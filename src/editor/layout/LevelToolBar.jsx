@@ -28,12 +28,9 @@ export function LevelToolBar() {
     setLevelName,
     canUndo,
     canRedo,
-    selectedActorIds,
     saveLevel,
     undo,
     redo,
-    duplicateSelected,
-    deleteSelected,
     play,
     stop,
     status,
@@ -49,7 +46,6 @@ export function LevelToolBar() {
   }, [recorder.error, alert]);
 
   const isPlay = mode === 'play';
-  const hasSelection = selectedActorIds.length > 0;
   const playReason = isPlay ? 'Unavailable during Play mode.' : null;
   const undoReason = isPlay
     ? 'Unavailable during Play mode.'
@@ -57,9 +53,6 @@ export function LevelToolBar() {
   const redoReason = isPlay
     ? 'Unavailable during Play mode.'
     : (!canRedo ? 'Nothing to redo.' : null);
-  const selectionReason = isPlay
-    ? 'Unavailable during Play mode.'
-    : (!hasSelection ? 'Select one or more actors first.' : null);
   const recordReason = !recorder.supported
     ? 'Screen recording is not supported in this browser.'
     : (recorder.error || null);
@@ -157,27 +150,6 @@ export function LevelToolBar() {
         title="Level filename"
         {...helpProps('toolbar.levelName', playReason)}
       />
-
-      <div className="bb-seg">
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={isPlay || !hasSelection}
-          onClick={() => duplicateSelected()}
-          {...helpProps('toolbar.duplicate', selectionReason)}
-        >
-          Dup
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={isPlay || !hasSelection}
-          onClick={() => deleteSelected()}
-          {...helpProps('toolbar.delete', selectionReason)}
-        >
-          Del
-        </button>
-      </div>
 
       <div className="bb-level-toolbar__end">
         <span className="bb-toolbar-status" title={status}>{status}</span>
