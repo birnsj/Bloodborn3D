@@ -106,6 +106,39 @@
   min-width: 0;
 }
 
+/* Hide spinner arrows — scrub-drag is the nudge interaction. */
+.bb-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.bb-input[type='number']::-webkit-inner-spin-button,
+.bb-input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.bb-input--scrub {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.bb-input--scrub:focus {
+  cursor: text;
+}
+
+.bb-axis--scrub {
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+body.bb-is-scrubbing,
+body.bb-is-scrubbing * {
+  cursor: ew-resize !important;
+  user-select: none !important;
+}
+
 .bb-input:focus,
 .bb-select:focus,
 .bb-btn:focus-visible {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { Collapsible } from '../../ui/Collapsible.jsx';
+import { ScrubAxisLabel, ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
 import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
@@ -28,14 +29,18 @@ function AxisInputs({ values, onChange, disabled, step, helpId }) {
 function FragmentAxis({ axis, value, onChange, disabled, step }) {
   return (
     <>
-      <span className={`bb-axis bb-axis--${axis}`}>{axis.toUpperCase()}</span>
-      <input
-        className="bb-input"
-        type="number"
-        step={step}
-        value={Number.isFinite(value) ? value : 0}
+      <ScrubAxisLabel
+        axis={axis}
+        value={value}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
+        step={step}
+        onChange={onChange}
+      />
+      <ScrubNumberInput
+        value={value}
+        disabled={disabled}
+        step={step}
+        onChange={onChange}
       />
     </>
   );
