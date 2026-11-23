@@ -31,6 +31,10 @@ import {
   SetStaticMeshPropertiesCommand,
   SetRampPropertiesCommand,
   SetStairPropertiesCommand,
+  SetColumnPropertiesCommand,
+  SetArchPropertiesCommand,
+  SetCurvedWallPropertiesCommand,
+  JoinWallEndpointsCommand,
   ReparentActorsCommand,
   SetActorFlagsCommand,
   ReplaceActorsCommand,
@@ -43,8 +47,20 @@ import {
 } from './brushFactory.js';
 import { createRampFromBounds } from './rampFactory.js';
 import { createStairFromBounds } from './stairFactory.js';
+import { createColumnFromBounds } from './columnFactory.js';
+import { createArchFromBounds } from './archFactory.js';
+import { createCurvedWallFromBounds } from './curvedWallFactory.js';
 import { DEFAULT_RAMP_RISE, RAMP_DIRECTIONS } from '../components/RampComponent.js';
 import { defaultsForStairType, STAIR_TYPES } from '../components/StairComponent.js';
+import { COLUMN_SHAPES, DEFAULT_COLUMN_HEIGHT } from '../components/ColumnComponent.js';
+import { ARCH_TYPES, DEFAULT_ARCH_OPENING_HEIGHT, DEFAULT_ARCH_RISE } from '../components/ArchComponent.js';
+import { DEFAULT_CURVED_WALL_SWEEP } from '../components/CurvedWallComponent.js';
+import {
+  findNearestWallEndpoint,
+  getWallEndpoints,
+  planWallEndpointJoin,
+  WALL_ENDPOINT_SNAP_DIST,
+} from '../runtime/wallEndpoints.js';
 import { createStaticMeshActor } from './meshFactory.js';
 import { createLightActor } from './lightFactory.js';
 import { createCellActor } from './cellFactory.js';
@@ -457,6 +473,66 @@ export function EditorProvider({ children }) {
           world,
           actorsJson: [actor.toJSON()],
           label: 'Create stairs',
+        }),
+        { selectIds: [actor.id] },
+      );
+      setTool('select');
+      return actor;
+    }
+
+    if (kind === 'column') {
+      const actor = createColumnFromBounds({
+        min,
+        max,
+        gridSize: gridRef.current,
+        height: DEFAULT_COLUMN_HEIGHT,
+      });
+      executeCommand(
+        new AddActorsCommand({
+          world,
+          actorsJson: [actor.toJSON()],
+          label: 'Create column',
+        }),
+        { selectIds: [actor.id] },
+      );
+      setTool('select');
+      return actor;
+    }
+
+    if (kind === 'arch' || kind === 'archRoman' || kind === 'archGothic') {
+      const archType = kind === 'archGothic' ? 'gothic' : 'roman';
+      const actor = createArchFromBounds({
+        min,
+        max,
+        gridSize: gridRef.current,
+        archType,
+        openingHeight: DEFAULT_ARCH_OPENING_HEIGHT,
+        archRise: DEFAULT_ARCH_RISE,
+      });
+      executeCommand(
+        new AddActorsCommand({
+          world,
+          actorsJson: [actor.toJSON()],
+          label: archType === 'gothic' ? 'Create gothic arch' : 'Create roman arch',
+        }),
+        { selectIds: [actor.id] },
+      );
+      setTool('select');
+      return actor;
+    }
+
+    if (kind === 'curvedWall') {
+      const actor = createCurvedWallFromBounds({
+        min,
+        max,
+        gridSize: gridRef.current,
+        sweepAngle: DEFAULT_CURVED_WALL_SWEEP,
+      });
+      executeCommand(
+        new AddActorsCommand({
+          world,
+          actorsJson: [actor.toJSON()],
+          label: 'Create curved wall',
         }),
         { selectIds: [actor.id] },
       );
@@ -902,7 +978,7 @@ export function EditorProvider({ children }) {
 
     const before = {};
     const after = {};
-    for (const key of ['materialId', 'faceMaterials', 'uv', 'color', 'collidable', 'operation']) {
+    for (const key of ['materialId', 'faceMaterials', 'uv', 'color', 'collidable', 'operation', 'miterStart', 'miterEnd']) {
       if (key in partial) {
         before[key] = key === 'uv'
           ? {
@@ -1145,6 +1221,268 @@ export function EditorProvider({ children }) {
           : partial.materialId !== undefined
             ? 'Assign stair material'
             : 'Edit stairs',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const updateSelectedColumn = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const column = world.getActor(actorId)?.getComponent('Column');
+    if (!column) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      if (['height', 'radius', 'baseHeight', 'baseRadius', 'capitalHeight', 'capitalRadius'].includes(key)) {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = column[key];
+        after[key] = Math.max(key.includes('Height') && key !== 'height' ? 0 : 1, snapToGrid(raw, gridRef.current) || raw);
+      } else if (key === 'sides') {
+        before.sides = column.sides;
+        after.sides = Math.max(3, Math.min(64, Math.round(Number(partial.sides) || 3)));
+      } else if (key === 'shape') {
+        if (!COLUMN_SHAPES.includes(partial.shape)) continue;
+        before.shape = column.shape;
+        after.shape = partial.shape;
+      } else if (key === 'uv') {
+        before.uv = {
+          scale: { ...column.uv.scale },
+          offset: { ...column.uv.offset },
+          rotation: column.uv.rotation,
+        };
+        after.uv = partial.uv;
+      } else if (key === 'baseEnabled' || key === 'capitalEnabled' || key === 'collidable') {
+        before[key] = column[key];
+        after[key] = Boolean(partial[key]);
+      } else {
+        before[key] = column[key];
+        after[key] = partial[key];
+      }
+    }
+    if (Object.keys(after).length === 0) return;
+    executeCommand(
+      new SetColumnPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: partial.materialId !== undefined ? 'Assign column material' : 'Edit column',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const updateSelectedCurvedWall = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const wall = world.getActor(actorId)?.getComponent('CurvedWall');
+    if (!wall) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      if (['radius', 'height', 'thickness'].includes(key)) {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = wall[key];
+        after[key] = Math.max(1, snapToGrid(raw, gridRef.current) || raw);
+      } else if (key === 'sweepAngle') {
+        const raw = Number(partial.sweepAngle);
+        if (!Number.isFinite(raw)) continue;
+        before.sweepAngle = wall.sweepAngle;
+        after.sweepAngle = Math.max(1, Math.min(360, raw));
+      } else if (key === 'startAngle' || key === 'miterStart' || key === 'miterEnd') {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = wall[key];
+        after[key] = raw;
+      } else if (key === 'curveResolution') {
+        before.curveResolution = wall.curveResolution;
+        after.curveResolution = Math.max(4, Math.min(128, Math.round(Number(partial.curveResolution) || 4)));
+      } else if (key === 'clockwise' || key === 'collidable') {
+        before[key] = wall[key];
+        after[key] = Boolean(partial[key]);
+      } else if (key === 'uv') {
+        before.uv = {
+          scale: { ...wall.uv.scale },
+          offset: { ...wall.uv.offset },
+          rotation: wall.uv.rotation,
+        };
+        after.uv = partial.uv;
+      } else {
+        before[key] = wall[key];
+        after[key] = partial[key];
+      }
+    }
+    if (Object.keys(after).length === 0) return;
+    executeCommand(
+      new SetCurvedWallPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: partial.materialId !== undefined ? 'Assign curved wall material' : 'Edit curved wall',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  /**
+   * Snap selected wall endpoint to nearest neighboring wall endpoint and apply miters.
+   */
+  const joinSelectedWallToNearest = useCallback(({
+    movingEndId = 'end',
+    orient = false,
+    maxDist = WALL_ENDPOINT_SNAP_DIST,
+  } = {}) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return false;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const actor = world.getActor(actorId);
+    if (!actor) return false;
+    const eps = getWallEndpoints(actor, world);
+    if (!eps) return false;
+    const movingEnd = eps[movingEndId] || eps.end;
+    const hit = findNearestWallEndpoint(world, movingEnd.position, {
+      excludeActorId: actorId,
+      maxDist,
+    });
+    if (!hit) return false;
+
+    const plan = planWallEndpointJoin({
+      movingActor: actor,
+      movingEndId: movingEnd.id,
+      targetActor: hit.actor,
+      targetEndId: hit.end.id,
+      world,
+      orient,
+      applyMiter: true,
+    });
+    if (!plan?.position) return false;
+
+    const patches = [];
+    const beforeXform = {
+      position: { ...actor.transform.position },
+      rotation: { ...actor.transform.rotation },
+    };
+    const afterXform = {
+      position: { ...plan.position },
+      rotation: plan.rotation
+        ? { ...plan.rotation }
+        : { ...actor.transform.rotation },
+    };
+    const movingPatch = {
+      actorId,
+      transform: { before: beforeXform, after: afterXform },
+    };
+
+    const brush = actor.getComponent('Brush');
+    const curved = actor.getComponent('CurvedWall');
+    if (brush) {
+      movingPatch.brushMiters = {
+        before: { miterStart: brush.miterStart, miterEnd: brush.miterEnd },
+        after: {
+          miterStart: movingEndId === 'start' ? plan.miterMoving : brush.miterStart,
+          miterEnd: movingEndId === 'end' ? plan.miterMoving : brush.miterEnd,
+        },
+      };
+    }
+    if (curved) {
+      movingPatch.curvedMiters = {
+        before: { miterStart: curved.miterStart, miterEnd: curved.miterEnd },
+        after: {
+          miterStart: movingEndId === 'start' ? plan.miterMoving : curved.miterStart,
+          miterEnd: movingEndId === 'end' ? plan.miterMoving : curved.miterEnd,
+        },
+      };
+    }
+    patches.push(movingPatch);
+
+    const targetBrush = hit.actor.getComponent('Brush');
+    const targetCurved = hit.actor.getComponent('CurvedWall');
+    if (targetBrush) {
+      patches.push({
+        actorId: hit.actor.id,
+        brushMiters: {
+          before: { miterStart: targetBrush.miterStart, miterEnd: targetBrush.miterEnd },
+          after: {
+            miterStart: hit.end.id === 'start' ? plan.miterTarget : targetBrush.miterStart,
+            miterEnd: hit.end.id === 'end' ? plan.miterTarget : targetBrush.miterEnd,
+          },
+        },
+      });
+    }
+    if (targetCurved) {
+      patches.push({
+        actorId: hit.actor.id,
+        curvedMiters: {
+          before: { miterStart: targetCurved.miterStart, miterEnd: targetCurved.miterEnd },
+          after: {
+            miterStart: hit.end.id === 'start' ? plan.miterTarget : targetCurved.miterStart,
+            miterEnd: hit.end.id === 'end' ? plan.miterTarget : targetCurved.miterEnd,
+          },
+        },
+      });
+    }
+
+    executeCommand(
+      new JoinWallEndpointsCommand({
+        world,
+        patches,
+        label: orient ? 'Join wall (orient)' : 'Join walls',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId, hit.actor.id]);
+    return true;
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const updateSelectedArch = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const arch = world.getActor(actorId)?.getComponent('Arch');
+    if (!arch) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      if (['openingWidth', 'openingHeight', 'archRise', 'thickness', 'depth'].includes(key)) {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = arch[key];
+        after[key] = Math.max(1, snapToGrid(raw, gridRef.current) || raw);
+      } else if (key === 'curveResolution') {
+        before.curveResolution = arch.curveResolution;
+        after.curveResolution = Math.max(4, Math.min(64, Math.round(Number(partial.curveResolution) || 4)));
+      } else if (key === 'archType') {
+        if (!ARCH_TYPES.includes(partial.archType)) continue;
+        before.archType = arch.archType;
+        after.archType = partial.archType;
+      } else if (key === 'uv') {
+        before.uv = {
+          scale: { ...arch.uv.scale },
+          offset: { ...arch.uv.offset },
+          rotation: arch.uv.rotation,
+        };
+        after.uv = partial.uv;
+      } else if (key === 'collidable') {
+        before.collidable = arch.collidable;
+        after.collidable = Boolean(partial.collidable);
+      } else {
+        before[key] = arch[key];
+        after[key] = partial[key];
+      }
+    }
+    if (Object.keys(after).length === 0) return;
+    executeCommand(
+      new SetArchPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: partial.materialId !== undefined ? 'Assign arch material' : 'Edit arch',
       }),
       { resync: true },
     );
@@ -1461,8 +1799,20 @@ export function EditorProvider({ children }) {
       updateSelectedStair({ materialId });
       return;
     }
+    if (actor?.getComponent('Column')) {
+      updateSelectedColumn({ materialId });
+      return;
+    }
+    if (actor?.getComponent('Arch')) {
+      updateSelectedArch({ materialId });
+      return;
+    }
+    if (actor?.getComponent('CurvedWall')) {
+      updateSelectedCurvedWall({ materialId });
+      return;
+    }
     updateSelectedBrush({ materialId });
-  }, [world, updateSelectedBrush, updateSelectedRamp, updateSelectedStair]);
+  }, [world, updateSelectedBrush, updateSelectedRamp, updateSelectedStair, updateSelectedColumn, updateSelectedArch, updateSelectedCurvedWall]);
 
   const renameSelected = useCallback((name) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -1575,6 +1925,10 @@ export function EditorProvider({ children }) {
     updateSelectedStaticMesh,
     updateSelectedRamp,
     updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+    joinSelectedWallToNearest,
     placeMeshAsset,
     placeLight,
     placePlayerSpawn,

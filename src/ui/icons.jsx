@@ -97,6 +97,38 @@ export function IconStairs(props) {
   );
 }
 
+export function IconCurvedWall(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M3 12.5c0-3.6 2.4-6.5 5.5-6.5S14 8.9 14 12.5h-1.8c0-2.5-1.6-4.5-3.7-4.5S4.8 10 4.8 12.5H3Zm.5.8h9v1.2h-9v-1.2Z" />
+    </Svg>
+  );
+}
+
+export function IconColumn(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M6.5 2.5h3v1.2H6.5V2.5Zm-1 1.8h5v1H5.5v-1Zm1.2 1.6h2.6v7.2H6.7V5.9Zm-1.2 7.8h5v1.2h-5v-1.2Zm-1 1.8h7v1.2h-7v-1.2Z" />
+    </Svg>
+  );
+}
+
+export function IconArch(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2.5 13.5V7.2c0-2.6 2.1-4.7 5.5-4.7s5.5 2.1 5.5 4.7v6.3h-2V7.2c0-1.5-1.2-2.7-3.5-2.7S5 5.7 5 7.2v6.3h-2.5Z" />
+    </Svg>
+  );
+}
+
+export function IconArchGothic(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2.5 13.5V8.2C2.5 5.2 5.2 2.8 8 2.2c2.8.6 5.5 3 5.5 6v5.3h-2V8.2c0-1.7-1.5-3.2-3.5-3.7-2 .5-3.5 2-3.5 3.7v5.3h-2Z" />
+    </Svg>
+  );
+}
+
 export function IconSubtract(props) {
   return (
     <Svg {...props}>

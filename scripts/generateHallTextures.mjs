@@ -18,7 +18,8 @@ mkdirSync(texDir, { recursive: true });
 mkdirSync(matDir, { recursive: true });
 mkdirSync(previewDir, { recursive: true });
 
-const SIZE = 1024;
+// 2048² → one wall module (3 m) ≈ 683 px/m, matching brushGeometry TARGET_TEXEL_DENSITY.
+const SIZE = 2048;
 const SPHERE_SIZE = 384;
 
 function crc32(buf) {
@@ -204,9 +205,11 @@ function fillMap(w, h, fn) {
 
 // ── Surface generators ──────────────────────────────────────────────────────
 
-// Large ashlar modules (~5–6 blocks across a 1024 map) so hall walls read as big stone.
-const STONE_BW = 200;
-const STONE_BH = 100;
+// Ashlar ~0.55×0.28 m when one texture covers one 3 m wall module (≈5–6 courses across).
+const STONE_BW = 380;
+const STONE_BH = 190;
+
+const STONE_MORTAR = 10;
 
 function stoneCell(x, y) {
   const bx = Math.floor(x / STONE_BW);
@@ -214,7 +217,8 @@ function stoneCell(x, y) {
   const ox = (by % 2) * (STONE_BW / 2);
   const lx = (x + ox) % STONE_BW;
   const ly = y % STONE_BH;
-  const mortar = lx < 6 || ly < 6 || lx > STONE_BW - 6 || ly > STONE_BH - 6;
+  const m = STONE_MORTAR;
+  const mortar = lx < m || ly < m || lx > STONE_BW - m || ly > STONE_BH - m;
   return { bx, by, ox, lx, ly, mortar };
 }
 
@@ -222,8 +226,9 @@ function stoneHeight(x, y) {
   const { bx, by, ox, lx, ly, mortar } = stoneCell(x, y);
   if (mortar) return 0.04 + fbm(x, y, 3, 6) * 0.06;
   // Soft bevel into mortar + slight per-block thickness
-  const edge = Math.min(lx - 6, STONE_BW - 6 - lx, ly - 6, STONE_BH - 6 - ly);
-  const bevel = Math.max(0, Math.min(1, edge / 14));
+  const m = STONE_MORTAR;
+  const edge = Math.min(lx - m, STONE_BW - m - lx, ly - m, STONE_BH - m - ly);
+  const bevel = Math.max(0, Math.min(1, edge / 22));
   const block = 0.62 + hash(bx + ox, by) * 0.22;
   const grain = fbm(x, y, 6, 22) * 0.22;
   const pits = valueNoise(x, y, 5) > 0.88 ? -0.08 : 0;
@@ -262,17 +267,21 @@ function stoneRough(x, y) {
   return [c, c, c, 255];
 }
 
-const FLOOR_T = 220;
+// Flagstones ~0.6 m when tiled at wall-module UV scale.
+const FLOOR_T = 420;
+
+const FLOOR_SEAM = 12;
 
 function floorHeight(x, y) {
   const bx = Math.floor(x / FLOOR_T);
   const by = Math.floor(y / FLOOR_T);
   const lx = x % FLOOR_T;
   const ly = y % FLOOR_T;
-  const seam = lx < 7 || ly < 7 || lx > FLOOR_T - 7 || ly > FLOOR_T - 7;
+  const s = FLOOR_SEAM;
+  const seam = lx < s || ly < s || lx > FLOOR_T - s || ly > FLOOR_T - s;
   if (seam) return 0.05 + fbm(x, y, 2, 5) * 0.05;
-  const edge = Math.min(lx - 7, FLOOR_T - 7 - lx, ly - 7, FLOOR_T - 7 - ly);
-  const bevel = Math.max(0, Math.min(1, edge / 16));
+  const edge = Math.min(lx - s, FLOOR_T - s - lx, ly - s, FLOOR_T - s - ly);
+  const bevel = Math.max(0, Math.min(1, edge / 28));
   const tile = 0.55 + hash(bx, by) * 0.28;
   const wear = fbm(x, y, 6, 28) * 0.18;
   const dish = Math.sin((lx / FLOOR_T) * Math.PI) * Math.sin((ly / FLOOR_T) * Math.PI) * 0.06;
@@ -285,7 +294,8 @@ function floorAlbedo(x, y) {
   const by = Math.floor(y / FLOOR_T);
   const lx = x % FLOOR_T;
   const ly = y % FLOOR_T;
-  const seam = lx < 7 || ly < 7 || lx > FLOOR_T - 7 || ly > FLOOR_T - 7;
+  const s = FLOOR_SEAM;
+  const seam = lx < s || ly < s || lx > FLOOR_T - s || ly > FLOOR_T - s;
   const tint = hash(bx, by);
   const base = mix3([112, 102, 88], [168, 156, 136], tint);
   const wear = fbm(x * 1.2, y * 1.1, 4, 20) * 20 - 8;
@@ -306,7 +316,8 @@ function floorRough(x, y) {
   const h = floorHeight(x, y);
   const lx = x % FLOOR_T;
   const ly = y % FLOOR_T;
-  const seam = lx < 7 || ly < 7 || lx > FLOOR_T - 7 || ly > FLOOR_T - 7;
+  const s = FLOOR_SEAM;
+  const seam = lx < s || ly < s || lx > FLOOR_T - s || ly > FLOOR_T - s;
   // Worn-polished flagstones: center of tile is shinier
   const center = Math.sin((lx / FLOOR_T) * Math.PI) * Math.sin((ly / FLOOR_T) * Math.PI);
   const polish = 55 + (1 - center) * 50 + (1 - h) * 40 + fbm(x, y, 3, 16) * 28;
@@ -344,22 +355,25 @@ function plasterRough(x, y) {
   return [c, c, c, 255];
 }
 
+// Plank width ~0.2 m at wall-module UV scale.
+const WOOD_W = 140;
+
 function woodHeight(x, y) {
-  const band = Math.floor(x / 72);
-  const lx = x % 72;
-  const gap = lx < 3 || lx > 69;
+  const band = Math.floor(x / WOOD_W);
+  const lx = x % WOOD_W;
+  const gap = lx < 5 || lx > WOOD_W - 5;
   if (gap) return 0.08 + fbm(x, y, 2, 5) * 0.05;
   const grain = Math.sin(y * 0.11 + hash(band, 0) * 8 + fbm(x, y, 2, 40) * 1.5) * 0.5 + 0.5;
   const fine = fbm(x * 2.2, y, 5, 9);
   const pore = valueNoise(x, y, 2.5);
-  const bevel = Math.min(lx - 3, 69 - lx) / 8;
+  const bevel = Math.min(lx - 5, WOOD_W - 5 - lx) / 12;
   return 0.35 + grain * 0.28 + fine * 0.22 + pore * 0.1 + Math.max(0, Math.min(1, bevel)) * 0.08;
 }
 
 function woodAlbedo(x, y) {
-  const band = Math.floor(x / 72);
-  const lx = x % 72;
-  const gap = lx < 3 || lx > 69;
+  const band = Math.floor(x / WOOD_W);
+  const lx = x % WOOD_W;
+  const gap = lx < 5 || lx > WOOD_W - 5;
   const odd = band % 2;
   const grain = Math.sin(y * 0.14 + hash(band, 1) * 6) * 14;
   const base = odd ? [142, 96, 58] : [122, 80, 48];
@@ -380,8 +394,8 @@ function woodAlbedo(x, y) {
 
 function woodRough(x, y) {
   const h = woodHeight(x, y);
-  const lx = x % 72;
-  const gap = lx < 3 || lx > 69;
+  const lx = x % WOOD_W;
+  const gap = lx < 5 || lx > WOOD_W - 5;
   // Satin varnish on plank faces; rough in pores/gaps
   const varnish = 48 + (1 - h) * 70 + fbm(x, y, 3, 12) * 35;
   const v = gap ? 200 : varnish;
@@ -511,8 +525,8 @@ const materials = [
     metalness: 0.02,
     normalScale: 1.55,
     envMapIntensity: 0.85,
-    // Large ashlar modules in texture + low UV scale ≈ ~0.7–1 m blocks on walls
-    uvScale: { x: 0.4, y: 0.4 },
+    // uvScale 1 = one texture per wall module (3 m), matching brushGeometry tiling.
+    uvScale: { x: 1, y: 1 },
   },
   {
     id: 'mat_hall_floor',
@@ -523,7 +537,7 @@ const materials = [
     metalness: 0,
     normalScale: 1.4,
     envMapIntensity: 0.9,
-    uvScale: { x: 0.4, y: 0.4 },
+    uvScale: { x: 1, y: 1 },
   },
   {
     id: 'mat_hall_ceiling',
@@ -534,7 +548,7 @@ const materials = [
     metalness: 0,
     normalScale: 0.95,
     envMapIntensity: 0.45,
-    uvScale: { x: 0.85, y: 0.85 },
+    uvScale: { x: 1, y: 1 },
   },
   {
     id: 'mat_hall_wood',
@@ -545,7 +559,7 @@ const materials = [
     metalness: 0.05,
     normalScale: 1.35,
     envMapIntensity: 0.95,
-    uvScale: { x: 0.75, y: 0.75 },
+    uvScale: { x: 1, y: 1 },
   },
 ];
 

@@ -18,8 +18,8 @@
   "opacity": 1,
   "transparent": false,
   "uvScale": {
-    "x": 0.85,
-    "y": 0.85
+    "x": 1,
+    "y": 1
   },
   "uvOffset": {
     "x": 0,
@@ -27,6 +27,6 @@
   },
   "uvRotation": 0,
   "previewPath": "previews/mat_hall_ceiling_sphere.png",
-  "createdAt": 1795419703056,
-  "updatedAt": 1795419703056
+  "createdAt": 1795421398807,
+  "updatedAt": 1795421398807
 }

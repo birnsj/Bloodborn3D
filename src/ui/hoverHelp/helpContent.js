@@ -70,6 +70,48 @@ export const HELP_CONTENT = {
     body: 'Drag a footprint to place a straight staircase as a single editable actor. Rise defaults to one wall module; step count and tread adjust to the run.',
     tips: 'Each step has its own collider. Edit Width, Step Count, Step Height, and Tread Depth in Details.',
   },
+  'toolbar.column': {
+    title: 'Column',
+    body: 'Drag a footprint to place a parametric column. Footprint size sets radius; height defaults to one wall module. Edit shape, base, and capital in Details.',
+    tips: 'Shapes: round, square, hexagon, octagon. Collision follows the generated prism.',
+  },
+  'toolbar.curvedWall': {
+    title: 'Curved Wall',
+    body: 'Drag a footprint to place a parametric curved wall. Near-square footprints become full circles; elongated footprints default to 90° or 180° arcs. Edit radius, sweep, and thickness in Details.',
+    tips: 'Segmented Rapier colliders follow the curve. Openings are not supported on curved walls — use straight walls for doors/arches.',
+  },
+  'details.curvedWall': {
+    title: 'Curved Wall Properties',
+    body: 'Radius is the centerline. Sweep 360° makes a hollow circular room. UVs tile by arc length at ~300 editor units per repeat.',
+  },
+  'details.wallJoin': {
+    title: 'Join Walls',
+    body: 'Snaps the selected wall’s end to the nearest neighboring wall endpoint and applies complementary miters. Actors stay independently editable.',
+    tips: 'Use Orient to Tangent when joining a straight wall to a curved wall so the straight wall follows the arc tangent.',
+  },
+  'toolbar.archRoman': {
+    title: 'Roman Arch',
+    body: 'Drag a footprint for a freestanding rounded arch with a real open passage. Longer axis is opening width; shorter is depth.',
+    tips: 'Collision uses piers plus segmented arch solids so you can walk through the opening.',
+  },
+  'toolbar.archGothic': {
+    title: 'Gothic Arch',
+    body: 'Drag a footprint for a freestanding pointed Gothic arch. The pointed profile is generated procedurally from opening width and rise.',
+    tips: 'Switch between Roman and Gothic in Details after placing.',
+  },
+  'details.column': {
+    title: 'Column Properties',
+    body: 'Parametric column: shape, height, radius, sides, optional base/capital, material, and collidable.',
+  },
+  'details.arch': {
+    title: 'Arch Properties',
+    body: 'Freestanding arch: type (Roman/Gothic), opening size, rise, structural thickness, depth, and curve resolution.',
+  },
+  'details.openings.arch': {
+    title: 'Arched Wall Opening',
+    body: 'Cut a Roman or Gothic arched opening through the selected wall. The wall actor is preserved; solids and collision follow the curved profile.',
+    tips: 'Rise is the height of the curve above the spring line. Interior jamb/soffit faces come from the segmented lintel solids.',
+  },
   'details.stair': {
     title: 'Stair Properties',
     body: 'Procedural stairs as a single actor. Choose Straight, Curved, or Spiral; geometry and collision regenerate immediately.',

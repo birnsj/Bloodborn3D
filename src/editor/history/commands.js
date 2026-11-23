@@ -239,6 +239,56 @@ export class SetBrushMaterialCommand {
     if ('operation' in state) {
       brush.operation = state.operation === 'subtract' ? 'subtract' : 'add';
     }
+    if ('miterStart' in state) brush.miterStart = Number(state.miterStart) || 0;
+    if ('miterEnd' in state) brush.miterEnd = Number(state.miterEnd) || 0;
+  }
+}
+
+/**
+ * Composite: move/rotate a wall onto another endpoint and set miters on both.
+ * patches: [{ actorId, transform?: {before, after}, brushMiters?: {before, after}, curvedMiters?: {before, after} }]
+ */
+export class JoinWallEndpointsCommand {
+  constructor({ world, patches, label = 'Join walls' }) {
+    this.world = world;
+    this.patches = structuredClone(patches || []);
+    this.label = label;
+  }
+
+  do() {
+    this._apply('after');
+  }
+
+  undo() {
+    this._apply('before');
+  }
+
+  _apply(which) {
+    for (const p of this.patches) {
+      const actor = this.world.getActor(p.actorId);
+      if (!actor) continue;
+      if (p.transform) {
+        const t = p.transform[which];
+        if (t?.position) actor.transform.position = { ...t.position };
+        if (t?.rotation) actor.transform.rotation = { ...t.rotation };
+      }
+      if (p.brushMiters) {
+        const brush = actor.getComponent('Brush');
+        const m = p.brushMiters[which];
+        if (brush && m) {
+          if ('miterStart' in m) brush.miterStart = Number(m.miterStart) || 0;
+          if ('miterEnd' in m) brush.miterEnd = Number(m.miterEnd) || 0;
+        }
+      }
+      if (p.curvedMiters) {
+        const wall = actor.getComponent('CurvedWall');
+        const m = p.curvedMiters[which];
+        if (wall && m) {
+          if ('miterStart' in m) wall.miterStart = Number(m.miterStart) || 0;
+          if ('miterEnd' in m) wall.miterEnd = Number(m.miterEnd) || 0;
+        }
+      }
+    }
   }
 }
 
@@ -342,6 +392,125 @@ export class SetRampPropertiesCommand {
         };
       } else {
         ramp[key] = state[key];
+      }
+    }
+  }
+}
+
+/**
+ * Patch ColumnComponent properties.
+ */
+export class SetColumnPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit column' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const column = this.world.getActor(this.actorId)?.getComponent('Column');
+    if (!column) return;
+    for (const key of Object.keys(state)) {
+      if (key === 'uv' && state.uv) {
+        column.uv = {
+          scale: { ...(state.uv.scale || column.uv.scale) },
+          offset: { ...(state.uv.offset || column.uv.offset) },
+          rotation: state.uv.rotation ?? column.uv.rotation,
+        };
+      } else if (key === 'sides') {
+        column.sides = Math.max(3, Math.min(64, Math.round(Number(state.sides) || 3)));
+      } else {
+        column[key] = state[key];
+      }
+    }
+  }
+}
+
+/**
+ * Patch CurvedWallComponent properties.
+ */
+export class SetCurvedWallPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit curved wall' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const wall = this.world.getActor(this.actorId)?.getComponent('CurvedWall');
+    if (!wall) return;
+    for (const key of Object.keys(state)) {
+      if (key === 'uv' && state.uv) {
+        wall.uv = {
+          scale: { ...(state.uv.scale || wall.uv.scale) },
+          offset: { ...(state.uv.offset || wall.uv.offset) },
+          rotation: state.uv.rotation ?? wall.uv.rotation,
+        };
+      } else if (key === 'curveResolution') {
+        wall.curveResolution = Math.max(4, Math.min(128, Math.round(Number(state.curveResolution) || 4)));
+      } else if (key === 'sweepAngle') {
+        wall.sweepAngle = Math.max(1, Math.min(360, Number(state.sweepAngle) || 1));
+      } else {
+        wall[key] = state[key];
+      }
+    }
+  }
+}
+
+/**
+ * Patch ArchComponent properties.
+ */
+export class SetArchPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit arch' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const arch = this.world.getActor(this.actorId)?.getComponent('Arch');
+    if (!arch) return;
+    for (const key of Object.keys(state)) {
+      if (key === 'uv' && state.uv) {
+        arch.uv = {
+          scale: { ...(state.uv.scale || arch.uv.scale) },
+          offset: { ...(state.uv.offset || arch.uv.offset) },
+          rotation: state.uv.rotation ?? arch.uv.rotation,
+        };
+      } else if (key === 'curveResolution') {
+        arch.curveResolution = Math.max(4, Math.min(64, Math.round(Number(state.curveResolution) || 4)));
+      } else {
+        arch[key] = state[key];
       }
     }
   }

@@ -10,6 +10,11 @@ import {
   CEILING_THICKNESS,
 } from '../core/units.js';
 import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
+import {
+  DEFAULT_ARCH_OPENING_HEIGHT,
+  DEFAULT_ARCH_RISE,
+  DEFAULT_ARCH_THICKNESS,
+} from '../components/ArchComponent.js';
 import { resizeBrushFace } from './brushFactory.js';
 import { IconMaximize, IconRestore } from '../ui/icons.jsx';
 import { findAsset } from '../assets/AssetRegistry.js';
@@ -453,7 +458,7 @@ export function Viewport() {
     const sceneView = runtimeRef.current.sceneView;
 
     // Create tools: start footprint drag on construction plane
-    if (tool === 'box' || tool === 'wall' || tool === 'floor' || tool === 'ceiling' || tool === 'ramp' || tool === 'stair' || tool === 'subtract') {
+    if (tool === 'box' || tool === 'wall' || tool === 'floor' || tool === 'ceiling' || tool === 'ramp' || tool === 'stair' || tool === 'column' || tool === 'arch' || tool === 'archRoman' || tool === 'archGothic' || tool === 'curvedWall' || tool === 'subtract') {
       const point = sceneView.pickConstructionPoint(nx, ny, 0);
       if (!point) return;
       const g = gridSnap ? gridSize : 1;
@@ -566,9 +571,14 @@ export function Viewport() {
           : drag.kind === 'ramp'
             ? DEFAULT_RAMP_RISE
             : drag.kind === 'stair'
+              || drag.kind === 'column'
+              || drag.kind === 'wall'
+              || drag.kind === 'curvedWall'
               ? WALL_MODULE_SIZE
-              : drag.kind === 'wall'
-                ? WALL_MODULE_SIZE
+              : drag.kind === 'arch'
+                || drag.kind === 'archRoman'
+                || drag.kind === 'archGothic'
+                ? DEFAULT_ARCH_OPENING_HEIGHT + DEFAULT_ARCH_RISE + DEFAULT_ARCH_THICKNESS
                 : Math.max(gridSize, gridSize),
       z: Math.max(drag.start.z, drag.current.z),
     };
@@ -743,6 +753,9 @@ export function Viewport() {
     if (tool === 'ceiling') return 'Drag on grid to create a ceiling · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'ramp') return 'Drag on grid to create a ramp · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'stair') return 'Drag on grid to create stairs · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'column') return 'Drag on grid to create a column · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'curvedWall') return 'Drag on grid to create a curved wall · near-square → circle · RMB orbit · WASD free-fly · Q/E · Shift boost';
+    if (tool === 'archRoman' || tool === 'archGothic' || tool === 'arch') return 'Drag on grid to create an arch · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
   };

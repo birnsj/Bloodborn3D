@@ -21,6 +21,10 @@ import {
 import { isSubtractBrush } from './brushBoolean.js';
 import { createRampWedgeGeometry, getRampAabbSize } from './rampGeometry.js';
 import { createStairGeometry } from './stairGeometry.js';
+import { createColumnGeometry, getColumnAabbSize } from './columnGeometry.js';
+import { createArchGeometry, getArchAabbSize } from './archGeometry.js';
+import { createCurvedWallGeometry, getCurvedWallAabbSize } from './curvedWallGeometry.js';
+import { brushHasMiters, createMiteredWallGeometry } from './miteredWallGeometry.js';
 import {
   createThreeMaterial,
   createFallbackBrushMaterial,
@@ -303,6 +307,12 @@ export class SceneView {
         this._addRampVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'Stair') {
         this._addStairVisual(group, actor, comp, syncToken);
+      } else if (comp.type === 'Column') {
+        this._addColumnVisual(group, actor, comp, syncToken);
+      } else if (comp.type === 'Arch') {
+        this._addArchVisual(group, actor, comp, syncToken);
+      } else if (comp.type === 'CurvedWall') {
+        this._addCurvedWallVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'Cell' && this.editMode) {
         const marker = new THREE.Mesh(
           new THREE.BoxGeometry(0.25, 0.25, 0.25),
@@ -380,6 +390,42 @@ export class SceneView {
     }
 
     const world = actor.world || null;
+    // Mitered walls without openings: single prism mesh (keeps clean angled junctions).
+    // Openings keep the AABB solid path; miters are ignored while openings exist.
+    if (
+      brushHasMiters(comp)
+      && !(comp.openings?.length)
+      && actor.tags?.includes?.('wall')
+    ) {
+      const geom = createMiteredWallGeometry(
+        comp.size,
+        comp.uv,
+        comp.miterStart,
+        comp.miterEnd,
+      );
+      const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
+        editMode: this.editMode,
+      });
+      const mesh = new THREE.Mesh(geom, fallback);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.actorId = actor.id;
+      mesh.userData.pickable = true;
+      mesh.userData.miteredWall = true;
+      group.add(mesh);
+      if (this.editMode) {
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geom),
+          new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+        );
+        edges.userData.actorId = actor.id;
+        edges.userData.editorOnly = true;
+        group.add(edges);
+      }
+      void this._applySimpleParamMaterial(mesh, comp, syncToken);
+      return;
+    }
+
     const { solids } = getBrushRenderSolids(comp, world ? { world, actor } : null);
     const tile = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -500,6 +546,105 @@ export class SceneView {
     }
 
     void this._applyRampMaterial(mesh, comp, syncToken);
+  }
+
+  _addColumnVisual(group, actor, comp, syncToken) {
+    const geom = createColumnGeometry(comp);
+    const fallback = createFallbackBrushMaterial(comp.color || '#8a9098', {
+      editMode: this.editMode,
+    });
+    const mesh = new THREE.Mesh(geom, fallback);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.actorId = actor.id;
+    mesh.userData.pickable = true;
+    mesh.userData.column = true;
+    group.add(mesh);
+
+    if (this.editMode) {
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geom, 24),
+        new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+      );
+      edges.userData.actorId = actor.id;
+      edges.userData.editorOnly = true;
+      group.add(edges);
+    }
+
+    void this._applySimpleParamMaterial(mesh, comp, syncToken);
+  }
+
+  _addArchVisual(group, actor, comp, syncToken) {
+    const geom = createArchGeometry(comp);
+    const fallback = createFallbackBrushMaterial(comp.color || '#7a8494', {
+      editMode: this.editMode,
+    });
+    const mesh = new THREE.Mesh(geom, fallback);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.actorId = actor.id;
+    mesh.userData.pickable = true;
+    mesh.userData.arch = true;
+    group.add(mesh);
+
+    if (this.editMode) {
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geom, 20),
+        new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+      );
+      edges.userData.actorId = actor.id;
+      edges.userData.editorOnly = true;
+      group.add(edges);
+    }
+
+    void this._applySimpleParamMaterial(mesh, comp, syncToken);
+  }
+
+  async _applySimpleParamMaterial(mesh, comp, syncToken) {
+    if (!comp.materialId || !this.assetResolver?.getMaterialDefinition) return;
+    const def = await this.assetResolver.getMaterialDefinition(comp.materialId);
+    if (syncToken !== this._syncToken || !def) return;
+    const mapResolver = (assetId) => {
+      if (!this.assetResolver?.getTextureUrl) return null;
+      return assetUrl(this.assetResolver.getTextureUrl(assetId));
+    };
+    const mat = await createThreeMaterial(def, mapResolver, {
+      maxAnisotropy: this.maxAnisotropy,
+    });
+    if (syncToken !== this._syncToken) {
+      mat.dispose?.();
+      return;
+    }
+    const prev = mesh.material;
+    mesh.material = mat;
+    if (Array.isArray(prev)) prev.forEach((m) => m.dispose?.());
+    else prev?.dispose?.();
+  }
+
+  _addCurvedWallVisual(group, actor, comp, syncToken) {
+    const geom = createCurvedWallGeometry(comp);
+    const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
+      editMode: this.editMode,
+    });
+    const mesh = new THREE.Mesh(geom, fallback);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.actorId = actor.id;
+    mesh.userData.pickable = true;
+    mesh.userData.curvedWall = true;
+    group.add(mesh);
+
+    if (this.editMode) {
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geom, 24),
+        new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+      );
+      edges.userData.actorId = actor.id;
+      edges.userData.editorOnly = true;
+      group.add(edges);
+    }
+
+    void this._applySimpleParamMaterial(mesh, comp, syncToken);
   }
 
   async _applyRampMaterial(mesh, comp, syncToken) {
@@ -804,16 +949,31 @@ export class SceneView {
       const brush = actor.getComponent?.('Brush');
       const ramp = actor.getComponent?.('Ramp');
       const stair = actor.getComponent?.('Stair');
-      if (!brush && !ramp && !stair) continue;
+      const column = actor.getComponent?.('Column');
+      const arch = actor.getComponent?.('Arch');
+      const curvedWall = actor.getComponent?.('CurvedWall');
+      if (!brush && !ramp && !stair && !column && !arch && !curvedWall) continue;
       const worldPos = getWorldTransform(actor, world || actor.world).position;
       const state = {
         position: { ...worldPos },
-        // Parametric ramps/stairs: move only (edit dimensions in Details).
+        // Parametric actors: move only (edit dimensions in Details).
         size: brush ? { ...brush.size } : undefined,
       };
       if (ramp && !brush) {
         state.size = undefined;
         state.aabb = getRampAabbSize(ramp);
+      }
+      if (column && !brush) {
+        state.size = undefined;
+        state.aabb = getColumnAabbSize(column);
+      }
+      if (arch && !brush) {
+        state.size = undefined;
+        state.aabb = getArchAabbSize(arch);
+      }
+      if (curvedWall && !brush) {
+        state.size = undefined;
+        state.aabb = getCurvedWallAabbSize(curvedWall);
       }
       brushStates.push(state);
       if (!primary) primary = state;

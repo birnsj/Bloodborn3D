@@ -22,6 +22,10 @@ export class BrushComponent extends Component {
     openings = null,
     /** 'add' (default) or 'subtract' — subtractive brushes carve overlapping additive solids. */
     operation = 'add',
+    /** Miter half-angle at local length − end (degrees). Used for clean wall junctions. */
+    miterStart = 0,
+    /** Miter half-angle at local length + end (degrees). */
+    miterEnd = 0,
   } = {}) {
     super({ id, type: BrushComponent.componentType, enabled });
     this.size = { ...size };
@@ -32,6 +36,8 @@ export class BrushComponent extends Component {
     this.uv = createBrushUvState(uv || {});
     this.openings = normalizeOpenings(openings);
     this.operation = operation === 'subtract' ? 'subtract' : 'add';
+    this.miterStart = Number(miterStart) || 0;
+    this.miterEnd = Number(miterEnd) || 0;
   }
 
   toJSON() {
@@ -45,6 +51,8 @@ export class BrushComponent extends Component {
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
       operation: this.operation === 'subtract' ? 'subtract' : 'add',
+      miterStart: this.miterStart,
+      miterEnd: this.miterEnd,
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },
@@ -55,10 +63,13 @@ export class BrushComponent extends Component {
       json.openings = this.openings.map((o) => ({
         id: o.id,
         type: o.type,
+        profile: o.profile || 'rect',
         offset: o.offset,
         bottom: o.bottom,
         width: o.width,
         height: o.height,
+        rise: o.rise || 0,
+        curveResolution: o.curveResolution,
       }));
     }
     return json;

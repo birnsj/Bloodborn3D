@@ -57,6 +57,10 @@ export function DetailsPanel({ docked = false } = {}) {
     updateSelectedStaticMesh,
     updateSelectedRamp,
     updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+    joinSelectedWallToNearest,
     renameSelected,
     deleteSelected,
     duplicateSelected,
@@ -87,6 +91,9 @@ export function DetailsPanel({ docked = false } = {}) {
   const brush = selectedActor?.getComponent('Brush');
   const ramp = selectedActor?.getComponent('Ramp');
   const stair = selectedActor?.getComponent('Stair');
+  const column = selectedActor?.getComponent('Column');
+  const arch = selectedActor?.getComponent('Arch');
+  const curvedWall = selectedActor?.getComponent('CurvedWall');
   const light = selectedActor?.getComponent('Light');
   const spawn = selectedActor?.getComponent('PlayerSpawn');
   const staticMesh = selectedActor?.getComponent('StaticMesh');
@@ -548,9 +555,76 @@ export function DetailsPanel({ docked = false } = {}) {
               </Collapsible>
             )}
 
+            {(brush && isWallBrush(selectedActor) && brush.operation !== 'subtract') || curvedWall ? (
+              <Collapsible title="Wall Join" storageKey="details.wallJoin" defaultOpen={false}>
+                <div {...helpProps('details.wallJoin')}>
+                  <p className="bb-muted">
+                    Snap this wall’s endpoint to the nearest neighboring wall endpoint and apply miters. Walls stay separate actors.
+                  </p>
+                  <div className="bb-field-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled}
+                      onClick={() => joinSelectedWallToNearest({ movingEndId: 'start' })}
+                    >
+                      Join Start
+                    </button>
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled}
+                      onClick={() => joinSelectedWallToNearest({ movingEndId: 'end' })}
+                    >
+                      Join End
+                    </button>
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled}
+                      onClick={() => joinSelectedWallToNearest({ movingEndId: 'end', orient: true })}
+                    >
+                      Join End + Orient
+                    </button>
+                  </div>
+                  {brush && (
+                    <>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Miter Start (°)</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={1}
+                          disabled={disabled}
+                          value={brush.miterStart || 0}
+                          onChange={(e) => updateSelectedBrush({ miterStart: Number(e.target.value) })}
+                        />
+                      </label>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Miter End (°)</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={1}
+                          disabled={disabled}
+                          value={brush.miterEnd || 0}
+                          onChange={(e) => updateSelectedBrush({ miterEnd: Number(e.target.value) })}
+                        />
+                      </label>
+                      {brush.openings?.length > 0 && (Math.abs(brush.miterStart) > 0.01 || Math.abs(brush.miterEnd) > 0.01) && (
+                        <p className="bb-muted">
+                          Miters are ignored in mesh/collision while openings are present (openings use the rectangular solid path).
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </Collapsible>
+            ) : null}
+
             {brush && brush.operation !== 'subtract' && isWallBrush(selectedActor) && (
               <Collapsible title="Openings" storageKey="details.openings">
-                <div className="bb-field-row" style={{ gap: 8, marginBottom: 8 }}>
+                <div className="bb-field-row" style={{ gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="bb-btn"
@@ -569,10 +643,28 @@ export function DetailsPanel({ docked = false } = {}) {
                   >
                     Add Window
                   </button>
+                  <button
+                    type="button"
+                    className="bb-btn"
+                    disabled={disabled}
+                    {...helpProps('details.openings.arch')}
+                    onClick={() => addBrushOpening('arch-roman')}
+                  >
+                    Add Roman Arch
+                  </button>
+                  <button
+                    type="button"
+                    className="bb-btn"
+                    disabled={disabled}
+                    {...helpProps('details.openings.arch')}
+                    onClick={() => addBrushOpening('arch-gothic')}
+                  >
+                    Add Gothic Arch
+                  </button>
                 </div>
                 {normalizeOpenings(brush.openings).length === 0 && (
                   <p className="bb-muted" {...helpProps('details.openings')}>
-                    No openings. Add a door or window; geometry and collision update automatically.
+                    No openings. Add a door, window, or arched opening; geometry and collision update automatically.
                   </p>
                 )}
                 {normalizeOpenings(brush.openings).map((opening) => (
@@ -584,7 +676,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       paddingTop: 8,
                       marginTop: 8,
                     }}
-                    {...helpProps('details.openings.fields')}
+                    {...helpProps(opening.profile !== 'rect' ? 'details.openings.arch' : 'details.openings.fields')}
                   >
                     <label className="bb-field">
                       <span className="bb-field__label">Type</span>
@@ -596,6 +688,27 @@ export function DetailsPanel({ docked = false } = {}) {
                       >
                         <option value="door">Door</option>
                         <option value="window">Window</option>
+                      </select>
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Profile</span>
+                      <select
+                        className="bb-select"
+                        disabled={disabled}
+                        value={opening.profile || 'rect'}
+                        onChange={(e) => {
+                          const profile = e.target.value;
+                          const patch = { profile };
+                          if (profile !== 'rect' && !(opening.rise > 0)) {
+                            patch.rise = Math.round(opening.width * 0.5);
+                          }
+                          if (profile === 'rect') patch.rise = 0;
+                          updateBrushOpening(opening.id, patch);
+                        }}
+                      >
+                        <option value="rect">Rectangular</option>
+                        <option value="roman">Roman arch</option>
+                        <option value="gothic">Gothic arch</option>
                       </select>
                     </label>
                     <label className="bb-field">
@@ -650,6 +763,38 @@ export function DetailsPanel({ docked = false } = {}) {
                         })}
                       />
                     </label>
+                    {(opening.profile === 'roman' || opening.profile === 'gothic') && (
+                      <>
+                        <label className="bb-field">
+                          <span className="bb-field__label">Arch Rise</span>
+                          <input
+                            className="bb-input"
+                            type="number"
+                            step={gridSize}
+                            disabled={disabled}
+                            value={opening.rise}
+                            onChange={(e) => updateBrushOpening(opening.id, {
+                              rise: Number(e.target.value),
+                            })}
+                          />
+                        </label>
+                        <label className="bb-field">
+                          <span className="bb-field__label">Curve Segments</span>
+                          <input
+                            className="bb-input"
+                            type="number"
+                            min={4}
+                            max={48}
+                            step={1}
+                            disabled={disabled}
+                            value={opening.curveResolution}
+                            onChange={(e) => updateBrushOpening(opening.id, {
+                              curveResolution: Number(e.target.value),
+                            })}
+                          />
+                        </label>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="bb-btn"
@@ -970,6 +1115,423 @@ export function DetailsPanel({ docked = false } = {}) {
                     {(stair.stairType || 'straight') === 'straight'
                       ? `Straight · ${stair.stepCount} step boxes · run ${Math.round(stair.length)} · rise ${Math.round(stair.totalRise)}`
                       : `${stair.stairType === 'spiral' ? 'Spiral' : 'Curved'} · ${stair.stepCount} wedge steps · sweep ${stair.sweepAngle}° · rise ${Math.round(stair.totalRise)}`}
+                  </p>
+                </div>
+              </Collapsible>
+            )}
+
+            {column && (
+              <Collapsible title="Column" storageKey="details.column">
+                <div {...helpProps('details.column')}>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Shape</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={column.shape}
+                      onChange={(e) => updateSelectedColumn({ shape: e.target.value })}
+                    >
+                      <option value="round">Round</option>
+                      <option value="square">Square</option>
+                      <option value="hexagon">Hexagon</option>
+                      <option value="octagon">Octagon</option>
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Height</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={column.height}
+                      onChange={(e) => updateSelectedColumn({ height: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Radius / Width</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={column.radius}
+                      onChange={(e) => updateSelectedColumn({ radius: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Sides</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      min={3}
+                      max={64}
+                      step={1}
+                      disabled={disabled}
+                      value={column.sides}
+                      onChange={(e) => updateSelectedColumn({ sides: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Base</span>
+                    <input
+                      type="checkbox"
+                      checked={column.baseEnabled !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedColumn({ baseEnabled: e.target.checked })}
+                    />
+                  </label>
+                  {column.baseEnabled !== false && (
+                    <>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Base Height</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={column.baseHeight}
+                          onChange={(e) => updateSelectedColumn({ baseHeight: Number(e.target.value) })}
+                        />
+                      </label>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Base Radius</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={column.baseRadius ?? Math.round(column.radius * 1.25)}
+                          onChange={(e) => updateSelectedColumn({ baseRadius: Number(e.target.value) })}
+                        />
+                      </label>
+                    </>
+                  )}
+                  <label className="bb-field">
+                    <span className="bb-field__label">Capital</span>
+                    <input
+                      type="checkbox"
+                      checked={column.capitalEnabled !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedColumn({ capitalEnabled: e.target.checked })}
+                    />
+                  </label>
+                  {column.capitalEnabled !== false && (
+                    <>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Capital Height</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={column.capitalHeight}
+                          onChange={(e) => updateSelectedColumn({ capitalHeight: Number(e.target.value) })}
+                        />
+                      </label>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Capital Radius</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={column.capitalRadius ?? Math.round(column.radius * 1.2)}
+                          onChange={(e) => updateSelectedColumn({ capitalRadius: Number(e.target.value) })}
+                        />
+                      </label>
+                    </>
+                  )}
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      disabled={disabled}
+                      value={normalizeHex(column.color)}
+                      onChange={(e) => updateSelectedColumn({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={column.materialId || ''}
+                      onChange={(e) => updateSelectedColumn({ materialId: e.target.value || null })}
+                    >
+                      <option value="">(fallback color)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={column.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedColumn({ collidable: e.target.checked })}
+                    />
+                  </label>
+                </div>
+              </Collapsible>
+            )}
+
+            {curvedWall && (
+              <Collapsible title="Curved Wall" storageKey="details.curvedWall">
+                <div {...helpProps('details.curvedWall')}>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Radius</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={curvedWall.radius}
+                      onChange={(e) => updateSelectedCurvedWall({ radius: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Sweep Angle (°)</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      min={1}
+                      max={360}
+                      step={5}
+                      disabled={disabled}
+                      value={curvedWall.sweepAngle}
+                      onChange={(e) => updateSelectedCurvedWall({ sweepAngle: Number(e.target.value) })}
+                    />
+                  </label>
+                  <div className="bb-seg" style={{ marginBottom: 8 }}>
+                    {[45, 90, 180, 360].map((deg) => (
+                      <button
+                        key={deg}
+                        type="button"
+                        className={`bb-btn${Number(curvedWall.sweepAngle) === deg ? ' bb-btn--active' : ''}`}
+                        disabled={disabled}
+                        onClick={() => updateSelectedCurvedWall({ sweepAngle: deg })}
+                      >
+                        {deg}°
+                      </button>
+                    ))}
+                  </div>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Start Angle (°)</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={5}
+                      disabled={disabled}
+                      value={curvedWall.startAngle}
+                      onChange={(e) => updateSelectedCurvedWall({ startAngle: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Height</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={curvedWall.height}
+                      onChange={(e) => updateSelectedCurvedWall({ height: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Thickness</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={curvedWall.thickness}
+                      onChange={(e) => updateSelectedCurvedWall({ thickness: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Curve Resolution</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      min={4}
+                      max={128}
+                      step={1}
+                      disabled={disabled}
+                      value={curvedWall.curveResolution}
+                      onChange={(e) => updateSelectedCurvedWall({ curveResolution: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Clockwise</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(curvedWall.clockwise)}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedCurvedWall({ clockwise: e.target.checked })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      disabled={disabled}
+                      value={normalizeHex(curvedWall.color)}
+                      onChange={(e) => updateSelectedCurvedWall({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={curvedWall.materialId || ''}
+                      onChange={(e) => updateSelectedCurvedWall({ materialId: e.target.value || null })}
+                    >
+                      <option value="">(fallback color)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={curvedWall.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedCurvedWall({ collidable: e.target.checked })}
+                    />
+                  </label>
+                  <p className="bb-muted">
+                    Openings are not supported on curved walls. Cut doors/arches in adjacent straight wall segments.
+                  </p>
+                </div>
+              </Collapsible>
+            )}
+
+            {arch && (
+              <Collapsible title="Arch" storageKey="details.arch">
+                <div {...helpProps('details.arch')}>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Type</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={arch.archType}
+                      onChange={(e) => updateSelectedArch({ archType: e.target.value })}
+                    >
+                      <option value="roman">Roman (rounded)</option>
+                      <option value="gothic">Gothic (pointed)</option>
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Opening Width</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={arch.openingWidth}
+                      onChange={(e) => updateSelectedArch({ openingWidth: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Opening Height</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={arch.openingHeight}
+                      onChange={(e) => updateSelectedArch({ openingHeight: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Arch Rise</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={arch.archRise}
+                      onChange={(e) => updateSelectedArch({ archRise: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Thickness</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={arch.thickness}
+                      onChange={(e) => updateSelectedArch({ thickness: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Depth</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={arch.depth}
+                      onChange={(e) => updateSelectedArch({ depth: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Curve Resolution</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      min={4}
+                      max={64}
+                      step={1}
+                      disabled={disabled}
+                      value={arch.curveResolution}
+                      onChange={(e) => updateSelectedArch({ curveResolution: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      disabled={disabled}
+                      value={normalizeHex(arch.color)}
+                      onChange={(e) => updateSelectedArch({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={arch.materialId || ''}
+                      onChange={(e) => updateSelectedArch({ materialId: e.target.value || null })}
+                    >
+                      <option value="">(fallback color)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={arch.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedArch({ collidable: e.target.checked })}
+                    />
+                  </label>
+                  <p className="bb-muted">
+                    Freestanding arch with an open passage. Collision uses piers plus segmented arch solids.
                   </p>
                 </div>
               </Collapsible>

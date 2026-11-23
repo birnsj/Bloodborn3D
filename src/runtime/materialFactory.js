@@ -90,6 +90,9 @@ export async function createThreeMaterial(definition, mapResolver = () => null, 
     // Clone so UV transforms can differ per brush instance
     const clone = tex.clone();
     clone.needsUpdate = true;
+    if (options.maxAnisotropy) {
+      clone.anisotropy = options.maxAnisotropy;
+    }
     if (def.uvScale) {
       clone.repeat.set(def.uvScale.x || 1, def.uvScale.y || 1);
     }

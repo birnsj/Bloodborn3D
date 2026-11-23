@@ -7,6 +7,15 @@ import {
   getStairSteps,
   wedgeVerticesToMetersFlat,
 } from './stairGeometry.js';
+import {
+  columnPointsToMetersFlat,
+  getColumnColliderPoints,
+  getColumnCylinderCollider,
+} from './columnGeometry.js';
+import { getArchColliderSolids } from './archGeometry.js';
+import { getCurvedWallColliderSolids } from './curvedWallGeometry.js';
+import { brushHasMiters, miteredWallPointsToMetersFlat } from './miteredWallGeometry.js';
+import { isWallBrush } from './wallOpenings.js';
 
 let rapierReady = null;
 
@@ -70,6 +79,24 @@ export class PhysicsWorld {
         continue;
       }
 
+      const column = actor.getComponent('Column');
+      if (column && column.enabled && column.collidable !== false) {
+        this._addColumnCollider(actor, column);
+        continue;
+      }
+
+      const arch = actor.getComponent('Arch');
+      if (arch && arch.enabled && arch.collidable !== false) {
+        this._addArchColliders(actor, arch);
+        continue;
+      }
+
+      const curvedWall = actor.getComponent('CurvedWall');
+      if (curvedWall && curvedWall.enabled && curvedWall.collidable !== false) {
+        this._addCurvedWallColliders(actor, curvedWall);
+        continue;
+      }
+
       const mesh = actor.getComponent('StaticMesh');
       if (
         mesh
@@ -85,6 +112,37 @@ export class PhysicsWorld {
 
   _addBrushColliders(actor, brush, gameWorld = null) {
     const world = gameWorld || actor.world || null;
+    // Mitered wall without openings: one convex prism matching the visible mesh.
+    if (
+      brushHasMiters(brush)
+      && !(brush.openings?.length)
+      && isWallBrush(actor)
+    ) {
+      const worldXform = getWorldTransform(actor, world);
+      const pos = worldXform.position;
+      const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+      const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+      const desc = RAPIER.RigidBodyDesc.fixed()
+        .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+        .setRotation(eulerDegreesToQuat(rot));
+      const body = this.world.createRigidBody(desc);
+      const points = miteredWallPointsToMetersFlat(
+        brush.size,
+        brush.miterStart,
+        brush.miterEnd,
+        scale,
+      );
+      const colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+      if (!colliderDesc) {
+        this.world.removeRigidBody(body);
+        return;
+      }
+      colliderDesc.setFriction(0.9);
+      const collider = this.world.createCollider(colliderDesc, body);
+      this._bodies.set(actor.id, { body, colliders: [collider], actor });
+      return;
+    }
+
     const { solids } = getBrushRenderSolids(brush, world ? { world, actor } : null);
     if (!solids.length) return;
 
@@ -186,6 +244,112 @@ export class PhysicsWorld {
       .setRotation(eulerDegreesToQuat(slope.localRotation));
     const collider = this.world.createCollider(colliderDesc, body);
     this._bodies.set(actor.id, { body, colliders: [collider], actor });
+  }
+
+  _addColumnCollider(actor, column) {
+    const world = actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+
+    const cyl = getColumnCylinderCollider(column);
+    let colliderDesc = null;
+    if (cyl && column.shape === 'round') {
+      const sx = Math.abs(scale.x || 1);
+      const sy = Math.abs(scale.y || 1);
+      const sz = Math.abs(scale.z || 1);
+      const radial = Math.max(sx, sz);
+      colliderDesc = RAPIER.ColliderDesc.cylinder(
+        Math.max(0.01, toMeters(cyl.halfHeight) * sy),
+        Math.max(0.01, toMeters(cyl.radius) * radial),
+      ).setTranslation(
+        toMeters(cyl.localPosition.x * (scale.x || 1)),
+        toMeters(cyl.localPosition.y * (scale.y || 1)),
+        toMeters(cyl.localPosition.z * (scale.z || 1)),
+      );
+    } else {
+      const points = columnPointsToMetersFlat(getColumnColliderPoints(column), scale);
+      colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+    }
+    if (!colliderDesc) {
+      this.world.removeRigidBody(body);
+      return;
+    }
+    colliderDesc.setFriction(0.9);
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
+  }
+
+  _addArchColliders(actor, arch) {
+    const solids = getArchColliderSolids(arch);
+    if (!solids.length) return;
+    const world = actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    const colliders = [];
+    for (const solid of solids) {
+      const hx = Math.max(0.01, toMeters(solid.size.x) * 0.5 * Math.abs(scale.x || 1));
+      const hy = Math.max(0.01, toMeters(solid.size.y) * 0.5 * Math.abs(scale.y || 1));
+      const hz = Math.max(0.01, toMeters(solid.size.z) * 0.5 * Math.abs(scale.z || 1));
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+        .setTranslation(
+          toMeters(solid.center.x * (scale.x || 1)),
+          toMeters(solid.center.y * (scale.y || 1)),
+          toMeters(solid.center.z * (scale.z || 1)),
+        );
+      colliderDesc.setFriction(0.9);
+      colliders.push(this.world.createCollider(colliderDesc, body));
+    }
+    if (colliders.length) {
+      this._bodies.set(actor.id, { body, colliders, actor });
+    } else {
+      this.world.removeRigidBody(body);
+    }
+  }
+
+  _addCurvedWallColliders(actor, curvedWall) {
+    const solids = getCurvedWallColliderSolids(curvedWall);
+    if (!solids.length) return;
+    const world = actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    const colliders = [];
+    for (const solid of solids) {
+      const hx = Math.max(0.01, toMeters(solid.size.x) * 0.5 * Math.abs(scale.x || 1));
+      const hy = Math.max(0.01, toMeters(solid.size.y) * 0.5 * Math.abs(scale.y || 1));
+      const hz = Math.max(0.01, toMeters(solid.size.z) * 0.5 * Math.abs(scale.z || 1));
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+        .setTranslation(
+          toMeters(solid.center.x * (scale.x || 1)),
+          toMeters(solid.center.y * (scale.y || 1)),
+          toMeters(solid.center.z * (scale.z || 1)),
+        )
+        .setRotation(eulerDegreesToQuat(solid.localRotation || { x: 0, y: 0, z: 0 }));
+      colliderDesc.setFriction(0.9);
+      colliders.push(this.world.createCollider(colliderDesc, body));
+    }
+    if (colliders.length) {
+      this._bodies.set(actor.id, { body, colliders, actor });
+    } else {
+      this.world.removeRigidBody(body);
+    }
   }
 
   _addBoxCollider(actor, halfMeters) {
