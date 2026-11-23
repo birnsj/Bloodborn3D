@@ -1,0 +1,58 @@
+export const firstRoomLesson = {
+  id: 'first-room',
+  title: 'Build Your First Room',
+  summary: 'Create floors and walls, move them, snap to the grid, and resize faces.',
+  order: 2,
+  starterPath: 'tutorials/first-room.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Empty practice space',
+      body: 'You will build a simple room from scratch. Brushes are the solid blocks used for floors and walls.',
+      terms: [
+        { term: 'Brush', def: 'A solid building block (floor, wall, or box) you draw in the level.' },
+        { term: 'Grid snapping', def: 'Positions and sizes jump to neat increments so pieces line up.' },
+      ],
+      verify: { type: 'manualConfirm', label: 'Start building' },
+    },
+    {
+      id: 'create-floor',
+      title: 'Create a floor',
+      body: 'Click Floor in the toolbar, then click-drag on the ground grid in the Viewport to draw a floor slab.',
+      highlight: ['toolbar.floor'],
+      verify: { type: 'brushCreated', kind: 'floor', trackAs: 'floor1' },
+      failHint: 'Select the Floor tool, then drag a rectangle on the grid.',
+    },
+    {
+      id: 'create-wall',
+      title: 'Create a wall',
+      body: 'Click Wall in the toolbar, then drag along an edge of your floor to place a wall.',
+      highlight: ['toolbar.wall'],
+      verify: { type: 'brushCreated', kind: 'wall', trackAs: 'wall1' },
+      failHint: 'Select Wall, then drag in the Viewport.',
+    },
+    {
+      id: 'grid-size',
+      title: 'Change the grid',
+      body: 'Set Grid in the toolbar to 50. Larger grid steps make bigger, chunkier snaps.',
+      highlight: ['toolbar.grid'],
+      verify: { type: 'gridSizeIs', value: 50 },
+    },
+    {
+      id: 'move-wall',
+      title: 'Move the wall',
+      body: 'Click Select, select your wall, then drag a colored gizmo arrow — or change Position in Details.',
+      highlight: ['toolbar.select'],
+      verify: { type: 'transformChanged', trackAs: 'wall1' },
+      failHint: 'Select the wall you created, then move it.',
+      explain: 'Hold Alt while dragging the gizmo to move in fine 1-unit steps instead of the grid.',
+    },
+    {
+      id: 'resize-wall',
+      title: 'Resize a face',
+      body: 'With the wall selected, drag a face handle on the gizmo (or edit Size in Details). The opposite face should stay put when using the face gizmo.',
+      verify: { type: 'brushResized', trackAs: 'wall1' },
+      failHint: 'Change the wall’s size with the gizmo or Details.',
+    },
+  ],
+};

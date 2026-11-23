@@ -3,6 +3,7 @@ import { LayoutProvider } from './editor/layout/LayoutContext.jsx';
 import { AssetBrowserProvider } from './editor/assets/AssetBrowserContext.jsx';
 import { HoverHelpProvider } from './ui/hoverHelp/HoverHelpContext.jsx';
 import { EditorDialogProvider } from './ui/dialogs/EditorDialogContext.jsx';
+import { TutorialProvider } from './tutorials/TutorialProvider.jsx';
 import { EditorShell } from './editor/layout/EditorShell.jsx';
 
 export default function App() {
@@ -12,7 +13,9 @@ export default function App() {
         <EditorProvider>
           <LayoutProvider>
             <HoverHelpProvider>
-              <EditorShell />
+              <TutorialProvider>
+                <EditorShell />
+              </TutorialProvider>
             </HoverHelpProvider>
           </LayoutProvider>
         </EditorProvider>

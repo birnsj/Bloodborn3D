@@ -107,9 +107,13 @@ describe('hover help positioning', () => {
 
 describe('helpProps', () => {
   it('emits data attributes for help wiring', () => {
-    expect(helpProps('toolbar.select')).toEqual({ 'data-bb-help': 'toolbar.select' });
+    expect(helpProps('toolbar.select')).toEqual({
+      'data-bb-help': 'toolbar.select',
+      'data-bb-tutorial': 'toolbar.select',
+    });
     expect(helpProps('toolbar.undo', 'Nothing to undo.', 'extra')).toEqual({
       'data-bb-help': 'toolbar.undo',
+      'data-bb-tutorial': 'toolbar.undo',
       'data-bb-help-disabled': 'Nothing to undo.',
       'data-bb-help-meta': 'extra',
     });

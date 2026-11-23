@@ -8,6 +8,7 @@ import { StatusBar } from './StatusBar.jsx';
 import { PlaceholderWorkspace } from './PlaceholderWorkspace.jsx';
 import { LevelDockWorkspace } from './LevelDockWorkspace.jsx';
 import { HoverHelpLayer } from '../../ui/hoverHelp/HoverHelpContext.jsx';
+import { TutorialCoachMark } from '../../tutorials/TutorialCoachMark.jsx';
 
 export function EditorShell() {
   const { layout, setDockApi } = useLayout();
@@ -68,6 +69,7 @@ export function EditorShell() {
 
         <StatusBar />
         <HoverHelpLayer />
+        <TutorialCoachMark />
       </div>
     </div>
   );

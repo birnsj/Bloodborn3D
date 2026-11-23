@@ -15,6 +15,7 @@ export function createEmptySnapshot() {
     detailsVisible: true,
     contentVisible: true,
     assetViewerVisible: true,
+    tutorialsVisible: false,
     viewportMaximized: false,
   };
 }
@@ -52,6 +53,7 @@ export function normalizeSnapshot(raw) {
     detailsVisible: raw.detailsVisible !== false,
     contentVisible: raw.contentVisible !== false,
     assetViewerVisible: raw.assetViewerVisible !== false,
+    tutorialsVisible: Boolean(raw.tutorialsVisible),
     viewportMaximized: Boolean(raw.viewportMaximized),
   };
 }

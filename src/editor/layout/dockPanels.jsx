@@ -3,6 +3,7 @@ import { DetailsPanel } from './DetailsPanel.jsx';
 import { ContentBrowser } from './ContentBrowser.jsx';
 import { AssetViewer } from './AssetViewer.jsx';
 import { Viewport } from '../Viewport.jsx';
+import { TutorialsPanel } from '../../tutorials/TutorialsPanel.jsx';
 
 function DockPanelShell({ children, className = '' }) {
   return (
@@ -22,24 +23,30 @@ function ViewportDockPanel() {
 
 function OutlinerDockPanel() {
   return (
-    <DockPanelShell>
-      <SceneOutliner docked />
+    <DockPanelShell className="bb-dock-panel--outliner">
+      <div data-bb-tutorial="panel.outliner" className="bb-dock-panel__fill">
+        <SceneOutliner docked />
+      </div>
     </DockPanelShell>
   );
 }
 
 function DetailsDockPanel() {
   return (
-    <DockPanelShell>
-      <DetailsPanel docked />
+    <DockPanelShell className="bb-dock-panel--details">
+      <div data-bb-tutorial="panel.details" className="bb-dock-panel__fill">
+        <DetailsPanel docked />
+      </div>
     </DockPanelShell>
   );
 }
 
 function ContentDockPanel() {
   return (
-    <DockPanelShell>
-      <ContentBrowser docked />
+    <DockPanelShell className="bb-dock-panel--content">
+      <div data-bb-tutorial="panel.content" className="bb-dock-panel__fill">
+        <ContentBrowser docked />
+      </div>
     </DockPanelShell>
   );
 }
@@ -52,6 +59,14 @@ function AssetViewerDockPanel() {
   );
 }
 
+function TutorialsDockPanel() {
+  return (
+    <DockPanelShell className="bb-dock-panel--tutorials">
+      <TutorialsPanel docked />
+    </DockPanelShell>
+  );
+}
+
 /** Registered dockview component map (stable identity). */
 export const dockviewComponents = {
   viewport: ViewportDockPanel,
@@ -59,4 +74,5 @@ export const dockviewComponents = {
   details: DetailsDockPanel,
   content: ContentDockPanel,
   assetViewer: AssetViewerDockPanel,
+  tutorials: TutorialsDockPanel,
 };

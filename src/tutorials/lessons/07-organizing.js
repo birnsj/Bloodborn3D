@@ -1,0 +1,48 @@
+export const organizingLesson = {
+  id: 'organizing',
+  title: 'Organizing Levels',
+  summary: 'Use Cells, parenting, visibility, and locking to keep rooms tidy.',
+  order: 7,
+  starterPath: 'tutorials/openings.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Hierarchy',
+      body: 'Objects can be nested under parents. A Cell is a folder-like actor used to group a room’s contents.',
+      terms: [
+        { term: 'Cell', def: 'A grouping actor for organizing part of a level (like a room folder).' },
+        { term: 'Parenting', def: 'Attaching one object under another so they move together.' },
+      ],
+      verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'create-cell',
+      title: 'Create a Cell',
+      body: 'In the Scene Outliner, click + Cell.',
+      highlight: ['outliner.newCell'],
+      verify: { type: 'cellCreated', trackAs: 'cell1' },
+      failHint: 'Click + Cell in the Scene Outliner.',
+    },
+    {
+      id: 'select-wall',
+      title: 'Select the wall',
+      body: 'Select the wall you want to put inside the Cell.',
+      verify: { type: 'actorSelected', nameIncludes: 'Wall', hasBrush: true, trackAs: 'wall' },
+    },
+    {
+      id: 'parent-wall',
+      title: 'Parent the wall under the Cell',
+      body: 'With the wall selected, set Parent to your Cell in Details, or drag the wall onto the Cell in the Outliner.',
+      highlight: ['panel.outliner', 'panel.details'],
+      verify: { type: 'actorParented', childTrackAs: 'wall', parentTrackAs: 'cell1' },
+      failHint: 'Parent the wall under the Cell you created.',
+    },
+    {
+      id: 'lock',
+      title: 'Lock an object',
+      body: 'With the wall still selected (or select it again), turn on Locked in Details so it cannot be edited by accident.',
+      verify: { type: 'actorFlag', trackAs: 'wall', flag: 'locked' },
+      failHint: 'Enable Locked on the wall in Details.',
+    },
+  ],
+};

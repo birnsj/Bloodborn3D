@@ -1,0 +1,51 @@
+export const testingLesson = {
+  id: 'testing',
+  title: 'Testing',
+  summary: 'Use Undo/Redo, then Play and Stop to test collision.',
+  order: 9,
+  starterPath: 'tutorials/openings.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Edit vs Play',
+      body: 'Edit mode is for building. Play mode drops you into the level with physics. Stop restores your authored level.',
+      terms: [
+        { term: 'Play', def: 'Test the level in first person with collision.' },
+        { term: 'Undo', def: 'Reverse the last edit. Cleared when you enter or leave Play.' },
+      ],
+      verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'make-edit',
+      title: 'Make an undoable edit',
+      body: 'Select the wall and nudge its Position in Details (or move it slightly).',
+      verify: { type: 'canUndo' },
+      failHint: 'Move or edit something so Undo becomes available.',
+    },
+    {
+      id: 'undo',
+      title: 'Undo that edit',
+      body: 'Click Undo in the toolbar (or Ctrl+Z).',
+      highlight: ['toolbar.undo'],
+      verify: { type: 'undoConsumed' },
+      failHint: 'Press Undo after making a change.',
+    },
+    {
+      id: 'play',
+      title: 'Enter Play',
+      body: 'Click Play. Click the Viewport to capture the mouse, then WASD to walk. Esc releases the mouse.',
+      highlight: ['toolbar.play'],
+      verify: { type: 'modeIs', mode: 'play' },
+      failHint: 'Click Play.',
+      explain: 'Play clears the Undo history. That is normal.',
+    },
+    {
+      id: 'stop',
+      title: 'Stop and restore',
+      body: 'Click Stop. You return to Edit mode and the level matches what you had before Play.',
+      highlight: ['toolbar.stop'],
+      verify: { type: 'modeSequence', sequence: ['play', 'edit'] },
+      failHint: 'Click Stop after playing.',
+    },
+  ],
+};

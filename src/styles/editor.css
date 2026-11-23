@@ -25,6 +25,7 @@ select {
 
 /* Full-window host for STA-style UI view scale (transform, not browser zoom). */
 .bb-stage-viewport {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 100dvh;
@@ -1329,4 +1330,338 @@ select {
   justify-content: flex-end;
   gap: 6px;
   padding: 10px 12px 12px;
+}
+
+/* ——— Tutorials ——— */
+
+.bb-dock-panel__fill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bb-tutorials {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  color: var(--bb-text, #e8ecf2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bb-tutorials__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.bb-tutorials__lead {
+  margin: 0 0 10px;
+  color: var(--bb-muted, #9aa3b2);
+}
+
+.bb-tutorials-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bb-tutorials-list__item {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--bb-border, #3a4250);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  cursor: pointer;
+}
+
+.bb-tutorials-list__item:hover {
+  border-color: var(--bb-accent, #6aa2ff);
+  background: rgba(106, 162, 255, 0.08);
+}
+
+.bb-tutorials-list__order {
+  flex: 0 0 auto;
+  width: 1.5em;
+  font-weight: 700;
+  color: var(--bb-muted, #9aa3b2);
+}
+
+.bb-tutorials-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-tutorials-list__name {
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bb-tutorials-list__summary {
+  color: var(--bb-muted, #9aa3b2);
+}
+
+.bb-tutorials-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(80, 180, 120, 0.2);
+  color: #8fd6a8;
+}
+
+.bb-tutorials-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--bb-muted, #9aa3b2);
+  font-size: 11px;
+}
+
+.bb-tutorials-progress__bar {
+  height: 4px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bb-tutorials-progress__fill {
+  height: 100%;
+  background: var(--bb-accent, #6aa2ff);
+  transition: width 160ms ease;
+}
+
+.bb-tutorials-step__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.bb-tutorials-step__body {
+  margin: 0 0 10px;
+}
+
+.bb-tutorials-terms {
+  margin: 0 0 10px;
+  padding: 8px;
+  border: 1px solid var(--bb-border, #3a4250);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.bb-tutorials-terms__row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.bb-tutorials-terms__row:last-child {
+  margin-bottom: 0;
+}
+
+.bb-tutorials-terms dt {
+  margin: 0;
+  font-weight: 650;
+}
+
+.bb-tutorials-terms dd {
+  margin: 0;
+  color: var(--bb-muted, #9aa3b2);
+}
+
+.bb-tutorials-explain {
+  margin-bottom: 10px;
+}
+
+.bb-tutorials-explain__body {
+  margin: 6px 0 0;
+  color: var(--bb-muted, #9aa3b2);
+}
+
+.bb-tutorials-feedback {
+  margin: 0 0 10px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(220, 160, 70, 0.45);
+  background: rgba(220, 160, 70, 0.12);
+  color: #f0d19a;
+}
+
+.bb-tutorials-complete {
+  margin: 0 0 10px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(80, 180, 120, 0.45);
+  background: rgba(80, 180, 120, 0.12);
+  color: #8fd6a8;
+}
+
+.bb-tutorials-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bb-btn--primary {
+  background: var(--bb-accent, #6aa2ff);
+  color: #0b1020;
+  border-color: transparent;
+}
+
+.bb-btn--ghost {
+  background: transparent;
+}
+
+[data-bb-tutorial-lit='1'] {
+  outline: 2px solid var(--bb-accent, #6aa2ff) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(106, 162, 255, 0.18);
+  animation: bb-tutorial-pulse 1.4s ease-in-out infinite;
+  position: relative;
+  z-index: 5;
+}
+
+@keyframes bb-tutorial-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(106, 162, 255, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(106, 162, 255, 0.28);
+  }
+}
+
+.bb-tutorials-running {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--bb-border, #3a4250);
+  border-radius: 4px;
+  background: rgba(106, 162, 255, 0.08);
+}
+
+.bb-tutorials-running p {
+  margin: 0;
+}
+
+.bb-tutorials-terms--compact {
+  font-size: 11px;
+}
+
+/* Floating coach marks (independent of dock panels) */
+
+.bb-coach-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 80;
+}
+
+.bb-coach-spotlight {
+  position: absolute;
+  border: 2px solid var(--bb-accent, #6aa2ff);
+  border-radius: 4px;
+  box-shadow: 0 0 0 9999px rgba(8, 12, 18, 0.35);
+  pointer-events: none;
+  animation: bb-tutorial-pulse 1.4s ease-in-out infinite;
+}
+
+.bb-coach-card {
+  position: absolute;
+  pointer-events: auto;
+  padding: 12px 12px 10px;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  background: rgba(14, 18, 26, 0.96);
+  color: #f0f3f8;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bb-coach-card__chrome {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #9aa3b2;
+  font-size: 11px;
+}
+
+.bb-coach-card__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.bb-coach-card__body {
+  margin: 0 0 10px;
+}
+
+.bb-coach-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.bb-coach-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.bb-coach-arrow--below {
+  top: -10px;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid rgba(14, 18, 26, 0.96);
+  transform: translateX(-50%);
+}
+
+.bb-coach-arrow--above {
+  bottom: -10px;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(14, 18, 26, 0.96);
+  transform: translateX(-50%);
+}
+
+.bb-coach-arrow--right {
+  left: -10px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid rgba(14, 18, 26, 0.96);
+  transform: translateY(-50%);
+}
+
+.bb-coach-arrow--left {
+  right: -10px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid rgba(14, 18, 26, 0.96);
+  transform: translateY(-50%);
 }

@@ -34,6 +34,7 @@ function readWorkingSnapshot(layout) {
     detailsVisible: layout.detailsVisible,
     contentVisible: layout.contentVisible,
     assetViewerVisible: layout.assetViewerVisible,
+    tutorialsVisible: Boolean(layout.tutorialsVisible),
     viewportMaximized: layout.viewportMaximized,
   };
 }
@@ -136,6 +137,7 @@ export function LayoutProvider({ children }) {
         detailsVisible: snapshot.detailsVisible !== false,
         contentVisible: snapshot.contentVisible !== false,
         assetViewerVisible: snapshot.assetViewerVisible !== false,
+        tutorialsVisible: Boolean(snapshot.tutorialsVisible),
         viewportMaximized: Boolean(snapshot.viewportMaximized),
       };
       if (api) {
@@ -174,12 +176,22 @@ export function LayoutProvider({ children }) {
           ? 'content'
           : key === 'assetViewerVisible'
             ? 'assetViewer'
-            : null;
+            : key === 'tutorialsVisible'
+              ? 'tutorials'
+              : null;
     if (!panelKey || !api) return;
 
     const panel = api.getPanel(panelKey);
     if (panel) closePanelByKey(api, panelKey);
     else reopenPanel(api, panelKey);
+    persistDockLayout();
+  }, [persistDockLayout]);
+
+  /** Open a panel if closed; activate if already open. */
+  const ensurePanel = useCallback((panelKey) => {
+    const api = dockApiRef.current;
+    if (!api || !panelKey) return;
+    reopenPanel(api, panelKey);
     persistDockLayout();
   }, [persistDockLayout]);
 
@@ -278,6 +290,7 @@ export function LayoutProvider({ children }) {
     patch,
     setWorkspace,
     togglePanel,
+    ensurePanel,
     toggleMaximizeViewport,
     resetLayout,
     setUiScale,
@@ -304,6 +317,7 @@ export function LayoutProvider({ children }) {
     patch,
     setWorkspace,
     togglePanel,
+    ensurePanel,
     toggleMaximizeViewport,
     resetLayout,
     setUiScale,

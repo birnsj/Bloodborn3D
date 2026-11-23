@@ -14,6 +14,10 @@ export function Viewport() {
   const canvasRef = useRef(null);
   const orbitRef = useRef(null);
   const dragRef = useRef(null);
+  /** Edit-mode fly: RMB + WASD (Q/E up/down). */
+  const flyKeysRef = useRef(new Set());
+  const rmbDownRef = useRef(false);
+  const flyClockRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
 
   const {
     attachCanvas,
@@ -70,9 +74,79 @@ export function Viewport() {
     ro.observe(shell);
     const sizeRaf = requestAnimationFrame(applySize);
 
+    const onFlyKeyDown = (e) => {
+      if (e.repeat) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'].includes(e.code)) {
+        flyKeysRef.current.add(e.code);
+      }
+    };
+    const onFlyKeyUp = (e) => {
+      flyKeysRef.current.delete(e.code);
+    };
+    const onFlyBlur = () => {
+      flyKeysRef.current.clear();
+      rmbDownRef.current = false;
+    };
+    const onPointerDownFly = (e) => {
+      if (e.button === 2) rmbDownRef.current = true;
+    };
+    const onPointerUpFly = (e) => {
+      if (e.button === 2) rmbDownRef.current = false;
+    };
+    const onContextMenu = (e) => {
+      // Keep RMB for orbit/fly; suppress browser menu on the canvas.
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', onFlyKeyDown);
+    window.addEventListener('keyup', onFlyKeyUp);
+    window.addEventListener('blur', onFlyBlur);
+    canvas.addEventListener('pointerdown', onPointerDownFly);
+    window.addEventListener('pointerup', onPointerUpFly);
+    canvas.addEventListener('contextmenu', onContextMenu);
+
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    const move = new THREE.Vector3();
+    // ~4.5 m/s feel in editor units (100 eu = 1 m)
+    const FLY_SPEED = 450;
+
     let raf = 0;
+    flyClockRef.current = performance.now();
     const tick = () => {
-      if (runtime.mode === 'edit' && orbitRef.current) orbitRef.current.update();
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - flyClockRef.current) / 1000);
+      flyClockRef.current = now;
+
+      if (runtime.mode === 'edit' && orbitRef.current) {
+        const controls = orbitRef.current;
+        const keys = flyKeysRef.current;
+        // Hold right mouse + WASD to fly (Unreal/Unity-style); Q/E vertical.
+        if (rmbDownRef.current && keys.size > 0) {
+          const cam = runtime.sceneView.camera;
+          cam.getWorldDirection(forward);
+          forward.normalize();
+          right.crossVectors(forward, up).normalize();
+          move.set(0, 0, 0);
+          if (keys.has('KeyW')) move.add(forward);
+          if (keys.has('KeyS')) move.sub(forward);
+          if (keys.has('KeyD')) move.add(right);
+          if (keys.has('KeyA')) move.sub(right);
+          if (keys.has('KeyE')) move.y += 1;
+          if (keys.has('KeyQ')) move.y -= 1;
+          if (move.lengthSq() > 0) {
+            move.normalize().multiplyScalar(FLY_SPEED * dt);
+            // Convert editor-unit speed → meters for Three camera (scene is meters).
+            const meters = move.multiplyScalar(0.01);
+            cam.position.add(meters);
+            controls.target.add(meters);
+          }
+        }
+        controls.update();
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -81,9 +155,17 @@ export function Viewport() {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(sizeRaf);
       ro.disconnect();
+      window.removeEventListener('keydown', onFlyKeyDown);
+      window.removeEventListener('keyup', onFlyKeyUp);
+      window.removeEventListener('blur', onFlyBlur);
+      canvas.removeEventListener('pointerdown', onPointerDownFly);
+      window.removeEventListener('pointerup', onPointerUpFly);
+      canvas.removeEventListener('contextmenu', onContextMenu);
       controls.dispose();
       runtime.dispose();
       orbitRef.current = null;
+      flyKeysRef.current.clear();
+      rmbDownRef.current = false;
     };
   }, [attachCanvas]);
 
@@ -367,10 +449,10 @@ export function Viewport() {
     if (mode !== 'edit') {
       return 'Click to lock mouse · WASD move · Mouse look · Space jump · Esc release';
     }
-    if (tool === 'box') return 'Drag on grid to create a box · RMB/MMB orbit';
-    if (tool === 'wall') return 'Drag on grid to create a wall · RMB/MMB orbit';
-    if (tool === 'floor') return 'Drag on grid to create a floor · RMB/MMB orbit';
-    return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB/MMB orbit';
+    if (tool === 'box') return 'Drag on grid to create a box · RMB orbit · RMB+WASD fly · MMB zoom';
+    if (tool === 'wall') return 'Drag on grid to create a wall · RMB orbit · RMB+WASD fly · MMB zoom';
+    if (tool === 'floor') return 'Drag on grid to create a floor · RMB orbit · RMB+WASD fly · MMB zoom';
+    return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · RMB+WASD fly · Q/E up/down · MMB zoom';
   };
 
   return (

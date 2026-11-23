@@ -93,6 +93,14 @@ export function EditorProvider({ children }) {
   const [gridSize, setGridSizeState] = useState(DEFAULT_GRID_EDITOR_UNITS);
   const [revision, setRevision] = useState(0);
   const [historyFlags, setHistoryFlags] = useState({ canUndo: false, canRedo: false });
+  /** @type {[{ kind: 'project'|'tutorial', readOnlyDisk: boolean, lessonId: string|null, displayName: string }]} */
+  const [levelSession, setLevelSession] = useState({
+    kind: 'project',
+    readOnlyDisk: false,
+    lessonId: null,
+    displayName: null,
+  });
+  const sessionStackRef = useRef([]);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -179,37 +187,32 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.setGridSize(size);
   }, []);
 
-  const loadLevel = useCallback(async (name) => {
-    setStatus(`Loading ${name}…`);
-    const data = await loadLevelFile(name);
-    const next = deserializeLevel(data);
+  const applyLevelData = useCallback((data, {
+    fileName = null,
+    session = null,
+    statusMessage = null,
+  } = {}) => {
+    const resolved = (data && typeof data.addActor === 'function')
+      ? data
+      : deserializeLevel(data);
+
     historyRef.current.clear();
-    setWorld(next);
-    setLevelName(name);
+    setWorld(resolved);
+    if (fileName != null) setLevelName(fileName);
     setSelectedActorIds([]);
     setTool('select');
+    if (session) setLevelSession(session);
     if (runtimeRef.current) {
       if (runtimeRef.current.mode === 'play') {
         runtimeRef.current.stop();
       }
-      runtimeRef.current.setWorld(next);
+      runtimeRef.current.setWorld(resolved);
       runtimeRef.current.setSelection([]);
     }
-    setStatus(`Loaded ${name}`);
+    if (statusMessage) setStatus(statusMessage);
     bump();
-    return next;
+    return resolved;
   }, [bump, setStatus]);
-
-  const saveLevel = useCallback(async () => {
-    if (!world) return;
-    if (runtimeRef.current?.mode === 'play') {
-      notify('Stop Play before saving');
-      return;
-    }
-    const data = serializeLevel(world);
-    await saveLevelFile(levelName, data);
-    notify(`Saved ${levelName}`);
-  }, [world, levelName, notify]);
 
   const refreshLevels = useCallback(async () => {
     try {
@@ -219,6 +222,152 @@ export function EditorProvider({ children }) {
       notify(`Level list failed: ${err.message}`);
     }
   }, [notify]);
+
+  const loadLevel = useCallback(async (name) => {
+    setStatus(`Loading ${name}…`);
+    const data = await loadLevelFile(name);
+    return applyLevelData(data, {
+      fileName: name,
+      session: {
+        kind: 'project',
+        readOnlyDisk: false,
+        lessonId: null,
+        displayName: name,
+      },
+      statusMessage: `Loaded ${name}`,
+    });
+  }, [applyLevelData, setStatus]);
+
+  const beginTutorialSession = useCallback(async ({ lessonId, levelData, starterPath }) => {
+    if (!lessonId) throw new Error('beginTutorialSession requires lessonId');
+    if (runtimeRef.current?.mode === 'play') {
+      runtimeRef.current.stop();
+      setMode('edit');
+    }
+    const currentWorld = worldRef.current;
+    if (currentWorld) {
+      sessionStackRef.current.push({
+        snapshot: serializeLevel(currentWorld),
+        levelName,
+        session: { ...levelSession },
+      });
+    }
+    let data = levelData;
+    if (!data && starterPath) {
+      // Static public path (supports tutorials/ subfolder); not the basename-only file API.
+      const res = await fetch(`/levels/${starterPath}`);
+      if (!res.ok) throw new Error(`Failed to load tutorial starter: ${starterPath}`);
+      data = await res.json();
+    }
+    if (!data) throw new Error('Tutorial starter level data missing');
+    return applyLevelData(data, {
+      fileName: levelName, // keep project filename for restore; disk writes blocked
+      session: {
+        kind: 'tutorial',
+        readOnlyDisk: true,
+        lessonId,
+        displayName: starterPath || lessonId,
+      },
+      statusMessage: `Tutorial: ${lessonId}`,
+    });
+  }, [applyLevelData, levelName, levelSession]);
+
+  const endTutorialSession = useCallback(() => {
+    const prev = sessionStackRef.current.pop();
+    if (!prev) {
+      setLevelSession({
+        kind: 'project',
+        readOnlyDisk: false,
+        lessonId: null,
+        displayName: null,
+      });
+      return null;
+    }
+    return applyLevelData(prev.snapshot, {
+      fileName: prev.levelName,
+      session: prev.session || {
+        kind: 'project',
+        readOnlyDisk: false,
+        lessonId: null,
+        displayName: prev.levelName,
+      },
+      statusMessage: `Restored ${prev.levelName}`,
+    });
+  }, [applyLevelData]);
+
+  const restartTutorialSession = useCallback(async ({ lessonId, levelData, starterPath }) => {
+    // Replace current tutorial world without popping the project stack entry.
+    if (levelSession.kind !== 'tutorial') {
+      return beginTutorialSession({ lessonId, levelData, starterPath });
+    }
+    let data = levelData;
+    if (!data && starterPath) {
+      const res = await fetch(`/levels/${starterPath}`);
+      if (!res.ok) throw new Error(`Failed to load tutorial starter: ${starterPath}`);
+      data = await res.json();
+    }
+    return applyLevelData(data, {
+      fileName: levelName,
+      session: {
+        kind: 'tutorial',
+        readOnlyDisk: true,
+        lessonId: lessonId || levelSession.lessonId,
+        displayName: starterPath || levelSession.displayName,
+      },
+      statusMessage: 'Tutorial restarted',
+    });
+  }, [applyLevelData, beginTutorialSession, levelName, levelSession]);
+
+  const saveTutorialWorkAs = useCallback(async (fileName) => {
+    if (!world) return null;
+    if (runtimeRef.current?.mode === 'play') {
+      notify('Stop Play before saving');
+      return null;
+    }
+    let name = String(fileName || '').trim();
+    if (!name) return null;
+    if (!name.endsWith('.json')) name = `${name}.json`;
+    // Basename only — matches level file API safety rules.
+    name = name.split(/[/\\]/).pop();
+    const data = serializeLevel(world);
+    data.name = data.name || name.replace(/\.json$/i, '');
+    await saveLevelFile(name, data);
+    // Exit tutorial into a normal project session targeting the new file.
+    sessionStackRef.current = [];
+    setLevelSession({
+      kind: 'project',
+      readOnlyDisk: false,
+      lessonId: null,
+      displayName: name,
+    });
+    setLevelName(name);
+    notify(`Saved tutorial work as ${name}`);
+    await refreshLevels();
+    return name;
+  }, [world, notify, refreshLevels]);
+
+  const saveLevel = useCallback(async () => {
+    if (!world) return;
+    if (runtimeRef.current?.mode === 'play') {
+      notify('Stop Play before saving');
+      return;
+    }
+    if (levelSession.readOnlyDisk || levelSession.kind === 'tutorial') {
+      const name = await dialogs.prompt(
+        'Tutorial levels are not saved over your project. Enter a new level filename to keep this work:',
+        {
+          title: 'Save tutorial work as…',
+          initialValue: 'my-tutorial-room.json',
+        },
+      );
+      if (!name) return;
+      await saveTutorialWorkAs(name);
+      return;
+    }
+    const data = serializeLevel(world);
+    await saveLevelFile(levelName, data);
+    notify(`Saved ${levelName}`);
+  }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs]);
 
   useEffect(() => {
     refreshLevels().then(() => loadLevel('test-room.json')).catch((err) => {
@@ -1035,6 +1184,12 @@ export function EditorProvider({ children }) {
     attachCanvas,
     loadLevel,
     saveLevel,
+    applyLevelData,
+    levelSession,
+    beginTutorialSession,
+    endTutorialSession,
+    restartTutorialSession,
+    saveTutorialWorkAs,
     refreshLevels,
     selectActor,
     selectActors,

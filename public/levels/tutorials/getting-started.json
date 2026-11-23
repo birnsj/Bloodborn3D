@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "name": "Tutorial Getting Started",
+  "actors": [
+    {
+      "id": "actor_tutorial_floor",
+      "name": "Practice Floor",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_tutorial_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 600, "y": 20, "z": 600 },
+          "color": "#5a6270",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_tutorial_wall",
+      "name": "Practice Wall",
+      "transform": {
+        "position": { "x": 0, "y": 160, "z": -310 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_tutorial_wall",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 600, "y": 300, "z": 20 },
+          "color": "#7a8494",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_tutorial_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 100 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_tutorial_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

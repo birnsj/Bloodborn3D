@@ -4,7 +4,11 @@
  */
 export function helpProps(id, disabledReason = null, meta = null) {
   if (!id) return {};
-  const props = { 'data-bb-help': id };
+  const props = {
+    'data-bb-help': id,
+    // Same stable ids drive tutorial highlight targeting.
+    'data-bb-tutorial': id,
+  };
   if (disabledReason) {
     props['data-bb-help-disabled'] = String(disabledReason);
   }

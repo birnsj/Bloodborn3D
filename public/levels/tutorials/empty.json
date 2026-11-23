@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 2,
+  "name": "Tutorial Empty",
+  "actors": [
+    {
+      "id": "actor_tutorial_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 100 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_tutorial_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { useEditor } from '../EditorContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { useTutorials } from '../../tutorials/TutorialProvider.jsx';
 
 function Menu({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -129,6 +130,7 @@ export function AppMenuBar() {
     factoryLayoutId,
   } = useLayout();
   const { showHoverHelp, setShowHoverHelp } = useHoverHelp();
+  const { openTutorialsPanel, startLesson, lessons } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
 
   const isPlay = mode === 'play';
@@ -284,6 +286,11 @@ export function AppMenuBar() {
               close={close}
               onClick={() => togglePanel('assetViewerVisible')}
             />
+            <Item
+              label={`${layout.tutorialsVisible ? 'Hide' : 'Show'} Tutorials`}
+              close={close}
+              onClick={() => togglePanel('tutorialsVisible')}
+            />
             <Sep />
             <Item
               label={layout.viewportMaximized ? 'Restore Viewport' : 'Maximize Viewport'}
@@ -348,7 +355,31 @@ export function AppMenuBar() {
               onClick={() => setShowHoverHelp(!showHoverHelp)}
             />
             <Sep />
-            <Item label="BloodBound Phase 2C — cells, prefabs, hover help" disabled close={close} />
+            <Item
+              label="Tutorials…"
+              close={close}
+              onClick={() => openTutorialsPanel()}
+            />
+            <SubMenu label="Start Lesson">
+              {(subClose) => {
+                const done = () => {
+                  subClose();
+                  close();
+                };
+                return (
+                  <>
+                    {lessons.map((lesson) => (
+                      <Item
+                        key={lesson.id}
+                        label={`${lesson.order}. ${lesson.title}`}
+                        close={done}
+                        onClick={() => { void startLesson(lesson.id); }}
+                      />
+                    ))}
+                  </>
+                );
+              }}
+            </SubMenu>
           </>
         )}
       </Menu>
