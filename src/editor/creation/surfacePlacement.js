@@ -178,18 +178,22 @@ export function computePlacePose(hit, {
 
 /**
  * Default footprint (min/max) for dropping a structural tool without drag-to-size.
+ * Corners are whole grid cells so created geo edges land on the construction grid.
  */
 export function defaultFootprintAt(kind, center, gridSize = 25) {
   const g = Math.max(1, gridSize);
-  const cx = center.x;
+  const cx = snapToGrid(center.x, g);
   const cy = center.y ?? 0;
-  const cz = center.z;
-  const half = Math.max(g * 2, 50);
+  const cz = snapToGrid(center.z, g);
+  const half = Math.max(g * 2, snapToGrid(50, g) || g * 2);
+  const rampHalfX = Math.max(g * 2, snapToGrid(half * 0.6, g) || g * 2);
+  const boxHalf = Math.max(g * 2, snapToGrid(half * 0.5, g) || g * 2);
 
   if (kind === 'wall') {
+    // One cell thick from the snapped point; length along Z in whole cells.
     return {
-      min: { x: cx - g / 2, y: cy, z: cz - half },
-      max: { x: cx + g / 2, y: cy, z: cz + half },
+      min: { x: cx, y: cy, z: cz - half },
+      max: { x: cx + g, y: cy, z: cz + half },
     };
   }
   if (kind === 'floor' || kind === 'ceiling') {
@@ -200,14 +204,14 @@ export function defaultFootprintAt(kind, center, gridSize = 25) {
   }
   if (kind === 'ramp' || kind === 'stair') {
     return {
-      min: { x: cx - half * 0.6, y: cy, z: cz - half },
-      max: { x: cx + half * 0.6, y: cy, z: cz + half },
+      min: { x: cx - rampHalfX, y: cy, z: cz - half },
+      max: { x: cx + rampHalfX, y: cy, z: cz + half },
     };
   }
   // box / subtract
   return {
-    min: { x: cx - half * 0.5, y: cy, z: cz - half * 0.5 },
-    max: { x: cx + half * 0.5, y: cy + g, z: cz + half * 0.5 },
+    min: { x: cx - boxHalf, y: cy, z: cz - boxHalf },
+    max: { x: cx + boxHalf, y: cy + g, z: cz + boxHalf },
   };
 }
 

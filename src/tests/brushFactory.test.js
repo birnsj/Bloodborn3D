@@ -18,8 +18,12 @@ describe('brushFactory', () => {
     });
     const brush = wall.getComponent('Brush');
     expect(brush.size.y).toBe(300);
-    expect(wall.transform.position.x % 12.5 === 0 || Number.isFinite(wall.transform.position.x)).toBe(true);
-    expect(brush.size.x % 25 === 0 || brush.size.z % 25 === 0).toBe(true);
+    // Wide short-axis drag: thickness grows from min face so edges sit on grid.
+    expect(brush.size.z).toBe(25);
+    const wallMinZ = wall.transform.position.z - brush.size.z / 2;
+    const wallMaxZ = wall.transform.position.z + brush.size.z / 2;
+    expect(wallMinZ).toBe(0);
+    expect(wallMaxZ).toBe(25);
 
     const floor = createBrushFromBounds({
       kind: 'floor',
@@ -28,6 +32,9 @@ describe('brushFactory', () => {
       gridSize: 25,
     });
     expect(floor.getComponent('Brush').size.y).toBe(20);
+    const floorBrush = floor.getComponent('Brush');
+    expect(floor.transform.position.x - floorBrush.size.x / 2).toBe(0);
+    expect(floor.transform.position.x + floorBrush.size.x / 2).toBe(300);
 
     const box = createBrushFromBounds({
       kind: 'box',

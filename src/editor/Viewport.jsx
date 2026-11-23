@@ -7,6 +7,7 @@ import {
   snapToGrid,
   WALL_MODULE_SIZE,
 } from '../core/units.js';
+import { getBrushSnapSize, snapMovedAxis } from './gridSnap.js';
 import { resizeBrushFace } from './brushFactory.js';
 import { IconMaximize, IconRestore } from '../ui/icons.jsx';
 import { findAsset } from '../assets/AssetRegistry.js';
@@ -53,13 +54,20 @@ export function Viewport() {
     mode,
     tool,
     setTool,
+    transformMode,
+    setTransformMode,
     selectActor,
+    selectAllActors,
+    deselectAllActors,
+    cycleGridSize,
+    toggleGridSnap,
     selectedActorIds,
     world,
     gridSize,
     gridSnap,
     createBrushAtBounds,
     previewActorPositions,
+    previewActorLocalTransforms,
     previewBrushGeometry,
     commitTransforms,
     commitBrushGeometry,
@@ -372,14 +380,75 @@ export function Viewport() {
   }, [mode]);
 
   useEffect(() => {
+    runtimeRef.current?.sceneView?.setTransformMode?.(transformMode);
+  }, [runtimeRef, transformMode]);
+
+  const focusSelected = useCallback(() => {
+    const sceneView = runtimeRef.current?.sceneView;
+    const controls = orbitRef.current;
+    if (!sceneView || !controls || selectedActorIds.length === 0) return;
+
+    const box = new THREE.Box3();
+    let has = false;
+    for (const id of selectedActorIds) {
+      const entry = sceneView._actorMeshes?.get(id);
+      if (!entry?.group) continue;
+      box.expandByObject(entry.group);
+      has = true;
+    }
+    if (!has || box.isEmpty()) return;
+
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    const radius = Math.max(size.length() * 0.5, 0.35);
+
+    const camera = sceneView.camera;
+    const fov = THREE.MathUtils.degToRad(camera.fov);
+    const dist = Math.max((radius / Math.sin(fov * 0.5)) * 1.2, 1.5);
+
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    if (dir.lengthSq() < 1e-6) dir.set(0.55, -0.35, 0.75);
+    dir.normalize();
+
+    // Leave free-fly so orbit framing sticks.
+    flyModeRef.current = false;
+    lookRef.current.active = false;
+    lookRef.current.pointerId = null;
+    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+
+    controls.target.copy(center);
+    camera.position.copy(center).addScaledVector(dir, -dist);
+    camera.lookAt(center);
+    lookRef.current.distance = dist;
+    const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+    lookRef.current.yaw = lookEuler.y;
+    lookRef.current.pitch = lookEuler.x;
+    controls.update();
+  }, [runtimeRef, selectedActorIds]);
+
+  useEffect(() => {
+    const onFocusEvent = () => focusSelected();
+    window.addEventListener('bb:focus-selection', onFocusEvent);
+    return () => window.removeEventListener('bb:focus-selection', onFocusEvent);
+  }, [focusSelected]);
+
+  useEffect(() => {
     const onKeyDown = (e) => {
       if (mode !== 'edit') return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
-      if (e.key === 'Escape' && placeSessionRef.current) {
+      if (e.key === 'Escape') {
         e.preventDefault();
-        clearPlacementSession();
+        if (placeSessionRef.current) {
+          clearPlacementSession();
+        } else {
+          deselectAllActors();
+        }
         return;
       }
       if (e.key === 'Tab' && placeSessionRef.current) {
@@ -399,6 +468,33 @@ export function Viewport() {
         return;
       }
 
+      // W/E/R — transform · F — focus · [ ] — grid · Shift+G — snap
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'w') {
+          setTransformMode('move');
+          setTool('select');
+        } else if (k === 'e') {
+          setTransformMode('rotate');
+          setTool('select');
+        } else if (k === 'r') {
+          setTransformMode('scale');
+          setTool('select');
+        } else if (k === 'f') {
+          e.preventDefault();
+          focusSelected();
+        } else if (e.key === '[') {
+          e.preventDefault();
+          cycleGridSize(-1);
+        } else if (e.key === ']') {
+          e.preventDefault();
+          cycleGridSize(1);
+        } else if (k === 'g' && e.shiftKey) {
+          e.preventDefault();
+          toggleGridSnap();
+        }
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveLevel();
@@ -414,6 +510,9 @@ export function Viewport() {
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        selectAllActors();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSelected();
@@ -427,10 +526,17 @@ export function Viewport() {
     redo,
     duplicateSelected,
     deleteSelected,
+    selectAllActors,
+    deselectAllActors,
+    cycleGridSize,
+    toggleGridSnap,
+    setTransformMode,
+    setTool,
     saveLevel,
     clearPlacementSession,
     resolveSurfacePose,
     updatePlacementPreview,
+    focusSelected,
   ]);
 
   const pointerNorm = (e) => {
@@ -504,10 +610,13 @@ export function Viewport() {
           } else {
             startPos = worldPos || { ...actor.transform.position };
           }
+          // Brushes: edge snap via AABB size. Props: pivot snap (size null).
+          const snapSize = getBrushSnapSize(actor);
           return {
             actorId: id,
             before: actor.transform.toJSON(),
             startPos,
+            snapSize,
           };
         }).filter(Boolean);
 
@@ -541,6 +650,36 @@ export function Viewport() {
             size: { ...brush.size },
             position: worldPos,
           },
+        };
+      } else if (gizmoHit.kind === 'rotate') {
+        const beforeStates = selectedActorIds.map((id) => {
+          const actor = world.getActor(id);
+          if (!actor) return null;
+          return {
+            actorId: id,
+            before: actor.transform.toJSON(),
+            startRot: { ...actor.transform.rotation },
+          };
+        }).filter(Boolean);
+        dragRef.current = {
+          type: 'rotate',
+          axis: gizmoHit.axis,
+          beforeStates,
+        };
+      } else if (gizmoHit.kind === 'scale') {
+        const beforeStates = selectedActorIds.map((id) => {
+          const actor = world.getActor(id);
+          if (!actor) return null;
+          return {
+            actorId: id,
+            before: actor.transform.toJSON(),
+            startScale: { ...actor.transform.scale },
+          };
+        }).filter(Boolean);
+        dragRef.current = {
+          type: 'scale',
+          axis: gizmoHit.axis,
+          beforeStates,
         };
       }
 
@@ -605,15 +744,56 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
-      // Hold Alt to temporarily disable grid snapping during gizmo drags.
-      const snap = e.altKey || !gridSnap ? 1 : gridSize;
-      const delta = snapToGrid(sample.deltaEditor, snap);
+      // Snap off = freeform. Alt = temporary 1-unit snap. Otherwise construction grid.
+      const freeMove = !gridSnap && !e.altKey;
+      const snapStep = e.altKey ? 1 : gridSize;
+      const delta = sample.deltaEditor;
       const updates = drag.beforeStates.map((s) => {
         const position = { ...s.startPos };
-        position[drag.axis] = snapToGrid(s.startPos[drag.axis] + delta, snap);
+        const sizeAlong = s.snapSize?.[drag.axis] ?? null;
+        if (freeMove) {
+          position[drag.axis] = s.startPos[drag.axis] + delta;
+        } else {
+          position[drag.axis] = snapMovedAxis({
+            startValue: s.startPos[drag.axis],
+            delta,
+            gridSize: snapStep,
+            sizeAlongAxis: sizeAlong,
+          });
+        }
         return { actorId: s.actorId, position };
       });
       previewActorPositions(updates);
+      return;
+    }
+
+    if (drag.type === 'rotate') {
+      const raycaster = sceneView.getRaycaster(nx, ny);
+      const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
+      if (!sample || sample.deltaDegrees == null) return;
+      const raw = sample.deltaDegrees;
+      const snapDeg = e.altKey ? raw : Math.round(raw / 5) * 5;
+      const updates = drag.beforeStates.map((s) => {
+        const rotation = { ...s.startRot };
+        rotation[drag.axis] = s.startRot[drag.axis] + snapDeg;
+        return { actorId: s.actorId, rotation };
+      });
+      previewActorLocalTransforms(updates);
+      return;
+    }
+
+    if (drag.type === 'scale') {
+      const raycaster = sceneView.getRaycaster(nx, ny);
+      const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
+      if (!sample || sample.deltaEditor == null) return;
+      // 100 editor units of drag ≈ +1.0 scale on that axis.
+      const factor = sample.deltaEditor / 100;
+      const updates = drag.beforeStates.map((s) => {
+        const scale = { ...s.startScale };
+        scale[drag.axis] = Math.max(0.01, s.startScale[drag.axis] + factor);
+        return { actorId: s.actorId, scale };
+      });
+      previewActorLocalTransforms(updates);
       return;
     }
 
@@ -690,8 +870,9 @@ export function Viewport() {
             : drag.current.y,
         z: drag.current.z,
       });
-    } else if (drag.type === 'move') {
+    } else if (drag.type === 'move' || drag.type === 'rotate' || drag.type === 'scale') {
       runtimeRef.current?.sceneView.gizmo.endDrag();
+      const label = drag.type === 'move' ? 'Move' : drag.type === 'rotate' ? 'Rotate' : 'Scale';
       const changes = drag.beforeStates.map((s) => {
         const actor = world.getActor(s.actorId);
         return {
@@ -700,7 +881,7 @@ export function Viewport() {
           after: actor ? actor.transform.toJSON() : s.before,
         };
       });
-      commitTransforms(changes, 'Move');
+      commitTransforms(changes, label);
     } else if (drag.type === 'resize') {
       runtimeRef.current?.sceneView.gizmo.endDrag();
       const actor = world.getActor(drag.actorId);
@@ -741,7 +922,7 @@ export function Viewport() {
     if (tool === 'curvedWall') return 'Drag on grid to create a curved wall · near-square → circle · RMB orbit · WASD free-fly · Q/E · Shift boost';
     if (tool === 'archRoman' || tool === 'archGothic' || tool === 'arch') return 'Drag on grid to create an arch · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    return `LMB select · Ctrl+LMB multi · W move · E rotate · R scale (${transformMode}) · F focus · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly · Q/E up/down · Shift boost · MMB pan · wheel zoom`;
   };
 
   const onCanvasDragOver = (e) => {

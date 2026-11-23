@@ -20,11 +20,11 @@ import {
   TEXTURE_TILE_EDITOR_UNITS,
 } from './brushGeometry.js';
 import { isSubtractBrush } from './brushBoolean.js';
-import { createRampWedgeGeometry, getRampAabbSize } from './rampGeometry.js';
+import { createRampWedgeGeometry } from './rampGeometry.js';
 import { createStairGeometry } from './stairGeometry.js';
-import { createColumnGeometry, getColumnAabbSize } from './columnGeometry.js';
-import { createArchGeometry, getArchAabbSize } from './archGeometry.js';
-import { createCurvedWallGeometry, getCurvedWallAabbSize } from './curvedWallGeometry.js';
+import { createColumnGeometry } from './columnGeometry.js';
+import { createArchGeometry } from './archGeometry.js';
+import { createCurvedWallGeometry } from './curvedWallGeometry.js';
 import { brushHasMiters, createMiteredWallGeometry } from './miteredWallGeometry.js';
 import {
   createThreeMaterial,
@@ -232,6 +232,13 @@ export class SceneView {
     const scale = actor.transform.scale;
     entry.group.scale.set(scale.x, scale.y, scale.z);
     entry.group.visible = isEffectivelyVisible(actor, actor.world);
+    // Spot / directional lights need target matrices current after the group moves.
+    entry.group.updateMatrixWorld(true);
+    entry.group.traverse((obj) => {
+      if (obj.isLight && obj.target) {
+        obj.target.updateMatrixWorld(true);
+      }
+    });
     if (this.selectedActorIds.includes(actor.id)) {
       this.setSelection(this.selectedActorIds, actor.world);
     }
@@ -947,6 +954,10 @@ export class SceneView {
     this._updateGizmo(world);
   }
 
+  setTransformMode(mode) {
+    this.gizmo?.setMode?.(mode);
+  }
+
   _updateGizmo(world) {
     if (!this.gizmo || !this.editMode) return;
     const brushStates = [];
@@ -955,34 +966,12 @@ export class SceneView {
       const actor = world?.getActor?.(id) || this._actorMeshes.get(id)?.actor;
       if (!actor) continue;
       const brush = actor.getComponent?.('Brush');
-      const ramp = actor.getComponent?.('Ramp');
-      const stair = actor.getComponent?.('Stair');
-      const column = actor.getComponent?.('Column');
-      const arch = actor.getComponent?.('Arch');
-      const curvedWall = actor.getComponent?.('CurvedWall');
-      if (!brush && !ramp && !stair && !column && !arch && !curvedWall) continue;
       const worldPos = getWorldTransform(actor, world || actor.world).position;
       const state = {
         position: { ...worldPos },
-        // Parametric actors: move only (edit dimensions in Details).
+        // Face-scale handles only for brushes (parametric actors keep size in Details).
         size: brush ? { ...brush.size } : undefined,
       };
-      if (ramp && !brush) {
-        state.size = undefined;
-        state.aabb = getRampAabbSize(ramp);
-      }
-      if (column && !brush) {
-        state.size = undefined;
-        state.aabb = getColumnAabbSize(column);
-      }
-      if (arch && !brush) {
-        state.size = undefined;
-        state.aabb = getArchAabbSize(arch);
-      }
-      if (curvedWall && !brush) {
-        state.size = undefined;
-        state.aabb = getCurvedWallAabbSize(curvedWall);
-      }
       brushStates.push(state);
       if (!primary) primary = state;
     }

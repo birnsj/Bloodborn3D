@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 const EditorDialogContext = createContext(null);
 
@@ -73,6 +74,7 @@ export function EditorDialogProvider({ children }) {
     message: String(message ?? ''),
     confirmLabel: options.confirmLabel || 'OK',
     tone: options.tone || toneForMessage(message),
+    wide: Boolean(options.wide),
   }), [enqueue]);
 
   const confirm = useCallback((message, options = {}) => enqueue({
@@ -101,74 +103,78 @@ export function EditorDialogProvider({ children }) {
     isOpen: Boolean(active),
   }), [alert, confirm, prompt, active]);
 
+  const dialogTree = active ? (
+    <div className="bb-dialog-root" role="presentation">
+      <button
+        type="button"
+        className="bb-dialog-backdrop"
+        aria-label="Dismiss dialog"
+        onClick={() => dismiss(active.kind === 'alert' ? undefined : null)}
+      />
+      <div
+        className={`bb-dialog bb-dialog--${active.tone || 'default'}${active.wide ? ' bb-dialog--wide' : ''}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="bb-dialog-title"
+        aria-describedby="bb-dialog-body"
+      >
+        <div className="bb-dialog__header">
+          <h2 id="bb-dialog-title" className="bb-dialog__title">{active.title}</h2>
+        </div>
+        <div id="bb-dialog-body" className="bb-dialog__body">
+          <p className="bb-dialog__message">{active.message}</p>
+          {active.kind === 'prompt' && (
+            <input
+              ref={inputRef}
+              className="bb-input bb-dialog__input"
+              type="text"
+              defaultValue={active.initialValue}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  dismiss(e.currentTarget.value);
+                }
+              }}
+            />
+          )}
+        </div>
+        <div className="bb-dialog__footer">
+          {(active.kind === 'confirm' || active.kind === 'prompt') && (
+            <button
+              type="button"
+              className="bb-btn"
+              onClick={() => dismiss(null)}
+            >
+              {active.cancelLabel || 'Cancel'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="bb-btn bb-btn--active"
+            autoFocus={active.kind !== 'prompt'}
+            onClick={() => {
+              if (active.kind === 'prompt') {
+                dismiss(inputRef.current?.value ?? '');
+              } else if (active.kind === 'confirm') {
+                dismiss(true);
+              } else {
+                dismiss(undefined);
+              }
+            }}
+          >
+            {active.confirmLabel || 'OK'}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <EditorDialogContext.Provider value={value}>
       {children}
-      {active && (
-        <div className="bb-dialog-root" role="presentation">
-          <button
-            type="button"
-            className="bb-dialog-backdrop"
-            aria-label="Dismiss dialog"
-            onClick={() => dismiss(active.kind === 'alert' ? undefined : null)}
-          />
-          <div
-            className={`bb-dialog bb-dialog--${active.tone || 'default'}`}
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="bb-dialog-title"
-            aria-describedby="bb-dialog-body"
-          >
-            <div className="bb-dialog__header">
-              <h2 id="bb-dialog-title" className="bb-dialog__title">{active.title}</h2>
-            </div>
-            <div id="bb-dialog-body" className="bb-dialog__body">
-              <p className="bb-dialog__message">{active.message}</p>
-              {active.kind === 'prompt' && (
-                <input
-                  ref={inputRef}
-                  className="bb-input bb-dialog__input"
-                  type="text"
-                  defaultValue={active.initialValue}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      dismiss(e.currentTarget.value);
-                    }
-                  }}
-                />
-              )}
-            </div>
-            <div className="bb-dialog__footer">
-              {(active.kind === 'confirm' || active.kind === 'prompt') && (
-                <button
-                  type="button"
-                  className="bb-btn"
-                  onClick={() => dismiss(null)}
-                >
-                  {active.cancelLabel || 'Cancel'}
-                </button>
-              )}
-              <button
-                type="button"
-                className="bb-btn bb-btn--active"
-                autoFocus={active.kind !== 'prompt'}
-                onClick={() => {
-                  if (active.kind === 'prompt') {
-                    dismiss(inputRef.current?.value ?? '');
-                  } else if (active.kind === 'confirm') {
-                    dismiss(true);
-                  } else {
-                    dismiss(undefined);
-                  }
-                }}
-              >
-                {active.confirmLabel || 'OK'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {typeof document !== 'undefined' && dialogTree
+        ? createPortal(dialogTree, document.body)
+        : null}
     </EditorDialogContext.Provider>
   );
 }

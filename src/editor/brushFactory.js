@@ -74,14 +74,16 @@ export function createBrushFromBounds({
   if (brushKind === 'wall') {
     sizeY = WALL_MODULE_SIZE;
     // Thickness snaps to grid while preferring the standard wall thickness.
+    // Grow thickness from the short-axis min face so both faces sit on grid lines
+    // (centering in a wide drag lands faces between cells).
     const thickness = Math.max(g, snapToGrid(WALL_THICKNESS, g) || g);
     if (sizeX <= sizeZ) {
       sizeX = thickness;
-      centerX = (minX + maxX) / 2;
+      centerX = minX + thickness / 2;
       centerZ = minZ + sizeZ / 2;
     } else {
       sizeZ = thickness;
-      centerZ = (minZ + maxZ) / 2;
+      centerZ = minZ + thickness / 2;
       centerX = minX + sizeX / 2;
     }
     centerY = baseY + sizeY / 2;

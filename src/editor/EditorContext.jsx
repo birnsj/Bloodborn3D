@@ -16,6 +16,10 @@ import {
   GRID_INCREMENTS,
   WALL_MODULE_SIZE,
 } from '../core/units.js';
+import {
+  getBrushSnapSize,
+  snapCenterByEdges,
+} from './gridSnap.js';
 import { GameRuntime } from '../runtime/GameRuntime.js';
 import { HistoryStack } from './history/HistoryStack.js';
 import {
@@ -112,6 +116,13 @@ export function EditorProvider({ children }) {
   const [selectedActorIds, setSelectedActorIds] = useState([]);
   const [mode, setMode] = useState('edit');
   const [tool, setTool] = useState('select'); // select | box | wall | floor | ceiling | subtract
+  /** Gizmo mode: move (W) | rotate (E) | scale (R). */
+  const [transformMode, setTransformModeState] = useState('move');
+  const setTransformMode = useCallback((mode) => {
+    const next = mode === 'rotate' || mode === 'scale' ? mode : 'move';
+    setTransformModeState(next);
+    runtimeRef.current?.sceneView?.setTransformMode?.(next);
+  }, []);
   const [levelName, setLevelName] = useState('test-room.json');
   const [levels, setLevels] = useState([]);
   const [status, setStatusState] = useState('Ready');
@@ -439,6 +450,30 @@ export function EditorProvider({ children }) {
     }
   }, [selectActors]);
 
+  const selectAllActors = useCallback(() => {
+    if (!world || mode === 'play') return;
+    selectActors(world.actors.map((a) => a.id));
+  }, [world, mode, selectActors]);
+
+  const deselectAllActors = useCallback(() => {
+    if (mode === 'play') return;
+    selectActors([]);
+  }, [mode, selectActors]);
+
+  const cycleGridSize = useCallback((direction = 1) => {
+    if (mode === 'play') return;
+    const list = GRID_INCREMENTS;
+    const idx = list.indexOf(gridRef.current);
+    const from = idx >= 0 ? idx : list.indexOf(DEFAULT_GRID_EDITOR_UNITS);
+    const next = list[(from + direction + list.length) % list.length];
+    setGridSize(next);
+  }, [mode, setGridSize]);
+
+  const toggleGridSnap = useCallback(() => {
+    if (mode === 'play') return;
+    setGridSnap((v) => !v);
+  }, [mode]);
+
   const createBrushAtBounds = useCallback((kind, min, max) => {
     if (!world || mode === 'play') return null;
 
@@ -720,6 +755,7 @@ export function EditorProvider({ children }) {
   const previewActorPositions = useCallback((updates) => {
     if (!world || mode === 'play') return;
     const restore = [];
+    let touchedBrush = false;
     for (const u of updates) {
       const actor = world.getActor(u.actorId);
       if (!actor || isEffectivelyLocked(actor, world)) continue;
@@ -736,16 +772,52 @@ export function EditorProvider({ children }) {
         ...current,
         position: { ...pos },
       }, world);
+      if (actor.getComponent?.('Brush')) touchedBrush = true;
     }
-    if (!validateWorldSubtractComplexity(world).ok) {
+    // Subtract complexity only changes when brushes move; skip for lights/props.
+    if (touchedBrush && !validateWorldSubtractComplexity(world).ok) {
       for (const r of restore) {
         setWorldTransform(r.actor, r.worldTransform, world);
       }
     }
     for (const r of restore) {
-      runtimeRef.current?.refreshBrushCarveDependents(r.actor);
+      const brush = r.actor.getComponent?.('Brush');
+      if (brush) {
+        runtimeRef.current?.refreshBrushCarveDependents(r.actor);
+      } else {
+        // Lights / props: always push the Three.js group so markers & illumination follow.
+        runtimeRef.current?.refreshActor(r.actor);
+      }
     }
     // No React bump during drag — Details refreshes on commit.
+    runtimeRef.current?.setSelection(selectedRef.current);
+  }, [world, mode]);
+
+  /**
+   * Live local rotation/scale preview during gizmo drag (no history until commit).
+   * updates: [{ actorId, rotation?, scale? }]
+   */
+  const previewActorLocalTransforms = useCallback((updates) => {
+    if (!world || mode === 'play') return;
+    for (const u of updates) {
+      const actor = world.getActor(u.actorId);
+      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (u.rotation) {
+        actor.transform.rotation = {
+          x: Number(u.rotation.x) || 0,
+          y: Number(u.rotation.y) || 0,
+          z: Number(u.rotation.z) || 0,
+        };
+      }
+      if (u.scale) {
+        actor.transform.scale = {
+          x: Math.max(0.01, Number(u.scale.x) || 1),
+          y: Math.max(0.01, Number(u.scale.y) || 1),
+          z: Math.max(0.01, Number(u.scale.z) || 1),
+        };
+      }
+      runtimeRef.current?.refreshBrushCarveDependents(actor);
+    }
     runtimeRef.current?.setSelection(selectedRef.current);
   }, [world, mode]);
 
@@ -797,9 +869,23 @@ export function EditorProvider({ children }) {
     if (partial.position) {
       after.position = { ...after.position, ...partial.position };
       if (snap) {
-        after.position.x = snapToGrid(after.position.x, gridRef.current);
-        after.position.y = snapToGrid(after.position.y, gridRef.current);
-        after.position.z = snapToGrid(after.position.z, gridRef.current);
+        const brushSize = getBrushSnapSize(actor);
+        if (brushSize) {
+          // Structural geo: keep AABB faces on grid lines.
+          after.position = snapCenterByEdges(after.position, brushSize, gridRef.current);
+        } else {
+          // Props / lights: snap only axes the user edited (preserve light height, etc.).
+          const g = gridRef.current;
+          if (partial.position.x !== undefined) {
+            after.position.x = snapToGrid(after.position.x, g);
+          }
+          if (partial.position.y !== undefined) {
+            after.position.y = snapToGrid(after.position.y, g);
+          }
+          if (partial.position.z !== undefined) {
+            after.position.z = snapToGrid(after.position.z, g);
+          }
+        }
       }
     }
     if (partial.rotation) {
@@ -1882,6 +1968,8 @@ export function EditorProvider({ children }) {
     mode,
     tool,
     setTool,
+    transformMode,
+    setTransformMode,
     levelName,
     setLevelName,
     levels,
@@ -1908,12 +1996,17 @@ export function EditorProvider({ children }) {
     refreshLevels,
     selectActor,
     selectActors,
+    selectAllActors,
+    deselectAllActors,
+    cycleGridSize,
+    toggleGridSnap,
     createBrushAtBounds,
     deleteSelected,
     duplicateSelected,
     commitTransforms,
     commitBrushGeometry,
     previewActorPositions,
+    previewActorLocalTransforms,
     previewBrushGeometry,
     updateSelectedTransform,
     updateSelectedBrush,

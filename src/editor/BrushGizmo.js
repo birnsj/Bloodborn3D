@@ -7,8 +7,10 @@ const AXIS_COLORS = {
   z: 0x3498db,
 };
 
+export const TRANSFORM_MODES = ['move', 'rotate', 'scale'];
+
 /**
- * Edit-mode move/resize handles rendered in the shared SceneView.
+ * Edit-mode transform gizmo: Move (W) / Rotate (E) / Scale (R).
  * Operates in meters visually; reports editor-unit deltas to the editor.
  */
 export class BrushGizmo {
@@ -20,16 +22,55 @@ export class BrushGizmo {
     scene.add(this.root);
 
     this.moveGroup = new THREE.Group();
+    this.rotateGroup = new THREE.Group();
     this.resizeGroup = new THREE.Group();
+    this.scaleGroup = new THREE.Group();
     this.root.add(this.moveGroup);
+    this.root.add(this.rotateGroup);
     this.root.add(this.resizeGroup);
+    this.root.add(this.scaleGroup);
 
+    this.mode = 'move';
     this._handles = [];
-    this._primaryBrush = null; // { position, size } editor units
+    this._primaryBrush = null;
     this._selectionCenter = new THREE.Vector3();
     this._drag = null;
+    this._hasBrushSize = false;
 
     this._buildMoveHandles();
+    this._buildRotateHandles();
+    this._buildScaleAxisHandles();
+    this._applyModeVisibility();
+  }
+
+  setMode(mode) {
+    const next = TRANSFORM_MODES.includes(mode) ? mode : 'move';
+    if (this.mode === next) return;
+    this.mode = next;
+    this._applyModeVisibility();
+  }
+
+  _applyModeVisibility() {
+    this.moveGroup.visible = this.mode === 'move';
+    this.rotateGroup.visible = this.mode === 'rotate';
+    // Brushes: face resize. Others: axis scale boxes.
+    this.resizeGroup.visible = this.mode === 'scale' && this._hasBrushSize;
+    this.scaleGroup.visible = this.mode === 'scale' && !this._hasBrushSize;
+    this._rebuildHandleList();
+  }
+
+  _rebuildHandleList() {
+    this._handles = [];
+    const collect = (group, visible) => {
+      if (!visible) return;
+      group.traverse((obj) => {
+        if (obj.userData?.pickable && obj.userData?.kind) this._handles.push(obj);
+      });
+    };
+    collect(this.moveGroup, this.moveGroup.visible);
+    collect(this.rotateGroup, this.rotateGroup.visible);
+    collect(this.resizeGroup, this.resizeGroup.visible);
+    collect(this.scaleGroup, this.scaleGroup.visible);
   }
 
   _buildMoveHandles() {
@@ -39,29 +80,20 @@ export class BrushGizmo {
         axis === 'y' ? 1 : 0,
         axis === 'z' ? 1 : 0,
       );
-      const origin = new THREE.Vector3(0, 0, 0);
-      const arrow = new THREE.ArrowHelper(dir, origin, 0.9, color, 0.18, 0.1);
-      arrow.userData = { kind: 'move', axis };
-      // Enlarge pick target
+      const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(), 0.9, color, 0.18, 0.1);
       const pick = new THREE.Mesh(
         new THREE.CylinderGeometry(0.08, 0.08, 0.9, 8),
-        new THREE.MeshBasicMaterial({
-          transparent: true,
-          opacity: 0,
-          depthTest: false,
-        }),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
       );
       pick.position.copy(dir.clone().multiplyScalar(0.45));
       if (axis === 'x') pick.rotation.z = -Math.PI / 2;
       if (axis === 'z') pick.rotation.x = Math.PI / 2;
-      pick.userData = { kind: 'move', axis };
+      pick.userData = { kind: 'move', axis, pickable: true };
       pick.renderOrder = 10;
       const group = new THREE.Group();
       group.add(arrow);
       group.add(pick);
-      group.userData = { kind: 'move', axis };
       this.moveGroup.add(group);
-      this._handles.push(pick);
     };
 
     makeArrow('x', AXIS_COLORS.x);
@@ -69,16 +101,65 @@ export class BrushGizmo {
     makeArrow('z', AXIS_COLORS.z);
   }
 
+  _buildRotateHandles() {
+    const makeRing = (axis, color) => {
+      const torus = new THREE.Mesh(
+        new THREE.TorusGeometry(0.75, 0.035, 8, 48),
+        new THREE.MeshBasicMaterial({
+          color,
+          depthTest: false,
+          transparent: true,
+          opacity: 0.9,
+        }),
+      );
+      // Torus lies in XY by default; orient so its plane is perpendicular to axis.
+      if (axis === 'x') torus.rotation.y = Math.PI / 2;
+      if (axis === 'y') torus.rotation.x = Math.PI / 2;
+      // z: default
+      torus.renderOrder = 12;
+      torus.userData = { kind: 'rotate', axis, pickable: true };
+      this.rotateGroup.add(torus);
+    };
+    makeRing('x', AXIS_COLORS.x);
+    makeRing('y', AXIS_COLORS.y);
+    makeRing('z', AXIS_COLORS.z);
+  }
+
+  _buildScaleAxisHandles() {
+    const makeBox = (axis, color) => {
+      const dir = new THREE.Vector3(
+        axis === 'x' ? 1 : 0,
+        axis === 'y' ? 1 : 0,
+        axis === 'z' ? 1 : 0,
+      );
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.14, 0.14),
+        new THREE.MeshBasicMaterial({
+          color,
+          depthTest: false,
+          transparent: true,
+          opacity: 0.95,
+        }),
+      );
+      mesh.position.copy(dir.multiplyScalar(0.85));
+      mesh.renderOrder = 11;
+      mesh.userData = { kind: 'scale', axis, pickable: true };
+      this.scaleGroup.add(mesh);
+    };
+    makeBox('x', AXIS_COLORS.x);
+    makeBox('y', AXIS_COLORS.y);
+    makeBox('z', AXIS_COLORS.z);
+  }
+
   setVisible(visible) {
     this.root.visible = !!visible;
   }
 
   /**
-   * @param {Array<{position: object, size?: object}>} brushStates editor-unit brush AABBs
+   * @param {Array<{position: object, size?: object}>} brushStates editor-unit AABBs
    * @param {object|null} primary primary brush for resize handles
    */
   update(brushStates, primary) {
-    this._handles = this._handles.filter((h) => h.userData.kind === 'move');
     while (this.resizeGroup.children.length) {
       const child = this.resizeGroup.children[0];
       this.resizeGroup.remove(child);
@@ -91,13 +172,15 @@ export class BrushGizmo {
     if (!brushStates || brushStates.length === 0) {
       this.setVisible(false);
       this._primaryBrush = null;
+      this._hasBrushSize = false;
+      this._applyModeVisibility();
       return;
     }
 
     this.setVisible(true);
     this._primaryBrush = primary || brushStates[0];
+    this._hasBrushSize = Boolean(this._primaryBrush?.size);
 
-    // Selection center (editor units -> meters)
     const center = { x: 0, y: 0, z: 0 };
     for (const b of brushStates) {
       center.x += b.position.x;
@@ -110,9 +193,10 @@ export class BrushGizmo {
     this._selectionCenter.set(toMeters(center.x), toMeters(center.y), toMeters(center.z));
     this.root.position.copy(this._selectionCenter);
 
-    if (this._primaryBrush?.size) {
+    if (this._hasBrushSize) {
       this._buildResizeHandles(this._primaryBrush);
     }
+    this._applyModeVisibility();
   }
 
   _buildResizeHandles(brush) {
@@ -121,7 +205,6 @@ export class BrushGizmo {
       y: toMeters(brush.size.y) * 0.5,
       z: toMeters(brush.size.z) * 0.5,
     };
-    // Offset from selection center to primary brush center
     const primaryCenter = new THREE.Vector3(
       toMeters(brush.position.x),
       toMeters(brush.position.y),
@@ -154,9 +237,8 @@ export class BrushGizmo {
         localOffset.z + face.pos[2],
       );
       mesh.renderOrder = 11;
-      mesh.userData = { kind: 'resize', axis: face.axis, sign: face.sign };
+      mesh.userData = { kind: 'resize', axis: face.axis, sign: face.sign, pickable: true };
       this.resizeGroup.add(mesh);
-      this._handles.push(mesh);
     }
   }
 
@@ -174,6 +256,22 @@ export class BrushGizmo {
   }
 
   beginDrag(handle, pointerRay) {
+    if (handle.kind === 'rotate') {
+      const angle = this._angleAboutAxis(pointerRay, handle.axis);
+      this._drag = {
+        kind: 'rotate',
+        axis: handle.axis,
+        startAngle: angle,
+        primary: this._primaryBrush
+          ? {
+              position: { ...this._primaryBrush.position },
+              size: this._primaryBrush.size ? { ...this._primaryBrush.size } : undefined,
+            }
+          : null,
+      };
+      return this._drag;
+    }
+
     this._drag = {
       kind: handle.kind,
       axis: handle.axis,
@@ -182,7 +280,7 @@ export class BrushGizmo {
       primary: this._primaryBrush
         ? {
             position: { ...this._primaryBrush.position },
-            size: { ...this._primaryBrush.size },
+            size: this._primaryBrush.size ? { ...this._primaryBrush.size } : undefined,
           }
         : null,
     };
@@ -190,13 +288,28 @@ export class BrushGizmo {
   }
 
   /**
-   * @returns {{ axis, kind, deltaEditor: number } | null}
+   * @returns {{ axis, kind, deltaEditor?: number, deltaDegrees?: number, sign?: number } | null}
    */
   sampleDrag(pointerRay) {
     if (!this._drag) return null;
+
+    if (this._drag.kind === 'rotate') {
+      const angle = this._angleAboutAxis(pointerRay, this._drag.axis);
+      if (angle == null || this._drag.startAngle == null) return null;
+      let delta = angle - this._drag.startAngle;
+      // Unwrap to shortest path continuity for this sample (absolute from start).
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      return {
+        kind: 'rotate',
+        axis: this._drag.axis,
+        deltaDegrees: delta * (180 / Math.PI),
+        primaryBefore: this._drag.primary,
+      };
+    }
+
     const now = this._projectAxis(pointerRay, this._drag.axis, this._drag.startPoint);
     if (!now || !this._drag.startPoint) return null;
-    // _projectAxis returns a Vector3 — compare axis components, not Vector3 - number (NaN).
     const deltaMeters =
       this._axisComponent(now, this._drag.axis)
       - this._axisComponent(this._drag.startPoint, this._drag.axis);
@@ -216,30 +329,37 @@ export class BrushGizmo {
     return drag;
   }
 
+  _angleAboutAxis(ray, axis) {
+    const axisVec = new THREE.Vector3(
+      axis === 'x' ? 1 : 0,
+      axis === 'y' ? 1 : 0,
+      axis === 'z' ? 1 : 0,
+    );
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      axisVec,
+      this._selectionCenter,
+    );
+    const hit = new THREE.Vector3();
+    if (!ray.intersectPlane(plane, hit)) return null;
+    const local = hit.clone().sub(this._selectionCenter);
+    if (axis === 'x') return Math.atan2(local.z, local.y);
+    if (axis === 'y') return Math.atan2(local.x, local.z);
+    return Math.atan2(local.y, local.x);
+  }
+
   _axisComponent(point, axis) {
     return point[axis];
   }
 
   _projectAxis(ray, axis, referencePoint) {
-    // Intersect ray with plane that contains the axis and faces the camera-ish view:
-    // use the plane whose normal is the cross of axis and a stable up/right.
     const axisVec = new THREE.Vector3(
       axis === 'x' ? 1 : 0,
       axis === 'y' ? 1 : 0,
       axis === 'z' ? 1 : 0,
     );
     const ref = referencePoint?.clone?.() || this._selectionCenter.clone();
-    // Choose plane normal perpendicular to axis with largest camera alignment via ray direction
     const rayDir = ray.direction.clone().normalize();
-    let planeNormal = new THREE.Vector3().crossVectors(axisVec, rayDir).normalize();
-    if (planeNormal.lengthSq() < 1e-6) {
-      planeNormal = new THREE.Vector3().crossVectors(axisVec, new THREE.Vector3(0, 1, 0)).normalize();
-      if (planeNormal.lengthSq() < 1e-6) {
-        planeNormal = new THREE.Vector3(1, 0, 0);
-      }
-    }
-    // Better: plane through ref, normal = component of rayDir orthogonal to axis
-    planeNormal = rayDir.clone().sub(axisVec.clone().multiplyScalar(rayDir.dot(axisVec)));
+    let planeNormal = rayDir.clone().sub(axisVec.clone().multiplyScalar(rayDir.dot(axisVec)));
     if (planeNormal.lengthSq() < 1e-6) {
       planeNormal = axis === 'y' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
     } else {

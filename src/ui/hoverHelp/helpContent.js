@@ -3,6 +3,8 @@
  * Keys are stable ids referenced via data-bb-help / HoverHelpTarget.
  */
 
+export { KEYBOARD_SHORTCUTS_TEXT, KEYBOARD_SHORTCUT_SECTIONS } from './keyboardShortcuts.js';
+
 /** @typedef {{
  *   title: string,
  *   body: string,
@@ -13,6 +15,17 @@
 
 /** @type {Record<string, HelpEntry>} */
 export const HELP_CONTENT = {
+  // —— Help menu ——
+  'help.shortcuts': {
+    title: 'Keyboard Shortcuts',
+    body: 'Open Help → Keyboard Shortcuts… for the full formatted list of editor, transform, grid, camera, and play bindings.',
+    tips: 'Hover Help also shows shortcuts on matching toolbar buttons.',
+  },
+  'help.hoverHelp': {
+    title: 'Show Hover Help',
+    body: 'When enabled, pausing the cursor over toolbar and panel controls shows a tip with description and shortcut when available.',
+  },
+
   // —— Toolbar ——
   'toolbar.save': {
     title: 'Save Level',
@@ -33,8 +46,23 @@ export const HELP_CONTENT = {
   },
   'toolbar.select': {
     title: 'Select',
-    body: 'Select actors in the viewport and use the move/resize gizmos. Drag on a brush face handle to resize structural geometry.',
-    tips: 'Ctrl+click adds or removes from the multi-selection.',
+    body: 'Select actors in the viewport and use the transform gizmo. Switch modes with W (move), E (rotate), or R (scale).',
+    tips: 'W/E/R move·rotate·scale · F focus · Ctrl+LMB multi-select · Del delete. See Help → Keyboard Shortcuts… for the full list.',
+  },
+  'toolbar.move': {
+    title: 'Move',
+    body: 'Shows axis arrows on the selection. Drag an arrow to translate along that axis.',
+    shortcut: 'W',
+  },
+  'toolbar.rotate': {
+    title: 'Rotate',
+    body: 'Shows rotation rings on the selection. Drag a ring to rotate around that axis (5° snaps; hold Alt for free).',
+    shortcut: 'E',
+  },
+  'toolbar.scale': {
+    title: 'Scale',
+    body: 'Brushes show face handles that resize geometry. Other actors show axis boxes that scale the transform.',
+    shortcut: 'R',
   },
   'toolbar.box': {
     title: 'Box Brush',
@@ -166,18 +194,19 @@ export const HELP_CONTENT = {
   },
   'toolbar.grid': {
     title: 'Grid Snap',
-    body: 'Controls the spacing used when placing and resizing structural brushes. Hold Alt while dragging a gizmo to temporarily snap to 1 unit instead. Use the Snap checkbox to disable snapping entirely.',
-    tips: 'Smaller increments allow more precise construction. Structural geometry remains aligned to the selected grid.',
-    meta: 'Values are editor units (100 editor units = 1 meter).',
+    body: 'Controls the spacing used when placing and resizing structural brushes. Brushes snap by edges (faces on grid lines); props snap by pivot. Hold Alt while dragging a gizmo to temporarily snap to 1 unit instead. Use the Snap checkbox to disable snapping entirely.',
+    tips: '[ / ] cycle grid size · Shift+G toggle snap. Values are editor units (100 = 1 m).',
+    meta: 'Also under View → Smaller/Larger Grid.',
   },
   'toolbar.gridSnap': {
     title: 'Enable Snap',
-    body: 'When enabled, placement and gizmo moves snap to the grid increment. When disabled, props keep freeform XZ while still sticking to the support surface elevation.',
+    body: 'When enabled, structural geo snaps edges to the grid; props/lights snap their pivot (e.g. chair bottom-center). When disabled, props keep freeform XZ while still sticking to the support surface elevation.',
+    shortcut: 'Shift+G',
   },
   'creation.toolbar': {
-    title: 'Creation Toolbar',
-    body: 'Floating Photoshop-style tool rail over the viewport. Click a category to expand tools, drag tools into the scene, or click a tool to activate its normal create mode.',
-    tips: 'Drag the handle to reposition. Pin keeps the flyout open. Esc cancels an armed placement.',
+    title: 'Creation Toolbox',
+    body: 'Floating Photoshop-style tool rail. Hover a category to roll out tools; click or drag a tool into the viewport to place.',
+    tips: 'Drag the handle to reposition. Pin keeps the rollout open. Esc closes an unpinned rollout or cancels placement. See Help → Keyboard Shortcuts… for the full list.',
   },
   'creation.geometry': {
     title: 'Geometry',
@@ -204,8 +233,8 @@ export const HELP_CONTENT = {
     body: 'Drag a prefab instance onto a support surface. Overrides and hierarchy behave like Content Browser placement.',
   },
   'creation.pin': {
-    title: 'Pin Flyout',
-    body: 'Keeps the expanded tool strip open after choosing a tool. Unpin to auto-collapse like Photoshop.',
+    title: 'Pin Rollout',
+    body: 'Keeps the tool icon strip open while the cursor leaves. Unpin to auto-collapse on mouse-out like Photoshop.',
   },
   'toolbar.levelName': {
     title: 'Level Filename',
@@ -224,7 +253,7 @@ export const HELP_CONTENT = {
   'toolbar.play': {
     title: 'Play In Editor',
     body: 'Snapshots the authored level, builds Rapier collision, and starts first-person Play mode from the Player Spawn.',
-    tips: 'Click the viewport to capture the mouse. Esc releases the pointer. Stop restores the authored scene exactly.',
+    tips: 'Click the viewport to capture the mouse · WASD move · Space jump · Esc releases the pointer. Stop restores the authored scene exactly.',
   },
   'toolbar.stop': {
     title: 'Stop',

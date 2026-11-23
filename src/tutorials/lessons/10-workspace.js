@@ -14,7 +14,7 @@ export const workspaceLesson = {
     {
       id: 'hover-help',
       title: 'Hover Help',
-      body: 'Ensure Help → Show Hover Help is checked. Hover a toolbar button briefly to see its tip.',
+      body: 'Ensure Help → Show Hover Help is checked. Hover a toolbar button briefly to see its tip. Help → Keyboard Shortcuts… lists all editor hotkeys.',
       highlight: ['toolbar.select'],
       verify: { type: 'manualConfirm', label: 'I saw a tip' },
     },

@@ -106,7 +106,7 @@ export function LevelToolBar() {
           type="button"
           className={`bb-btn${tool === 'select' && !isPlay ? ' bb-btn--active' : ''}`}
           disabled={isPlay}
-          title="Select / gizmo"
+          title="Select / gizmo · W move · E rotate · R scale"
           onClick={() => setTool('select')}
           {...helpProps('toolbar.select', playReason)}
         >

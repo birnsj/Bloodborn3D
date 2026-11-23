@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
+import { KeyboardShortcutsDialog } from '../../ui/hoverHelp/KeyboardShortcutsDialog.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useTutorials } from '../../tutorials/TutorialProvider.jsx';
 
@@ -108,6 +109,12 @@ export function AppMenuBar() {
     redo,
     duplicateSelected,
     deleteSelected,
+    selectAllActors,
+    deselectAllActors,
+    cycleGridSize,
+    toggleGridSnap,
+    gridSnap,
+    gridSize,
     play,
     stop,
   } = useEditor();
@@ -132,6 +139,7 @@ export function AppMenuBar() {
   const { showHoverHelp, setShowHoverHelp } = useHoverHelp();
   const { openTutorialsPanel, startLesson, lessons } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const isPlay = mode === 'play';
   const hasSelection = selectedActorIds.length > 0;
@@ -231,6 +239,21 @@ export function AppMenuBar() {
             <Item label="Undo" shortcut="Ctrl+Z" disabled={isPlay || !canUndo} close={close} onClick={() => undo()} />
             <Item label="Redo" shortcut="Ctrl+Y" disabled={isPlay || !canRedo} close={close} onClick={() => redo()} />
             <Sep />
+            <Item
+              label="Select All"
+              shortcut="Ctrl+A"
+              disabled={isPlay || !world?.actors?.length}
+              close={close}
+              onClick={() => selectAllActors()}
+            />
+            <Item
+              label="Deselect"
+              shortcut="Esc"
+              disabled={isPlay || !hasSelection}
+              close={close}
+              onClick={() => deselectAllActors()}
+            />
+            <Sep />
             <Item label="Duplicate" shortcut="Ctrl+D" disabled={isPlay || !hasSelection} close={close} onClick={() => duplicateSelected()} />
             <Item label="Delete" shortcut="Del" disabled={isPlay || !hasSelection} close={close} onClick={() => deleteSelected()} />
           </>
@@ -250,6 +273,39 @@ export function AppMenuBar() {
       <Menu label="View">
         {(close) => (
           <>
+            <Item
+              label="Focus Selection"
+              shortcut="F"
+              disabled={isPlay || !hasSelection}
+              close={close}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('bb:focus-selection'));
+              }}
+            />
+            <Sep />
+            <Item
+              label="Smaller Grid"
+              shortcut="["
+              disabled={isPlay}
+              close={close}
+              onClick={() => cycleGridSize(-1)}
+            />
+            <Item
+              label={`Larger Grid (${gridSize})`}
+              shortcut="]"
+              disabled={isPlay}
+              close={close}
+              onClick={() => cycleGridSize(1)}
+            />
+            <Item
+              label="Grid Snap"
+              shortcut="Shift+G"
+              checked={gridSnap}
+              disabled={isPlay}
+              close={close}
+              onClick={() => toggleGridSnap()}
+            />
+            <Sep />
             {viewScales.map((entry) => (
               <Item
                 key={entry.id}
@@ -354,6 +410,11 @@ export function AppMenuBar() {
               close={close}
               onClick={() => setShowHoverHelp(!showHoverHelp)}
             />
+            <Item
+              label="Keyboard Shortcuts…"
+              close={close}
+              onClick={() => setShortcutsOpen(true)}
+            />
             <Sep />
             <Item
               label="Tutorials…"
@@ -388,6 +449,11 @@ export function AppMenuBar() {
         {world?.name || 'Untitled'}
         <span className="bb-menubar__scene-file">— {levelName}</span>
       </div>
+
+      <KeyboardShortcutsDialog
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+      />
     </div>
   );
 }
