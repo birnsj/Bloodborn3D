@@ -16,6 +16,11 @@ import {
 } from './layoutPrefs.js';
 import { stepViewScale, VIEW_SCALES } from './viewScale.js';
 import {
+  applyColorTheme,
+  COLOR_THEMES,
+  normalizeColorTheme,
+} from '../../ui/colorThemes.js';
+import {
   applyDockSnapshot,
   closePanelByKey,
   getPanelVisibility,
@@ -45,10 +50,12 @@ export function LayoutProvider({ children }) {
     const prefs = loadLayoutPrefs();
     const active = manager.getLayout(prefs.activeLayoutId) || manager.getActiveLayout();
     manager.setActiveLayoutId(active.id);
-    return clampLayout({
+    const next = clampLayout({
       ...prefs,
       activeLayoutId: active.id,
     });
+    applyColorTheme(next.colorTheme);
+    return next;
   });
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [baselineFp, setBaselineFp] = useState(null);
@@ -63,6 +70,11 @@ export function LayoutProvider({ children }) {
     saveTimer.current = window.setTimeout(() => saveLayoutPrefs(layout), 120);
     return () => window.clearTimeout(saveTimer.current);
   }, [layout]);
+
+  // Color theme on <html> so portaled dialogs inherit CSS tokens.
+  useEffect(() => {
+    applyColorTheme(layout.colorTheme);
+  }, [layout.colorTheme]);
 
   const bumpLayouts = useCallback(() => {
     setLayoutRevision((n) => n + 1);
@@ -278,6 +290,10 @@ export function LayoutProvider({ children }) {
     patch({ uiScale });
   }, [patch]);
 
+  const setColorTheme = useCallback((colorTheme) => {
+    patch({ colorTheme: normalizeColorTheme(colorTheme) });
+  }, [patch]);
+
   const stepUiScale = useCallback((direction) => {
     setLayout((prev) => clampLayout({
       ...prev,
@@ -294,6 +310,7 @@ export function LayoutProvider({ children }) {
     toggleMaximizeViewport,
     resetLayout,
     setUiScale,
+    setColorTheme,
     stepUiScale,
     setDockApi,
     dockApiRef,
@@ -302,6 +319,7 @@ export function LayoutProvider({ children }) {
     markLayoutClean,
     captureCurrentSnapshot,
     viewScales: VIEW_SCALES,
+    colorThemes: COLOR_THEMES,
     workspaces: WORKSPACES,
     namedLayouts,
     activeNamedLayout,
@@ -321,6 +339,7 @@ export function LayoutProvider({ children }) {
     toggleMaximizeViewport,
     resetLayout,
     setUiScale,
+    setColorTheme,
     stepUiScale,
     setDockApi,
     persistDockLayout,

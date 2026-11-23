@@ -125,7 +125,9 @@ export function AppMenuBar() {
     resetLayout,
     setWorkspace,
     setUiScale,
+    setColorTheme,
     viewScales,
+    colorThemes,
     namedLayouts,
     activeNamedLayout,
     layoutDirty,
@@ -305,6 +307,28 @@ export function AppMenuBar() {
               close={close}
               onClick={() => toggleGridSnap()}
             />
+            <Sep />
+            <SubMenu label="Theme">
+              {(subClose) => {
+                const done = () => {
+                  subClose();
+                  close();
+                };
+                return (
+                  <>
+                    {colorThemes.map((theme) => (
+                      <Item
+                        key={theme.id}
+                        label={theme.label}
+                        checked={layout.colorTheme === theme.id}
+                        close={done}
+                        onClick={() => setColorTheme(theme.id)}
+                      />
+                    ))}
+                  </>
+                );
+              }}
+            </SubMenu>
             <Sep />
             {viewScales.map((entry) => (
               <Item

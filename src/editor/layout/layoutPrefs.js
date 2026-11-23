@@ -1,4 +1,5 @@
 import { DEFAULT_VIEW_SCALE, normalizeViewScale } from './viewScale.js';
+import { DEFAULT_COLOR_THEME, normalizeColorTheme } from '../../ui/colorThemes.js';
 
 const STORAGE_KEY_V1 = 'bloodbound.editor.layout.v1';
 const STORAGE_KEY = 'bloodbound.editor.layout.v2';
@@ -28,6 +29,8 @@ export const DEFAULT_LAYOUT = {
   contentFolder: 'Materials',
   /** UI view scale percent (STA-style). Not browser zoom. */
   uiScale: DEFAULT_VIEW_SCALE,
+  /** Editor color theme id (View → Theme). */
+  colorTheme: DEFAULT_COLOR_THEME,
   /**
    * Serialized dockview layout (`api.toJSON()`).
    * null → apply default dock arrangement on next ready.
@@ -43,6 +46,7 @@ export function clampLayout(partial) {
     next.workspace = 'level';
   }
   next.uiScale = normalizeViewScale(next.uiScale);
+  next.colorTheme = normalizeColorTheme(next.colorTheme);
   next.outlinerVisible = Boolean(next.outlinerVisible);
   next.detailsVisible = Boolean(next.detailsVisible);
   next.contentVisible = Boolean(next.contentVisible);

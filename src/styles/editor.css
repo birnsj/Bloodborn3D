@@ -391,7 +391,7 @@ select {
   --dv-tabs-and-actions-container-height: 26px;
   --dv-drag-over-background-color: var(--bb-select-soft);
   --dv-drag-over-border-color: var(--bb-select);
-  --dv-edge-dock-indicator-color: rgba(61, 126, 196, 0.9);
+  --dv-edge-dock-indicator-color: var(--bb-select);
   --dv-edge-drop-strip-size: 6px;
   --dv-tabs-container-scrollbar-color: #5c6575;
   --dv-icon-hover-background-color: var(--bb-bg-hover);
