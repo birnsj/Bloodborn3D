@@ -15,6 +15,8 @@ export function createStaticMeshActor({
   rotation = { x: 0, y: 0, z: 0 },
   scale = { x: 1, y: 1, z: 1 },
   gridSize = 25,
+  /** When false, preserve authored Y (surface elevation). */
+  snapY = true,
   collidable = false,
   collisionType = 'none',
 } = {}) {
@@ -22,7 +24,7 @@ export function createStaticMeshActor({
 
   const pos = {
     x: snapToGrid(position.x, gridSize),
-    y: snapToGrid(position.y, gridSize),
+    y: snapY ? snapToGrid(position.y, gridSize) : position.y,
     z: snapToGrid(position.z, gridSize),
   };
 

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_hall_wood",
+  "name": "Hall Wood",
+  "type": "material",
+  "baseColor": "#6e4a32",
+  "baseColorMapId": "tex_hall_wood",
+  "normalMapId": "tex_hall_wood_n",
+  "normalScale": 1.35,
+  "roughness": 1,
+  "metalness": 0.05,
+  "roughnessMapId": "tex_hall_wood_r",
+  "metalnessMapId": null,
+  "envMapIntensity": 0.95,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 0.75,
+    "y": 0.75
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_hall_wood_sphere.png",
+  "createdAt": 1795419703056,
+  "updatedAt": 1795419703056
+}

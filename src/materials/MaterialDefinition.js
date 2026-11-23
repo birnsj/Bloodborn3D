@@ -18,10 +18,16 @@ export function createMaterialDefinition(partial = {}) {
     baseColor: partial.baseColor || '#8a9099',
     baseColorMapId: partial.baseColorMapId || null,
     normalMapId: partial.normalMapId || null,
+    normalScale: Number.isFinite(Number(partial.normalScale))
+      ? Math.max(0, Number(partial.normalScale))
+      : 1,
     roughness: clamp01(partial.roughness ?? 0.75),
     metalness: clamp01(partial.metalness ?? 0.05),
     roughnessMapId: partial.roughnessMapId || null,
     metalnessMapId: partial.metalnessMapId || null,
+    envMapIntensity: Number.isFinite(Number(partial.envMapIntensity))
+      ? Math.max(0, Number(partial.envMapIntensity))
+      : 1,
     emissive: partial.emissive || '#000000',
     emissiveIntensity: Number(partial.emissiveIntensity) || 0,
     emissiveMapId: partial.emissiveMapId || null,
@@ -36,6 +42,7 @@ export function createMaterialDefinition(partial = {}) {
       y: Number(partial.uvOffset?.y) || 0,
     },
     uvRotation: Number(partial.uvRotation) || 0,
+    previewPath: partial.previewPath || null,
     createdAt: partial.createdAt || now,
     updatedAt: partial.updatedAt || now,
   };

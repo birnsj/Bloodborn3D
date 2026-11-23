@@ -5,6 +5,12 @@ import {
   toMeters,
 } from '../core/units.js';
 import { buildWallOpeningSolids, validateOpenings } from './wallOpenings.js';
+import {
+  applyWorldSubtraction,
+  formatSubtractComplexityMessage,
+  isSubtractBrush,
+  MAX_SUBTRACT_SOLIDS,
+} from './brushBoolean.js';
 
 /**
  * Architectural tiling: one 2048² texture covers one wall module (3 m).
@@ -86,10 +92,9 @@ function applyBrushUvs(geom, sx, sy, sz, uv = {}, uvBias = null) {
 }
 
 /**
- * Build render solids for a brush (single box, or partitioned wall with openings).
- * @returns {{ solids: Array<{ center, size, role }>, hasOpenings: boolean }}
+ * Build base solids before world subtraction (openings applied).
  */
-export function getBrushRenderSolids(brush) {
+export function getBrushBaseSolids(brush) {
   const openings = brush?.openings || [];
   if (!openings.length) {
     return {
@@ -113,7 +118,6 @@ export function getBrushRenderSolids(brush) {
     };
   }
   const solids = buildWallOpeningSolids(brush.size, valid);
-  // Never leave a brush with zero meshes (e.g. pathological opening cover).
   if (!solids.length) {
     return {
       hasOpenings: false,
@@ -128,4 +132,70 @@ export function getBrushRenderSolids(brush) {
     hasOpenings: true,
     solids,
   };
+}
+
+/**
+ * Build render/physics solids for a brush.
+ * @param {object} brush
+ * @param {{ world?: object, actor?: object, maxSolids?: number }|null} [context]
+ *   When world+actor are provided, subtractive brushes carve this additive brush.
+ * @returns {{ solids: Array<{ center, size, role }>, hasOpenings: boolean, warnings?: array, exceeded?: boolean, ok?: boolean }}
+ */
+export function getBrushRenderSolids(brush, context = null) {
+  // Subtractive volumes are never solid themselves.
+  if (isSubtractBrush(brush)) {
+    return { hasOpenings: false, solids: [], isSubtract: true };
+  }
+
+  const base = getBrushBaseSolids(brush);
+  if (!context?.world || !context?.actor) {
+    return base;
+  }
+
+  const carved = applyWorldSubtraction(base.solids, context.actor, context.world, {
+    maxSolids: context.maxSolids ?? MAX_SUBTRACT_SOLIDS,
+  });
+  return {
+    hasOpenings: base.hasOpenings || carved.solids.length !== base.solids.length,
+    solids: carved.solids,
+    warnings: carved.warnings,
+    exceeded: carved.exceeded,
+    ok: carved.ok,
+    solidCount: carved.solidCount,
+    maxSolids: carved.maxSolids,
+    truncated: false,
+  };
+}
+
+/**
+ * Atomically validate that every additive brush stays within the solid limit.
+ * @returns {{ ok: true } | { ok: false, actorId, actorName, solidCount, maxSolids, message }}
+ */
+export function validateWorldSubtractComplexity(world, {
+  maxSolids = MAX_SUBTRACT_SOLIDS,
+} = {}) {
+  if (!world?.actors) return { ok: true, maxSolids };
+
+  for (const actor of world.actors) {
+    const brush = actor.getComponent?.('Brush');
+    if (!brush || brush.enabled === false || isSubtractBrush(brush)) continue;
+    const base = getBrushBaseSolids(brush);
+    const carved = applyWorldSubtraction(base.solids, actor, world, { maxSolids });
+    if (carved.exceeded) {
+      return {
+        ok: false,
+        actorId: actor.id,
+        actorName: actor.name || actor.id,
+        solidCount: carved.solidCount,
+        maxSolids: carved.maxSolids,
+        offendingCutterId: carved.offendingCutterId || null,
+        message: formatSubtractComplexityMessage({
+          actorName: actor.name || actor.id,
+          solidCount: carved.solidCount,
+          maxSolids: carved.maxSolids,
+        }),
+      };
+    }
+  }
+  return { ok: true, maxSolids };
 }

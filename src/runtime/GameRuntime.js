@@ -63,6 +63,28 @@ export class GameRuntime {
     this.sceneView.updateBrushGeometry(actor);
   }
 
+  /**
+   * After a brush moves/resizes: rebuild carved solids for dependents.
+   * Subtractive changes refresh all additive brushes (cutter may leave a volume).
+   */
+  refreshBrushCarveDependents(actor) {
+    if (!actor) return;
+    const brush = actor.getComponent?.('Brush');
+    if (!brush) {
+      this.refreshActor(actor);
+      return;
+    }
+    this.refreshBrush(actor);
+    if (!this.world || brush.operation !== 'subtract') return;
+    for (const other of this.world.actors) {
+      if (other.id === actor.id) continue;
+      const otherBrush = other.getComponent?.('Brush');
+      if (otherBrush && otherBrush.operation !== 'subtract') {
+        this.refreshBrush(other);
+      }
+    }
+  }
+
   resyncWorld() {
     if (this.world) {
       this.sceneView.syncFromWorld(this.world);

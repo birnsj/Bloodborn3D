@@ -13,10 +13,11 @@ export function createCellActor({
   position = { x: 0, y: 0, z: 0 },
   rotation = { x: 0, y: 0, z: 0 },
   gridSize = 25,
+  snapY = true,
 } = {}) {
   const pos = {
     x: snapToGrid(position.x, gridSize),
-    y: snapToGrid(position.y, gridSize),
+    y: snapY ? snapToGrid(position.y, gridSize) : position.y,
     z: snapToGrid(position.z, gridSize),
   };
 

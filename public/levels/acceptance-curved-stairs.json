@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance Curved Stairs",
+  "actors": [
+    {
+      "id": "actor_ground",
+      "name": "Ground Floor",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_ground",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1200, "y": 20, "z": 1200 },
+          "color": "#4a5560",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_landing",
+      "name": "Upper Landing",
+      "transform": {
+        "position": { "x": 0, "y": 310, "z": -350 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_landing",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 500, "y": 20, "z": 400 },
+          "color": "#5a6270",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_curved_180",
+      "name": "Sweeping Stairs",
+      "transform": {
+        "position": { "x": -250, "y": 160, "z": 50 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "stair", "curved"],
+      "components": [
+        {
+          "id": "comp_curved",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "curved",
+          "width": 140,
+          "stepCount": 16,
+          "stepHeight": 18.75,
+          "treadDepth": 30,
+          "direction": "z+",
+          "innerRadius": 160,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_spiral_360",
+      "name": "Spiral Stairs",
+      "transform": {
+        "position": { "x": 280, "y": 160, "z": 80 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "stair", "spiral"],
+      "components": [
+        {
+          "id": "comp_spiral",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "spiral",
+          "width": 100,
+          "stepCount": 20,
+          "stepHeight": 15,
+          "treadDepth": 30,
+          "direction": "z+",
+          "innerRadius": 55,
+          "sweepAngle": 360,
+          "clockwise": false,
+          "startAngle": 90,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 400 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

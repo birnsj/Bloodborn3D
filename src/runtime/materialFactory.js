@@ -67,16 +67,19 @@ export function assetUrl(path) {
  */
 export async function createThreeMaterial(definition, mapResolver = () => null, options = {}) {
   const def = definition || {};
+  const normalScale = Number.isFinite(Number(def.normalScale)) ? Number(def.normalScale) : 1;
   const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(def.baseColor || '#8a9099'),
     roughness: def.roughness ?? 0.75,
     metalness: def.metalness ?? 0.05,
     emissive: new THREE.Color(def.emissive || '#000000'),
     emissiveIntensity: def.emissiveIntensity ?? 0,
+    envMapIntensity: Number.isFinite(Number(def.envMapIntensity)) ? Number(def.envMapIntensity) : 1,
     transparent: Boolean(def.transparent) || (def.opacity != null && def.opacity < 1),
     opacity: def.opacity ?? 1,
     side: options.side ?? THREE.FrontSide,
   });
+  mat.normalScale.set(normalScale, normalScale);
 
   const applyMap = async (assetId, assign, { normal = false } = {}) => {
     if (!assetId) return;

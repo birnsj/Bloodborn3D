@@ -14,6 +14,7 @@ import {
   snapToGrid,
   DEFAULT_GRID_EDITOR_UNITS,
   GRID_INCREMENTS,
+  WALL_MODULE_SIZE,
 } from '../core/units.js';
 import { GameRuntime } from '../runtime/GameRuntime.js';
 import { HistoryStack } from './history/HistoryStack.js';
@@ -28,6 +29,8 @@ import {
   SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
   SetStaticMeshPropertiesCommand,
+  SetRampPropertiesCommand,
+  SetStairPropertiesCommand,
   ReparentActorsCommand,
   SetActorFlagsCommand,
   ReplaceActorsCommand,
@@ -38,9 +41,14 @@ import {
   duplicateActors,
   resizeBrushFace,
 } from './brushFactory.js';
+import { createRampFromBounds } from './rampFactory.js';
+import { createStairFromBounds } from './stairFactory.js';
+import { DEFAULT_RAMP_RISE, RAMP_DIRECTIONS } from '../components/RampComponent.js';
+import { defaultsForStairType, STAIR_TYPES } from '../components/StairComponent.js';
 import { createStaticMeshActor } from './meshFactory.js';
 import { createLightActor } from './lightFactory.js';
 import { createCellActor } from './cellFactory.js';
+import { createPlayerSpawnActor } from './spawnFactory.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
 import {
   getWorldTransform,
@@ -68,6 +76,7 @@ import {
   normalizeOpenings,
   validateOpenings,
 } from '../runtime/wallOpenings.js';
+import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
 import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
@@ -86,11 +95,13 @@ export function EditorProvider({ children }) {
   const [world, setWorld] = useState(null);
   const [selectedActorIds, setSelectedActorIds] = useState([]);
   const [mode, setMode] = useState('edit');
-  const [tool, setTool] = useState('select'); // select | box | wall | floor
+  const [tool, setTool] = useState('select'); // select | box | wall | floor | ceiling | subtract
   const [levelName, setLevelName] = useState('test-room.json');
   const [levels, setLevels] = useState([]);
   const [status, setStatusState] = useState('Ready');
   const [gridSize, setGridSizeState] = useState(DEFAULT_GRID_EDITOR_UNITS);
+  /** When false, placement/gizmo snaps are freeform (surface contact preserved). */
+  const [gridSnap, setGridSnap] = useState(true);
   const [revision, setRevision] = useState(0);
   const [historyFlags, setHistoryFlags] = useState({ canUndo: false, canRedo: false });
   /** @type {[{ kind: 'project'|'tutorial', readOnlyDisk: boolean, lessonId: string|null, displayName: string }]} */
@@ -114,12 +125,21 @@ export function EditorProvider({ children }) {
     reportEditorMessage(setStatusState, dialogs, message, { ...options, dialog: true });
   }, [dialogs]);
 
+  /** Reject edits that would exceed carve complexity. Does not touch history. */
+  const rejectSubtractIfTooComplex = useCallback((check) => {
+    if (!check || check.ok) return false;
+    notify(check.message, { title: 'Subtraction Too Complex' });
+    return true;
+  }, [notify]);
+
   const worldRef = useRef(null);
   worldRef.current = world;
   const selectedRef = useRef(selectedActorIds);
   selectedRef.current = selectedActorIds;
   const gridRef = useRef(gridSize);
   gridRef.current = gridSize;
+  const gridSnapRef = useRef(gridSnap);
+  gridSnapRef.current = gridSnap;
 
   const historyRef = useRef(null);
   if (!historyRef.current) {
@@ -405,23 +425,74 @@ export function EditorProvider({ children }) {
 
   const createBrushAtBounds = useCallback((kind, min, max) => {
     if (!world || mode === 'play') return null;
+
+    if (kind === 'ramp') {
+      const actor = createRampFromBounds({
+        min,
+        max,
+        gridSize: gridRef.current,
+        rise: DEFAULT_RAMP_RISE,
+      });
+      executeCommand(
+        new AddActorsCommand({
+          world,
+          actorsJson: [actor.toJSON()],
+          label: 'Create ramp',
+        }),
+        { selectIds: [actor.id] },
+      );
+      setTool('select');
+      return actor;
+    }
+
+    if (kind === 'stair') {
+      const actor = createStairFromBounds({
+        min,
+        max,
+        gridSize: gridRef.current,
+        totalRise: WALL_MODULE_SIZE,
+      });
+      executeCommand(
+        new AddActorsCommand({
+          world,
+          actorsJson: [actor.toJSON()],
+          label: 'Create stairs',
+        }),
+        { selectIds: [actor.id] },
+      );
+      setTool('select');
+      return actor;
+    }
+
+    const isSubtract = kind === 'subtract';
     const actor = createBrushFromBounds({
-      kind,
+      kind: isSubtract ? 'box' : kind,
       min,
       max,
       gridSize: gridRef.current,
+      operation: isSubtract ? 'subtract' : 'add',
     });
+    // Tentative insert — reject without history if carve complexity overflows.
+    world.addActor(actor);
+    const complexity = validateWorldSubtractComplexity(world);
+    if (rejectSubtractIfTooComplex(complexity)) {
+      world.removeActor(actor.id);
+      runtimeRef.current?.resyncWorld();
+      setTool('select');
+      return null;
+    }
+    world.removeActor(actor.id);
     executeCommand(
       new AddActorsCommand({
         world,
         actorsJson: [actor.toJSON()],
-        label: `Create ${kind}`,
+        label: isSubtract ? 'Create subtract box' : `Create ${kind}`,
       }),
       { selectIds: [actor.id] },
     );
     setTool('select');
     return actor;
-  }, [world, mode, executeCommand]);
+  }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
 
   const deleteSelected = useCallback(() => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -442,6 +513,14 @@ export function EditorProvider({ children }) {
       offset: { x: gridRef.current, y: 0, z: 0 },
       gridSize: gridRef.current,
     });
+    for (const copy of copies) world.addActor(copy);
+    const complexity = validateWorldSubtractComplexity(world);
+    if (rejectSubtractIfTooComplex(complexity)) {
+      for (const copy of copies) world.removeActor(copy.id);
+      runtimeRef.current?.resyncWorld();
+      return;
+    }
+    for (const copy of copies) world.removeActor(copy.id);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -450,7 +529,7 @@ export function EditorProvider({ children }) {
       }),
       { selectIds: copies.map((a) => a.id) },
     );
-  }, [world, mode, executeCommand]);
+  }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
 
   const autoCapturePrefabOverrides = useCallback(async (actorIds) => {
     if (!world || !actorIds?.length) return;
@@ -466,17 +545,32 @@ export function EditorProvider({ children }) {
       JSON.stringify(c.before) !== JSON.stringify(c.after),
     );
     if (!meaningful.length) return;
+    // Ensure proposed transforms are active (gizmo preview may already be there).
+    for (const c of meaningful) {
+      const actor = world.getActor(c.actorId);
+      if (actor) actor.transform.copyFrom(c.after);
+    }
+    const complexity = validateWorldSubtractComplexity(world);
+    if (rejectSubtractIfTooComplex(complexity)) {
+      for (const c of meaningful) {
+        const actor = world.getActor(c.actorId);
+        if (actor) actor.transform.copyFrom(c.before);
+      }
+      runtimeRef.current?.resyncWorld();
+      runtimeRef.current?.setSelection(selectedRef.current);
+      return;
+    }
     executeCommand(
       new SetTransformsCommand({ world, changes: meaningful, label }),
       { resync: false },
     );
     for (const c of meaningful) {
       const actor = world.getActor(c.actorId);
-      if (actor) runtimeRef.current?.refreshActor(actor);
+      if (actor) runtimeRef.current?.refreshBrushCarveDependents(actor);
     }
     autoCapturePrefabOverrides(meaningful.map((c) => c.actorId));
     runtimeRef.current?.setSelection(selectedRef.current);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
 
   const commitBrushGeometry = useCallback((changes, label = 'Resize') => {
     if (!world || mode === 'play' || !changes?.length) return;
@@ -484,6 +578,30 @@ export function EditorProvider({ children }) {
       JSON.stringify(c.before) !== JSON.stringify(c.after),
     );
     if (!meaningful.length) return;
+
+    const applyGeom = (key) => {
+      for (const c of meaningful) {
+        const actor = world.getActor(c.actorId);
+        const brush = actor?.getComponent('Brush');
+        if (!brush) continue;
+        const state = c[key];
+        brush.size = { ...state.size };
+        if (state.position) {
+          actor.transform.position = { ...state.position };
+        }
+      }
+    };
+
+    // Ensure world is at proposed geometry (Details edits may still be at before).
+    applyGeom('after');
+    const complexity = validateWorldSubtractComplexity(world);
+    if (rejectSubtractIfTooComplex(complexity)) {
+      applyGeom('before');
+      runtimeRef.current?.resyncWorld();
+      runtimeRef.current?.setSelection(selectedRef.current);
+      return;
+    }
+
     executeCommand(
       new SetBrushGeometryCommand({ world, changes: meaningful, label }),
       { resync: true },
@@ -498,20 +616,26 @@ export function EditorProvider({ children }) {
         snap: gridRef.current,
       });
       if (JSON.stringify(prevOpenings) !== JSON.stringify(nextOpenings)) {
-        executeCommand(
-          new SetBrushOpeningsCommand({
-            world,
-            actorId: c.actorId,
-            before: prevOpenings,
-            after: nextOpenings,
-            label: 'Clamp openings',
-          }),
-          { resync: true },
-        );
+        const openCmd = new SetBrushOpeningsCommand({
+          world,
+          actorId: c.actorId,
+          before: prevOpenings,
+          after: nextOpenings,
+          label: 'Clamp openings',
+        });
+        openCmd.do();
+        const openCheck = validateWorldSubtractComplexity(world);
+        if (rejectSubtractIfTooComplex(openCheck)) {
+          openCmd.undo();
+          runtimeRef.current?.resyncWorld();
+          continue;
+        }
+        openCmd.undo();
+        executeCommand(openCmd, { resync: true });
       }
     }
     autoCapturePrefabOverrides(meaningful.map((c) => c.actorId));
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
 
   /**
    * Live world-position update during gizmo drag (no history until commit).
@@ -519,6 +643,7 @@ export function EditorProvider({ children }) {
    */
   const previewActorPositions = useCallback((updates) => {
     if (!world || mode === 'play') return;
+    const restore = [];
     for (const u of updates) {
       const actor = world.getActor(u.actorId);
       if (!actor || isEffectivelyLocked(actor, world)) continue;
@@ -527,12 +652,22 @@ export function EditorProvider({ children }) {
         continue;
       }
       const current = getWorldTransform(actor, world);
+      restore.push({
+        actor,
+        worldTransform: structuredClone(current),
+      });
       setWorldTransform(actor, {
         ...current,
         position: { ...pos },
       }, world);
-      runtimeRef.current?.refreshActor(actor);
-      // Nested children move with parent Three group — refresh selection box.
+    }
+    if (!validateWorldSubtractComplexity(world).ok) {
+      for (const r of restore) {
+        setWorldTransform(r.actor, r.worldTransform, world);
+      }
+    }
+    for (const r of restore) {
+      runtimeRef.current?.refreshBrushCarveDependents(r.actor);
     }
     // No React bump during drag — Details refreshes on commit.
     runtimeRef.current?.setSelection(selectedRef.current);
@@ -553,18 +688,23 @@ export function EditorProvider({ children }) {
     ) {
       return;
     }
+    const prevSize = { ...brush.size };
+    const prevWorld = structuredClone(getWorldTransform(actor, world));
     const nextSize = {
       x: Math.max(1, Number(size.x)),
       y: Math.max(1, Number(size.y)),
       z: Math.max(1, Number(size.z)),
     };
     brush.size = nextSize;
-    const current = getWorldTransform(actor, world);
     setWorldTransform(actor, {
-      ...current,
+      ...prevWorld,
       position: { ...worldPosition },
     }, world);
-    runtimeRef.current?.refreshBrush(actor);
+    if (!validateWorldSubtractComplexity(world).ok) {
+      brush.size = prevSize;
+      setWorldTransform(actor, prevWorld, world);
+    }
+    runtimeRef.current?.refreshBrushCarveDependents(actor);
     // No React bump during drag — avoids remount/churn while meshes rebuild.
     runtimeRef.current?.setSelection(selectedRef.current);
   }, [world, mode]);
@@ -626,12 +766,15 @@ export function EditorProvider({ children }) {
     );
   }, [world, mode, executeCommand]);
 
-  const createCell = useCallback((name = 'Cell') => {
+  const createCell = useCallback((name = 'Cell', position) => {
     if (!world || mode === 'play') return null;
+    const snap = gridSnapRef.current;
+    const g = snap ? gridRef.current : 1;
     const cell = createCellActor({
       name,
-      position: { x: 0, y: 0, z: 0 },
-      gridSize: gridRef.current,
+      position: position || { x: 0, y: 0, z: 0 },
+      gridSize: g,
+      snapY: snap,
     });
     executeCommand(
       new AddActorsCommand({
@@ -725,9 +868,41 @@ export function EditorProvider({ children }) {
       return;
     }
 
+    if (partial.operation != null && Object.keys(partial).length === 1) {
+      const nextOp = partial.operation === 'subtract' ? 'subtract' : 'add';
+      if (brush.operation === nextOp) return;
+      const before = {
+        operation: brush.operation === 'subtract' ? 'subtract' : 'add',
+        collidable: brush.collidable,
+        color: brush.color,
+      };
+      const after = {
+        operation: nextOp,
+        collidable: nextOp === 'subtract' ? false : brush.collidable !== false,
+        color: nextOp === 'subtract' && brush.color === '#8a9099' ? '#c23b4a' : brush.color,
+      };
+      const cmd = new SetBrushMaterialCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: nextOp === 'subtract' ? 'Set subtractive' : 'Set additive',
+      });
+      cmd.do();
+      if (rejectSubtractIfTooComplex(validateWorldSubtractComplexity(world))) {
+        cmd.undo();
+        runtimeRef.current?.resyncWorld();
+        return;
+      }
+      cmd.undo();
+      executeCommand(cmd, { resync: true });
+      autoCapturePrefabOverrides([actorId]);
+      return;
+    }
+
     const before = {};
     const after = {};
-    for (const key of ['materialId', 'faceMaterials', 'uv', 'color', 'collidable']) {
+    for (const key of ['materialId', 'faceMaterials', 'uv', 'color', 'collidable', 'operation']) {
       if (key in partial) {
         before[key] = key === 'uv'
           ? {
@@ -738,22 +913,37 @@ export function EditorProvider({ children }) {
           : key === 'faceMaterials'
             ? (brush.faceMaterials ? { ...brush.faceMaterials } : null)
             : brush[key];
-        after[key] = partial[key];
+        after[key] = key === 'operation'
+          ? (partial.operation === 'subtract' ? 'subtract' : 'add')
+          : partial[key];
       }
     }
     if (Object.keys(after).length === 0) return;
-    executeCommand(
-      new SetBrushMaterialCommand({
-        world,
-        actorId,
-        before,
-        after,
-        label: partial.materialId !== undefined ? 'Assign material' : 'Edit brush material',
-      }),
-      { resync: true },
-    );
+    if ('operation' in after && after.operation === 'subtract') {
+      after.collidable = false;
+      before.collidable = brush.collidable;
+    }
+    const matCmd = new SetBrushMaterialCommand({
+      world,
+      actorId,
+      before,
+      after,
+      label: partial.materialId !== undefined
+        ? 'Assign material'
+        : partial.operation !== undefined
+          ? (after.operation === 'subtract' ? 'Set subtractive' : 'Set additive')
+          : 'Edit brush material',
+    });
+    matCmd.do();
+    if (rejectSubtractIfTooComplex(validateWorldSubtractComplexity(world))) {
+      matCmd.undo();
+      runtimeRef.current?.resyncWorld();
+      return;
+    }
+    matCmd.undo();
+    executeCommand(matCmd, { resync: true });
     autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, commitBrushGeometry, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, commitBrushGeometry, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
 
   const setSelectedBrushOpenings = useCallback((nextOpenings, label = 'Edit openings') => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -766,12 +956,17 @@ export function EditorProvider({ children }) {
       snap: gridRef.current,
     });
     if (JSON.stringify(before) === JSON.stringify(after)) return;
-    executeCommand(
-      new SetBrushOpeningsCommand({ world, actorId, before, after, label }),
-      { resync: true },
-    );
+    const openCmd = new SetBrushOpeningsCommand({ world, actorId, before, after, label });
+    openCmd.do();
+    if (rejectSubtractIfTooComplex(validateWorldSubtractComplexity(world))) {
+      openCmd.undo();
+      runtimeRef.current?.resyncWorld();
+      return;
+    }
+    openCmd.undo();
+    executeCommand(openCmd, { resync: true });
     autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
 
   const addBrushOpening = useCallback((type = 'door') => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -840,13 +1035,135 @@ export function EditorProvider({ children }) {
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
 
-  const placeMeshAsset = useCallback((asset, position) => {
+  const updateSelectedRamp = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const ramp = world.getActor(actorId)?.getComponent('Ramp');
+    if (!ramp) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      if (['width', 'length', 'rise', 'thickness'].includes(key)) {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = ramp[key];
+        after[key] = Math.max(gridRef.current, snapToGrid(raw, gridRef.current));
+      } else if (key === 'direction') {
+        if (!RAMP_DIRECTIONS.includes(partial.direction)) continue;
+        before.direction = ramp.direction;
+        after.direction = partial.direction;
+      } else if (key === 'uv') {
+        before.uv = {
+          scale: { ...ramp.uv.scale },
+          offset: { ...ramp.uv.offset },
+          rotation: ramp.uv.rotation,
+        };
+        after.uv = partial.uv;
+      } else {
+        before[key] = ramp[key];
+        after[key] = partial[key];
+      }
+    }
+    if (Object.keys(after).length === 0) return;
+    executeCommand(
+      new SetRampPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: partial.materialId !== undefined ? 'Assign ramp material' : 'Edit ramp',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const updateSelectedStair = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const stair = world.getActor(actorId)?.getComponent('Stair');
+    if (!stair) return;
+    const before = {};
+    const after = {};
+
+    if (partial.stairType != null && STAIR_TYPES.includes(partial.stairType)) {
+      const nextType = partial.stairType;
+      if (nextType !== stair.stairType) {
+        const defaults = defaultsForStairType(nextType, stair);
+        for (const key of Object.keys(defaults)) {
+          before[key] = stair[key];
+          after[key] = defaults[key];
+        }
+      }
+    }
+
+    for (const key of Object.keys(partial)) {
+      if (key === 'stairType') continue;
+      if (['width', 'stepHeight', 'treadDepth', 'innerRadius'].includes(key)) {
+        const raw = Number(partial[key]);
+        if (!Number.isFinite(raw)) continue;
+        before[key] = stair[key];
+        after[key] = Math.max(key === 'innerRadius' ? 0 : 1, snapToGrid(raw, gridRef.current) || raw);
+      } else if (key === 'stepCount') {
+        before.stepCount = stair.stepCount;
+        after.stepCount = Math.max(1, Math.round(Number(partial.stepCount) || 1));
+      } else if (key === 'sweepAngle') {
+        const raw = Math.abs(Number(partial.sweepAngle));
+        if (!Number.isFinite(raw)) continue;
+        before.sweepAngle = stair.sweepAngle;
+        after.sweepAngle = Math.max(1, Math.min(720, raw));
+      } else if (key === 'startAngle') {
+        const raw = Number(partial.startAngle);
+        if (!Number.isFinite(raw)) continue;
+        before.startAngle = stair.startAngle;
+        after.startAngle = raw;
+      } else if (key === 'clockwise') {
+        before.clockwise = stair.clockwise;
+        after.clockwise = Boolean(partial.clockwise);
+      } else if (key === 'totalRise') {
+        const rise = Math.max(gridRef.current, snapToGrid(Number(partial.totalRise), gridRef.current));
+        before.stepHeight = stair.stepHeight;
+        after.stepHeight = rise / Math.max(1, stair.stepCount);
+      } else if (key === 'direction') {
+        if (!RAMP_DIRECTIONS.includes(partial.direction)) continue;
+        before.direction = stair.direction;
+        after.direction = partial.direction;
+      } else {
+        before[key] = stair[key];
+        after[key] = partial[key];
+      }
+    }
+    if (Object.keys(after).length === 0) return;
+    executeCommand(
+      new SetStairPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: partial.stairType !== undefined
+          ? `Set ${partial.stairType} stairs`
+          : partial.materialId !== undefined
+            ? 'Assign stair material'
+            : 'Edit stairs',
+      }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const placeMeshAsset = useCallback((asset, position, options = {}) => {
     if (!world || mode === 'play' || !asset?.id) return null;
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     const actor = createStaticMeshActor({
       assetId: asset.id,
       name: asset.name || 'Static Mesh',
       position: position || { x: 0, y: 50, z: 0 },
-      gridSize: gridRef.current,
+      rotation: options.rotation,
+      gridSize: g,
+      snapY: options.snapY ?? false,
+      collidable: options.collidable,
+      collisionType: options.collisionType,
     });
     executeCommand(
       new AddActorsCommand({
@@ -859,18 +1176,43 @@ export function EditorProvider({ children }) {
     return actor;
   }, [world, mode, executeCommand]);
 
-  const placeLight = useCallback((lightType = 'point', position) => {
+  const placeLight = useCallback((lightType = 'point', position, options = {}) => {
     if (!world || mode === 'play') return null;
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     const actor = createLightActor({
       lightType,
       position: position || { x: 0, y: 200, z: 0 },
-      gridSize: gridRef.current,
+      rotation: options.rotation,
+      gridSize: g,
+      snapY: options.snapY ?? snap,
     });
     executeCommand(
       new AddActorsCommand({
         world,
         actorsJson: [actor.toJSON()],
         label: `Place ${lightType} light`,
+      }),
+      { selectIds: [actor.id] },
+    );
+    return actor;
+  }, [world, mode, executeCommand]);
+
+  const placePlayerSpawn = useCallback((position, options = {}) => {
+    if (!world || mode === 'play') return null;
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
+    const actor = createPlayerSpawnActor({
+      position: position || { x: 0, y: 0, z: 0 },
+      rotation: options.rotation,
+      gridSize: g,
+      snapY: options.snapY ?? false,
+    });
+    executeCommand(
+      new AddActorsCommand({
+        world,
+        actorsJson: [actor.toJSON()],
+        label: 'Place player spawn',
       }),
       { selectIds: [actor.id] },
     );
@@ -900,7 +1242,7 @@ export function EditorProvider({ children }) {
     }
   }, [world, mode, savePrefabDefinition, getPrefabDefinitionSync, notify]);
 
-  const placePrefabAsset = useCallback(async (assetOrId, position) => {
+  const placePrefabAsset = useCallback(async (assetOrId, position, options = {}) => {
     if (!world || mode === 'play') return null;
     const id = typeof assetOrId === 'string' ? assetOrId : assetOrId?.id;
     if (!id) return null;
@@ -912,10 +1254,18 @@ export function EditorProvider({ children }) {
       notify(`Prefab not found: ${id}`);
       return null;
     }
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
+    const raw = {
+      x: position?.x ?? 0,
+      y: position?.y ?? 0,
+      z: position?.z ?? 0,
+    };
     const pos = {
-      x: snapToGrid(position?.x ?? 0, gridRef.current),
-      y: snapToGrid(position?.y ?? 0, gridRef.current),
-      z: snapToGrid(position?.z ?? 0, gridRef.current),
+      x: snap ? snapToGrid(raw.x, g) : raw.x,
+      // Preserve surface elevation unless caller asks to snap Y.
+      y: (options.snapY && snap) ? snapToGrid(raw.y, g) : raw.y,
+      z: snap ? snapToGrid(raw.z, g) : raw.z,
     };
     const placed = instantiatePrefab(definition, world, { position: pos });
     // instantiate already added actors — capture JSON then remove so command owns add
@@ -1098,8 +1448,21 @@ export function EditorProvider({ children }) {
 
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
+    if (!world || selectedRef.current.length === 0) {
+      updateSelectedBrush({ materialId });
+      return;
+    }
+    const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
+    if (actor?.getComponent('Ramp')) {
+      updateSelectedRamp({ materialId });
+      return;
+    }
+    if (actor?.getComponent('Stair')) {
+      updateSelectedStair({ materialId });
+      return;
+    }
     updateSelectedBrush({ materialId });
-  }, [updateSelectedBrush]);
+  }, [world, updateSelectedBrush, updateSelectedRamp, updateSelectedStair]);
 
   const renameSelected = useCallback((name) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -1177,6 +1540,8 @@ export function EditorProvider({ children }) {
     notify,
     gridSize,
     setGridSize,
+    gridSnap,
+    setGridSnap,
     gridIncrements: GRID_INCREMENTS,
     revision,
     canUndo: historyFlags.canUndo,
@@ -1208,8 +1573,11 @@ export function EditorProvider({ children }) {
     removeBrushOpening,
     updateSelectedLight,
     updateSelectedStaticMesh,
+    updateSelectedRamp,
+    updateSelectedStair,
     placeMeshAsset,
     placeLight,
+    placePlayerSpawn,
     placePrefabAsset,
     createPrefabFromSelection,
     updatePrefabAssetFromSelection,

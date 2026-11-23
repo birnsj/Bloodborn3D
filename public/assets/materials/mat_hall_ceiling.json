@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_hall_ceiling",
+  "name": "Hall Ceiling",
+  "type": "material",
+  "baseColor": "#9a9690",
+  "baseColorMapId": "tex_hall_plaster",
+  "normalMapId": "tex_hall_plaster_n",
+  "normalScale": 0.95,
+  "roughness": 1,
+  "metalness": 0,
+  "roughnessMapId": "tex_hall_plaster_r",
+  "metalnessMapId": null,
+  "envMapIntensity": 0.45,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 0.85,
+    "y": 0.85
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_hall_ceiling_sphere.png",
+  "createdAt": 1795419703056,
+  "updatedAt": 1795419703056
+}

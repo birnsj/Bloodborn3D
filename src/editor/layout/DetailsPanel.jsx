@@ -55,6 +55,8 @@ export function DetailsPanel({ docked = false } = {}) {
     removeBrushOpening,
     updateSelectedLight,
     updateSelectedStaticMesh,
+    updateSelectedRamp,
+    updateSelectedStair,
     renameSelected,
     deleteSelected,
     duplicateSelected,
@@ -83,6 +85,8 @@ export function DetailsPanel({ docked = false } = {}) {
   const [tab, setTab] = useState('details');
   const disabled = mode === 'play' || !selectedActor;
   const brush = selectedActor?.getComponent('Brush');
+  const ramp = selectedActor?.getComponent('Ramp');
+  const stair = selectedActor?.getComponent('Stair');
   const light = selectedActor?.getComponent('Light');
   const spawn = selectedActor?.getComponent('PlayerSpawn');
   const staticMesh = selectedActor?.getComponent('StaticMesh');
@@ -159,6 +163,10 @@ export function DetailsPanel({ docked = false } = {}) {
               {selectedActor.getComponent('Cell') && <span>Cell</span>}
               {brush && <span>Brush</span>}
               {brush && <span>Collider (Box)</span>}
+              {ramp && <span>Ramp</span>}
+              {ramp && <span>Collider (Slope)</span>}
+              {stair && <span>Stairs</span>}
+              {stair && <span>Collider (Steps)</span>}
               {light && <span>Light</span>}
               {staticMesh && <span>StaticMesh</span>}
               {spawn && <span>PlayerSpawn</span>}
@@ -350,6 +358,18 @@ export function DetailsPanel({ docked = false } = {}) {
 
             {brush && (
               <Collapsible title="Brush" storageKey="details.brush">
+                <label className="bb-field" {...helpProps('details.brush.operation')}>
+                  <span className="bb-field__label">Operation</span>
+                  <select
+                    className="bb-input"
+                    value={brush.operation === 'subtract' ? 'subtract' : 'add'}
+                    disabled={disabled}
+                    onChange={(e) => updateSelectedBrush({ operation: e.target.value })}
+                  >
+                    <option value="add">Add (solid)</option>
+                    <option value="subtract">Subtract (cutter)</option>
+                  </select>
+                </label>
                 <div className="bb-field-caption">Dimensions</div>
                 <AxisInputs
                   values={brush.size}
@@ -372,11 +392,17 @@ export function DetailsPanel({ docked = false } = {}) {
                   <span className="bb-field__label">Collidable</span>
                   <input
                     type="checkbox"
-                    checked={brush.collidable !== false}
-                    disabled={disabled}
+                    checked={brush.operation !== 'subtract' && brush.collidable !== false}
+                    disabled={disabled || brush.operation === 'subtract'}
                     onChange={(e) => updateSelectedBrush({ collidable: e.target.checked })}
                   />
                 </label>
+                {brush.operation === 'subtract' && (
+                  <p className="bb-muted">
+                    Subtractive brushes carve overlapping additive solids. They never generate
+                    colliders and are hidden in Play mode.
+                  </p>
+                )}
               </Collapsible>
             )}
 
@@ -522,7 +548,7 @@ export function DetailsPanel({ docked = false } = {}) {
               </Collapsible>
             )}
 
-            {brush && isWallBrush(selectedActor) && (
+            {brush && brush.operation !== 'subtract' && isWallBrush(selectedActor) && (
               <Collapsible title="Openings" storageKey="details.openings">
                 <div className="bb-field-row" style={{ gap: 8, marginBottom: 8 }}>
                   <button
@@ -640,8 +666,312 @@ export function DetailsPanel({ docked = false } = {}) {
             {brush && (
               <Collapsible title="Collision" storageKey="details.collision" defaultOpen={false}>
                 <p className="bb-muted" {...helpProps('details.collision.collidable')}>
-                  Play mode builds Rapier box collider(s) from brush solids (including openings) at the actor’s world transform when Collidable is enabled.
+                  {brush.operation === 'subtract'
+                    ? 'Subtractive brushes never generate Rapier colliders. Carved openings in additive brushes update collision from the remaining solids.'
+                    : 'Play mode builds Rapier box collider(s) from brush solids (including openings and subtractive cuts) at the actor’s world transform when Collidable is enabled.'}
                 </p>
+              </Collapsible>
+            )}
+
+            {ramp && (
+              <Collapsible title="Ramp" storageKey="details.ramp">
+                <div {...helpProps('details.ramp')}>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Width</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={ramp.width}
+                      onChange={(e) => updateSelectedRamp({ width: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Length (run)</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={ramp.length}
+                      onChange={(e) => updateSelectedRamp({ length: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Rise</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={ramp.rise}
+                      onChange={(e) => updateSelectedRamp({ rise: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Direction</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={ramp.direction}
+                      onChange={(e) => updateSelectedRamp({ direction: e.target.value })}
+                    >
+                      <option value="z+">+Z (rise toward +Z)</option>
+                      <option value="z-">−Z (rise toward −Z)</option>
+                      <option value="x+">+X (rise toward +X)</option>
+                      <option value="x-">−X (rise toward −X)</option>
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Thickness</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={ramp.thickness}
+                      onChange={(e) => updateSelectedRamp({ thickness: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      disabled={disabled}
+                      value={normalizeHex(ramp.color)}
+                      onChange={(e) => updateSelectedRamp({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={ramp.materialId || ''}
+                      onChange={(e) => {
+                        const id = e.target.value || null;
+                        updateSelectedRamp({ materialId: id });
+                      }}
+                    >
+                      <option value="">(fallback color)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={ramp.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedRamp({ collidable: e.target.checked })}
+                    />
+                  </label>
+                  <p className="bb-muted">
+                    Collision uses a rotated slab along the slope hypotenuse, not a full bounding box.
+                  </p>
+                </div>
+              </Collapsible>
+            )}
+
+            {stair && (
+              <Collapsible title="Stairs" storageKey="details.stair">
+                <div {...helpProps('details.stair')}>
+                  <label className="bb-field" {...helpProps('details.stair.type')}>
+                    <span className="bb-field__label">Type</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={stair.stairType || 'straight'}
+                      onChange={(e) => updateSelectedStair({ stairType: e.target.value })}
+                    >
+                      <option value="straight">Straight</option>
+                      <option value="curved">Curved</option>
+                      <option value="spiral">Spiral</option>
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Width</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={stair.width}
+                      onChange={(e) => updateSelectedStair({ width: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Step Count</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      min={1}
+                      step={1}
+                      disabled={disabled}
+                      value={stair.stepCount}
+                      onChange={(e) => updateSelectedStair({ stepCount: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Step Height</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={stair.stepHeight}
+                      onChange={(e) => updateSelectedStair({ stepHeight: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Total Rise</span>
+                    <input
+                      className="bb-input"
+                      type="number"
+                      step={gridSize}
+                      disabled={disabled}
+                      value={stair.totalRise}
+                      onChange={(e) => updateSelectedStair({ totalRise: Number(e.target.value) })}
+                    />
+                  </label>
+                  {(stair.stairType || 'straight') === 'straight' && (
+                    <>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Tread Depth</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={stair.treadDepth}
+                          onChange={(e) => updateSelectedStair({ treadDepth: Number(e.target.value) })}
+                        />
+                      </label>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Direction</span>
+                        <select
+                          className="bb-select"
+                          disabled={disabled}
+                          value={stair.direction}
+                          onChange={(e) => updateSelectedStair({ direction: e.target.value })}
+                        >
+                          <option value="z+">+Z</option>
+                          <option value="z-">−Z</option>
+                          <option value="x+">+X</option>
+                          <option value="x-">−X</option>
+                        </select>
+                      </label>
+                    </>
+                  )}
+                  {(stair.stairType === 'curved' || stair.stairType === 'spiral') && (
+                    <>
+                      <label className="bb-field" {...helpProps('details.stair.innerRadius')}>
+                        <span className="bb-field__label">Inner Radius</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={gridSize}
+                          disabled={disabled}
+                          value={stair.innerRadius}
+                          onChange={(e) => updateSelectedStair({ innerRadius: Number(e.target.value) })}
+                        />
+                      </label>
+                      <label className="bb-field" {...helpProps('details.stair.sweep')}>
+                        <span className="bb-field__label">Sweep Angle (°)</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          min={1}
+                          max={720}
+                          step={15}
+                          disabled={disabled}
+                          value={stair.sweepAngle}
+                          onChange={(e) => updateSelectedStair({ sweepAngle: Number(e.target.value) })}
+                        />
+                      </label>
+                      <div className="bb-seg" style={{ marginBottom: 8 }}>
+                        {[90, 180, 270, 360].map((deg) => (
+                          <button
+                            key={deg}
+                            type="button"
+                            className={`bb-btn${Number(stair.sweepAngle) === deg ? ' bb-btn--active' : ''}`}
+                            disabled={disabled}
+                            onClick={() => updateSelectedStair({ sweepAngle: deg })}
+                          >
+                            {deg}°
+                          </button>
+                        ))}
+                      </div>
+                      <label className="bb-field" {...helpProps('details.stair.winding')}>
+                        <span className="bb-field__label">Winding</span>
+                        <select
+                          className="bb-select"
+                          disabled={disabled}
+                          value={stair.clockwise !== false ? 'cw' : 'ccw'}
+                          onChange={(e) => updateSelectedStair({
+                            clockwise: e.target.value === 'cw',
+                          })}
+                        >
+                          <option value="cw">Clockwise</option>
+                          <option value="ccw">Counterclockwise</option>
+                        </select>
+                      </label>
+                      <label className="bb-field">
+                        <span className="bb-field__label">Start Angle (°)</span>
+                        <input
+                          className="bb-input"
+                          type="number"
+                          step={15}
+                          disabled={disabled}
+                          value={stair.startAngle}
+                          onChange={(e) => updateSelectedStair({ startAngle: Number(e.target.value) })}
+                        />
+                      </label>
+                    </>
+                  )}
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      disabled={disabled}
+                      value={normalizeHex(stair.color)}
+                      onChange={(e) => updateSelectedStair({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={stair.materialId || ''}
+                      onChange={(e) => updateSelectedStair({ materialId: e.target.value || null })}
+                    >
+                      <option value="">(fallback color)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={stair.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedStair({ collidable: e.target.checked })}
+                    />
+                  </label>
+                  <p className="bb-muted">
+                    {(stair.stairType || 'straight') === 'straight'
+                      ? `Straight · ${stair.stepCount} step boxes · run ${Math.round(stair.length)} · rise ${Math.round(stair.totalRise)}`
+                      : `${stair.stairType === 'spiral' ? 'Spiral' : 'Curved'} · ${stair.stepCount} wedge steps · sweep ${stair.sweepAngle}° · rise ${Math.round(stair.totalRise)}`}
+                  </p>
+                </div>
               </Collapsible>
             )}
 

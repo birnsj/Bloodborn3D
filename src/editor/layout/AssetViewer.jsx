@@ -155,12 +155,20 @@ function PreviewSurface({ asset }) {
 }
 
 function MaterialPreviewWithMap({ asset }) {
-  const { getTextureUrl } = useAssetBrowser();
+  const { assetResolver } = useAssetBrowser();
+  const getTextureUrl = assetResolver?.getTextureUrl;
   const color = asset.definition?.baseColor || asset.meta?.baseColor || asset.preview?.color || '#8a9099';
-  const mapUrl = asset.definition?.baseColorMapId
+  const mapUrl = asset.definition?.baseColorMapId && getTextureUrl
     ? getTextureUrl(asset.definition.baseColorMapId)
     : null;
-  return <MaterialPreviewCanvas color={color} mapUrl={mapUrl || null} />;
+  return (
+    <MaterialPreviewCanvas
+      definition={asset.definition}
+      color={color}
+      mapUrl={mapUrl || null}
+      getTextureUrl={getTextureUrl || null}
+    />
+  );
 }
 
 function previewHint(asset) {

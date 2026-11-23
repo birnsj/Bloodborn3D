@@ -21,6 +21,8 @@ function typeIcon(actor) {
   if (type === 'PlayerSpawn') return <IconSpawn />;
   if (type === 'Cell') return <span className="bb-outliner-glyph">C</span>;
   if (type === 'StaticMesh') return <span className="bb-outliner-glyph">M</span>;
+  if (type === 'Ramp') return <span className="bb-outliner-glyph">R</span>;
+  if (type === 'Stair') return <span className="bb-outliner-glyph">S</span>;
   return <IconBrush />;
 }
 
@@ -260,7 +262,11 @@ function OutlinerNode({
           <span className="bb-outliner-item__icon">{typeIcon(actor)}</span>
           <span className="bb-outliner-item__name">{actor.name}</span>
           <span className="bb-outliner-item__type">
-            {isCell ? 'Cell' : (actor.components[0]?.type || 'Actor')}
+            {isCell
+              ? 'Cell'
+              : (actor.getComponent?.('Brush')?.operation === 'subtract'
+                ? 'Subtract'
+                : (actor.components[0]?.type || 'Actor'))}
           </span>
         </button>
         <button

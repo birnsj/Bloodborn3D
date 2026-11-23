@@ -73,6 +73,38 @@ export function IconFloor(props) {
   );
 }
 
+export function IconCeiling(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2 3.5h12v2.5H2V3.5Zm1.5 4h9v1.5h-9V7.5Zm0 3h9v1.5h-9V10.5Z" />
+    </Svg>
+  );
+}
+
+export function IconRamp(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2 12.5 14 12.5 14 10.5 4.5 3.5 2 3.5v9Z" />
+    </Svg>
+  );
+}
+
+export function IconStairs(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2 13h3v-3h3V7h3V4h3v9H2Z" />
+    </Svg>
+  );
+}
+
+export function IconSubtract(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M2.5 3.5h11v9h-11v-9Zm1.5 1.5v6h8v-6H4Zm1.5 2.5h5v1.5h-5V7.5Z" />
+    </Svg>
+  );
+}
+
 export function IconPlay(props) {
   return (
     <Svg {...props}>
@@ -181,6 +213,54 @@ export function IconList(props) {
   return (
     <Svg {...props}>
       <path fill="currentColor" d="M3 3.5h10v1.5H3V3.5Zm0 4h10V9H3V7.5Zm0 4h10v1.5H3V11.5Z" />
+    </Svg>
+  );
+}
+
+export function IconPin(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M6.2 2.5h3.6l.7 4.2 2 1.3v1.5H9.2V13.5H6.8v-4H3.5V8l2-1.3.7-4.2Z" />
+    </Svg>
+  );
+}
+
+export function IconDragHandle(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M3 4.5h10v1.2H3V4.5Zm0 3h10v1.2H3V7.5Zm0 3h10v1.2H3V10.5Z" />
+    </Svg>
+  );
+}
+
+export function IconActors(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M5.2 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm5.6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM2.8 12.5c0-1.7 1.3-2.8 2.8-2.8h.8c.4.5 1 .9 1.6 1.1-.6 1.4-1.6 2.3-3.2 2.3H2.8v-.6Zm7.2-.6c-1.6 0-2.6-.9-3.2-2.3.6-.2 1.2-.6 1.6-1.1h.8c1.5 0 2.8 1.1 2.8 2.8v.6H10Z" />
+    </Svg>
+  );
+}
+
+export function IconPrefab(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M3 3.5h4.5v4.5H3V3.5Zm5.5 0H13v4.5H8.5V3.5ZM3 9H7.5v4.5H3V9Zm5.5 1.5H13V13.5H8.5V10.5Z" />
+    </Svg>
+  );
+}
+
+export function IconMesh(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M8 2.2 13.5 5v6L8 14.2 2.5 11V5L8 2.2Zm0 1.7L4 6v4.2l4 2.3 4-2.3V6L8 3.9Z" />
+    </Svg>
+  );
+}
+
+export function IconCell(props) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M3 3.5h10v10H3v-10Zm1.5 1.5v7h7v-7h-7Z" />
     </Svg>
   );
 }

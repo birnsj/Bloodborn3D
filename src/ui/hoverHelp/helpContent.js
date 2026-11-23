@@ -50,23 +50,120 @@ export const HELP_CONTENT = {
     title: 'Floor Brush',
     body: 'Drag on the construction grid to create a floor slab at the standard floor thickness.',
   },
+  'toolbar.ceiling': {
+    title: 'Ceiling Brush',
+    body: 'Drag on the construction grid to create a ceiling slab at standard thickness. The underside sits at wall-module height above the construction plane so a standard wall meets it.',
+    tips: 'Move or resize like any brush. Subtractive boxes can cut shafts through ceilings and floors.',
+    meta: 'Thickness uses the ceiling construction constant (same scale as floors).',
+  },
+  'toolbar.ramp': {
+    title: 'Ramp',
+    body: 'Drag a footprint on the construction grid to place a parametric ramp. Slope follows the longer drag axis; edit Width, Length, Rise, and Direction in Details.',
+    tips: 'Collision uses a rotated slab along the slope — not a full box AABB.',
+  },
+  'details.ramp': {
+    title: 'Ramp Properties',
+    body: 'Parametric straight ramp: width, run length, vertical rise, slope direction, thickness, material, and collidable.',
+  },
+  'toolbar.stair': {
+    title: 'Stairs',
+    body: 'Drag a footprint to place a straight staircase as a single editable actor. Rise defaults to one wall module; step count and tread adjust to the run.',
+    tips: 'Each step has its own collider. Edit Width, Step Count, Step Height, and Tread Depth in Details.',
+  },
+  'details.stair': {
+    title: 'Stair Properties',
+    body: 'Procedural stairs as a single actor. Choose Straight, Curved, or Spiral; geometry and collision regenerate immediately.',
+  },
+  'details.stair.type': {
+    title: 'Staircase Type',
+    body: 'Straight uses rectangular steps. Curved and Spiral share a wedge-step generator that sweeps around a central opening.',
+    tips: 'Switching type applies sensible defaults for radius and sweep; you can edit them afterward.',
+  },
+  'details.stair.innerRadius': {
+    title: 'Inner Radius',
+    body: 'Distance from the stair center to the inner edge of the treads. Larger values open a wider central well; zero makes a solid core.',
+  },
+  'details.stair.sweep': {
+    title: 'Sweep Angle',
+    body: 'How far the staircase turns in degrees (90, 180, 270, 360, or custom). Step angles are spaced evenly across the sweep.',
+  },
+  'details.stair.winding': {
+    title: 'Winding Direction',
+    body: 'Clockwise or counterclockwise turn as you ascend.',
+  },
+  'toolbar.subtract': {
+    title: 'Subtract Box',
+    body: 'Drag on the construction grid to create a subtractive box. Where it overlaps additive brushes, solid geometry is carved away without destroying the original brush actors.',
+    tips: 'Shown as translucent crimson in Edit mode; hidden in Play. Only axis-aligned cuts relative to the target are supported.',
+  },
+  'details.brush.operation': {
+    title: 'Brush Operation',
+    body: 'Add builds solid structural geometry. Subtract removes overlapping solid volume from additive brushes in the same level.',
+    tips: 'Subtractive brushes never generate Rapier colliders and are editor-only visuals.',
+  },
   'toolbar.pointLight': {
     title: 'Point Light',
-    body: 'Places a point light actor above the origin (snapped to the grid). Edit intensity, color, and range in Details.',
+    body: 'Drag onto a surface in the viewport, or click then click a surface to place. Snaps horizontally when grid snap is on; elevation follows the support surface.',
+    tips: 'Edit intensity, color, and range in Details after placing.',
   },
   'toolbar.spotLight': {
     title: 'Spot Light',
-    body: 'Places a spot light actor. Adjust cone angle and direction from the Details panel Transform and Light sections.',
+    body: 'Drag onto a wall or surface, or click then click to place. Prefers vertical surfaces so the spot faces outward from the wall.',
   },
   'toolbar.dirLight': {
     title: 'Directional Light',
-    body: 'Places a directional (sun-like) light. Rotation in Transform controls the light direction.',
+    body: 'Places a directional (sun-like) light. Drag into the viewport or click then click to place. Rotation in Transform controls the light direction.',
+  },
+  'toolbar.playerSpawn': {
+    title: 'Player Spawn',
+    body: 'Places the Play-mode start point on a floor or other support surface. Drag from the creation toolbar or click then click to place.',
+  },
+  'toolbar.cell': {
+    title: 'Cell',
+    body: 'Creates an empty Cell root for organizing room hierarchy. Drag into the viewport or click then click to place.',
   },
   'toolbar.grid': {
     title: 'Grid Snap',
-    body: 'Controls the spacing used when placing and resizing structural brushes. Hold Alt while dragging a gizmo to temporarily snap to 1 unit instead.',
+    body: 'Controls the spacing used when placing and resizing structural brushes. Hold Alt while dragging a gizmo to temporarily snap to 1 unit instead. Use the Snap checkbox to disable snapping entirely.',
     tips: 'Smaller increments allow more precise construction. Structural geometry remains aligned to the selected grid.',
     meta: 'Values are editor units (100 editor units = 1 meter).',
+  },
+  'toolbar.gridSnap': {
+    title: 'Enable Snap',
+    body: 'When enabled, placement and gizmo moves snap to the grid increment. When disabled, props keep freeform XZ while still sticking to the support surface elevation.',
+  },
+  'creation.toolbar': {
+    title: 'Creation Toolbar',
+    body: 'Floating Photoshop-style tool rail over the viewport. Click a category to expand tools, drag tools into the scene, or click a tool to activate its normal create mode.',
+    tips: 'Drag the handle to reposition. Pin keeps the flyout open. Esc cancels an armed placement.',
+  },
+  'creation.geometry': {
+    title: 'Geometry',
+    body: 'Structural brushes: box, wall, floor, ceiling, ramp, stairs, and subtract. Click to enter drag-to-size mode, or drag onto a surface for a default footprint.',
+  },
+  'creation.lights': {
+    title: 'Lights',
+    body: 'Point, spot, and directional lights. Drag onto surfaces for surface-aware placement.',
+  },
+  'creation.actors': {
+    title: 'Actors',
+    body: 'Gameplay and organization actors such as Player Spawn and Cell.',
+  },
+  'creation.assets': {
+    title: 'Prefabs / Assets',
+    body: 'Imported meshes and prefabs from the project registry. Drag onto floors, tables, or shelves — ceilings are skipped for interior placement.',
+  },
+  'creation.mesh': {
+    title: 'Static Mesh',
+    body: 'Drag onto a support surface. Placement uses visible mesh geometry even when gameplay collision is off.',
+  },
+  'creation.prefab': {
+    title: 'Prefab',
+    body: 'Drag a prefab instance onto a support surface. Overrides and hierarchy behave like Content Browser placement.',
+  },
+  'creation.pin': {
+    title: 'Pin Flyout',
+    body: 'Keeps the expanded tool strip open after choosing a tool. Unpin to auto-collapse like Photoshop.',
   },
   'toolbar.levelName': {
     title: 'Level Filename',

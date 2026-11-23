@@ -73,6 +73,334 @@
       },
       "createdAt": 1795409827425,
       "updatedAt": 1795409827431
+    },
+    {
+      "id": "tex_hall_stone",
+      "kind": "texture",
+      "name": "Hall Ashlar Stone",
+      "folder": "Textures",
+      "path": "textures/tex_hall_stone.png",
+      "originalName": "tex_hall_stone.png",
+      "tags": [
+        "hall",
+        "generated",
+        "albedo"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "albedo"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_stone_n",
+      "kind": "texture",
+      "name": "Hall Ashlar Stone Normal",
+      "folder": "Textures",
+      "path": "textures/tex_hall_stone_n.png",
+      "originalName": "tex_hall_stone_n.png",
+      "tags": [
+        "hall",
+        "generated",
+        "normal"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "normal"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_stone_r",
+      "kind": "texture",
+      "name": "Hall Ashlar Stone Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_hall_stone_r.png",
+      "originalName": "tex_hall_stone_r.png",
+      "tags": [
+        "hall",
+        "generated",
+        "roughness"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "roughness"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_floor",
+      "kind": "texture",
+      "name": "Hall Flagstone",
+      "folder": "Textures",
+      "path": "textures/tex_hall_floor.png",
+      "originalName": "tex_hall_floor.png",
+      "tags": [
+        "hall",
+        "generated",
+        "albedo"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "albedo"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_floor_n",
+      "kind": "texture",
+      "name": "Hall Flagstone Normal",
+      "folder": "Textures",
+      "path": "textures/tex_hall_floor_n.png",
+      "originalName": "tex_hall_floor_n.png",
+      "tags": [
+        "hall",
+        "generated",
+        "normal"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "normal"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_floor_r",
+      "kind": "texture",
+      "name": "Hall Flagstone Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_hall_floor_r.png",
+      "originalName": "tex_hall_floor_r.png",
+      "tags": [
+        "hall",
+        "generated",
+        "roughness"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "roughness"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_plaster",
+      "kind": "texture",
+      "name": "Hall Plaster",
+      "folder": "Textures",
+      "path": "textures/tex_hall_plaster.png",
+      "originalName": "tex_hall_plaster.png",
+      "tags": [
+        "hall",
+        "generated",
+        "albedo"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "albedo"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_plaster_n",
+      "kind": "texture",
+      "name": "Hall Plaster Normal",
+      "folder": "Textures",
+      "path": "textures/tex_hall_plaster_n.png",
+      "originalName": "tex_hall_plaster_n.png",
+      "tags": [
+        "hall",
+        "generated",
+        "normal"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "normal"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_plaster_r",
+      "kind": "texture",
+      "name": "Hall Plaster Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_hall_plaster_r.png",
+      "originalName": "tex_hall_plaster_r.png",
+      "tags": [
+        "hall",
+        "generated",
+        "roughness"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "roughness"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_wood",
+      "kind": "texture",
+      "name": "Hall Dark Oak",
+      "folder": "Textures",
+      "path": "textures/tex_hall_wood.png",
+      "originalName": "tex_hall_wood.png",
+      "tags": [
+        "hall",
+        "generated",
+        "albedo"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "albedo"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_wood_n",
+      "kind": "texture",
+      "name": "Hall Dark Oak Normal",
+      "folder": "Textures",
+      "path": "textures/tex_hall_wood_n.png",
+      "originalName": "tex_hall_wood_n.png",
+      "tags": [
+        "hall",
+        "generated",
+        "normal"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "normal"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "tex_hall_wood_r",
+      "kind": "texture",
+      "name": "Hall Dark Oak Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_hall_wood_r.png",
+      "originalName": "tex_hall_wood_r.png",
+      "tags": [
+        "hall",
+        "generated",
+        "roughness"
+      ],
+      "meta": {
+        "width": 1024,
+        "height": 1024,
+        "mapType": "roughness"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "mat_hall_stone",
+      "kind": "material",
+      "name": "Stone Block A",
+      "folder": "Materials",
+      "path": "materials/mat_hall_stone.json",
+      "originalName": "mat_hall_stone.json",
+      "tags": [
+        "hall",
+        "generated",
+        "pbr"
+      ],
+      "meta": {
+        "baseColor": "#a8a098",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_hall_stone_sphere.png"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "mat_hall_floor",
+      "kind": "material",
+      "name": "Hall Floor",
+      "folder": "Materials",
+      "path": "materials/mat_hall_floor.json",
+      "originalName": "mat_hall_floor.json",
+      "tags": [
+        "hall",
+        "generated",
+        "pbr"
+      ],
+      "meta": {
+        "baseColor": "#8e8478",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_hall_floor_sphere.png"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "mat_hall_ceiling",
+      "kind": "material",
+      "name": "Hall Ceiling",
+      "folder": "Materials",
+      "path": "materials/mat_hall_ceiling.json",
+      "originalName": "mat_hall_ceiling.json",
+      "tags": [
+        "hall",
+        "generated",
+        "pbr"
+      ],
+      "meta": {
+        "baseColor": "#9a9690",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_hall_ceiling_sphere.png"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
+    },
+    {
+      "id": "mat_hall_wood",
+      "kind": "material",
+      "name": "Hall Wood",
+      "folder": "Materials",
+      "path": "materials/mat_hall_wood.json",
+      "originalName": "mat_hall_wood.json",
+      "tags": [
+        "hall",
+        "generated",
+        "pbr"
+      ],
+      "meta": {
+        "baseColor": "#6e4a32",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_hall_wood_sphere.png"
+      },
+      "createdAt": 1795419703056,
+      "updatedAt": 1795419703056
     }
   ]
 }

@@ -20,6 +20,8 @@ export class BrushComponent extends Component {
     faceMaterials = null,
     uv = null,
     openings = null,
+    /** 'add' (default) or 'subtract' — subtractive brushes carve overlapping additive solids. */
+    operation = 'add',
   } = {}) {
     super({ id, type: BrushComponent.componentType, enabled });
     this.size = { ...size };
@@ -29,6 +31,7 @@ export class BrushComponent extends Component {
     this.faceMaterials = normalizeFaceMaterials(faceMaterials);
     this.uv = createBrushUvState(uv || {});
     this.openings = normalizeOpenings(openings);
+    this.operation = operation === 'subtract' ? 'subtract' : 'add';
   }
 
   toJSON() {
@@ -41,6 +44,7 @@ export class BrushComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      operation: this.operation === 'subtract' ? 'subtract' : 'add',
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

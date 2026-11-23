@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import {
-  IconBox,
-  IconFloor,
   IconPlay,
   IconRecord,
   IconRedo,
@@ -10,7 +8,6 @@ import {
   IconSelect,
   IconStop,
   IconUndo,
-  IconWall,
 } from '../../ui/icons.jsx';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useSessionRecorder } from '../sessionRecorder/useSessionRecorder.js';
@@ -24,6 +21,8 @@ export function LevelToolBar() {
     setTool,
     gridSize,
     setGridSize,
+    gridSnap,
+    setGridSnap,
     gridIncrements,
     levelName,
     setLevelName,
@@ -38,7 +37,6 @@ export function LevelToolBar() {
     play,
     stop,
     status,
-    placeLight,
   } = useEditor();
 
   const recorder = useSessionRecorder();
@@ -114,71 +112,6 @@ export function LevelToolBar() {
         >
           <IconSelect /> Select
         </button>
-        <button
-          type="button"
-          className={`bb-btn${tool === 'box' && !isPlay ? ' bb-btn--active' : ''}`}
-          disabled={isPlay}
-          title="Create box brush"
-          onClick={() => setTool('box')}
-          {...helpProps('toolbar.box', playReason)}
-        >
-          <IconBox /> Box
-        </button>
-        <button
-          type="button"
-          className={`bb-btn${tool === 'wall' && !isPlay ? ' bb-btn--active' : ''}`}
-          disabled={isPlay}
-          title="Create wall brush"
-          onClick={() => setTool('wall')}
-          {...helpProps('toolbar.wall', playReason)}
-        >
-          <IconWall /> Wall
-        </button>
-        <button
-          type="button"
-          className={`bb-btn${tool === 'floor' && !isPlay ? ' bb-btn--active' : ''}`}
-          disabled={isPlay}
-          title="Create floor brush"
-          onClick={() => setTool('floor')}
-          {...helpProps('toolbar.floor', playReason)}
-        >
-          <IconFloor /> Floor
-        </button>
-      </div>
-
-      <div className="bb-toolbar-divider" />
-
-      <div className="bb-seg">
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={isPlay}
-          title="Place point light"
-          onClick={() => placeLight('point')}
-          {...helpProps('toolbar.pointLight', playReason)}
-        >
-          Point Light
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={isPlay}
-          title="Place spot light"
-          onClick={() => placeLight('spot')}
-          {...helpProps('toolbar.spotLight', playReason)}
-        >
-          Spot
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={isPlay}
-          title="Place directional light"
-          onClick={() => placeLight('directional')}
-          {...helpProps('toolbar.dirLight', playReason)}
-        >
-          Dir
-        </button>
       </div>
 
       <div className="bb-toolbar-divider" />
@@ -188,7 +121,7 @@ export function LevelToolBar() {
         {...helpProps(
           'toolbar.grid',
           playReason,
-          `Current setting: ${gridSize} editor units`,
+          `Current setting: ${gridSize} editor units · snap ${gridSnap ? 'on' : 'off'}`,
         )}
       >
         <span>Grid</span>
@@ -202,6 +135,18 @@ export function LevelToolBar() {
             <option key={n} value={n}>{n}</option>
           ))}
         </select>
+      </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps('toolbar.gridSnap', playReason)}
+      >
+        <input
+          type="checkbox"
+          checked={gridSnap}
+          disabled={isPlay}
+          onChange={(e) => setGridSnap(e.target.checked)}
+        />
+        <span>Snap</span>
       </label>
 
       <input

@@ -169,3 +169,17 @@ export function transformToMatrix(transform) {
 export function matrixToTransform(m) {
   return decomposeTRS(m);
 }
+
+/** Transform a point by a column-major 4×4 matrix. */
+export function mat4TransformPoint(m, p) {
+  const x = p.x ?? 0;
+  const y = p.y ?? 0;
+  const z = p.z ?? 0;
+  const w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  const invW = Math.abs(w) > 1e-12 ? 1 / w : 1;
+  return {
+    x: (m[0] * x + m[4] * y + m[8] * z + m[12]) * invW,
+    y: (m[1] * x + m[5] * y + m[9] * z + m[13]) * invW,
+    z: (m[2] * x + m[6] * y + m[10] * z + m[14]) * invW,
+  };
+}

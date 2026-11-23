@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance Multilevel Gothic",
+  "actors": [
+    {
+      "id": "cell_ground",
+      "name": "Ground Hall",
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["cell"],
+      "components": [
+        { "id": "comp_cell_g", "type": "Cell", "enabled": true, "color": "#4d7ea8" }
+      ]
+    },
+    {
+      "id": "actor_ground_floor",
+      "name": "Ground Floor",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_gf",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 800, "y": 20, "z": 800 },
+          "color": "#4a5560",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_wall_n",
+      "name": "Wall North",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": 0, "y": 160, "z": -390 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_wn",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 800, "y": 300, "z": 20 },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_wall_s",
+      "name": "Wall South",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": 0, "y": 160, "z": 390 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_ws",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 800, "y": 300, "z": 20 },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_wall_w",
+      "name": "Wall West",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": -390, "y": 160, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_ww",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 20, "y": 300, "z": 760 },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_wall_e",
+      "name": "Wall East",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": 390, "y": 160, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_we",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 20, "y": 300, "z": 760 },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_ceiling",
+      "name": "Ground Ceiling",
+      "parentId": "cell_ground",
+      "transform": {
+        "position": { "x": 0, "y": 310, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "ceiling"],
+      "components": [
+        {
+          "id": "comp_ceil",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 800, "y": 20, "z": 800 },
+          "color": "#5a6270",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_upper_floor",
+      "name": "Upper Floor",
+      "transform": {
+        "position": { "x": 0, "y": 330, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_uf",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 800, "y": 20, "z": 800 },
+          "color": "#4a5560",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_shaft",
+      "name": "Light Shaft",
+      "transform": {
+        "position": { "x": -250, "y": 320, "z": -250 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "subtract"],
+      "components": [
+        {
+          "id": "comp_shaft",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 150, "y": 80, "z": 150 },
+          "color": "#c23b4a",
+          "collidable": false,
+          "operation": "subtract"
+        }
+      ]
+    },
+    {
+      "id": "actor_stairs",
+      "name": "Grand Stairs",
+      "transform": {
+        "position": { "x": 200, "y": 160, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "stair"],
+      "components": [
+        {
+          "id": "comp_stairs",
+          "type": "Stair",
+          "enabled": true,
+          "width": 150,
+          "stepCount": 15,
+          "stepHeight": 20,
+          "treadDepth": 30,
+          "direction": "z+",
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_ramp",
+      "name": "Service Ramp",
+      "transform": {
+        "position": { "x": -200, "y": 85, "z": 200 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "ramp"],
+      "components": [
+        {
+          "id": "comp_ramp",
+          "type": "Ramp",
+          "enabled": true,
+          "width": 120,
+          "length": 400,
+          "rise": 150,
+          "direction": "x+",
+          "thickness": 20,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_verify_wall"
+        }
+      ]
+    },
+    {
+      "id": "actor_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 250 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

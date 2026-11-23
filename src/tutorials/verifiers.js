@@ -3,6 +3,8 @@
  * Pass only when a *new* or *tracked* entity matches — not because older scene content exists.
  */
 
+import { getBrushBaseSolids, getBrushRenderSolids } from '../runtime/brushGeometry.js';
+
 function brushOf(actor) {
   return actor?.getComponent?.('Brush') || null;
 }
@@ -18,6 +20,7 @@ function meshOf(actor) {
 function brushKindFromTags(actor) {
   const tags = actor?.tags || [];
   if (tags.includes('wall')) return 'wall';
+  if (tags.includes('ceiling')) return 'ceiling';
   if (tags.includes('floor')) return 'floor';
   if (tags.includes('box')) return 'box';
   return null;
@@ -39,6 +42,7 @@ function snapshotActor(actor) {
     brush: brush
       ? {
         kind: brushKindFromTags(actor),
+        operation: brush.operation === 'subtract' ? 'subtract' : 'add',
         size: { ...brush.size },
         materialId: brush.materialId || null,
         openings: Array.isArray(brush.openings) ? brush.openings.map((o) => ({ ...o })) : [],
@@ -158,18 +162,108 @@ export function evaluateVerify(verify, ctx) {
         const b = brushOf(a);
         if (!b) return false;
         if (verify.kind && brushKindFromTags(a) !== verify.kind) return false;
+        if (verify.operation === 'subtract' && b.operation !== 'subtract') return false;
+        if (verify.operation === 'add' && b.operation === 'subtract') return false;
         return true;
       });
       if (!created.length) {
         return {
           ok: false,
           hint: verify.failHint
-            || `Create a new ${verify.kind || 'brush'} with the toolbar tool, then drag in the viewport.`,
+            || (verify.operation === 'subtract'
+              ? 'Create a Subtract Box with the toolbar tool, then drag in the viewport.'
+              : `Create a new ${verify.kind || 'brush'} with the toolbar tool, then drag in the viewport.`),
         };
       }
       const actor = created[created.length - 1];
       const track = verify.trackAs ? { [verify.trackAs]: actor.id } : undefined;
       return { ok: true, track };
+    }
+
+    case 'rampCreated': {
+      const created = newActors(world, baseline).filter((a) => a.getComponent?.('Ramp'));
+      if (!created.length) {
+        return { ok: false, hint: verify.failHint || 'Create a ramp with the Ramp toolbar tool.' };
+      }
+      const actor = created[created.length - 1];
+      return {
+        ok: true,
+        track: verify.trackAs ? { [verify.trackAs]: actor.id } : undefined,
+      };
+    }
+
+    case 'stairCreated': {
+      const created = newActors(world, baseline).filter((a) => a.getComponent?.('Stair'));
+      if (!created.length) {
+        return { ok: false, hint: verify.failHint || 'Create stairs with the Stairs toolbar tool.' };
+      }
+      const actor = created[created.length - 1];
+      return {
+        ok: true,
+        track: verify.trackAs ? { [verify.trackAs]: actor.id } : undefined,
+      };
+    }
+
+    case 'stairTypeIs': {
+      const actor = resolveTrackedActor(world, tracked, verify.trackAs)
+        || world?.getActor?.(selectedActorIds[selectedActorIds.length - 1]);
+      const stair = actor?.getComponent?.('Stair');
+      if (!stair) {
+        return { ok: false, hint: 'Select the stairs from the earlier step.' };
+      }
+      const want = verify.stairType || 'curved';
+      if ((stair.stairType || 'straight') !== want) {
+        return {
+          ok: false,
+          hint: verify.failHint || `Set staircase Type to ${want} in Details.`,
+        };
+      }
+      return {
+        ok: true,
+        track: verify.trackAs ? { [verify.trackAs]: actor.id } : undefined,
+      };
+    }
+
+    case 'stairSweepSet': {
+      const actor = resolveTrackedActor(world, tracked, verify.trackAs)
+        || world?.getActor?.(selectedActorIds[selectedActorIds.length - 1]);
+      const stair = actor?.getComponent?.('Stair');
+      if (!stair || (stair.stairType !== 'curved' && stair.stairType !== 'spiral')) {
+        return { ok: false, hint: 'Select curved or spiral stairs first.' };
+      }
+      const minSweep = Number(verify.minSweep) || 90;
+      if (Number(stair.sweepAngle) < minSweep) {
+        return {
+          ok: false,
+          hint: verify.failHint || `Set Sweep Angle to at least ${minSweep}°.`,
+        };
+      }
+      return { ok: true };
+    }
+
+    case 'brushCarved': {
+      const wall = resolveTrackedActor(world, tracked, verify.trackAs);
+      if (!wall) return { ok: false, hint: 'Select the wall from the earlier step first.' };
+      const brush = brushOf(wall);
+      if (!brush || brush.operation === 'subtract') {
+        return { ok: false, hint: 'Track an additive wall brush.' };
+      }
+      const cutter = verify.byCutter
+        ? resolveTrackedActor(world, tracked, verify.byCutter)
+        : null;
+      if (verify.byCutter && (!cutter || brushOf(cutter)?.operation !== 'subtract')) {
+        return { ok: false, hint: 'Place a subtractive brush first.' };
+      }
+      const base = getBrushBaseSolids(brush);
+      const carved = getBrushRenderSolids(brush, { world, actor: wall });
+      const changed = JSON.stringify(base.solids) !== JSON.stringify(carved.solids);
+      if (!changed) {
+        return {
+          ok: false,
+          hint: verify.failHint || 'Move the subtractive brush so it overlaps the additive wall.',
+        };
+      }
+      return { ok: true };
     }
 
     case 'brushResized': {

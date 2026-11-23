@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { cloneLoadedMesh } from '../../runtime/meshLoader.js';
+import { createThreeMaterial, assetUrl } from '../../runtime/materialFactory.js';
+import { installStudioEnvironment } from '../../runtime/studioEnvironment.js';
 
 /**
  * Independent Three.js preview for Asset Viewer — not a GameRuntime.
@@ -105,53 +107,125 @@ export function MeshPreviewCanvas({ url }) {
 }
 
 /**
- * Simple orbit preview for material / texture swatches in 3D.
+ * Lit PBR material sphere for Asset Viewer — albedo / normal / roughness maps.
  */
-export function MaterialPreviewCanvas({ color = '#8a9099', mapUrl = null }) {
+export function MaterialPreviewCanvas({
+  definition = null,
+  color = '#8a9099',
+  mapUrl = null,
+  getTextureUrl = null,
+}) {
   const canvasRef = useRef(null);
+  const defKey = definition
+    ? [
+        definition.id,
+        definition.baseColor,
+        definition.baseColorMapId,
+        definition.normalMapId,
+        definition.roughnessMapId,
+        definition.metalnessMapId,
+        definition.roughness,
+        definition.metalness,
+        definition.normalScale,
+        definition.envMapIntensity,
+      ].join('|')
+    : `${color}|${mapUrl || ''}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x141820);
-    const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 50);
-    camera.position.set(1.4, 1.0, 1.6);
+    scene.background = new THREE.Color(0x12161d);
+    const studioEnv = installStudioEnvironment(renderer, scene, { intensity: 0.85 });
+
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 50);
+    camera.position.set(1.55, 0.85, 1.85);
 
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 1.2;
+    controls.maxDistance = 4;
+    controls.target.set(0, 0, 0);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(2, 3, 2);
-    scene.add(light);
+    scene.add(new THREE.AmbientLight(0xb8c4d8, 0.22));
+    const key = new THREE.DirectionalLight(0xfff2e0, 1.55);
+    key.position.set(2.4, 3.2, 2.0);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x8aa0c0, 0.4);
+    fill.position.set(-2.2, 1.4, -1.8);
+    scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xd0e0ff, 0.35);
+    rim.position.set(0.2, 1.0, -2.5);
+    scene.add(rim);
 
-    const mat = new THREE.MeshStandardMaterial({
+    // Soft ground disc so the sphere reads as grounded.
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(1.1, 48),
+      new THREE.MeshStandardMaterial({
+        color: 0x1a1f28,
+        roughness: 0.95,
+        metalness: 0,
+      }),
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.56;
+    scene.add(ground);
+
+    let mat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
       roughness: 0.55,
-      metalness: 0.1,
+      metalness: 0.08,
     });
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.55, 48, 32), mat);
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.55, 64, 48), mat);
     scene.add(sphere);
 
     let disposed = false;
-    if (mapUrl) {
-      const loader = new THREE.TextureLoader();
-      loader.load(mapUrl, (tex) => {
-        if (disposed) {
-          tex.dispose();
-          return;
+    const textures = [];
+
+    const applyDefinition = async () => {
+      if (!definition) {
+        if (mapUrl) {
+          const loader = new THREE.TextureLoader();
+          loader.load(mapUrl, (tex) => {
+            if (disposed) {
+              tex.dispose();
+              return;
+            }
+            tex.colorSpace = THREE.SRGBColorSpace;
+            textures.push(tex);
+            mat.map = tex;
+            mat.needsUpdate = true;
+          });
         }
-        tex.colorSpace = THREE.SRGBColorSpace;
-        mat.map = tex;
-        mat.needsUpdate = true;
-      });
-    }
+        return;
+      }
+
+      const resolver = (assetId) => {
+        if (!assetId || !getTextureUrl) return null;
+        return assetUrl(getTextureUrl(assetId));
+      };
+      const next = await createThreeMaterial(definition, resolver);
+      if (disposed) {
+        next.dispose();
+        return;
+      }
+      for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
+        if (next[key]) textures.push(next[key]);
+      }
+      sphere.material = next;
+      mat.dispose();
+      mat = next;
+    };
+
+    void applyDefinition();
 
     const resize = () => {
       const w = canvas.clientWidth || 280;
@@ -167,7 +241,7 @@ export function MaterialPreviewCanvas({ color = '#8a9099', mapUrl = null }) {
     let raf = 0;
     const tick = () => {
       if (disposed) return;
-      sphere.rotation.y += 0.008;
+      sphere.rotation.y += 0.006;
       controls.update();
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -180,11 +254,15 @@ export function MaterialPreviewCanvas({ color = '#8a9099', mapUrl = null }) {
       ro.disconnect();
       controls.dispose();
       sphere.geometry.dispose();
-      if (mat.map) mat.map.dispose();
+      ground.geometry.dispose();
+      ground.material.dispose();
+      for (const tex of textures) tex.dispose?.();
       mat.dispose();
+      studioEnv?.dispose?.();
+      scene.environment = null;
       renderer.dispose();
     };
-  }, [color, mapUrl]);
+  }, [defKey, color, mapUrl, getTextureUrl]);
 
   return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
 }

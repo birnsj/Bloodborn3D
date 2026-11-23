@@ -8,6 +8,7 @@ import {
   WALL_MODULE_SIZE,
   WALL_THICKNESS,
   FLOOR_THICKNESS,
+  CEILING_THICKNESS,
 } from '../core/units.js';
 
 export const BRUSH_PRESETS = {
@@ -29,6 +30,12 @@ export const BRUSH_PRESETS = {
     color: '#5a6270',
     heightMode: 'floor',
   },
+  ceiling: {
+    name: 'Ceiling',
+    tag: 'ceiling',
+    color: '#6a7080',
+    heightMode: 'ceiling',
+  },
 };
 
 /**
@@ -41,8 +48,11 @@ export function createBrushFromBounds({
   max,
   gridSize,
   name,
+  operation = 'add',
 } = {}) {
-  const preset = BRUSH_PRESETS[kind] || BRUSH_PRESETS.box;
+  const brushKind = kind === 'subtract' ? 'box' : kind;
+  const preset = BRUSH_PRESETS[brushKind] || BRUSH_PRESETS.box;
+  const isSubtract = operation === 'subtract' || kind === 'subtract';
   const g = Math.max(1, gridSize || 25);
 
   let minX = snapToGrid(Math.min(min.x, max.x), g);
@@ -61,7 +71,7 @@ export function createBrushFromBounds({
   let centerX = (minX + maxX) / 2;
   let centerZ = (minZ + maxZ) / 2;
 
-  if (kind === 'wall') {
+  if (brushKind === 'wall') {
     sizeY = WALL_MODULE_SIZE;
     // Thickness snaps to grid while preferring the standard wall thickness.
     const thickness = Math.max(g, snapToGrid(WALL_THICKNESS, g) || g);
@@ -75,9 +85,17 @@ export function createBrushFromBounds({
       centerX = minX + sizeX / 2;
     }
     centerY = baseY + sizeY / 2;
-  } else if (kind === 'floor') {
+  } else if (brushKind === 'floor') {
     sizeY = FLOOR_THICKNESS;
     centerY = baseY + sizeY / 2;
+  } else if (brushKind === 'ceiling') {
+    // Same slab architecture as floors; underside sits at standard room height
+    // above the construction-plane base so a wall of WALL_MODULE_SIZE meets it.
+    sizeY = CEILING_THICKNESS;
+    const elevation = max.y != null && Number.isFinite(max.y)
+      ? snapToGrid(max.y, g)
+      : baseY + WALL_MODULE_SIZE;
+    centerY = elevation + sizeY / 2;
   } else {
     // General box: height defaults to one grid cell unless max.y provided
     const topY = max.y != null ? snapToGrid(max.y, g) : baseY + g;
@@ -85,19 +103,23 @@ export function createBrushFromBounds({
     centerY = baseY + sizeY / 2;
   }
 
+  const tags = ['structure', 'brush', preset.tag];
+  if (isSubtract) tags.push('subtract');
+
   const actor = new Actor({
     id: createId('actor'),
-    name: name || preset.name,
+    name: name || (isSubtract ? 'Subtract Box' : preset.name),
     transform: new Transform({
       position: { x: centerX, y: centerY, z: centerZ },
     }),
-    tags: ['structure', 'brush', preset.tag],
+    tags,
     components: [
       new BrushComponent({
         id: createId('comp'),
         size: { x: sizeX, y: sizeY, z: sizeZ },
-        color: preset.color,
-        collidable: true,
+        color: isSubtract ? '#c23b4a' : preset.color,
+        collidable: !isSubtract,
+        operation: isSubtract ? 'subtract' : 'add',
       }),
     ],
   });

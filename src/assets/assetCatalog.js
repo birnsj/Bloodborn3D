@@ -45,11 +45,18 @@ function buildPreview(entry, materialDef) {
     };
   }
   if (entry.kind === ASSET_KINDS.material) {
+    const previewPath = materialDef?.previewPath || entry.meta?.previewPath;
+    if (previewPath) {
+      return {
+        kind: 'image',
+        url: publicAssetUrl(previewPath),
+        color: materialDef?.baseColor || entry.meta?.baseColor || '#8a9099',
+      };
+    }
     return {
       kind: 'swatch',
       color: materialDef?.baseColor || entry.meta?.baseColor || '#8a9099',
       secondary: '#2a3038',
-      mapUrl: materialDef?.baseColorMapId ? null : null,
     };
   }
   if (entry.kind === ASSET_KINDS.mesh) {

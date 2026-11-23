@@ -431,7 +431,14 @@ export function captureOverrideFromActor(rootActor, actor, sourceTemplate) {
     const diff = {};
     for (const key of Object.keys(live)) {
       if (key === 'id' || key === 'type') continue;
-      if (JSON.stringify(live[key]) !== JSON.stringify(srcComp[key])) {
+      let srcVal = srcComp[key];
+      let liveVal = live[key];
+      // Legacy prefab sources omit operation; treat missing as additive.
+      if (key === 'operation') {
+        srcVal = srcVal === 'subtract' ? 'subtract' : 'add';
+        liveVal = liveVal === 'subtract' ? 'subtract' : 'add';
+      }
+      if (JSON.stringify(liveVal) !== JSON.stringify(srcVal)) {
         diff[key] = live[key];
       }
     }

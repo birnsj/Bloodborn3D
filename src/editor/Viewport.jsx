@@ -1,33 +1,65 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { useEditor } from './EditorContext.jsx';
 import { useLayout } from './layout/LayoutContext.jsx';
-import { snapToGrid, WALL_MODULE_SIZE, FLOOR_THICKNESS } from '../core/units.js';
+import {
+  snapToGrid,
+  WALL_MODULE_SIZE,
+  FLOOR_THICKNESS,
+  CEILING_THICKNESS,
+} from '../core/units.js';
+import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
 import { resizeBrushFace } from './brushFactory.js';
 import { IconMaximize, IconRestore } from '../ui/icons.jsx';
 import { findAsset } from '../assets/AssetRegistry.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
+import { CreationToolbar } from './creation/CreationToolbar.jsx';
+import {
+  CREATE_DRAG_MIME,
+  parseCreateDragPayload,
+} from './creation/creationTools.js';
+import {
+  computePlacePose,
+  selectPlacementHit,
+} from './creation/surfacePlacement.js';
+import {
+  commitCreatePlacement,
+  previewSizeForPayload,
+} from './creation/commitCreatePlacement.js';
 
 export function Viewport() {
   const shellRef = useRef(null);
   const canvasRef = useRef(null);
   const orbitRef = useRef(null);
   const dragRef = useRef(null);
-  /** Edit-mode fly: RMB + WASD (Q/E up/down). */
+  /** Active toolbar/asset surface placement (preview only until commit). */
+  const placeSessionRef = useRef(null);
+  /** Edit-mode: idle = RMB orbit; WASD/QE = free-fly + RMB freelook. */
   const flyKeysRef = useRef(new Set());
-  const rmbDownRef = useRef(false);
   const flyClockRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
+  const flyModeRef = useRef(false);
+  const lookRef = useRef({
+    active: false,
+    pointerId: null,
+    lastX: 0,
+    lastY: 0,
+    yaw: 0,
+    pitch: 0,
+    distance: 6,
+  });
 
   const {
     attachCanvas,
     runtimeRef,
     mode,
     tool,
+    setTool,
     selectActor,
     selectedActorIds,
     world,
     gridSize,
+    gridSnap,
     createBrushAtBounds,
     previewActorPositions,
     previewBrushGeometry,
@@ -40,10 +72,64 @@ export function Viewport() {
     saveLevel,
     placeMeshAsset,
     placePrefabAsset,
+    placeLight,
+    placePlayerSpawn,
+    createCell,
     updateSelectedBrush,
   } = useEditor();
   const { layout, toggleMaximizeViewport } = useLayout();
   const { dragMime, registry } = useAssetBrowser();
+
+  const clearPlacementSession = useCallback(() => {
+    placeSessionRef.current = null;
+    runtimeRef.current?.sceneView?.setPlacementPreview(null);
+  }, [runtimeRef]);
+
+  const resolveSurfacePose = useCallback((nx, ny, payload, candidateIndex = 0) => {
+    const sceneView = runtimeRef.current?.sceneView;
+    if (!sceneView) return { valid: false, position: null, reason: 'No view' };
+    const hits = sceneView.pickWorldHits(nx, ny);
+    const placement = payload?.placement || 'upright';
+    const { hit, candidates, index } = selectPlacementHit(hits, {
+      placement,
+      candidateIndex,
+    });
+    if (!hit) {
+      // Fall back to construction plane so empty scenes still place.
+      const plane = sceneView.pickConstructionPoint(nx, ny, 0);
+      if (!plane) return { valid: false, position: null, reason: 'No surface', candidates: [] };
+      const pose = computePlacePose(
+        { point: plane, normal: { x: 0, y: 1, z: 0 }, surfaceKind: 'support' },
+        { placement, gridSize, gridSnap, lightLift: payload?.placeKind === 'light' ? 40 : 0 },
+      );
+      return { ...pose, candidates: [], index: 0 };
+    }
+    const halfHeight = payload?.placeKind === 'spawn' ? 0 : 0;
+    const pose = computePlacePose(hit, {
+      placement,
+      gridSize,
+      gridSnap,
+      halfHeight,
+      lightLift: payload?.placeKind === 'light' && placement === 'upright' ? 40 : 0,
+    });
+    return { ...pose, candidates, index };
+  }, [runtimeRef, gridSize, gridSnap]);
+
+  const updatePlacementPreview = useCallback((pose, payload) => {
+    const sceneView = runtimeRef.current?.sceneView;
+    if (!sceneView) return;
+    if (!pose?.position) {
+      sceneView.setPlacementPreview(null);
+      return;
+    }
+    sceneView.setPlacementPreview({
+      position: pose.position,
+      size: previewSizeForPayload(payload, gridSize),
+      valid: pose.valid !== false,
+      normal: pose.normal,
+      gridSnap,
+    });
+  }, [runtimeRef, gridSize, gridSnap]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -56,13 +142,71 @@ export function Viewport() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.target.set(0, 1.5, 0);
+    // Default: RMB orbits. While WASD/QE are held we switch to freelook.
     controls.mouseButtons = {
-      LEFT: -1, // LMB reserved for select / create / gizmo
-      MIDDLE: THREE.MOUSE.DOLLY,
+      LEFT: -1,
+      MIDDLE: THREE.MOUSE.PAN,
       RIGHT: THREE.MOUSE.ROTATE,
     };
+    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.update();
     orbitRef.current = controls;
+    flyModeRef.current = false;
+
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const move = new THREE.Vector3();
+    const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+    {
+      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      lookRef.current.yaw = lookEuler.y;
+      lookRef.current.pitch = lookEuler.x;
+      lookRef.current.distance = camera.position.distanceTo(controls.target) || 6;
+    }
+
+    const FLY_MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE']);
+    const isFlyMoving = (keys) => {
+      for (const code of FLY_MOVE_KEYS) {
+        if (keys.has(code)) return true;
+      }
+      return false;
+    };
+
+    const syncLookTarget = () => {
+      camera.getWorldDirection(forward);
+      controls.target.copy(camera.position).addScaledVector(forward, lookRef.current.distance);
+    };
+
+    const applyLookRotation = () => {
+      const { yaw, pitch } = lookRef.current;
+      lookEuler.set(pitch, yaw, 0);
+      camera.quaternion.setFromEuler(lookEuler);
+      syncLookTarget();
+    };
+
+    const enterFlyMode = () => {
+      if (flyModeRef.current) return;
+      flyModeRef.current = true;
+      // Hand RMB to freelook so orbit rotate doesn't fight WASD.
+      controls.mouseButtons.RIGHT = -1;
+      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      lookRef.current.yaw = lookEuler.y;
+      lookRef.current.pitch = lookEuler.x;
+      lookRef.current.distance = Math.max(0.5, camera.position.distanceTo(controls.target));
+      syncLookTarget();
+    };
+
+    const exitFlyMode = () => {
+      if (!flyModeRef.current) return;
+      flyModeRef.current = false;
+      lookRef.current.active = false;
+      lookRef.current.pointerId = null;
+      // Resume orbit around the point currently in front of the camera.
+      controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+      controls.update();
+    };
 
     const applySize = () => {
       const width = shell.clientWidth;
@@ -78,41 +222,83 @@ export function Viewport() {
       if (e.repeat) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'].includes(e.code)) {
+      if (e.target?.isContentEditable) return;
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
         flyKeysRef.current.add(e.code);
+        if (FLY_MOVE_KEYS.has(e.code)) {
+          e.preventDefault();
+          if (runtime.mode === 'edit') enterFlyMode();
+        }
       }
     };
     const onFlyKeyUp = (e) => {
       flyKeysRef.current.delete(e.code);
+      if (!isFlyMoving(flyKeysRef.current)) exitFlyMode();
     };
     const onFlyBlur = () => {
       flyKeysRef.current.clear();
-      rmbDownRef.current = false;
+      exitFlyMode();
     };
-    const onPointerDownFly = (e) => {
-      if (e.button === 2) rmbDownRef.current = true;
+
+    const LOOK_SENS = 0.005;
+    const PITCH_LIMIT = Math.PI / 2 - 0.05;
+
+    const onLookPointerDown = (e) => {
+      // Freelook only while flying (WASD/QE). Otherwise OrbitControls owns RMB.
+      if (e.button !== 2 || runtime.mode !== 'edit' || !flyModeRef.current) return;
+      lookRef.current.active = true;
+      lookRef.current.pointerId = e.pointerId;
+      lookRef.current.lastX = e.clientX;
+      lookRef.current.lastY = e.clientY;
+      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      lookRef.current.yaw = lookEuler.y;
+      lookRef.current.pitch = lookEuler.x;
+      lookRef.current.distance = Math.max(0.5, camera.position.distanceTo(controls.target));
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
     };
-    const onPointerUpFly = (e) => {
-      if (e.button === 2) rmbDownRef.current = false;
+    const onLookPointerMove = (e) => {
+      const look = lookRef.current;
+      if (!look.active || e.pointerId !== look.pointerId || !flyModeRef.current) return;
+      const dx = e.clientX - look.lastX;
+      const dy = e.clientY - look.lastY;
+      look.lastX = e.clientX;
+      look.lastY = e.clientY;
+      look.yaw -= dx * LOOK_SENS;
+      look.pitch -= dy * LOOK_SENS;
+      look.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, look.pitch));
+      applyLookRotation();
+    };
+    const onLookPointerUp = (e) => {
+      const look = lookRef.current;
+      if (e.pointerId !== look.pointerId) return;
+      look.active = false;
+      look.pointerId = null;
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
     };
     const onContextMenu = (e) => {
-      // Keep RMB for orbit/fly; suppress browser menu on the canvas.
       e.preventDefault();
     };
 
     window.addEventListener('keydown', onFlyKeyDown);
     window.addEventListener('keyup', onFlyKeyUp);
     window.addEventListener('blur', onFlyBlur);
-    canvas.addEventListener('pointerdown', onPointerDownFly);
-    window.addEventListener('pointerup', onPointerUpFly);
+    canvas.addEventListener('pointerdown', onLookPointerDown);
+    window.addEventListener('pointermove', onLookPointerMove);
+    window.addEventListener('pointerup', onLookPointerUp);
+    window.addEventListener('pointercancel', onLookPointerUp);
     canvas.addEventListener('contextmenu', onContextMenu);
 
-    const forward = new THREE.Vector3();
-    const right = new THREE.Vector3();
-    const up = new THREE.Vector3(0, 1, 0);
-    const move = new THREE.Vector3();
-    // ~4.5 m/s feel in editor units (100 eu = 1 m)
+    // ~4.5 m/s feel in editor units (100 eu = 1 m); Shift boosts.
     const FLY_SPEED = 450;
+    const FLY_BOOST = 2.75;
 
     let raf = 0;
     flyClockRef.current = performance.now();
@@ -122,30 +308,33 @@ export function Viewport() {
       flyClockRef.current = now;
 
       if (runtime.mode === 'edit' && orbitRef.current) {
-        const controls = orbitRef.current;
         const keys = flyKeysRef.current;
-        // Hold right mouse + WASD to fly (Unreal/Unity-style); Q/E vertical.
-        if (rmbDownRef.current && keys.size > 0) {
+        if (flyModeRef.current && isFlyMoving(keys)) {
           const cam = runtime.sceneView.camera;
           cam.getWorldDirection(forward);
           forward.normalize();
-          right.crossVectors(forward, up).normalize();
+          right.crossVectors(forward, worldUp).normalize();
+          if (right.lengthSq() < 1e-6) {
+            right.setFromMatrixColumn(cam.matrixWorld, 0).normalize();
+          }
           move.set(0, 0, 0);
           if (keys.has('KeyW')) move.add(forward);
           if (keys.has('KeyS')) move.sub(forward);
           if (keys.has('KeyD')) move.add(right);
           if (keys.has('KeyA')) move.sub(right);
-          if (keys.has('KeyE')) move.y += 1;
-          if (keys.has('KeyQ')) move.y -= 1;
+          if (keys.has('KeyE')) move.add(worldUp);
+          if (keys.has('KeyQ')) move.sub(worldUp);
           if (move.lengthSq() > 0) {
-            move.normalize().multiplyScalar(FLY_SPEED * dt);
-            // Convert editor-unit speed → meters for Three camera (scene is meters).
+            const boost = keys.has('ShiftLeft') || keys.has('ShiftRight') ? FLY_BOOST : 1;
+            move.normalize().multiplyScalar(FLY_SPEED * boost * dt);
             const meters = move.multiplyScalar(0.01);
             cam.position.add(meters);
-            controls.target.add(meters);
+            syncLookTarget();
           }
+        } else if (!flyModeRef.current) {
+          // Idle orbit / pan / zoom — damping needs per-frame update.
+          controls.update();
         }
-        controls.update();
       }
       raf = requestAnimationFrame(tick);
     };
@@ -158,14 +347,17 @@ export function Viewport() {
       window.removeEventListener('keydown', onFlyKeyDown);
       window.removeEventListener('keyup', onFlyKeyUp);
       window.removeEventListener('blur', onFlyBlur);
-      canvas.removeEventListener('pointerdown', onPointerDownFly);
-      window.removeEventListener('pointerup', onPointerUpFly);
+      canvas.removeEventListener('pointerdown', onLookPointerDown);
+      window.removeEventListener('pointermove', onLookPointerMove);
+      window.removeEventListener('pointerup', onLookPointerUp);
+      window.removeEventListener('pointercancel', onLookPointerUp);
       canvas.removeEventListener('contextmenu', onContextMenu);
       controls.dispose();
       runtime.dispose();
       orbitRef.current = null;
       flyKeysRef.current.clear();
-      rmbDownRef.current = false;
+      flyModeRef.current = false;
+      lookRef.current.active = false;
     };
   }, [attachCanvas]);
 
@@ -180,6 +372,28 @@ export function Viewport() {
       if (mode !== 'edit') return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Escape' && placeSessionRef.current) {
+        e.preventDefault();
+        clearPlacementSession();
+        return;
+      }
+      if (e.key === 'Tab' && placeSessionRef.current) {
+        e.preventDefault();
+        const session = placeSessionRef.current;
+        session.candidateIndex = (session.candidateIndex || 0) + 1;
+        if (session.lastNx != null) {
+          const pose = resolveSurfacePose(
+            session.lastNx,
+            session.lastNy,
+            session.payload,
+            session.candidateIndex,
+          );
+          session.pose = pose;
+          updatePlacementPreview(pose, session.payload);
+        }
+        return;
+      }
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -203,7 +417,17 @@ export function Viewport() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mode, undo, redo, duplicateSelected, deleteSelected, saveLevel]);
+  }, [
+    mode,
+    undo,
+    redo,
+    duplicateSelected,
+    deleteSelected,
+    saveLevel,
+    clearPlacementSession,
+    resolveSurfacePose,
+    updatePlacementPreview,
+  ]);
 
   const pointerNorm = (e) => {
     const canvas = canvasRef.current;
@@ -219,17 +443,24 @@ export function Viewport() {
     if (mode !== 'edit' || !runtimeRef.current || !world) return;
     if (e.button !== 0) return;
 
+    // Armed click-to-place from creation toolbar (lights, spawn, cell, assets).
+    if (placeSessionRef.current?.armed) {
+      void commitArmedPlacement(e);
+      return;
+    }
+
     const { nx, ny } = pointerNorm(e);
     const sceneView = runtimeRef.current.sceneView;
 
     // Create tools: start footprint drag on construction plane
-    if (tool === 'box' || tool === 'wall' || tool === 'floor') {
+    if (tool === 'box' || tool === 'wall' || tool === 'floor' || tool === 'ceiling' || tool === 'ramp' || tool === 'stair' || tool === 'subtract') {
       const point = sceneView.pickConstructionPoint(nx, ny, 0);
       if (!point) return;
+      const g = gridSnap ? gridSize : 1;
       const snapped = {
-        x: snapToGrid(point.x, gridSize),
+        x: gridSnap ? snapToGrid(point.x, g) : point.x,
         y: 0,
-        z: snapToGrid(point.z, gridSize),
+        z: gridSnap ? snapToGrid(point.z, g) : point.z,
       };
       dragRef.current = {
         type: 'create',
@@ -330,14 +561,31 @@ export function Viewport() {
       x: Math.max(drag.start.x, drag.current.x),
       y: drag.kind === 'floor'
         ? FLOOR_THICKNESS
-        : drag.kind === 'wall'
-          ? WALL_MODULE_SIZE
-          : Math.max(gridSize, gridSize),
+        : drag.kind === 'ceiling'
+          ? WALL_MODULE_SIZE + CEILING_THICKNESS
+          : drag.kind === 'ramp'
+            ? DEFAULT_RAMP_RISE
+            : drag.kind === 'stair'
+              ? WALL_MODULE_SIZE
+              : drag.kind === 'wall'
+                ? WALL_MODULE_SIZE
+                : Math.max(gridSize, gridSize),
       z: Math.max(drag.start.z, drag.current.z),
     };
     if (max.x === min.x) max.x = min.x + gridSize;
     if (max.z === min.z) max.z = min.z + gridSize;
-    runtimeRef.current.sceneView.setCreatePreview({ min, max });
+    // Ceiling preview sits at room height (same elevation as createBrushFromBounds).
+    const previewMin = drag.kind === 'ceiling'
+      ? { ...min, y: WALL_MODULE_SIZE }
+      : min;
+    const previewMax = drag.kind === 'ceiling'
+      ? { ...max, y: WALL_MODULE_SIZE + CEILING_THICKNESS }
+      : max;
+    runtimeRef.current.sceneView.setCreatePreview({
+      min: previewMin,
+      max: previewMax,
+      operation: drag.kind === 'subtract' ? 'subtract' : 'add',
+    });
   };
 
   const onPointerMove = (e) => {
@@ -349,10 +597,11 @@ export function Viewport() {
     if (drag.type === 'create') {
       const point = sceneView.pickConstructionPoint(nx, ny, 0);
       if (!point) return;
+      const g = gridSnap ? gridSize : 1;
       drag.current = {
-        x: snapToGrid(point.x, gridSize),
+        x: gridSnap ? snapToGrid(point.x, g) : point.x,
         y: 0,
-        z: snapToGrid(point.z, gridSize),
+        z: gridSnap ? snapToGrid(point.z, g) : point.z,
       };
       updateCreatePreview(drag);
       return;
@@ -363,7 +612,7 @@ export function Viewport() {
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
       // Hold Alt to temporarily disable grid snapping during gizmo drags.
-      const snap = e.altKey ? 1 : gridSize;
+      const snap = e.altKey || !gridSnap ? 1 : gridSize;
       const delta = snapToGrid(sample.deltaEditor, snap);
       const updates = drag.beforeStates.map((s) => {
         const position = { ...s.startPos };
@@ -378,7 +627,7 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
-      const snap = e.altKey ? 1 : gridSize;
+      const snap = e.altKey || !gridSnap ? 1 : gridSize;
       const result = resizeBrushFace({
         position: drag.before.position,
         size: drag.before.size,
@@ -389,6 +638,41 @@ export function Viewport() {
       });
       previewBrushGeometry(drag.actorId, result.size, result.position);
     }
+  };
+
+  const onActivateCreationTool = (toolDef) => {
+    if (!toolDef || mode !== 'edit') return;
+    if (toolDef.action === 'mode' && toolDef.tool) {
+      setTool(toolDef.tool);
+      return;
+    }
+    // Click-to-arm place tools: next left-click commits at surface under cursor.
+    placeSessionRef.current = {
+      payload: toolDef,
+      armed: true,
+      candidateIndex: 0,
+    };
+  };
+
+  const commitArmedPlacement = async (e) => {
+    const session = placeSessionRef.current;
+    if (!session?.armed || !runtimeRef.current) return false;
+    const { nx, ny } = pointerNorm(e);
+    const pose = resolveSurfacePose(nx, ny, session.payload, session.candidateIndex || 0);
+    clearPlacementSession();
+    if (!pose.valid) return true;
+    await commitCreatePlacement(session.payload, pose, {
+      createBrushAtBounds,
+      placeLight,
+      placePlayerSpawn,
+      createCell,
+      placeMeshAsset,
+      placePrefabAsset,
+      gridSize,
+      gridSnap,
+    });
+    setTool('select');
+    return true;
   };
 
   const onPointerUp = (e) => {
@@ -405,7 +689,11 @@ export function Viewport() {
       runtimeRef.current?.sceneView.setCreatePreview(null);
       createBrushAtBounds(drag.kind, drag.start, {
         x: drag.current.x,
-        y: drag.kind === 'box' ? gridSize : drag.current.y,
+        y: drag.kind === 'box' || drag.kind === 'subtract'
+          ? gridSize
+          : drag.kind === 'ceiling'
+            ? WALL_MODULE_SIZE
+            : drag.current.y,
         z: drag.current.z,
       });
     } else if (drag.type === 'move') {
@@ -449,10 +737,145 @@ export function Viewport() {
     if (mode !== 'edit') {
       return 'Click to lock mouse · WASD move · Mouse look · Space jump · Esc release';
     }
-    if (tool === 'box') return 'Drag on grid to create a box · RMB orbit · RMB+WASD fly · MMB zoom';
-    if (tool === 'wall') return 'Drag on grid to create a wall · RMB orbit · RMB+WASD fly · MMB zoom';
-    if (tool === 'floor') return 'Drag on grid to create a floor · RMB orbit · RMB+WASD fly · MMB zoom';
-    return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · RMB+WASD fly · Q/E up/down · MMB zoom';
+    if (tool === 'box') return 'Drag on grid to create a box · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'wall') return 'Drag on grid to create a wall · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'floor') return 'Drag on grid to create a floor · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'ceiling') return 'Drag on grid to create a ceiling · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'ramp') return 'Drag on grid to create a ramp · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'stair') return 'Drag on grid to create stairs · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    return 'LMB select · Ctrl+LMB multi · Gizmo move/resize · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+  };
+
+  const onCanvasDragOver = (e) => {
+    if (mode !== 'edit') return;
+    const types = [...e.dataTransfer.types];
+    const isCreate = types.includes(CREATE_DRAG_MIME);
+    const isAsset = types.includes(dragMime) || types.includes('text/plain');
+    if (!isCreate && !isAsset) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+
+    const { nx, ny } = pointerNorm(e);
+    let payload = placeSessionRef.current?.payload || null;
+    if (isCreate && !payload) {
+      // Browser may not expose data until drop; use a generic upright preview.
+      payload = { placement: 'upright', placeKind: 'prop' };
+    }
+    if (isAsset && !isCreate) {
+      payload = { placement: 'upright', action: 'asset' };
+    }
+    const pose = resolveSurfacePose(
+      nx,
+      ny,
+      payload,
+      placeSessionRef.current?.candidateIndex || 0,
+    );
+    placeSessionRef.current = {
+      ...(placeSessionRef.current || {}),
+      payload: placeSessionRef.current?.payload || payload,
+      lastNx: nx,
+      lastNy: ny,
+      pose,
+      dragging: true,
+      candidateIndex: placeSessionRef.current?.candidateIndex || 0,
+    };
+    updatePlacementPreview(pose, payload);
+  };
+
+  const onCanvasDrop = async (e) => {
+    if (mode !== 'edit' || !runtimeRef.current) return;
+    e.preventDefault();
+    const { nx, ny } = pointerNorm(e);
+
+    // Creation toolbar drag (custom MIME, text/plain backup, or live session).
+    const createRaw = e.dataTransfer.getData(CREATE_DRAG_MIME)
+      || e.dataTransfer.getData('text/plain')
+      || '';
+    let createPayload = parseCreateDragPayload(createRaw);
+    if (
+      !createPayload
+      && placeSessionRef.current?.dragging
+      && placeSessionRef.current?.payload?.toolId
+    ) {
+      createPayload = placeSessionRef.current.payload;
+    }
+    const isCreateDrop = Boolean(
+      createPayload
+      && (createPayload.action === 'mode'
+        || createPayload.placeKind
+        || createPayload.action === 'asset'
+        || createPayload.assetId),
+    );
+    if (isCreateDrop) {
+      const pose = resolveSurfacePose(
+        nx,
+        ny,
+        createPayload,
+        placeSessionRef.current?.candidateIndex || 0,
+      );
+      clearPlacementSession();
+      if (!pose.valid) return;
+      await commitCreatePlacement(createPayload, pose, {
+        createBrushAtBounds,
+        placeLight,
+        placePlayerSpawn,
+        createCell,
+        placeMeshAsset,
+        placePrefabAsset,
+        gridSize,
+        gridSnap,
+      });
+      if (createPayload.action === 'mode') setTool('select');
+      return;
+    }
+
+    // Content Browser asset drag
+    let payload = null;
+    try {
+      payload = JSON.parse(e.dataTransfer.getData(dragMime) || 'null');
+    } catch {
+      payload = null;
+    }
+    const id = payload?.id || e.dataTransfer.getData('text/plain');
+    if (!id) {
+      clearPlacementSession();
+      return;
+    }
+    const entry = findAsset(registry, id);
+    const kind = payload?.kind || payload?.type || entry?.kind;
+    if (kind === 'material' && selectedActorIds.length > 0) {
+      clearPlacementSession();
+      updateSelectedBrush({ materialId: id });
+      return;
+    }
+
+    const placePayload = {
+      action: 'asset',
+      assetId: id,
+      assetKind: kind,
+      label: payload?.name || entry?.name || id,
+      placement: 'upright',
+    };
+    const pose = resolveSurfacePose(nx, ny, placePayload, 0);
+    clearPlacementSession();
+    if (!pose.valid) return;
+    await commitCreatePlacement(placePayload, pose, {
+      createBrushAtBounds,
+      placeLight,
+      placePlayerSpawn,
+      createCell,
+      placeMeshAsset,
+      placePrefabAsset,
+      gridSize,
+      gridSnap,
+    });
+  };
+
+  const onCanvasDragLeave = () => {
+    if (placeSessionRef.current?.dragging && !placeSessionRef.current?.armed) {
+      clearPlacementSession();
+    }
   };
 
   return (
@@ -478,6 +901,29 @@ export function Viewport() {
           {layout.viewportMaximized ? <IconRestore /> : <IconMaximize />}
         </button>
       </div>
+      <CreationToolbar
+        viewportRef={shellRef}
+        disabled={mode !== 'edit'}
+        onActivateTool={onActivateCreationTool}
+        onToolDragStart={(payload) => {
+          placeSessionRef.current = {
+            payload,
+            dragging: true,
+            candidateIndex: 0,
+          };
+          // Keep the active create tool in sync so a failed HTML5 drop
+          // still footprint-drags the intended kind (not a prior Subtract).
+          if (payload?.action === 'mode' && payload.tool) {
+            setTool(payload.tool);
+          }
+        }}
+        onToolDragEnd={() => {
+          // Drop handler clears; if cancelled, clear preview.
+          if (placeSessionRef.current?.dragging) {
+            clearPlacementSession();
+          }
+        }}
+      />
       <canvas
         ref={canvasRef}
         className="bb-viewport-canvas"
@@ -485,54 +931,13 @@ export function Viewport() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onDragOver={(e) => {
-          if (mode !== 'edit') return;
-          if (
-            [...e.dataTransfer.types].includes(dragMime)
-            || e.dataTransfer.types.includes('text/plain')
-          ) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
-          }
-        }}
-        onDrop={(e) => {
-          if (mode !== 'edit' || !runtimeRef.current) return;
-          e.preventDefault();
-          let payload = null;
-          try {
-            payload = JSON.parse(e.dataTransfer.getData(dragMime) || 'null');
-          } catch {
-            payload = null;
-          }
-          const id = payload?.id || e.dataTransfer.getData('text/plain');
-          if (!id) return;
-          const entry = findAsset(registry, id);
-          const kind = payload?.kind || payload?.type || entry?.kind;
-          const { nx, ny } = pointerNorm(e);
-          const point = runtimeRef.current.sceneView.pickConstructionPoint(nx, ny, 0)
-            || { x: 0, y: 0, z: 0 };
-
-          if (kind === 'mesh') {
-            placeMeshAsset(
-              { id, name: payload?.name || entry?.name || 'Mesh' },
-              { x: point.x, y: 50, z: point.z },
-            );
-            return;
-          }
-          if (kind === 'prefab') {
-            placePrefabAsset(
-              { id, name: payload?.name || entry?.name || 'Prefab' },
-              { x: point.x, y: 0, z: point.z },
-            );
-            return;
-          }
-          if (kind === 'material' && selectedActorIds.length > 0) {
-            updateSelectedBrush({ materialId: id });
-          }
-        }}
+        onDragOver={onCanvasDragOver}
+        onDragLeave={onCanvasDragLeave}
+        onDrop={onCanvasDrop}
       />
       <div className="bb-viewport-hint">
         {toolHint()}
+        {placeSessionRef.current?.armed ? ' · Click surface to place · Esc cancel · Tab cycle' : ''}
         {selectedActorIds.length > 0 && mode === 'edit'
           ? ` · ${selectedActorIds.length} selected`
           : ''}

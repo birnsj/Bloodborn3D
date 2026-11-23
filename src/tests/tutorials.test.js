@@ -79,8 +79,11 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers ten beginner lessons', () => {
-    expect(LESSONS).toHaveLength(10);
+    expect(LESSONS).toHaveLength(13);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
+    expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
+    expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
+    expect(listLessons().map((l) => l.id)).toContain('ramps-stairs');
     expect(getLessonById('missing')).toBeNull();
   });
 

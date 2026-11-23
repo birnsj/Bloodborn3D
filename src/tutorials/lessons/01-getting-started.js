@@ -19,11 +19,11 @@ export const gettingStartedLesson = {
     {
       id: 'orbit',
       title: 'Look around',
-      body: 'In the Viewport: hold right mouse and drag to look. Keep holding right mouse and use WASD to fly (Q/E up/down). Middle mouse zooms.',
+      body: 'In the Viewport: hold right mouse and drag to orbit. Press WASD to free-fly (Q/E up/down, Shift faster); while flying, RMB freelooks instead of orbiting. Middle-mouse pans; scroll zooms.',
       explain: 'This only moves the camera, not objects. Left-click selects things later. In Play mode, click the viewport first, then WASD walks with physics.',
       highlight: [],
       verify: { type: 'manualConfirm', label: 'I looked around' },
-      failHint: 'Hold right mouse, drag to look, try WASD to move, then confirm.',
+      failHint: 'Orbit with right mouse, then try WASD to free-fly, then confirm.',
     },
     {
       id: 'select-wall',

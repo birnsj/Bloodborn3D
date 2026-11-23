@@ -12,13 +12,15 @@ export function createLightActor({
   color = '#ffffff',
   intensity = 1.5,
   range = 1200,
-  castShadow = false,
+  castShadow = true,
   gridSize = 25,
+  snapY = true,
 } = {}) {
+  const g = gridSize > 0 ? gridSize : 25;
   const pos = {
-    x: snapToGrid(position.x, gridSize),
-    y: snapToGrid(position.y, gridSize),
-    z: snapToGrid(position.z, gridSize),
+    x: snapToGrid(position.x, g),
+    y: snapY ? snapToGrid(position.y, g) : position.y,
+    z: snapToGrid(position.z, g),
   };
 
   const defaults = {
@@ -44,7 +46,7 @@ export function createLightActor({
         color,
         intensity: intensity ?? preset.intensity,
         range: range ?? preset.range,
-        castShadow,
+        castShadow: lightType === 'ambient' ? false : castShadow,
       }),
     ],
   });

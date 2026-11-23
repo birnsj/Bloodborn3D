@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_hall_floor",
+  "name": "Hall Floor",
+  "type": "material",
+  "baseColor": "#8e8478",
+  "baseColorMapId": "tex_hall_floor",
+  "normalMapId": "tex_hall_floor_n",
+  "normalScale": 1.4,
+  "roughness": 1,
+  "metalness": 0,
+  "roughnessMapId": "tex_hall_floor_r",
+  "metalnessMapId": null,
+  "envMapIntensity": 0.9,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 0.4,
+    "y": 0.4
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_hall_floor_sphere.png",
+  "createdAt": 1795419703056,
+  "updatedAt": 1795419703056
+}

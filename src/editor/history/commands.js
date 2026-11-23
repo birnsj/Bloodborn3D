@@ -236,6 +236,9 @@ export class SetBrushMaterialCommand {
     }
     if ('color' in state) brush.color = state.color;
     if ('collidable' in state) brush.collidable = state.collidable;
+    if ('operation' in state) {
+      brush.operation = state.operation === 'subtract' ? 'subtract' : 'add';
+    }
   }
 }
 
@@ -264,6 +267,82 @@ export class SetLightPropertiesCommand {
     if (!light) return;
     for (const key of Object.keys(state)) {
       light[key] = state[key];
+    }
+  }
+}
+
+/**
+ * Patch StairComponent properties.
+ */
+export class SetStairPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit stairs' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const stair = this.world.getActor(this.actorId)?.getComponent('Stair');
+    if (!stair) return;
+    for (const key of Object.keys(state)) {
+      if (key === 'uv' && state.uv) {
+        stair.uv = {
+          scale: { ...(state.uv.scale || stair.uv.scale) },
+          offset: { ...(state.uv.offset || stair.uv.offset) },
+          rotation: state.uv.rotation ?? stair.uv.rotation,
+        };
+      } else if (key === 'stepCount') {
+        stair.stepCount = Math.max(1, Math.round(Number(state.stepCount) || 1));
+      } else {
+        stair[key] = state[key];
+      }
+    }
+  }
+}
+
+/**
+ * Patch RampComponent properties.
+ */
+export class SetRampPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit ramp' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const ramp = this.world.getActor(this.actorId)?.getComponent('Ramp');
+    if (!ramp) return;
+    for (const key of Object.keys(state)) {
+      if (key === 'uv' && state.uv) {
+        ramp.uv = {
+          scale: { ...(state.uv.scale || ramp.uv.scale) },
+          offset: { ...(state.uv.offset || ramp.uv.offset) },
+          rotation: state.uv.rotation ?? ramp.uv.rotation,
+        };
+      } else {
+        ramp[key] = state[key];
+      }
     }
   }
 }

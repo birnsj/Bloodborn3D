@@ -116,6 +116,17 @@ export class PlayerController {
     let vy = current.y;
     if (this._keys.has('Space') && Math.abs(current.y) < 0.15) {
       vy = 4.5;
+    } else if (
+      // Smallest stair/curb assist: when wishing forward but nearly stopped
+      // horizontally while close to grounded, nudge up over ~0.2 m risers.
+      wish.lengthSq() > 0
+      && current.y > -0.4
+      && current.y < 0.08
+    ) {
+      const horiz = Math.hypot(current.x, current.z);
+      if (horiz < speedMps * 0.4) {
+        vy = Math.max(vy, 2.35);
+      }
     }
 
     this.physics.setPlayerVelocity(wish.x, vy, wish.z);

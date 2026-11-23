@@ -2,6 +2,11 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { toMeters } from '../core/units.js';
 import { getWorldTransform } from '../core/hierarchy.js';
 import { getBrushRenderSolids } from './brushGeometry.js';
+import { getRampSlopeCollider } from './rampGeometry.js';
+import {
+  getStairSteps,
+  wedgeVerticesToMetersFlat,
+} from './stairGeometry.js';
 
 let rapierReady = null;
 
@@ -47,8 +52,21 @@ export class PhysicsWorld {
     this.clear();
     for (const actor of gameWorld.actors) {
       const brush = actor.getComponent('Brush');
-      if (brush && brush.enabled && brush.collidable !== false) {
-        this._addBrushColliders(actor, brush);
+      // Subtractive brushes never generate colliders of their own.
+      if (brush && brush.enabled && brush.collidable !== false && brush.operation !== 'subtract') {
+        this._addBrushColliders(actor, brush, gameWorld);
+        continue;
+      }
+
+      const ramp = actor.getComponent('Ramp');
+      if (ramp && ramp.enabled && ramp.collidable !== false) {
+        this._addRampCollider(actor, ramp);
+        continue;
+      }
+
+      const stair = actor.getComponent('Stair');
+      if (stair && stair.enabled && stair.collidable !== false) {
+        this._addStairColliders(actor, stair);
         continue;
       }
 
@@ -65,9 +83,12 @@ export class PhysicsWorld {
     }
   }
 
-  _addBrushColliders(actor, brush) {
-    const { solids } = getBrushRenderSolids(brush);
-    const worldXform = getWorldTransform(actor, actor.world || null);
+  _addBrushColliders(actor, brush, gameWorld = null) {
+    const world = gameWorld || actor.world || null;
+    const { solids } = getBrushRenderSolids(brush, world ? { world, actor } : null);
+    if (!solids.length) return;
+
+    const worldXform = getWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -91,6 +112,80 @@ export class PhysicsWorld {
     }
 
     this._bodies.set(actor.id, { body, colliders, actor });
+  }
+
+  /**
+   * Straight stairs: cuboid per step.
+   * Curved / spiral: convex hull per annular wedge (matches visible shape).
+   */
+  _addStairColliders(actor, stair) {
+    const steps = getStairSteps(stair);
+    if (!steps.length) return;
+    const world = actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    const colliders = [];
+    for (const step of steps) {
+      let colliderDesc = null;
+      if (step.kind === 'wedge' && step.vertices?.length) {
+        const points = wedgeVerticesToMetersFlat(step.vertices, scale);
+        colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+      } else if (step.size && step.center) {
+        const hx = Math.max(0.01, toMeters(step.size.x) * 0.5 * Math.abs(scale.x || 1));
+        const hy = Math.max(0.01, toMeters(step.size.y) * 0.5 * Math.abs(scale.y || 1));
+        const hz = Math.max(0.01, toMeters(step.size.z) * 0.5 * Math.abs(scale.z || 1));
+        colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+          .setTranslation(
+            toMeters(step.center.x * (scale.x || 1)),
+            toMeters(step.center.y * (scale.y || 1)),
+            toMeters(step.center.z * (scale.z || 1)),
+          );
+      }
+      if (!colliderDesc) continue;
+      colliderDesc.setFriction(0.9);
+      colliders.push(this.world.createCollider(colliderDesc, body));
+    }
+    if (colliders.length) {
+      this._bodies.set(actor.id, { body, colliders, actor });
+    } else {
+      this.world.removeRigidBody(body);
+    }
+  }
+
+  /**
+   * Sloped board collider — rotated cuboid along the ramp hypotenuse (not AABB).
+   */
+  _addRampCollider(actor, ramp) {
+    const world = actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const slope = getRampSlopeCollider(ramp);
+
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+
+    const hx = Math.max(0.01, toMeters(slope.halfSize.x) * Math.abs(scale.x || 1));
+    const hy = Math.max(0.01, toMeters(slope.halfSize.y) * Math.abs(scale.y || 1));
+    const hz = Math.max(0.01, toMeters(slope.halfSize.z) * Math.abs(scale.z || 1));
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+      .setTranslation(
+        toMeters(slope.localPosition.x * (scale.x || 1)),
+        toMeters(slope.localPosition.y * (scale.y || 1)),
+        toMeters(slope.localPosition.z * (scale.z || 1)),
+      )
+      .setRotation(eulerDegreesToQuat(slope.localRotation));
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
 
   _addBoxCollider(actor, halfMeters) {

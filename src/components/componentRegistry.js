@@ -2,6 +2,8 @@ import { BrushComponent } from './BrushComponent.js';
 import { CellComponent } from './CellComponent.js';
 import { LightComponent } from './LightComponent.js';
 import { PlayerSpawnComponent } from './PlayerSpawnComponent.js';
+import { RampComponent } from './RampComponent.js';
+import { StairComponent } from './StairComponent.js';
 import { StaticMeshComponent } from './StaticMeshComponent.js';
 import { Component } from '../core/Component.js';
 
@@ -10,6 +12,8 @@ const REGISTRY = {
   [CellComponent.componentType]: CellComponent,
   [LightComponent.componentType]: LightComponent,
   [PlayerSpawnComponent.componentType]: PlayerSpawnComponent,
+  [RampComponent.componentType]: RampComponent,
+  [StairComponent.componentType]: StairComponent,
   [StaticMeshComponent.componentType]: StaticMeshComponent,
 };
 
