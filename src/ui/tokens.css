@@ -1,0 +1,77 @@
+/**
+ * BloodBound Editor — design tokens
+ * Commercial DCC chrome; steel brand accents; blue/orange for edit selection.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bb-bg-app: #0e1014;
+  --bb-bg-menubar: #12151a;
+  --bb-bg-toolbar: #161a20;
+  --bb-bg-panel: #151920;
+  --bb-bg-panel-header: #1a1f27;
+  --bb-bg-panel-elevated: #1c222b;
+  --bb-bg-input: #0c0f14;
+  --bb-bg-hover: #222833;
+  --bb-bg-viewport: #0a0c10;
+  --bb-bg-statusbar: #10131a;
+
+  /* Borders */
+  --bb-border: #2a303a;
+  --bb-border-subtle: #22272f;
+  --bb-border-strong: #3a4250;
+
+  /* Text */
+  --bb-text: #d8dde6;
+  --bb-text-muted: #8a93a3;
+  --bb-text-dim: #5c6575;
+  --bb-text-bright: #f0f3f8;
+
+  /* Brand / workspace (cool steel — not crimson) */
+  --bb-brand: #4d7ea8;
+  --bb-brand-bright: #6a97bc;
+  --bb-brand-soft: rgba(77, 126, 168, 0.28);
+  /* Legacy aliases */
+  --bb-crimson: var(--bb-brand);
+  --bb-crimson-bright: var(--bb-brand-bright);
+  --bb-crimson-soft: var(--bb-brand-soft);
+  --bb-play: #2f8f5b;
+  --bb-play-hover: #37a368;
+  --bb-play-active: #246b44;
+
+  /* Edit selection (reserved) */
+  --bb-select: #3d7ec4;
+  --bb-select-soft: rgba(61, 126, 196, 0.22);
+  --bb-select-text: #cfe3ff;
+  --bb-gizmo-orange: #e0953a;
+
+  /* Axis colors */
+  --bb-axis-x: #e05a5a;
+  --bb-axis-y: #5ac96e;
+  --bb-axis-z: #5a9be0;
+
+  /* Controls */
+  --bb-control-h: 22px;
+  --bb-radius: 3px;
+  --bb-font: "Segoe UI", "Helvetica Neue", sans-serif;
+  --bb-font-size: 11px;
+  --bb-font-size-sm: 10px;
+  --bb-font-size-xs: 9px;
+
+  /* Layout defaults */
+  --bb-outliner-w: 240px;
+  --bb-details-w: 300px;
+  --bb-content-h: 180px;
+  --bb-menubar-h: 28px;
+  --bb-workspace-h: 32px;
+  --bb-toolbar-h: 30px;
+  --bb-statusbar-h: 22px;
+
+  font-family: var(--bb-font);
+  font-size: var(--bb-font-size);
+  line-height: 1.25;
+  color: var(--bb-text);
+  background: var(--bb-bg-app);
+}

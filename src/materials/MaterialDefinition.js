@@ -1,0 +1,68 @@
+import { createId } from '../core/ids.js';
+
+/**
+ * Engine-neutral PBR material definition.
+ * Three.js adapters resolve textures / MeshStandardMaterial at the boundary.
+ */
+export const MATERIAL_SCHEMA_VERSION = 1;
+
+export const FACE_KEYS = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+
+export function createMaterialDefinition(partial = {}) {
+  const now = Date.now();
+  return {
+    schemaVersion: MATERIAL_SCHEMA_VERSION,
+    id: partial.id || createId('mat'),
+    name: partial.name || 'New Material',
+    type: 'material',
+    baseColor: partial.baseColor || '#8a9099',
+    baseColorMapId: partial.baseColorMapId || null,
+    normalMapId: partial.normalMapId || null,
+    roughness: clamp01(partial.roughness ?? 0.75),
+    metalness: clamp01(partial.metalness ?? 0.05),
+    roughnessMapId: partial.roughnessMapId || null,
+    metalnessMapId: partial.metalnessMapId || null,
+    emissive: partial.emissive || '#000000',
+    emissiveIntensity: Number(partial.emissiveIntensity) || 0,
+    emissiveMapId: partial.emissiveMapId || null,
+    opacity: clamp01(partial.opacity ?? 1),
+    transparent: Boolean(partial.transparent) || (partial.opacity != null && partial.opacity < 1),
+    uvScale: {
+      x: Number(partial.uvScale?.x) || 1,
+      y: Number(partial.uvScale?.y) || 1,
+    },
+    uvOffset: {
+      x: Number(partial.uvOffset?.x) || 0,
+      y: Number(partial.uvOffset?.y) || 0,
+    },
+    uvRotation: Number(partial.uvRotation) || 0,
+    createdAt: partial.createdAt || now,
+    updatedAt: partial.updatedAt || now,
+  };
+}
+
+export function normalizeMaterialDefinition(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  return createMaterialDefinition(raw);
+}
+
+function clamp01(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(1, v));
+}
+
+/** Default UV mapping for structural brushes (world-aligned tiling). */
+export function createBrushUvState(partial = {}) {
+  return {
+    scale: {
+      x: Number(partial.scale?.x) || 1,
+      y: Number(partial.scale?.y) || 1,
+    },
+    offset: {
+      x: Number(partial.offset?.x) || 0,
+      y: Number(partial.offset?.y) || 0,
+    },
+    rotation: Number(partial.rotation) || 0,
+  };
+}

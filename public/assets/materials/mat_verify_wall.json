@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_verify_wall",
+  "name": "Verify Wall",
+  "type": "material",
+  "baseColor": "#ffffff",
+  "baseColorMapId": "tex_verify_wall",
+  "normalMapId": null,
+  "roughness": 0.8,
+  "metalness": 0,
+  "roughnessMapId": null,
+  "metalnessMapId": null,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 1,
+    "y": 1
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "createdAt": 1795405329386,
+  "updatedAt": 1795405329386
+}

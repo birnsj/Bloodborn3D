@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "tex_verify_wall",
+      "kind": "texture",
+      "name": "Verify Checker",
+      "folder": "Textures",
+      "path": "textures/tex_verify_wall.png",
+      "originalName": "verify-checker.png",
+      "tags": [
+        "verify"
+      ],
+      "meta": {
+        "width": 512,
+        "height": 512
+      },
+      "createdAt": 1795405329387,
+      "updatedAt": 1795405329387
+    },
+    {
+      "id": "mesh_verify_cube",
+      "kind": "mesh",
+      "name": "Verify Cube",
+      "folder": "Meshes",
+      "path": "meshes/mesh_verify_cube.glb",
+      "originalName": "verify-cube.glb",
+      "tags": [
+        "verify"
+      ],
+      "meta": {
+        "format": "glb",
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "boundingBoxMeters": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "createdAt": 1795405329387,
+      "updatedAt": 1795405329387
+    },
+    {
+      "id": "mat_verify_wall",
+      "kind": "material",
+      "name": "Verify Wall",
+      "folder": "Materials",
+      "path": "materials/mat_verify_wall.json",
+      "originalName": "mat_verify_wall.json",
+      "tags": [
+        "verify"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "hasBaseMap": true
+      },
+      "createdAt": 1795405329387,
+      "updatedAt": 1795405329387
+    }
+  ]
+}
