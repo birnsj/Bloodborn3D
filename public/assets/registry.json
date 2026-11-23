@@ -57,6 +57,22 @@
       },
       "createdAt": 1795405329387,
       "updatedAt": 1795405329387
+    },
+    {
+      "id": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d",
+      "kind": "prefab",
+      "name": "Cell Prefab",
+      "folder": "Prefabs",
+      "path": "prefabs/prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d.json",
+      "originalName": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d.json",
+      "tags": [],
+      "meta": {
+        "actorCount": 3,
+        "nestedCount": 0,
+        "rootCount": 1
+      },
+      "createdAt": 1795409827425,
+      "updatedAt": 1795409827431
     }
   ]
 }

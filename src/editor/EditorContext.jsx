@@ -25,6 +25,7 @@ import {
   RenameActorCommand,
   SetBrushColorCommand,
   SetBrushMaterialCommand,
+  SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
   SetStaticMeshPropertiesCommand,
   ReparentActorsCommand,
@@ -61,6 +62,14 @@ import {
 } from '../prefabs/prefabOps.js';
 import { Actor } from '../core/Actor.js';
 import { createComponentFromJSON } from '../components/componentRegistry.js';
+import {
+  createDefaultOpening,
+  isWallBrush,
+  normalizeOpenings,
+  validateOpenings,
+} from '../runtime/wallOpenings.js';
+import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
+import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
 const EditorContext = createContext(null);
 
@@ -72,6 +81,7 @@ export function EditorProvider({ children }) {
     getPrefabDefinition,
     getPrefabDefinitionSync,
   } = useAssetBrowser();
+  const dialogs = useEditorDialogs();
   const runtimeRef = useRef(null);
   const [world, setWorld] = useState(null);
   const [selectedActorIds, setSelectedActorIds] = useState([]);
@@ -79,12 +89,22 @@ export function EditorProvider({ children }) {
   const [tool, setTool] = useState('select'); // select | box | wall | floor
   const [levelName, setLevelName] = useState('test-room.json');
   const [levels, setLevels] = useState([]);
-  const [status, setStatus] = useState('Ready');
+  const [status, setStatusState] = useState('Ready');
   const [gridSize, setGridSizeState] = useState(DEFAULT_GRID_EDITOR_UNITS);
   const [revision, setRevision] = useState(0);
   const [historyFlags, setHistoryFlags] = useState({ canUndo: false, canRedo: false });
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
+
+  /** Toolbar status only (high-frequency edits / undo). */
+  const setStatus = useCallback((message) => {
+    setStatusState(String(message ?? ''));
+  }, []);
+
+  /** Status bar + editor dialog (user-facing notices, errors, confirmations). */
+  const notify = useCallback((message, options = {}) => {
+    reportEditorMessage(setStatusState, dialogs, message, { ...options, dialog: true });
+  }, [dialogs]);
 
   const worldRef = useRef(null);
   worldRef.current = world;
@@ -178,33 +198,33 @@ export function EditorProvider({ children }) {
     setStatus(`Loaded ${name}`);
     bump();
     return next;
-  }, [bump]);
+  }, [bump, setStatus]);
 
   const saveLevel = useCallback(async () => {
     if (!world) return;
     if (runtimeRef.current?.mode === 'play') {
-      setStatus('Stop Play before saving');
+      notify('Stop Play before saving');
       return;
     }
     const data = serializeLevel(world);
     await saveLevelFile(levelName, data);
-    setStatus(`Saved ${levelName}`);
-  }, [world, levelName]);
+    notify(`Saved ${levelName}`);
+  }, [world, levelName, notify]);
 
   const refreshLevels = useCallback(async () => {
     try {
       const list = await listLevels();
       setLevels(list);
     } catch (err) {
-      setStatus(`Level list failed: ${err.message}`);
+      notify(`Level list failed: ${err.message}`);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     refreshLevels().then(() => loadLevel('test-room.json')).catch((err) => {
-      setStatus(`Init failed: ${err.message}`);
+      notify(`Init failed: ${err.message}`);
     });
-  }, [loadLevel, refreshLevels]);
+  }, [loadLevel, refreshLevels, notify]);
 
   const selectActors = useCallback((ids, { additive = false } = {}) => {
     let next;
@@ -319,6 +339,28 @@ export function EditorProvider({ children }) {
       new SetBrushGeometryCommand({ world, changes: meaningful, label }),
       { resync: true },
     );
+    // Keep openings inside the new bounds after gizmo / numeric resize.
+    for (const c of meaningful) {
+      const actor = world.getActor(c.actorId);
+      const brush = actor?.getComponent('Brush');
+      if (!brush?.openings?.length) continue;
+      const prevOpenings = normalizeOpenings(brush.openings);
+      const { openings: nextOpenings } = validateOpenings(brush.size, prevOpenings, {
+        snap: gridRef.current,
+      });
+      if (JSON.stringify(prevOpenings) !== JSON.stringify(nextOpenings)) {
+        executeCommand(
+          new SetBrushOpeningsCommand({
+            world,
+            actorId: c.actorId,
+            before: prevOpenings,
+            after: nextOpenings,
+            label: 'Clamp openings',
+          }),
+          { resync: true },
+        );
+      }
+    }
     autoCapturePrefabOverrides(meaningful.map((c) => c.actorId));
   }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
 
@@ -331,33 +373,52 @@ export function EditorProvider({ children }) {
     for (const u of updates) {
       const actor = world.getActor(u.actorId);
       if (!actor || isEffectivelyLocked(actor, world)) continue;
+      const pos = u.position;
+      if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y) || !Number.isFinite(pos?.z)) {
+        continue;
+      }
       const current = getWorldTransform(actor, world);
       setWorldTransform(actor, {
         ...current,
-        position: { ...u.position },
+        position: { ...pos },
       }, world);
       runtimeRef.current?.refreshActor(actor);
       // Nested children move with parent Three group — refresh selection box.
     }
+    // No React bump during drag — Details refreshes on commit.
     runtimeRef.current?.setSelection(selectedRef.current);
-    bump();
-  }, [world, mode, bump]);
+  }, [world, mode]);
 
   const previewBrushGeometry = useCallback((actorId, size, worldPosition) => {
     if (!world || mode === 'play') return;
     const actor = world.getActor(actorId);
     const brush = actor?.getComponent('Brush');
     if (!brush || isEffectivelyLocked(actor, world)) return;
-    brush.size = { ...size };
+    if (
+      !Number.isFinite(worldPosition?.x)
+      || !Number.isFinite(worldPosition?.y)
+      || !Number.isFinite(worldPosition?.z)
+      || !Number.isFinite(size?.x)
+      || !Number.isFinite(size?.y)
+      || !Number.isFinite(size?.z)
+    ) {
+      return;
+    }
+    const nextSize = {
+      x: Math.max(1, Number(size.x)),
+      y: Math.max(1, Number(size.y)),
+      z: Math.max(1, Number(size.z)),
+    };
+    brush.size = nextSize;
     const current = getWorldTransform(actor, world);
     setWorldTransform(actor, {
       ...current,
       position: { ...worldPosition },
     }, world);
     runtimeRef.current?.refreshBrush(actor);
+    // No React bump during drag — avoids remount/churn while meshes rebuild.
     runtimeRef.current?.setSelection(selectedRef.current);
-    bump();
-  }, [world, mode, bump]);
+  }, [world, mode]);
 
   const updateSelectedTransform = useCallback((partial, { snap = true } = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -479,6 +540,25 @@ export function EditorProvider({ children }) {
         position: { ...actor.transform.position },
       };
       commitBrushGeometry([{ actorId, before, after }], 'Edit size');
+      if (brush.openings?.length) {
+        const prevOpenings = normalizeOpenings(brush.openings);
+        const { openings: nextOpenings } = validateOpenings(afterSize, prevOpenings, {
+          snap: gridRef.current,
+        });
+        if (JSON.stringify(prevOpenings) !== JSON.stringify(nextOpenings)) {
+          executeCommand(
+            new SetBrushOpeningsCommand({
+              world,
+              actorId,
+              before: prevOpenings,
+              after: nextOpenings,
+              label: 'Clamp openings',
+            }),
+            { resync: true },
+          );
+          autoCapturePrefabOverrides([actorId]);
+        }
+      }
       return;
     }
 
@@ -525,6 +605,55 @@ export function EditorProvider({ children }) {
     );
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, commitBrushGeometry, executeCommand, autoCapturePrefabOverrides]);
+
+  const setSelectedBrushOpenings = useCallback((nextOpenings, label = 'Edit openings') => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const actor = world.getActor(actorId);
+    const brush = actor?.getComponent('Brush');
+    if (!brush || !isWallBrush(actor)) return;
+    const before = normalizeOpenings(brush.openings);
+    const { openings: after } = validateOpenings(brush.size, nextOpenings, {
+      snap: gridRef.current,
+    });
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    executeCommand(
+      new SetBrushOpeningsCommand({ world, actorId, before, after, label }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const addBrushOpening = useCallback((type = 'door') => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
+    const brush = actor?.getComponent('Brush');
+    if (!brush || !isWallBrush(actor)) return;
+    const opening = createDefaultOpening(type);
+    setSelectedBrushOpenings([...(brush.openings || []), opening], `Add ${type}`);
+  }, [world, mode, setSelectedBrushOpenings]);
+
+  const updateBrushOpening = useCallback((openingId, partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
+    const brush = actor?.getComponent('Brush');
+    if (!brush) return;
+    const next = normalizeOpenings(brush.openings).map((o) => (
+      o.id === openingId ? { ...o, ...partial, id: o.id } : o
+    ));
+    setSelectedBrushOpenings(next, 'Edit opening');
+  }, [world, mode, setSelectedBrushOpenings]);
+
+  const removeBrushOpening = useCallback((openingId) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
+    const brush = actor?.getComponent('Brush');
+    if (!brush) return;
+    setSelectedBrushOpenings(
+      normalizeOpenings(brush.openings).filter((o) => o.id !== openingId),
+      'Remove opening',
+    );
+  }, [world, mode, setSelectedBrushOpenings]);
 
   const updateSelectedLight = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -601,7 +730,7 @@ export function EditorProvider({ children }) {
 
   const createPrefabFromSelection = useCallback(async (name = 'Prefab') => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) {
-      setStatus('Select actors or a cell to create a prefab');
+      notify('Select actors or a cell to create a prefab');
       return null;
     }
     const result = createPrefabFromActors(world, selectedRef.current, {
@@ -609,18 +738,18 @@ export function EditorProvider({ children }) {
       getDefinition: (id) => getPrefabDefinitionSync(id),
     });
     if (!result.ok) {
-      setStatus(result.error || 'Prefab create failed');
+      notify(result.error || 'Prefab create failed');
       return null;
     }
     try {
       const saved = await savePrefabDefinition(result.definition);
-      setStatus(`Created prefab ${saved.asset.name}`);
+      notify(`Created prefab ${saved.asset.name}`);
       return saved;
     } catch (err) {
-      setStatus(err.message);
+      notify(err.message);
       return null;
     }
-  }, [world, mode, savePrefabDefinition, getPrefabDefinitionSync]);
+  }, [world, mode, savePrefabDefinition, getPrefabDefinitionSync, notify]);
 
   const placePrefabAsset = useCallback(async (assetOrId, position) => {
     if (!world || mode === 'play') return null;
@@ -631,7 +760,7 @@ export function EditorProvider({ children }) {
       definition = await getPrefabDefinition(id);
     }
     if (!definition) {
-      setStatus(`Prefab not found: ${id}`);
+      notify(`Prefab not found: ${id}`);
       return null;
     }
     const pos = {
@@ -654,14 +783,14 @@ export function EditorProvider({ children }) {
       { selectIds: placed.rootActorIds },
     );
     return placed;
-  }, [world, mode, executeCommand, getPrefabDefinition, getPrefabDefinitionSync]);
+  }, [world, mode, executeCommand, getPrefabDefinition, getPrefabDefinitionSync, notify]);
 
   const applyPrefabSourceUpdate = useCallback(async (prefabId) => {
     if (!world || mode === 'play' || !prefabId) return;
     let definition = getPrefabDefinitionSync(prefabId);
     if (!definition) definition = await getPrefabDefinition(prefabId);
     if (!definition) {
-      setStatus(`Prefab not found: ${prefabId}`);
+      notify(`Prefab not found: ${prefabId}`);
       return;
     }
     // Ensure nested sources are loaded so parent sync can re-apply nested updates.
@@ -689,14 +818,14 @@ export function EditorProvider({ children }) {
       }),
       { resync: true },
     );
-  }, [world, mode, executeCommand, getPrefabDefinition, getPrefabDefinitionSync]);
+  }, [world, mode, executeCommand, getPrefabDefinition, getPrefabDefinitionSync, notify]);
 
   const updatePrefabAssetFromSelection = useCallback(async () => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return null;
     const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
     const prefabId = actor?.prefab?.prefabId || actor?.prefab?.ownerPrefabId;
     if (!prefabId) {
-      setStatus('Selection is not a prefab instance');
+      notify('Selection is not a prefab instance');
       return null;
     }
     const root = findInstanceRoot(world, actor.prefab.instanceId)
@@ -711,17 +840,17 @@ export function EditorProvider({ children }) {
       getDefinition: (id) => getPrefabDefinitionSync(id),
     });
     if (!result.ok) {
-      setStatus(result.error || 'Update prefab failed');
+      notify(result.error || 'Update prefab failed');
       return null;
     }
     try {
       const saved = await savePrefabDefinition(result.definition);
       // Propagate to other instances
       await applyPrefabSourceUpdate(prefabId);
-      setStatus(`Updated prefab ${saved.asset.name}`);
+      notify(`Updated prefab ${saved.asset.name}`);
       return saved;
     } catch (err) {
-      setStatus(err.message);
+      notify(err.message);
       return null;
     }
   }, [
@@ -730,6 +859,7 @@ export function EditorProvider({ children }) {
     savePrefabDefinition,
     getPrefabDefinitionSync,
     applyPrefabSourceUpdate,
+    notify,
   ]);
 
   const unpackSelectedPrefab = useCallback(() => {
@@ -737,7 +867,7 @@ export function EditorProvider({ children }) {
     const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
     const instanceId = actor?.prefab?.instanceId;
     if (!instanceId) {
-      setStatus('Selection is not a prefab instance');
+      notify('Selection is not a prefab instance');
       return;
     }
     const beforeJson = getInstanceActors(world, instanceId).map((a) => a.toJSON());
@@ -760,7 +890,7 @@ export function EditorProvider({ children }) {
       }),
       { resync: true },
     );
-  }, [world, mode, executeCommand]);
+  }, [world, mode, executeCommand, notify]);
 
   const recordSelectedPrefabOverride = useCallback(async () => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -774,7 +904,7 @@ export function EditorProvider({ children }) {
       getDefinition: getPrefabDefinition,
     });
     if (!result?.ok) {
-      setStatus(result?.error || 'Prefab source not available');
+      notify(result?.error || 'Prefab source not available');
       return;
     }
     const after = getPrefabOverrides(root);
@@ -790,7 +920,7 @@ export function EditorProvider({ children }) {
       { resync: false },
     );
     bump();
-  }, [world, mode, executeCommand, getPrefabDefinitionSync, getPrefabDefinition, bump]);
+  }, [world, mode, executeCommand, getPrefabDefinitionSync, getPrefabDefinition, bump, notify]);
 
   const revertSelectedPrefabOverride = useCallback(async (path = null) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -895,6 +1025,7 @@ export function EditorProvider({ children }) {
     levels,
     status,
     setStatus,
+    notify,
     gridSize,
     setGridSize,
     gridIncrements: GRID_INCREMENTS,
@@ -916,6 +1047,10 @@ export function EditorProvider({ children }) {
     previewBrushGeometry,
     updateSelectedTransform,
     updateSelectedBrush,
+    setSelectedBrushOpenings,
+    addBrushOpening,
+    updateBrushOpening,
+    removeBrushOpening,
     updateSelectedLight,
     updateSelectedStaticMesh,
     placeMeshAsset,

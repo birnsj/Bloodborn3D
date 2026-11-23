@@ -196,7 +196,11 @@ export class BrushGizmo {
     if (!this._drag) return null;
     const now = this._projectAxis(pointerRay, this._drag.axis, this._drag.startPoint);
     if (!now || !this._drag.startPoint) return null;
-    const deltaMeters = now - this._axisComponent(this._drag.startPoint, this._drag.axis);
+    // _projectAxis returns a Vector3 — compare axis components, not Vector3 - number (NaN).
+    const deltaMeters =
+      this._axisComponent(now, this._drag.axis)
+      - this._axisComponent(this._drag.startPoint, this._drag.axis);
+    if (!Number.isFinite(deltaMeters)) return null;
     return {
       kind: this._drag.kind,
       axis: this._drag.axis,

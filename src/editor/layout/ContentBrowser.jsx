@@ -4,6 +4,8 @@ import { useLayout } from './LayoutContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useEditor } from '../EditorContext.jsx';
 import { AssetThumbnail } from '../assets/AssetThumbnail.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 
 /** Content Browser — project asset registry, import, search, drag sources. */
 export function ContentBrowser({ docked = false } = {}) {
@@ -20,9 +22,15 @@ export function ContentBrowser({ docked = false } = {}) {
     importTexture,
     importMesh,
     createNewMaterial,
-    setStatus,
+    notify,
   } = useAssetBrowser();
-  const { createPrefabFromSelection, selectedActorIds, mode } = useEditor();
+  const {
+    createPrefabFromSelection,
+    selectedActorIds,
+    mode,
+    notify: notifyEditor,
+  } = useEditor();
+  const { prompt } = useEditorDialogs();
 
   const folder = layout.contentFolder || 'Materials';
   const viewMode = layout.contentViewMode || 'grid';
@@ -45,10 +53,10 @@ export function ContentBrowser({ docked = false } = {}) {
         } else if (/\.(glb|gltf)$/i.test(lower)) {
           await importMesh(file);
         } else {
-          setStatus(`Unsupported file: ${file.name}`);
+          notify(`Unsupported file: ${file.name}`);
         }
       } catch (err) {
-        setStatus(err.message);
+        notify(err.message);
       }
     }
   };
@@ -66,6 +74,7 @@ export function ContentBrowser({ docked = false } = {}) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               title="Filter project assets"
+              {...helpProps('content.search')}
             />
           </div>
           <div className="bb-seg">
@@ -74,6 +83,7 @@ export function ContentBrowser({ docked = false } = {}) {
               className={`bb-btn bb-btn--icon${viewMode === 'grid' ? ' bb-btn--active' : ''}`}
               title="Grid view"
               onClick={() => patch({ contentViewMode: 'grid' })}
+              {...helpProps('content.gridView')}
             >
               <IconGrid />
             </button>
@@ -82,6 +92,7 @@ export function ContentBrowser({ docked = false } = {}) {
               className={`bb-btn bb-btn--icon${viewMode === 'list' ? ' bb-btn--active' : ''}`}
               title="List view"
               onClick={() => patch({ contentViewMode: 'list' })}
+              {...helpProps('content.listView')}
             >
               <IconList />
             </button>
@@ -90,10 +101,20 @@ export function ContentBrowser({ docked = false } = {}) {
       </div>
 
       <div className="bb-content__toolbar">
-        <button type="button" className="bb-btn" onClick={() => textureInputRef.current?.click()}>
+        <button
+          type="button"
+          className="bb-btn"
+          onClick={() => textureInputRef.current?.click()}
+          {...helpProps('content.importTexture')}
+        >
           Import Texture
         </button>
-        <button type="button" className="bb-btn" onClick={() => meshInputRef.current?.click()}>
+        <button
+          type="button"
+          className="bb-btn"
+          onClick={() => meshInputRef.current?.click()}
+          {...helpProps('content.importMesh')}
+        >
           Import Mesh
         </button>
         <button
@@ -109,9 +130,10 @@ export function ContentBrowser({ docked = false } = {}) {
               });
               patch({ contentFolder: 'Materials' });
             } catch (err) {
-              setStatus(err.message);
+              notify(err.message);
             }
           }}
+          {...helpProps('content.newMaterial')}
         >
           New Material
         </button>
@@ -122,14 +144,23 @@ export function ContentBrowser({ docked = false } = {}) {
           title="Create prefab from selected actors / cell"
           onClick={async () => {
             try {
-              const name = window.prompt('Prefab name', 'Cell Prefab');
-              if (!name) return;
-              const result = await createPrefabFromSelection(name);
+              const name = await prompt('Prefab name', {
+                title: 'Create Prefab',
+                initialValue: 'Cell Prefab',
+              });
+              if (!name?.trim()) return;
+              const result = await createPrefabFromSelection(name.trim());
               if (result) patch({ contentFolder: 'Prefabs' });
             } catch (err) {
-              setStatus(err.message);
+              notifyEditor(err.message);
             }
           }}
+          {...helpProps(
+            'content.createPrefab',
+            mode === 'play'
+              ? 'Unavailable during Play mode.'
+              : (selectedActorIds.length === 0 ? 'Select actors or a cell first.' : null),
+          )}
         >
           Create Prefab
         </button>
@@ -146,7 +177,7 @@ export function ContentBrowser({ docked = false } = {}) {
               await importTexture(file);
               patch({ contentFolder: 'Textures' });
             } catch (err) {
-              setStatus(err.message);
+              notify(err.message);
             }
           }}
         />
@@ -163,7 +194,7 @@ export function ContentBrowser({ docked = false } = {}) {
               await importMesh(file);
               patch({ contentFolder: 'Meshes' });
             } catch (err) {
-              setStatus(err.message);
+              notify(err.message);
             }
           }}
         />
@@ -225,6 +256,7 @@ export function ContentBrowser({ docked = false } = {}) {
                       onDragStart={(e) => beginAssetDrag(e, asset)}
                       onClick={() => selectAsset(asset.id)}
                       title={`${asset.name} (${asset.type})`}
+                      {...helpProps('content.asset')}
                     >
                       <AssetThumbnail asset={asset} size={viewMode === 'grid' ? 56 : 28} />
                       <span className="bb-asset-tile__name">{asset.name}</span>

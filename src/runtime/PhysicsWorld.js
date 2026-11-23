@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { toMeters } from '../core/units.js';
 import { getWorldTransform } from '../core/hierarchy.js';
+import { getBrushRenderSolids } from './brushGeometry.js';
 
 let rapierReady = null;
 
@@ -47,11 +48,7 @@ export class PhysicsWorld {
     for (const actor of gameWorld.actors) {
       const brush = actor.getComponent('Brush');
       if (brush && brush.enabled && brush.collidable !== false) {
-        this._addBoxCollider(actor, {
-          x: toMeters(brush.size.x) * 0.5,
-          y: toMeters(brush.size.y) * 0.5,
-          z: toMeters(brush.size.z) * 0.5,
-        });
+        this._addBrushColliders(actor, brush);
         continue;
       }
 
@@ -68,6 +65,34 @@ export class PhysicsWorld {
     }
   }
 
+  _addBrushColliders(actor, brush) {
+    const { solids } = getBrushRenderSolids(brush);
+    const worldXform = getWorldTransform(actor, actor.world || null);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    const colliders = [];
+
+    for (const solid of solids) {
+      const hx = Math.max(0.01, toMeters(solid.size.x) * 0.5 * Math.abs(scale.x || 1));
+      const hy = Math.max(0.01, toMeters(solid.size.y) * 0.5 * Math.abs(scale.y || 1));
+      const hz = Math.max(0.01, toMeters(solid.size.z) * 0.5 * Math.abs(scale.z || 1));
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+        .setTranslation(
+          toMeters(solid.center.x * (scale.x || 1)),
+          toMeters(solid.center.y * (scale.y || 1)),
+          toMeters(solid.center.z * (scale.z || 1)),
+        );
+      colliders.push(this.world.createCollider(colliderDesc, body));
+    }
+
+    this._bodies.set(actor.id, { body, colliders, actor });
+  }
+
   _addBoxCollider(actor, halfMeters) {
     const worldXform = getWorldTransform(actor, actor.world || null);
     const pos = worldXform.position;
@@ -82,8 +107,8 @@ export class PhysicsWorld {
       Math.max(0.01, halfMeters.y * Math.abs(scale.y || 1)),
       Math.max(0.01, halfMeters.z * Math.abs(scale.z || 1)),
     );
-    this.world.createCollider(colliderDesc, body);
-    this._bodies.set(actor.id, { body, actor });
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
 
   /**
@@ -123,6 +148,11 @@ export class PhysicsWorld {
     if (!this.playerBody) return null;
     const t = this.playerBody.translation();
     return { x: t.x, y: t.y, z: t.z };
+  }
+
+  /** Test helper: number of colliders for an actor brush body. */
+  getColliderCount(actorId) {
+    return this._bodies.get(actorId)?.colliders?.length || 0;
   }
 
   step(dt) {

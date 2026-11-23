@@ -28,6 +28,8 @@ import {
   updatePrefab,
 } from '../../io/assetFileApi.js';
 import { normalizePrefabDefinition } from '../../prefabs/PrefabDefinition.js';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { reportEditorMessage } from '../../ui/dialogs/reportEditorMessage.js';
 
 const AssetBrowserContext = createContext(null);
 
@@ -36,15 +38,24 @@ const AssetBrowserContext = createContext(null);
  * Independent of GameRuntime / level world, but provides resolvers for it.
  */
 export function AssetBrowserProvider({ children }) {
+  const dialogs = useEditorDialogs();
   const [registry, setRegistry] = useState(() => normalizeRegistry({ assets: [] }));
   const [materialDefs, setMaterialDefs] = useState({});
   const [prefabDefs, setPrefabDefs] = useState({});
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatusState] = useState('');
   const [revision, setRevision] = useState(0);
   const materialCacheRef = useRef({});
   const prefabCacheRef = useRef({});
+
+  const setStatus = useCallback((message) => {
+    setStatusState(String(message ?? ''));
+  }, []);
+
+  const notify = useCallback((message, options = {}) => {
+    reportEditorMessage(setStatusState, dialogs, message, { ...options, dialog: true });
+  }, [dialogs]);
 
   const refreshRegistry = useCallback(async () => {
     try {
@@ -105,10 +116,10 @@ export function AssetBrowserProvider({ children }) {
       setPrefabDefs({ ...pdefs });
       return next;
     } catch (err) {
-      setStatus(`Asset registry: ${err.message}`);
+      notify(`Asset registry: ${err.message}`);
       return null;
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     refreshRegistry();
@@ -192,9 +203,9 @@ export function AssetBrowserProvider({ children }) {
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
-    setStatus(`Imported texture ${result.asset.name}`);
+    notify(`Imported texture ${result.asset.name}`);
     return result.asset;
-  }, []);
+  }, [notify, setStatus]);
 
   const importMesh = useCallback(async (file) => {
     setStatus(`Importing mesh ${file.name}…`);
@@ -202,9 +213,9 @@ export function AssetBrowserProvider({ children }) {
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
-    setStatus(`Imported mesh ${result.asset.name}`);
+    notify(`Imported mesh ${result.asset.name}`);
     return result.asset;
-  }, []);
+  }, [notify, setStatus]);
 
   const createNewMaterial = useCallback(async (partial = {}) => {
     setStatus('Creating material…');
@@ -217,9 +228,9 @@ export function AssetBrowserProvider({ children }) {
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
-    setStatus(`Created material ${result.asset.name}`);
+    notify(`Created material ${result.asset.name}`);
     return { asset: result.asset, definition: def };
-  }, []);
+  }, [notify, setStatus]);
 
   const saveMaterialDefinition = useCallback(async (id, partial) => {
     const result = await updateMaterial(id, partial);
@@ -230,9 +241,9 @@ export function AssetBrowserProvider({ children }) {
     }
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
-    setStatus(`Updated material ${result.asset.name}`);
+    notify(`Updated material ${result.asset.name}`);
     return def;
-  }, []);
+  }, [notify]);
 
   const getPrefabDefinition = useCallback(async (id) => {
     if (!id) return null;
@@ -280,9 +291,9 @@ export function AssetBrowserProvider({ children }) {
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
-    setStatus(`Saved prefab ${result.asset.name}`);
+    notify(`Saved prefab ${result.asset.name}`);
     return { asset: result.asset, definition: def };
-  }, [registry]);
+  }, [registry, notify]);
 
   const assetResolver = useMemo(() => ({
     getTextureUrl,
@@ -318,6 +329,7 @@ export function AssetBrowserProvider({ children }) {
     assetResolver,
     status,
     setStatus,
+    notify,
   }), [
     registry,
     revision,
@@ -340,6 +352,8 @@ export function AssetBrowserProvider({ children }) {
     prefabDefs,
     assetResolver,
     status,
+    setStatus,
+    notify,
   ]);
 
   return (

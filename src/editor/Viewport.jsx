@@ -280,10 +280,12 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
-      const delta = snapToGrid(sample.deltaEditor, gridSize);
+      // Hold Alt to temporarily disable grid snapping during gizmo drags.
+      const snap = e.altKey ? 1 : gridSize;
+      const delta = snapToGrid(sample.deltaEditor, snap);
       const updates = drag.beforeStates.map((s) => {
         const position = { ...s.startPos };
-        position[drag.axis] = snapToGrid(s.startPos[drag.axis] + delta, gridSize);
+        position[drag.axis] = snapToGrid(s.startPos[drag.axis] + delta, snap);
         return { actorId: s.actorId, position };
       });
       previewActorPositions(updates);
@@ -294,13 +296,14 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
+      const snap = e.altKey ? 1 : gridSize;
       const result = resizeBrushFace({
         position: drag.before.position,
         size: drag.before.size,
         axis: drag.axis,
         sign: drag.sign,
         delta: sample.deltaEditor,
-        gridSize,
+        gridSize: snap,
       });
       previewBrushGeometry(drag.actorId, result.size, result.position);
     }

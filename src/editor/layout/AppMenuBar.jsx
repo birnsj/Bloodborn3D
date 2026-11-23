@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
+import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 
 function Menu({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -90,12 +92,6 @@ function Sep() {
   return <li className="bb-menu-sep" aria-hidden="true" />;
 }
 
-function promptName(title, initial = '') {
-  const value = window.prompt(title, initial);
-  if (value == null) return null;
-  return value.trim();
-}
-
 export function AppMenuBar() {
   const {
     mode,
@@ -132,6 +128,8 @@ export function AppMenuBar() {
     deleteNamedLayout,
     factoryLayoutId,
   } = useLayout();
+  const { showHoverHelp, setShowHoverHelp } = useHoverHelp();
+  const { alert, confirm, prompt } = useEditorDialogs();
 
   const isPlay = mode === 'play';
   const hasSelection = selectedActorIds.length > 0;
@@ -139,48 +137,65 @@ export function AppMenuBar() {
   const isFactory = activeId === factoryLayoutId;
   const canSaveActive = !isFactory && !activeNamedLayout?.protected;
 
-  const onSaveLayout = () => {
+  const onSaveLayout = async () => {
     const result = saveLayout();
     if (!result.ok && result.error === 'protected') {
-      window.alert('The Default layout is protected. Use Save Layout As to create a custom layout.');
+      await alert(
+        'The Default layout is protected. Use Save Layout As to create a custom layout.',
+        { title: 'Protected Layout' },
+      );
     }
   };
 
-  const onSaveLayoutAs = () => {
-    const name = promptName('Save layout as:', layoutDirty ? `${activeNamedLayout?.name || 'Layout'} Copy` : 'My Layout');
-    if (!name) return;
-    const result = saveLayoutAs(name);
+  const onSaveLayoutAs = async () => {
+    const name = await prompt('Save layout as:', {
+      title: 'Save Layout As',
+      initialValue: layoutDirty ? `${activeNamedLayout?.name || 'Layout'} Copy` : 'My Layout',
+    });
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    const result = saveLayoutAs(trimmed);
     if (!result.ok) {
       if (result.error === 'reserved-name') {
-        window.alert('That name is reserved for the factory Default layout.');
+        await alert('That name is reserved for the factory Default layout.', { title: 'Reserved Name' });
       } else if (result.error === 'empty-name') {
-        window.alert('Enter a layout name.');
+        await alert('Enter a layout name.', { title: 'Layout Name' });
       }
     }
   };
 
-  const onRenameLayout = () => {
+  const onRenameLayout = async () => {
     if (isFactory || activeNamedLayout?.protected) {
-      window.alert('The Default layout cannot be renamed.');
+      await alert('The Default layout cannot be renamed.', { title: 'Protected Layout' });
       return;
     }
-    const name = promptName('Rename layout:', activeNamedLayout?.name || '');
-    if (!name) return;
-    renameNamedLayout(activeId, name);
+    const name = await prompt('Rename layout:', {
+      title: 'Rename Layout',
+      initialValue: activeNamedLayout?.name || '',
+    });
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    renameNamedLayout(activeId, trimmed);
   };
 
-  const onDeleteLayout = () => {
+  const onDeleteLayout = async () => {
     if (isFactory || activeNamedLayout?.protected) {
-      window.alert('The Default layout cannot be deleted.');
+      await alert('The Default layout cannot be deleted.', { title: 'Protected Layout' });
       return;
     }
-    const ok = window.confirm(`Delete layout “${activeNamedLayout?.name}”? This cannot be undone.`);
+    const ok = await confirm(
+      `Delete layout “${activeNamedLayout?.name}”? This cannot be undone.`,
+      { title: 'Delete Layout', confirmLabel: 'Delete' },
+    );
     if (!ok) return;
     deleteNamedLayout(activeId);
   };
 
-  const onResetLayout = () => {
-    const ok = window.confirm('Reset to the factory Default layout? Unsaved arrangement changes will be discarded.');
+  const onResetLayout = async () => {
+    const ok = await confirm(
+      'Reset to the factory Default layout? Unsaved arrangement changes will be discarded.',
+      { title: 'Reset Layout', confirmLabel: 'Reset' },
+    );
     if (!ok) return;
     resetLayout();
   };
@@ -326,7 +341,14 @@ export function AppMenuBar() {
       <Menu label="Help">
         {(close) => (
           <>
-            <Item label="BloodBound Phase 2A.5 — named workspace layouts" disabled close={close} />
+            <Item
+              label="Show Hover Help"
+              checked={showHoverHelp}
+              close={close}
+              onClick={() => setShowHoverHelp(!showHoverHelp)}
+            />
+            <Sep />
+            <Item label="BloodBound Phase 2C — cells, prefabs, hover help" disabled close={close} />
           </>
         )}
       </Menu>

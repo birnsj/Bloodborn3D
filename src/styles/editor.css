@@ -296,6 +296,42 @@ select {
   white-space: nowrap;
 }
 
+.bb-recorder-seg {
+  align-items: center;
+}
+
+.bb-recorder-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  height: var(--bb-control-h);
+  border-radius: var(--bb-radius);
+  border: 1px solid #6b2430;
+  background: rgba(180, 40, 55, 0.18);
+  color: #ffb4bc;
+  font-size: var(--bb-font-size-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.bb-recorder-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e44555;
+  box-shadow: 0 0 0 0 rgba(228, 69, 85, 0.55);
+  animation: bb-recorder-pulse 1.2s ease-out infinite;
+}
+
+@keyframes bb-recorder-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(228, 69, 85, 0.55); }
+  70% { box-shadow: 0 0 0 6px rgba(228, 69, 85, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(228, 69, 85, 0); }
+}
+
 /* —— Workspace body —— */
 .bb-workspace {
   display: flex;
@@ -1118,4 +1154,179 @@ select {
   .bb-workspace-tab span {
     display: none;
   }
+}
+
+/* —— Context-sensitive hover help —— */
+.bb-hover-help-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+.bb-app {
+  position: relative;
+}
+
+.bb-hover-help {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  min-width: 220px;
+  max-width: 350px;
+  padding: 10px 12px;
+  background: var(--bb-bg-panel-elevated);
+  border: 1px solid var(--bb-border-strong);
+  border-radius: var(--bb-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(77, 126, 168, 0.12);
+  color: var(--bb-text);
+  font-size: var(--bb-font-size);
+  line-height: 1.4;
+}
+
+.bb-hover-help__title {
+  font-weight: 600;
+  color: var(--bb-text-bright);
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.bb-hover-help__body,
+.bb-hover-help__tips,
+.bb-hover-help__meta,
+.bb-hover-help__shortcut,
+.bb-hover-help__disabled {
+  margin: 0 0 6px;
+}
+
+.bb-hover-help__body:last-child,
+.bb-hover-help__tips:last-child,
+.bb-hover-help__meta:last-child,
+.bb-hover-help__shortcut:last-child,
+.bb-hover-help__disabled:last-child {
+  margin-bottom: 0;
+}
+
+.bb-hover-help__tips {
+  color: var(--bb-text-muted);
+}
+
+.bb-hover-help__meta {
+  color: var(--bb-brand-bright);
+}
+
+.bb-hover-help__shortcut {
+  color: var(--bb-text-muted);
+}
+
+.bb-hover-help__shortcut kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--bb-border);
+  border-radius: 2px;
+  background: var(--bb-bg-input);
+  font-size: var(--bb-font-size-sm);
+  color: var(--bb-text-bright);
+}
+
+.bb-hover-help__disabled {
+  color: var(--bb-gizmo-orange);
+  border-top: 1px solid var(--bb-border-subtle);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+/* —— Editor dialogs —— */
+.bb-dialog-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bb-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(6, 8, 12, 0.62);
+  cursor: default;
+  pointer-events: auto;
+}
+
+.bb-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(80vh, 520px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bb-bg-panel-elevated);
+  border: 1px solid var(--bb-border-strong);
+  border-radius: var(--bb-radius);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(77, 126, 168, 0.12);
+  pointer-events: auto;
+}
+
+.bb-dialog--danger {
+  border-color: #6b2430;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(180, 40, 55, 0.2);
+}
+
+.bb-dialog--warning {
+  border-color: #6b4a20;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(224, 149, 58, 0.18);
+}
+
+.bb-dialog__header {
+  flex: 0 0 auto;
+  padding: 10px 12px 0;
+}
+
+.bb-dialog__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bb-text-bright);
+}
+
+.bb-dialog--danger .bb-dialog__title {
+  color: #ffb4bc;
+}
+
+.bb-dialog--warning .bb-dialog__title {
+  color: #f0c48a;
+}
+
+.bb-dialog__body {
+  flex: 1 1 auto;
+  padding: 8px 12px 4px;
+  overflow: auto;
+}
+
+.bb-dialog__message {
+  margin: 0;
+  color: var(--bb-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.bb-dialog__input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.bb-dialog__footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 12px 12px;
 }

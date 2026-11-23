@@ -89,6 +89,14 @@ export function IconStop(props) {
   );
 }
 
+export function IconRecord(props) {
+  return (
+    <Svg {...props}>
+      <circle fill="currentColor" cx="8" cy="8" r="4.5" />
+    </Svg>
+  );
+}
+
 export function IconSearch(props) {
   return (
     <Svg {...props}>

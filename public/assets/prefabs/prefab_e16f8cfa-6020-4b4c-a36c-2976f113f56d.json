@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "id": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d",
+  "name": "Cell Prefab",
+  "type": "prefab",
+  "rootTemplateIds": [
+    "tpl_cf235d0c-07cc-4f31-88f2-4ee8321acf81"
+  ],
+  "actors": [
+    {
+      "id": "tpl_cf235d0c-07cc-4f31-88f2-4ee8321acf81",
+      "name": "Wall East",
+      "transform": {
+        "position": {
+          "x": 310,
+          "y": 160,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_wall_east",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 20,
+            "y": 300,
+            "z": 600
+          },
+          "color": "#7e858f",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpl_d1f4f42d-df3c-4b92-94a7-c48b934883ac",
+      "name": "Wall West",
+      "transform": {
+        "position": {
+          "x": -620,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure"
+      ],
+      "parentId": "tpl_cf235d0c-07cc-4f31-88f2-4ee8321acf81",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_wall_west",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 20,
+            "y": 300,
+            "z": 600
+          },
+          "color": "#7e858f",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpl_06c3d5cc-8667-43a3-9e72-78cb11deb7a7",
+      "name": "Wall South",
+      "transform": {
+        "position": {
+          "x": 310,
+          "y": 0,
+          "z": 310
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure"
+      ],
+      "parentId": "tpl_d1f4f42d-df3c-4b92-94a7-c48b934883ac",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_wall_south",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 640,
+            "y": 300,
+            "z": 20
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    }
+  ],
+  "nestedPrefabIds": [],
+  "createdAt": 1795409827425,
+  "updatedAt": 1795409827431
+}

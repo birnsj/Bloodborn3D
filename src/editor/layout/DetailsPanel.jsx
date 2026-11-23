@@ -4,10 +4,13 @@ import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { Collapsible } from '../../ui/Collapsible.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
 import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { isWallBrush, normalizeOpenings } from '../../runtime/wallOpenings.js';
 
-function AxisInputs({ values, onChange, disabled, step }) {
+function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
-    <div className="bb-axis-row">
+    <div className="bb-axis-row" {...(helpId ? helpProps(helpId) : {})}>
       {['x', 'y', 'z'].map((axis) => (
         <FragmentAxis
           key={axis}
@@ -47,6 +50,9 @@ export function DetailsPanel({ docked = false } = {}) {
     world,
     updateSelectedTransform,
     updateSelectedBrush,
+    addBrushOpening,
+    updateBrushOpening,
+    removeBrushOpening,
     updateSelectedLight,
     updateSelectedStaticMesh,
     renameSelected,
@@ -63,6 +69,7 @@ export function DetailsPanel({ docked = false } = {}) {
     recordSelectedPrefabOverride,
     revertSelectedPrefabOverride,
   } = useEditor();
+  const { prompt } = useEditorDialogs();
 
   const {
     registry,
@@ -126,10 +133,22 @@ export function DetailsPanel({ docked = false } = {}) {
               />
               <p className="bb-details-id">{selectedActor.id}</p>
               <div className="bb-details-actions">
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => duplicateSelected()}>
+                <button
+                  type="button"
+                  className="bb-btn"
+                  disabled={disabled}
+                  onClick={() => duplicateSelected()}
+                  {...helpProps('details.duplicate', disabled ? 'Unavailable during Play mode.' : null)}
+                >
                   Duplicate
                 </button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => deleteSelected()}>
+                <button
+                  type="button"
+                  className="bb-btn"
+                  disabled={disabled}
+                  onClick={() => deleteSelected()}
+                  {...helpProps('details.delete', disabled ? 'Unavailable during Play mode.' : null)}
+                >
                   Delete
                 </button>
               </div>
@@ -146,7 +165,7 @@ export function DetailsPanel({ docked = false } = {}) {
             </div>
 
             <Collapsible title="Hierarchy" storageKey="details.hierarchy">
-              <label className="bb-field">
+              <label className="bb-field" {...helpProps('details.parent')}>
                 <span className="bb-field__label">Parent</span>
                 <select
                   className="bb-select"
@@ -164,7 +183,7 @@ export function DetailsPanel({ docked = false } = {}) {
                     ))}
                 </select>
               </label>
-              <label className="bb-field">
+              <label className="bb-field" {...helpProps('details.visible')}>
                 <span className="bb-field__label">Visible</span>
                 <input
                   type="checkbox"
@@ -173,7 +192,7 @@ export function DetailsPanel({ docked = false } = {}) {
                   onChange={(e) => setSelectedActorFlags({ visible: e.target.checked })}
                 />
               </label>
-              <label className="bb-field">
+              <label className="bb-field" {...helpProps('details.locked')}>
                 <span className="bb-field__label">Locked</span>
                 <input
                   type="checkbox"
@@ -183,7 +202,13 @@ export function DetailsPanel({ docked = false } = {}) {
                 />
               </label>
               <div className="bb-details-actions">
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => createCell()}>
+                <button
+                  type="button"
+                  className="bb-btn"
+                  disabled={disabled}
+                  onClick={() => createCell()}
+                  {...helpProps('details.newCell', disabled ? 'Unavailable during Play mode.' : null)}
+                >
                   New Cell
                 </button>
                 {selectedActor.getComponent('Cell') && selectedActorIds.length > 1 && (
@@ -192,6 +217,7 @@ export function DetailsPanel({ docked = false } = {}) {
                     className="bb-btn"
                     disabled={disabled}
                     onClick={() => assignSelectedToCell(selectedActor.id)}
+                    {...helpProps('details.parentSelection', disabled ? 'Unavailable during Play mode.' : null)}
                   >
                     Parent selection here
                   </button>
@@ -225,6 +251,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       disabled={disabled}
                       onClick={() => recordSelectedPrefabOverride()}
                       title="Store current differences from source as instance overrides"
+                      {...helpProps('details.prefab.record', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Record Override
                     </button>
@@ -234,6 +261,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       disabled={disabled}
                       onClick={() => revertSelectedPrefabOverride()}
                       title="Clear overrides for this template and resync from source"
+                      {...helpProps('details.prefab.revert', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Revert Override
                     </button>
@@ -242,6 +270,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       className="bb-btn"
                       disabled={disabled}
                       onClick={() => applyPrefabSourceUpdate(selectedActor.prefab.prefabId)}
+                      {...helpProps('details.prefab.apply', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Apply Source
                     </button>
@@ -250,6 +279,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       className="bb-btn"
                       disabled={disabled}
                       onClick={() => updatePrefabAssetFromSelection()}
+                      {...helpProps('details.prefab.update', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Update Source
                     </button>
@@ -258,6 +288,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       className="bb-btn"
                       disabled={disabled}
                       onClick={() => unpackSelectedPrefab()}
+                      {...helpProps('details.prefab.unpack', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Unpack
                     </button>
@@ -274,10 +305,14 @@ export function DetailsPanel({ docked = false } = {}) {
                       type="button"
                       className="bb-btn"
                       disabled={disabled}
-                      onClick={() => {
-                        const name = window.prompt('Prefab name', selectedActor.name || 'Prefab');
-                        if (name) createPrefabFromSelection(name);
+                      onClick={async () => {
+                        const name = await prompt('Prefab name', {
+                          title: 'Create Prefab',
+                          initialValue: selectedActor.name || 'Prefab',
+                        });
+                        if (name?.trim()) createPrefabFromSelection(name.trim());
                       }}
+                      {...helpProps('details.prefab.create', disabled ? 'Unavailable during Play mode.' : null)}
                     >
                       Create Prefab From Selection
                     </button>
@@ -292,6 +327,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 values={selectedActor.transform.position}
                 step={gridSize}
                 disabled={disabled}
+                helpId="details.transform.location"
                 onChange={(partial) => updateSelectedTransform({ position: partial })}
               />
               <div className="bb-field-caption">Rotation</div>
@@ -299,6 +335,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 values={selectedActor.transform.rotation}
                 step={1}
                 disabled={disabled}
+                helpId="details.transform.rotation"
                 onChange={(partial) => updateSelectedTransform({ rotation: partial }, { snap: false })}
               />
               <div className="bb-field-caption">Scale</div>
@@ -306,6 +343,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 values={selectedActor.transform.scale}
                 step={0.1}
                 disabled={disabled}
+                helpId="details.transform.scale"
                 onChange={(partial) => updateSelectedTransform({ scale: partial }, { snap: false })}
               />
             </Collapsible>
@@ -317,9 +355,10 @@ export function DetailsPanel({ docked = false } = {}) {
                   values={brush.size}
                   step={gridSize}
                   disabled={disabled}
+                  helpId="details.brush.size"
                   onChange={(partial) => updateSelectedBrush({ size: partial })}
                 />
-                <label className="bb-field">
+                <label className="bb-field" {...helpProps('details.brush.color')}>
                   <span className="bb-field__label">Fallback Color</span>
                   <input
                     className="bb-input"
@@ -329,7 +368,7 @@ export function DetailsPanel({ docked = false } = {}) {
                     onChange={(e) => updateSelectedBrush({ color: e.target.value })}
                   />
                 </label>
-                <label className="bb-field">
+                <label className="bb-field" {...helpProps('details.collision.collidable')}>
                   <span className="bb-field__label">Collidable</span>
                   <input
                     type="checkbox"
@@ -343,7 +382,7 @@ export function DetailsPanel({ docked = false } = {}) {
 
             {brush && (
               <Collapsible title="Material" storageKey="details.material">
-                <label className="bb-field">
+                <label className="bb-field" {...helpProps('details.material.id')}>
                   <span className="bb-field__label">Material</span>
                   <select
                     className="bb-select"
@@ -372,7 +411,7 @@ export function DetailsPanel({ docked = false } = {}) {
                   </button>
                 )}
                 <div className="bb-field-caption">UV Scale</div>
-                <div className="bb-axis-row">
+                <div className="bb-axis-row" {...helpProps('details.material.uv')}>
                   <span className="bb-axis">U</span>
                   <input
                     className="bb-input"
@@ -403,7 +442,7 @@ export function DetailsPanel({ docked = false } = {}) {
                   />
                 </div>
                 <div className="bb-field-caption">UV Offset</div>
-                <div className="bb-axis-row">
+                <div className="bb-axis-row" {...helpProps('details.material.uv')}>
                   <span className="bb-axis">U</span>
                   <input
                     className="bb-input"
@@ -433,7 +472,7 @@ export function DetailsPanel({ docked = false } = {}) {
                     })}
                   />
                 </div>
-                <label className="bb-field">
+                <label className="bb-field" {...helpProps('details.material.uv')}>
                   <span className="bb-field__label">UV Rotation°</span>
                   <input
                     className="bb-input"
@@ -483,16 +522,132 @@ export function DetailsPanel({ docked = false } = {}) {
               </Collapsible>
             )}
 
+            {brush && isWallBrush(selectedActor) && (
+              <Collapsible title="Openings" storageKey="details.openings">
+                <div className="bb-field-row" style={{ gap: 8, marginBottom: 8 }}>
+                  <button
+                    type="button"
+                    className="bb-btn"
+                    disabled={disabled}
+                    {...helpProps('details.openings.addDoor')}
+                    onClick={() => addBrushOpening('door')}
+                  >
+                    Add Door
+                  </button>
+                  <button
+                    type="button"
+                    className="bb-btn"
+                    disabled={disabled}
+                    {...helpProps('details.openings.addWindow')}
+                    onClick={() => addBrushOpening('window')}
+                  >
+                    Add Window
+                  </button>
+                </div>
+                {normalizeOpenings(brush.openings).length === 0 && (
+                  <p className="bb-muted" {...helpProps('details.openings')}>
+                    No openings. Add a door or window; geometry and collision update automatically.
+                  </p>
+                )}
+                {normalizeOpenings(brush.openings).map((opening) => (
+                  <div
+                    key={opening.id}
+                    className="bb-opening-card"
+                    style={{
+                      borderTop: '1px solid var(--bb-border, #333)',
+                      paddingTop: 8,
+                      marginTop: 8,
+                    }}
+                    {...helpProps('details.openings.fields')}
+                  >
+                    <label className="bb-field">
+                      <span className="bb-field__label">Type</span>
+                      <select
+                        className="bb-select"
+                        disabled={disabled}
+                        value={opening.type}
+                        onChange={(e) => updateBrushOpening(opening.id, { type: e.target.value })}
+                      >
+                        <option value="door">Door</option>
+                        <option value="window">Window</option>
+                      </select>
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Offset</span>
+                      <input
+                        className="bb-input"
+                        type="number"
+                        step={gridSize}
+                        disabled={disabled}
+                        value={opening.offset}
+                        onChange={(e) => updateBrushOpening(opening.id, {
+                          offset: Number(e.target.value),
+                        })}
+                      />
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Bottom</span>
+                      <input
+                        className="bb-input"
+                        type="number"
+                        step={gridSize}
+                        disabled={disabled}
+                        value={opening.bottom}
+                        onChange={(e) => updateBrushOpening(opening.id, {
+                          bottom: Number(e.target.value),
+                        })}
+                      />
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Width</span>
+                      <input
+                        className="bb-input"
+                        type="number"
+                        step={gridSize}
+                        disabled={disabled}
+                        value={opening.width}
+                        onChange={(e) => updateBrushOpening(opening.id, {
+                          width: Number(e.target.value),
+                        })}
+                      />
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Height</span>
+                      <input
+                        className="bb-input"
+                        type="number"
+                        step={gridSize}
+                        disabled={disabled}
+                        value={opening.height}
+                        onChange={(e) => updateBrushOpening(opening.id, {
+                          height: Number(e.target.value),
+                        })}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled}
+                      onClick={() => removeBrushOpening(opening.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </Collapsible>
+            )}
+
             {brush && (
               <Collapsible title="Collision" storageKey="details.collision" defaultOpen={false}>
-                <p className="bb-muted">
-                  Play mode builds a Rapier box collider from brush size and transform.
+                <p className="bb-muted" {...helpProps('details.collision.collidable')}>
+                  Play mode builds Rapier box collider(s) from brush solids (including openings) at the actor’s world transform when Collidable is enabled.
                 </p>
               </Collapsible>
             )}
 
             {light && (
               <Collapsible title="Light" storageKey="details.light">
+                <div {...helpProps('details.light')}>
                 <label className="bb-field">
                   <span className="bb-field__label">Type</span>
                   <select
@@ -597,11 +752,13 @@ export function DetailsPanel({ docked = false } = {}) {
                     </label>
                   </>
                 )}
+                </div>
               </Collapsible>
             )}
 
             {staticMesh && (
               <Collapsible title="Static Mesh" storageKey="details.staticMesh">
+                <div {...helpProps('details.staticMesh')}>
                 <p className="bb-muted">Asset ID: {staticMesh.assetId || '—'}</p>
                 <label className="bb-field">
                   <span className="bb-field__label">Collision</span>
@@ -624,6 +781,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 <p className="bb-muted">
                   Collision is explicit. Box uses actor scale as a 1 m unit cube proxy.
                 </p>
+                </div>
               </Collapsible>
             )}
 

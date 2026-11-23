@@ -3,6 +3,7 @@ import { AssetThumbnail } from '../assets/AssetThumbnail.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 
 /**
  * Dedicated asset preview panel.
@@ -64,7 +65,7 @@ function AssetPreview({ asset, onClear }) {
 
   return (
     <div className="bb-asset-preview">
-      <div className="bb-asset-preview__stage">
+      <div className="bb-asset-preview__stage" {...helpProps('assetViewer.preview')}>
         <PreviewSurface asset={asset} />
       </div>
 
@@ -75,7 +76,9 @@ function AssetPreview({ asset, onClear }) {
             <div className="bb-asset-preview__name">{asset.name}</div>
             <div className="bb-muted">{asset.type} · {asset.folder}</div>
           </div>
-          <button type="button" className="bb-btn" onClick={onClear}>Clear</button>
+          <button type="button" className="bb-btn" onClick={onClear} {...helpProps('assetViewer.clear')}>
+            Clear
+          </button>
         </div>
 
         <dl className="bb-asset-preview__fields">

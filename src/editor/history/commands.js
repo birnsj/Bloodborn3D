@@ -171,6 +171,33 @@ export class SetBrushColorCommand {
 }
 
 /**
+ * Replace brush openings array (doors/windows) with undo.
+ */
+export class SetBrushOpeningsCommand {
+  constructor({ world, actorId, before, after, label = 'Edit openings' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before || []);
+    this.after = structuredClone(after || []);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(openings) {
+    const brush = this.world.getActor(this.actorId)?.getComponent('Brush');
+    if (!brush) return;
+    brush.openings = Array.isArray(openings) ? structuredClone(openings) : [];
+  }
+}
+
+/**
  * Patch brush material / UV / face material fields.
  * before/after are partial property bags applied onto BrushComponent.
  */

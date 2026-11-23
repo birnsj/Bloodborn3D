@@ -12,7 +12,12 @@ import {
   getWorldTransform,
   isEffectivelyVisible,
 } from '../core/hierarchy.js';
-import { createBrushBoxGeometry } from './brushGeometry.js';
+import {
+  createBrushBoxGeometry,
+  createBrushSolidGeometry,
+  getBrushRenderSolids,
+  TEXTURE_TILE_EDITOR_UNITS,
+} from './brushGeometry.js';
 import {
   createThreeMaterial,
   createFallbackBrushMaterial,
@@ -165,7 +170,8 @@ export class SceneView {
   }
 
   addOrUpdateActorVisual(actor) {
-    // Hierarchy changes are safest with a full resync
+    // Hierarchy parenting changes need a full resync; geometry/transform
+    // refreshes must not tear down the whole scene (gizmo resize path).
     if (actor.world) {
       this.syncFromWorld(actor.world);
       return;
@@ -180,6 +186,8 @@ export class SceneView {
   removeActorVisual(actorId) {
     const entry = this._actorMeshes.get(actorId);
     if (!entry) return;
+    // Re-parent nested actor groups before disposing so children stay in the map.
+    this._detachChildActorGroups(entry.group, actorId);
     if (entry.group.parent) entry.group.parent.remove(entry.group);
     disposeObject(entry.group);
     this._actorMeshes.delete(actorId);
@@ -201,12 +209,57 @@ export class SceneView {
     entry.group.scale.set(scale.x, scale.y, scale.z);
     entry.group.visible = isEffectivelyVisible(actor, actor.world);
     if (this.selectedActorIds.includes(actor.id)) {
-      this.setSelection(this.selectedActorIds);
+      this.setSelection(this.selectedActorIds, actor.world);
     }
   }
 
+  /**
+   * Rebuild only this actor's brush meshes in place.
+   * Avoids syncFromWorld on every gizmo resize sample (which was disposing the
+   * entire scene graph and could make brushes vanish).
+   */
   updateBrushGeometry(actor) {
-    this.addOrUpdateActorVisual(actor);
+    const brush = actor?.getComponent?.('Brush');
+    const entry = this._actorMeshes.get(actor.id);
+    if (!brush) {
+      if (actor?.world) this.syncFromWorld(actor.world);
+      return;
+    }
+    if (!entry) {
+      this._addActorVisual(actor, this._syncToken, actor.world);
+      if (this.selectedActorIds.includes(actor.id)) {
+        this.setSelection(this.selectedActorIds, actor.world);
+      }
+      return;
+    }
+
+    const childGroups = this._detachChildActorGroups(entry.group, actor.id);
+    for (const child of [...entry.group.children]) {
+      entry.group.remove(child);
+      disposeObject(child);
+    }
+
+    const token = ++this._syncToken;
+    this._addBrushVisual(entry.group, actor, brush, token);
+    for (const child of childGroups) {
+      entry.group.add(child);
+    }
+
+    this.updateActorTransform(actor);
+  }
+
+  /** Pull nested actor Three groups out of a parent group without disposing them. */
+  _detachChildActorGroups(group, ownerActorId) {
+    const detached = [];
+    for (const child of [...group.children]) {
+      const childId = child.userData?.actorId;
+      if (!childId || childId === ownerActorId) continue;
+      const childEntry = this._actorMeshes.get(childId);
+      if (childEntry?.group !== child) continue;
+      group.remove(child);
+      detached.push(child);
+    }
+    return detached;
   }
 
   _addActorVisual(actor, syncToken = this._syncToken, world = actor.world) {
@@ -277,30 +330,48 @@ export class SceneView {
   }
 
   _addBrushVisual(group, actor, comp, syncToken) {
-    const geom = createBrushBoxGeometry(comp.size, comp.uv);
-    const fallback = createFallbackBrushMaterial(comp.color || '#888888', {
-      editMode: this.editMode,
-    });
-    // Six materials for per-face assignment (+x -x +y -y +z -z)
-    const mats = FACE_KEYS.map(() => fallback.clone());
-    const mesh = new THREE.Mesh(geom, mats);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.userData.actorId = actor.id;
-    mesh.userData.pickable = true;
-    group.add(mesh);
+    const { solids } = getBrushRenderSolids(comp);
+    const tile = TEXTURE_TILE_EDITOR_UNITS;
 
-    if (this.editMode) {
-      const edges = new THREE.LineSegments(
-        new THREE.EdgesGeometry(geom),
-        new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+    for (const solid of solids) {
+      const bias = {
+        u: (solid.center.x / tile) * (Number(comp.uv?.scale?.x) || 1),
+        v: (solid.center.y / tile) * (Number(comp.uv?.scale?.y) || 1),
+      };
+      const geom = solids.length === 1 && solid.role === 'solid'
+        ? createBrushBoxGeometry(solid.size, comp.uv)
+        : createBrushSolidGeometry(solid.size, comp.uv, bias);
+
+      const fallback = createFallbackBrushMaterial(comp.color || '#888888', {
+        editMode: this.editMode,
+      });
+      const mats = FACE_KEYS.map(() => fallback.clone());
+      const mesh = new THREE.Mesh(geom, mats);
+      mesh.position.set(
+        toMeters(solid.center.x),
+        toMeters(solid.center.y),
+        toMeters(solid.center.z),
       );
-      edges.userData.actorId = actor.id;
-      edges.userData.editorOnly = true;
-      group.add(edges);
-    }
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.actorId = actor.id;
+      mesh.userData.pickable = true;
+      mesh.userData.brushSolid = solid.role;
+      group.add(mesh);
 
-    void this._applyBrushMaterials(mesh, comp, syncToken);
+      if (this.editMode) {
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geom),
+          new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+        );
+        edges.position.copy(mesh.position);
+        edges.userData.actorId = actor.id;
+        edges.userData.editorOnly = true;
+        group.add(edges);
+      }
+
+      void this._applyBrushMaterials(mesh, comp, syncToken);
+    }
   }
 
   async _applyBrushMaterials(mesh, comp, syncToken) {

@@ -73,6 +73,24 @@
   color: #e8fff0;
 }
 
+.bb-btn--record {
+  border-color: #6b2430;
+  background: rgba(180, 40, 55, 0.16);
+  color: #ffb4bc;
+}
+
+.bb-btn--record:hover:not(:disabled) {
+  background: rgba(180, 40, 55, 0.28);
+  border-color: #8a2f3d;
+  color: #ffd0d5;
+}
+
+.bb-btn--record.is-active {
+  background: #8a2f3d;
+  border-color: #b14052;
+  color: #fff;
+}
+
 .bb-input,
 .bb-select {
   box-sizing: border-box;

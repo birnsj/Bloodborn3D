@@ -7,6 +7,7 @@ import {
   IconSpawn,
 } from '../../ui/icons.jsx';
 import { getChildren, getRootActors } from '../../core/hierarchy.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 
 const OUTLINER_DRAG = 'application/x-bloodbound-outliner-actor';
 
@@ -102,6 +103,10 @@ export function SceneOutliner({ docked = false } = {}) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
             disabled={!world || mode === 'play'}
+            {...helpProps(
+              'outliner.search',
+              mode === 'play' ? 'Unavailable during Play mode.' : null,
+            )}
           />
         </div>
         <div className="bb-outliner__actions">
@@ -111,6 +116,10 @@ export function SceneOutliner({ docked = false } = {}) {
             disabled={!world || mode === 'play'}
             onClick={() => createCell()}
             title="Create empty cell"
+            {...helpProps(
+              'outliner.newCell',
+              mode === 'play' ? 'Unavailable during Play mode.' : null,
+            )}
           >
             + Cell
           </button>
@@ -120,6 +129,12 @@ export function SceneOutliner({ docked = false } = {}) {
             disabled={!world || mode === 'play' || selectedActorIds.length === 0}
             onClick={() => reparentSelected(null)}
             title="Unparent selection"
+            {...helpProps(
+              'outliner.unparent',
+              mode === 'play'
+                ? 'Unavailable during Play mode.'
+                : (selectedActorIds.length === 0 ? 'Select actors to unparent.' : null),
+            )}
           >
             Unparent
           </button>
@@ -206,6 +221,7 @@ function OutlinerNode({
         className={`bb-outliner-row${selected ? ' is-selected' : ''}${isDrop ? ' is-drop' : ''}${actor.visible === false ? ' is-hidden' : ''}${actor.locked ? ' is-locked' : ''}`}
         style={{ paddingLeft: 6 + depth * 12 }}
         draggable={mode !== 'play'}
+        {...helpProps('outliner.row')}
         onDragStart={(e) => {
           if (!selected) selectActor(actor.id);
           e.dataTransfer.setData(OUTLINER_DRAG, actor.id);
@@ -252,6 +268,10 @@ function OutlinerNode({
           className="bb-outliner-flag"
           title={actor.visible === false ? 'Show' : 'Hide'}
           disabled={mode === 'play'}
+          {...helpProps(
+            'outliner.visibility',
+            mode === 'play' ? 'Unavailable during Play mode.' : null,
+          )}
           onClick={(e) => {
             e.stopPropagation();
             selectActor(actor.id);
@@ -265,6 +285,10 @@ function OutlinerNode({
           className="bb-outliner-flag"
           title={actor.locked ? 'Unlock' : 'Lock'}
           disabled={mode === 'play'}
+          {...helpProps(
+            'outliner.lock',
+            mode === 'play' ? 'Unavailable during Play mode.' : null,
+          )}
           onClick={(e) => {
             e.stopPropagation();
             selectActor(actor.id);

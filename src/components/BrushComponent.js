@@ -1,11 +1,13 @@
 import { Component } from '../core/Component.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
 import { createBrushUvState, FACE_KEYS } from '../materials/MaterialDefinition.js';
+import { normalizeOpenings } from '../runtime/wallOpenings.js';
 
 /**
  * Axis-aligned box brush for structural geometry.
  * Size is in editor units. Position is the brush center.
  * Materials are referenced by persistent asset IDs (not embedded Three objects).
+ * Optional openings[] are parametric door/window holes (walls only).
  */
 export class BrushComponent extends Component {
   constructor({
@@ -17,6 +19,7 @@ export class BrushComponent extends Component {
     materialId = null,
     faceMaterials = null,
     uv = null,
+    openings = null,
   } = {}) {
     super({ id, type: BrushComponent.componentType, enabled });
     this.size = { ...size };
@@ -25,10 +28,11 @@ export class BrushComponent extends Component {
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials);
     this.uv = createBrushUvState(uv || {});
+    this.openings = normalizeOpenings(openings);
   }
 
   toJSON() {
-    return {
+    const json = {
       id: this.id,
       type: this.type,
       enabled: this.enabled,
@@ -43,6 +47,17 @@ export class BrushComponent extends Component {
         rotation: this.uv.rotation,
       },
     };
+    if (this.openings?.length) {
+      json.openings = this.openings.map((o) => ({
+        id: o.id,
+        type: o.type,
+        offset: o.offset,
+        bottom: o.bottom,
+        width: o.width,
+        height: o.height,
+      }));
+    }
+    return json;
   }
 
   static fromJSON(data) {
