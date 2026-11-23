@@ -3,6 +3,7 @@ import { Transform } from '../core/Transform.js';
 import {
   StairComponent,
   DEFAULT_STEP_HEIGHT,
+  DEFAULT_TREAD_DEPTH,
   DEFAULT_INNER_RADIUS,
   DEFAULT_SPIRAL_INNER_RADIUS,
   DEFAULT_STAIR_WIDTH,
@@ -13,7 +14,8 @@ import { getStairAabbSize } from '../runtime/stairGeometry.js';
 
 /**
  * Build a straight staircase from a construction-plane footprint.
- * Longer axis = run; rise defaults toward one wall-module when unspecified.
+ * Drag sets placement center + run direction. Undersized footprints expand to
+ * wall-module rise and comfortable tread/width (game scale), not tiny steps.
  */
 export function createStairFromBounds({
   min,
@@ -37,25 +39,29 @@ export function createStairFromBounds({
   const dragDx = (max.x ?? maxX) - (min.x ?? minX);
   const dragDz = (max.z ?? maxZ) - (min.z ?? minZ);
 
-  let width;
-  let runLength;
+  let footprintWidth;
+  let footprintRun;
   let direction;
   if (sizeX >= sizeZ) {
-    runLength = sizeX;
-    width = sizeZ;
+    footprintRun = sizeX;
+    footprintWidth = sizeZ;
     direction = dragDx >= 0 ? 'x+' : 'x-';
   } else {
-    runLength = sizeZ;
-    width = sizeX;
+    footprintRun = sizeZ;
+    footprintWidth = sizeX;
     direction = dragDz >= 0 ? 'z+' : 'z-';
   }
 
-  const rise = Math.max(g, snapToGrid(totalRise, g) || g);
-  // Comfortable riser count from total rise; tread depth fills the footprint run.
+  const rise = Math.max(g, snapToGrid(totalRise, g) || WALL_MODULE_SIZE);
   let stepHeight = DEFAULT_STEP_HEIGHT;
   const stepCount = Math.max(1, Math.round(rise / stepHeight));
   stepHeight = rise / stepCount;
-  const treadDepth = Math.max(1, runLength / stepCount);
+
+  // Game-scale floors: never thinner than a comfortable tread / stair width.
+  const minRun = stepCount * DEFAULT_TREAD_DEPTH;
+  const runLength = Math.max(minRun, footprintRun);
+  const width = Math.max(DEFAULT_STAIR_WIDTH, footprintWidth);
+  const treadDepth = runLength / stepCount;
 
   const stair = new StairComponent({
     id: createId('comp'),

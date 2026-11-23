@@ -2,8 +2,12 @@ import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 
 export const RAMP_DIRECTIONS = ['z+', 'z-', 'x+', 'x-'];
-export const DEFAULT_RAMP_RISE = 150;
+/** One wall-module rise so ramps match floor-to-floor scale by default. */
+export const DEFAULT_RAMP_RISE = 300;
 export const DEFAULT_RAMP_THICKNESS = 20;
+export const DEFAULT_RAMP_WIDTH = 120;
+/** Minimum run for a default-rise ramp (~1:1 slope). */
+export const DEFAULT_RAMP_LENGTH = 300;
 
 /**
  * Parametric straight ramp (triangular prism wedge).

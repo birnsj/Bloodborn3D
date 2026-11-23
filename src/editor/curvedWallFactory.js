@@ -44,9 +44,11 @@ export function createCurvedWallFromBounds({
 
   const outerSpan = Math.max(sizeX, sizeZ) * 0.5;
   const wallThickness = Math.max(g, snapToGrid(thickness, g) || WALL_THICKNESS);
+  const footprintRadius = snapToGrid(outerSpan - wallThickness * 0.5, g) || 0;
   const radius = Math.max(
+    DEFAULT_CURVED_WALL_RADIUS,
     wallThickness * 0.5 + g,
-    snapToGrid(outerSpan - wallThickness * 0.5, g) || DEFAULT_CURVED_WALL_RADIUS,
+    footprintRadius,
   );
 
   // Near-square footprints → full circle tower; elongated → open arc corridor.

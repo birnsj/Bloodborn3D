@@ -89,12 +89,57 @@ export function previewSizeForPayload(payload, gridSize = 25) {
     if (kind === 'wall') return { x: 20, y: WALL_MODULE_SIZE, z: 100 };
     if (kind === 'floor') return { x: 100, y: FLOOR_THICKNESS, z: 100 };
     if (kind === 'ceiling') return { x: 100, y: CEILING_THICKNESS, z: 100 };
-    if (kind === 'ramp') return { x: 80, y: DEFAULT_RAMP_RISE, z: 160 };
-    if (kind === 'stair') return { x: 80, y: WALL_MODULE_SIZE, z: 160 };
+    if (kind === 'ramp') return { x: 120, y: DEFAULT_RAMP_RISE, z: 300 };
+    if (kind === 'stair') return { x: 120, y: WALL_MODULE_SIZE, z: 450 };
+    if (kind === 'column') return { x: 80, y: WALL_MODULE_SIZE, z: 80 };
+    if (kind === 'arch' || kind === 'archRoman' || kind === 'archGothic') {
+      return { x: 200, y: WALL_MODULE_SIZE, z: 80 };
+    }
+    if (kind === 'curvedWall') return { x: 200, y: WALL_MODULE_SIZE, z: 200 };
     return { x: gridSize * 2, y: gridSize * 2, z: gridSize * 2 };
   }
   if (payload?.placeKind === 'light') return { x: 30, y: 30, z: 30 };
   if (payload?.placeKind === 'spawn') return { x: 40, y: 80, z: 40 };
   if (payload?.placeKind === 'cell') return { x: 40, y: 40, z: 40 };
   return { x: 50, y: 50, z: 50 };
+}
+
+/**
+ * Footprint min/max for toolbar DnD placement preview — mirrors commitCreatePlacement.
+ * @returns {{ kind: string, min: object, max: object, gridSize: number }|null}
+ */
+export function previewBoundsForPayload(payload, position, gridSize = 25) {
+  if (!payload || !position) return null;
+  const kind = payload.tool
+    || (payload.action === 'mode' ? payload.toolId : null)
+    || null;
+  if (payload.action !== 'mode' || !kind) return null;
+
+  const fp = defaultFootprintAt(kind, {
+    x: position.x,
+    y: position.y,
+    z: position.z,
+  }, gridSize);
+
+  if (kind === 'ceiling') {
+    fp.min.y = position.y;
+    fp.max.y = position.y;
+  } else if (kind === 'floor') {
+    fp.min.y = position.y;
+    fp.max.y = position.y + FLOOR_THICKNESS;
+  } else if (kind === 'wall') {
+    fp.min.y = position.y;
+    fp.max.y = position.y;
+  } else if (kind === 'ramp') {
+    fp.min.y = position.y;
+    fp.max.y = position.y + DEFAULT_RAMP_RISE;
+  } else if (kind === 'stair') {
+    fp.min.y = position.y;
+    fp.max.y = position.y + WALL_MODULE_SIZE;
+  } else {
+    fp.min.y = position.y;
+    fp.max.y = position.y + gridSize;
+  }
+
+  return { kind, min: fp.min, max: fp.max, gridSize };
 }

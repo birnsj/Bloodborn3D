@@ -2,9 +2,11 @@ import { Actor } from '../core/Actor.js';
 import { Transform } from '../core/Transform.js';
 import {
   ArchComponent,
+  DEFAULT_ARCH_OPENING_WIDTH,
   DEFAULT_ARCH_OPENING_HEIGHT,
   DEFAULT_ARCH_RISE,
   DEFAULT_ARCH_THICKNESS,
+  DEFAULT_ARCH_DEPTH,
 } from '../components/ArchComponent.js';
 import { createId } from '../core/ids.js';
 import { snapToGrid, DEFAULT_GRID_EDITOR_UNITS, WALL_THICKNESS } from '../core/units.js';
@@ -12,7 +14,7 @@ import { getArchAabbSize } from '../runtime/archGeometry.js';
 
 /**
  * Build a freestanding arch from a construction-plane footprint drag.
- * Longer footprint axis = opening width; shorter = depth (clamped to thickness min).
+ * Drag sets placement/orientation; undersized footprints expand to game-scale opening.
  */
 export function createArchFromBounds({
   min,
@@ -39,11 +41,11 @@ export function createArchFromBounds({
   let openingWidth;
   let depth;
   if (sizeX >= sizeZ) {
-    openingWidth = Math.max(g * 2, sizeX - DEFAULT_ARCH_THICKNESS * 2);
-    depth = Math.max(WALL_THICKNESS, sizeZ);
+    openingWidth = Math.max(DEFAULT_ARCH_OPENING_WIDTH, sizeX - DEFAULT_ARCH_THICKNESS * 2);
+    depth = Math.max(DEFAULT_ARCH_DEPTH, WALL_THICKNESS, sizeZ);
   } else {
-    openingWidth = Math.max(g * 2, sizeZ - DEFAULT_ARCH_THICKNESS * 2);
-    depth = Math.max(WALL_THICKNESS, sizeX);
+    openingWidth = Math.max(DEFAULT_ARCH_OPENING_WIDTH, sizeZ - DEFAULT_ARCH_THICKNESS * 2);
+    depth = Math.max(DEFAULT_ARCH_DEPTH, WALL_THICKNESS, sizeX);
   }
 
   const oh = Math.max(g, snapToGrid(openingHeight, g) || g);

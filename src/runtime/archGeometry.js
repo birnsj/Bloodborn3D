@@ -180,27 +180,28 @@ export function createArchGeometry(arch) {
   const offU = Number(arch.uv?.offset?.x) || 0;
   const offV = Number(arch.uv?.offset?.y) || 0;
 
+  // Shape must be in meters (same as ExtrudeGeometry depth) — not editor units.
   const shape = new THREE.Shape();
   // Outer rectangle (CCW in XY)
-  shape.moveTo(-L.halfOuterW, L.yBottom);
-  shape.lineTo(L.halfOuterW, L.yBottom);
-  shape.lineTo(L.halfOuterW, L.topY);
-  shape.lineTo(-L.halfOuterW, L.topY);
-  shape.lineTo(-L.halfOuterW, L.yBottom);
+  shape.moveTo(toMeters(-L.halfOuterW), toMeters(L.yBottom));
+  shape.lineTo(toMeters(L.halfOuterW), toMeters(L.yBottom));
+  shape.lineTo(toMeters(L.halfOuterW), toMeters(L.topY));
+  shape.lineTo(toMeters(-L.halfOuterW), toMeters(L.topY));
+  shape.lineTo(toMeters(-L.halfOuterW), toMeters(L.yBottom));
 
   // Passage hole — THREE expects opposite winding
   const hole = new THREE.Path();
-  hole.moveTo(-L.halfInnerW, L.yBottom);
-  hole.lineTo(-L.halfInnerW, L.springY);
+  hole.moveTo(toMeters(-L.halfInnerW), toMeters(L.yBottom));
+  hole.lineTo(toMeters(-L.halfInnerW), toMeters(L.springY));
   for (let i = 0; i <= L.res; i += 1) {
     const t = -1 + (i / L.res) * 2;
     const x = t * L.halfInnerW;
     const y = L.springY + sampleArchProfileY(x, L.halfInnerW, L.archRise, L.archType);
-    hole.lineTo(x, y);
+    hole.lineTo(toMeters(x), toMeters(y));
   }
-  hole.lineTo(L.halfInnerW, L.springY);
-  hole.lineTo(L.halfInnerW, L.yBottom);
-  hole.lineTo(-L.halfInnerW, L.yBottom);
+  hole.lineTo(toMeters(L.halfInnerW), toMeters(L.springY));
+  hole.lineTo(toMeters(L.halfInnerW), toMeters(L.yBottom));
+  hole.lineTo(toMeters(-L.halfInnerW), toMeters(L.yBottom));
   shape.holes.push(hole);
 
   const extrude = new THREE.ExtrudeGeometry(shape, {

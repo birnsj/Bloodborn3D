@@ -28,7 +28,8 @@ describe('Stage 2 — parametric ramps', () => {
     });
     const ramp = actor.getComponent('Ramp');
     expect(ramp).toBeTruthy();
-    expect(ramp.width).toBe(100);
+    // Width expands to game-scale minimum when footprint is narrow.
+    expect(ramp.width).toBe(120);
     expect(ramp.length).toBe(400);
     expect(ramp.rise).toBe(150);
     expect(ramp.direction).toBe('z+');
@@ -36,6 +37,18 @@ describe('Stage 2 — parametric ramps', () => {
     const aabb = getRampAabbSize(ramp);
     expect(aabb.y).toBe(150);
     expect(actor.transform.position.y).toBe(75);
+  });
+
+  it('tiny footprint expands to wall-module ramp defaults', () => {
+    const actor = createRampFromBounds({
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 25, y: 0, z: 50 },
+      gridSize: 25,
+    });
+    const ramp = actor.getComponent('Ramp');
+    expect(ramp.rise).toBe(300);
+    expect(ramp.width).toBeGreaterThanOrEqual(120);
+    expect(ramp.length).toBeGreaterThanOrEqual(300);
   });
 
   it('slope collider is rotated along hypotenuse, not AABB half-extents', () => {
@@ -114,7 +127,7 @@ describe('Stage 2 — parametric ramps', () => {
     }));
     expect(ramp.rise).toBe(200);
     history.undo();
-    expect(ramp.rise).toBe(150);
+    expect(ramp.rise).toBe(300);
 
     const before = actor.transform.toJSON();
     const after = structuredClone(before);

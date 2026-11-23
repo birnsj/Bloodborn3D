@@ -8,7 +8,11 @@ import {
   isEmbeddedInSolids,
   SURFACE_KIND,
 } from '../editor/creation/surfacePlacement.js';
-import { commitCreatePlacement } from '../editor/creation/commitCreatePlacement.js';
+import {
+  commitCreatePlacement,
+  previewBoundsForPayload,
+} from '../editor/creation/commitCreatePlacement.js';
+import { WALL_MODULE_SIZE } from '../core/units.js';
 import { World } from '../core/World.js';
 import { HistoryStack } from '../editor/history/HistoryStack.js';
 import { AddActorsCommand } from '../editor/history/commands.js';
@@ -225,5 +229,19 @@ describe('placement commit + undo', () => {
     const json = serializeLevel(world);
     const again = deserializeLevel(json);
     expect(again.actors.some((a) => a.getComponent('Light'))).toBe(true);
+  });
+
+  it('previewBoundsForPayload matches stair drop footprint', () => {
+    const bounds = previewBoundsForPayload(
+      { action: 'mode', tool: 'stair', toolId: 'stair' },
+      { x: 100, y: 50, z: -25 },
+      25,
+    );
+    expect(bounds).toBeTruthy();
+    expect(bounds.kind).toBe('stair');
+    expect(bounds.min.y).toBe(50);
+    expect(bounds.max.y).toBe(50 + WALL_MODULE_SIZE);
+    expect(bounds.min.x).toBeLessThan(bounds.max.x);
+    expect(bounds.min.z).toBeLessThan(bounds.max.z);
   });
 });

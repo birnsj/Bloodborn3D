@@ -18,7 +18,7 @@ mkdirSync(texDir, { recursive: true });
 mkdirSync(matDir, { recursive: true });
 mkdirSync(previewDir, { recursive: true });
 
-// 2048² → one wall module (3 m) ≈ 683 px/m, matching brushGeometry TARGET_TEXEL_DENSITY.
+// 2048² → 1 m (100 editor units) = 2048 px/m, matching brushGeometry TARGET_TEXEL_DENSITY.
 const SIZE = 2048;
 const SPHERE_SIZE = 384;
 
@@ -205,11 +205,12 @@ function fillMap(w, h, fn) {
 
 // ── Surface generators ──────────────────────────────────────────────────────
 
-// Ashlar ~0.55×0.28 m when one texture covers one 3 m wall module (≈5–6 courses across).
-const STONE_BW = 380;
-const STONE_BH = 190;
+// Large ashlar drawn in pixels at 1 m / 2048 tile (uvScale stays 1 — never enlarge via UV).
+// ~0.5 × 0.25 m blocks → 2 across / 4 courses per meter.
+const STONE_BW = 1024;
+const STONE_BH = 512;
 
-const STONE_MORTAR = 10;
+const STONE_MORTAR = 28;
 
 function stoneCell(x, y) {
   const bx = Math.floor(x / STONE_BW);
@@ -228,7 +229,7 @@ function stoneHeight(x, y) {
   // Soft bevel into mortar + slight per-block thickness
   const m = STONE_MORTAR;
   const edge = Math.min(lx - m, STONE_BW - m - lx, ly - m, STONE_BH - m - ly);
-  const bevel = Math.max(0, Math.min(1, edge / 22));
+  const bevel = Math.max(0, Math.min(1, edge / 48));
   const block = 0.62 + hash(bx + ox, by) * 0.22;
   const grain = fbm(x, y, 6, 22) * 0.22;
   const pits = valueNoise(x, y, 5) > 0.88 ? -0.08 : 0;
@@ -525,7 +526,7 @@ const materials = [
     metalness: 0.02,
     normalScale: 1.55,
     envMapIntensity: 0.85,
-    // uvScale 1 = one texture per wall module (3 m), matching brushGeometry tiling.
+    // uvScale 1 = one texture per meter, matching brushGeometry tiling.
     uvScale: { x: 1, y: 1 },
   },
   {

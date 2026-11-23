@@ -33,14 +33,16 @@ export function createColumnFromBounds({
 
   const sizeX = Math.max(g, maxX - minX);
   const sizeZ = Math.max(g, maxZ - minZ);
-  const radius = Math.max(g * 0.5, snapToGrid(Math.min(sizeX, sizeZ) * 0.5, g) || g);
+  const footprintRadius = snapToGrid(Math.min(sizeX, sizeZ) * 0.5, g) || g;
+  // Tiny footprints still place a full-height, game-scale column.
+  const radius = Math.max(DEFAULT_COLUMN_RADIUS, footprintRadius);
   const colHeight = Math.max(g, snapToGrid(height, g) || DEFAULT_COLUMN_HEIGHT);
 
   const column = new ColumnComponent({
     id: createId('comp'),
     shape,
     height: colHeight,
-    radius: Math.max(DEFAULT_COLUMN_RADIUS * 0.5, radius),
+    radius,
   });
   const aabb = getColumnAabbSize(column);
   const centerX = (minX + maxX) / 2;

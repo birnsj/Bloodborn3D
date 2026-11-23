@@ -85,8 +85,8 @@ describe('Phase 2B materials', () => {
   });
 
   it('documents architectural texel density targets', () => {
-    expect(TEXTURE_TILE_EDITOR_UNITS).toBe(300);
-    expect(TARGET_TEXEL_DENSITY).toBeCloseTo(2048 / 3, 5);
+    expect(TEXTURE_TILE_EDITOR_UNITS).toBe(100);
+    expect(TARGET_TEXEL_DENSITY).toBeCloseTo(2048, 5);
   });
 });
 

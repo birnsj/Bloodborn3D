@@ -32,6 +32,20 @@ describe('Stage 3 — procedural stairs', () => {
     expect(getStairAabbSize(stair).y).toBeCloseTo(stair.totalRise, 5);
   });
 
+  it('tiny footprint expands to game-scale width, tread, and wall-module rise', () => {
+    const actor = createStairFromBounds({
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 25, z: 50 },
+      gridSize: 25,
+    });
+    const stair = actor.getComponent('Stair');
+    expect(stair.totalRise).toBeCloseTo(WALL_MODULE_SIZE, 5);
+    expect(stair.width).toBeGreaterThanOrEqual(120);
+    expect(stair.treadDepth).toBeGreaterThanOrEqual(30);
+    expect(stair.stepCount).toBe(15); // 300 / 20
+    expect(stair.length).toBeGreaterThanOrEqual(450);
+  });
+
   it('physics builds one collider per step', async () => {
     const world = new World({ name: 'stair-phys' });
     const actor = createStairFromBounds({

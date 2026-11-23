@@ -6,15 +6,7 @@ import { useLayout } from './layout/LayoutContext.jsx';
 import {
   snapToGrid,
   WALL_MODULE_SIZE,
-  FLOOR_THICKNESS,
-  CEILING_THICKNESS,
 } from '../core/units.js';
-import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
-import {
-  DEFAULT_ARCH_OPENING_HEIGHT,
-  DEFAULT_ARCH_RISE,
-  DEFAULT_ARCH_THICKNESS,
-} from '../components/ArchComponent.js';
 import { resizeBrushFace } from './brushFactory.js';
 import { IconMaximize, IconRestore } from '../ui/icons.jsx';
 import { findAsset } from '../assets/AssetRegistry.js';
@@ -31,6 +23,7 @@ import {
 import {
   commitCreatePlacement,
   previewSizeForPayload,
+  previewBoundsForPayload,
 } from './creation/commitCreatePlacement.js';
 
 export function Viewport() {
@@ -127,12 +120,18 @@ export function Viewport() {
       sceneView.setPlacementPreview(null);
       return;
     }
+    const bounds = previewBoundsForPayload(payload, pose.position, gridSize);
     sceneView.setPlacementPreview({
       position: pose.position,
       size: previewSizeForPayload(payload, gridSize),
       valid: pose.valid !== false,
       normal: pose.normal,
+      rotation: pose.rotation,
       gridSnap,
+      kind: bounds?.kind || null,
+      min: bounds?.min || null,
+      max: bounds?.max || null,
+      gridSize,
     });
   }, [runtimeRef, gridSize, gridSnap]);
 
@@ -557,6 +556,7 @@ export function Viewport() {
 
   const updateCreatePreview = (drag) => {
     if (!runtimeRef.current || !drag) return;
+    // Match createBrushAtBounds / factory inputs so the ghost equals the placed object.
     const min = {
       x: Math.min(drag.start.x, drag.current.x),
       y: 0,
@@ -564,36 +564,20 @@ export function Viewport() {
     };
     const max = {
       x: Math.max(drag.start.x, drag.current.x),
-      y: drag.kind === 'floor'
-        ? FLOOR_THICKNESS
+      y: drag.kind === 'box' || drag.kind === 'subtract'
+        ? gridSize
         : drag.kind === 'ceiling'
-          ? WALL_MODULE_SIZE + CEILING_THICKNESS
-          : drag.kind === 'ramp'
-            ? DEFAULT_RAMP_RISE
-            : drag.kind === 'stair'
-              || drag.kind === 'column'
-              || drag.kind === 'wall'
-              || drag.kind === 'curvedWall'
-              ? WALL_MODULE_SIZE
-              : drag.kind === 'arch'
-                || drag.kind === 'archRoman'
-                || drag.kind === 'archGothic'
-                ? DEFAULT_ARCH_OPENING_HEIGHT + DEFAULT_ARCH_RISE + DEFAULT_ARCH_THICKNESS
-                : Math.max(gridSize, gridSize),
+          ? WALL_MODULE_SIZE
+          : 0,
       z: Math.max(drag.start.z, drag.current.z),
     };
     if (max.x === min.x) max.x = min.x + gridSize;
     if (max.z === min.z) max.z = min.z + gridSize;
-    // Ceiling preview sits at room height (same elevation as createBrushFromBounds).
-    const previewMin = drag.kind === 'ceiling'
-      ? { ...min, y: WALL_MODULE_SIZE }
-      : min;
-    const previewMax = drag.kind === 'ceiling'
-      ? { ...max, y: WALL_MODULE_SIZE + CEILING_THICKNESS }
-      : max;
     runtimeRef.current.sceneView.setCreatePreview({
-      min: previewMin,
-      max: previewMax,
+      min,
+      max,
+      kind: drag.kind,
+      gridSize,
       operation: drag.kind === 'subtract' ? 'subtract' : 'add',
     });
   };

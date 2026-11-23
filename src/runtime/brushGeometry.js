@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import {
   EDITOR_UNITS_PER_METER,
-  WALL_MODULE_SIZE,
   toMeters,
 } from '../core/units.js';
 import { buildWallOpeningSolids, validateOpenings } from './wallOpenings.js';
@@ -13,16 +12,17 @@ import {
 } from './brushBoolean.js';
 
 /**
- * Architectural tiling: one 2048² texture covers one wall module (3 m).
- * ~683 px/m at that density.
+ * Texture resolution contract: one 2048² map covers 1 m (100 editor units).
+ * Target ≈ 2048 px/m. Do not stretch the tile to wall-module size — that tanks density.
+ * Brick / ashlar module size belongs in the texture pixels (or material uvScale), not here.
  */
-export const TEXTURE_TILE_EDITOR_UNITS = WALL_MODULE_SIZE;
-export const TEXTURE_TILE_METERS = WALL_MODULE_SIZE / EDITOR_UNITS_PER_METER;
+export const TEXTURE_TILE_EDITOR_UNITS = EDITOR_UNITS_PER_METER;
+export const TEXTURE_TILE_METERS = 1;
 export const TARGET_TEXEL_DENSITY = 2048 / TEXTURE_TILE_METERS;
 
 /**
  * BoxGeometry with world-aligned UVs so brush resize does not stretch textures.
- * UV units tile every TEXTURE_TILE_EDITOR_UNITS (300) by default, then apply brush UV transform.
+ * UV units tile every TEXTURE_TILE_EDITOR_UNITS (100 = 1 m) by default, then apply brush UV transform.
  *
  * Face order matches Three.js BoxGeometry materials: +x -x +y -y +z -z
  */

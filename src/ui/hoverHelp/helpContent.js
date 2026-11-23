@@ -82,7 +82,7 @@ export const HELP_CONTENT = {
   },
   'details.curvedWall': {
     title: 'Curved Wall Properties',
-    body: 'Radius is the centerline. Sweep 360° makes a hollow circular room. UVs tile by arc length at ~300 editor units per repeat.',
+    body: 'Radius is the centerline. Sweep 360° makes a hollow circular room. UVs tile by arc length at 100 editor units (1 m) per repeat.',
   },
   'details.wallJoin': {
     title: 'Join Walls',

@@ -1,12 +1,18 @@
 import { Actor } from '../core/Actor.js';
 import { Transform } from '../core/Transform.js';
-import { RampComponent, DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
+import {
+  RampComponent,
+  DEFAULT_RAMP_RISE,
+  DEFAULT_RAMP_WIDTH,
+  DEFAULT_RAMP_LENGTH,
+} from '../components/RampComponent.js';
 import { createId } from '../core/ids.js';
 import { snapToGrid, DEFAULT_GRID_EDITOR_UNITS } from '../core/units.js';
 import { getRampAabbSize } from '../runtime/rampGeometry.js';
 
 /**
  * Build a ramp from a construction-plane footprint drag.
+ * Drag sets placement + slope direction; undersized footprints expand to game scale.
  */
 export function createRampFromBounds({
   min,
@@ -30,20 +36,24 @@ export function createRampFromBounds({
   const dragDx = (max.x ?? maxX) - (min.x ?? minX);
   const dragDz = (max.z ?? maxZ) - (min.z ?? minZ);
 
-  let width;
-  let length;
+  let footprintWidth;
+  let footprintLength;
   let direction;
   if (sizeX >= sizeZ) {
-    length = sizeX;
-    width = sizeZ;
+    footprintLength = sizeX;
+    footprintWidth = sizeZ;
     direction = dragDx >= 0 ? 'x+' : 'x-';
   } else {
-    length = sizeZ;
-    width = sizeX;
+    footprintLength = sizeZ;
+    footprintWidth = sizeX;
     direction = dragDz >= 0 ? 'z+' : 'z-';
   }
 
-  const rampRise = Math.max(g, snapToGrid(rise, g) || g);
+  const rampRise = Math.max(g, snapToGrid(rise, g) || DEFAULT_RAMP_RISE);
+  const minLength = Math.max(DEFAULT_RAMP_LENGTH, rampRise);
+  const width = Math.max(DEFAULT_RAMP_WIDTH, footprintWidth);
+  const length = Math.max(minLength, footprintLength);
+
   const ramp = new RampComponent({
     id: createId('comp'),
     width,
