@@ -20,6 +20,7 @@ import {
   describeConvexBrush,
   listCutterConvexConflicts,
 } from '../../rules/convexBrushRules.js';
+import { DEFAULT_WORLD_AMBIENT } from '../../core/World.js';
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
@@ -2016,7 +2017,18 @@ function MaterialDefinitionEditor({
 }
 
 function WorldSettings() {
-  const { world, gridSize, levelName, mode } = useEditor();
+  const {
+    world,
+    gridSize,
+    levelName,
+    mode,
+    revision,
+    updateWorldAmbient,
+  } = useEditor();
+  const disabled = mode === 'play' || !world;
+  // Touch revision so ambient field values refresh after scrub/type updates.
+  void revision;
+  const ambient = world?.ambient || DEFAULT_WORLD_AMBIENT;
   const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
   return (
     <div>
@@ -2031,6 +2043,45 @@ function WorldSettings() {
         </p>
         <p className="bb-muted">Actors: {world?.actors?.length ?? 0}</p>
         <p className="bb-muted">Schema: {world?.schemaVersion ?? '—'}</p>
+      </Collapsible>
+      <Collapsible title="Ambient Light" storageKey="world.ambient" defaultOpen>
+        <p className="bb-muted" {...helpProps('world.ambient')}>
+          Scene fill (IBL + editor fills). Black or 0 = no fill. G = Game View. Ctrl = orbit.
+        </p>
+        <label className="bb-field">
+          <span className="bb-field__label">Color</span>
+          <input
+            className="bb-input"
+            type="color"
+            disabled={disabled}
+            value={normalizeHex(ambient.color)}
+            onChange={(e) => updateWorldAmbient?.({ color: e.target.value })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Edit intensity</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={4}
+            disabled={disabled}
+            value={ambient.intensity}
+            onChange={(v) => updateWorldAmbient?.({ intensity: v })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Play intensity</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={4}
+            disabled={disabled}
+            value={ambient.playIntensity}
+            onChange={(v) => updateWorldAmbient?.({ playIntensity: v })}
+          />
+        </label>
       </Collapsible>
       <Collapsible title="Editor" storageKey="world.editor">
         <p className="bb-muted">Mode: {mode}</p>

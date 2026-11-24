@@ -69,13 +69,13 @@ export function Viewport() {
   const [marqueeScreen, setMarqueeScreen] = useState(null);
   /** Active toolbar/asset surface placement (preview only until commit). */
   const placeSessionRef = useRef(null);
-  /** Edit-mode perspective: Alt+move orbits; RMB drag = look; WASD/QE free-fly. */
+  /** Edit-mode perspective: Ctrl+move orbits; Alt+move/rotate/scale duplicates; RMB look; WASD fly. */
   const flyKeysRef = useRef(new Set());
   const flyClockRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
   const flyModeRef = useRef(false);
-  /** Perspective: hold Alt and move the mouse to orbit (no mouse button). */
-  const altOrbitHeldRef = useRef(false);
-  /** Plain RMB drag freelook (perspective only; not while Alt orbits). */
+  /** Perspective: hold Ctrl and move the mouse to orbit (no mouse button). */
+  const ctrlOrbitHeldRef = useRef(false);
+  /** Plain RMB drag freelook (perspective only; not while Ctrl orbits). */
   const rmbLookHeldRef = useRef(false);
   const lookRef = useRef({
     active: false,
@@ -101,7 +101,9 @@ export function Viewport() {
     alignSurfaceToReference,
     setStatus,
     transformMode,
+    scaleHandleStyle,
     setTransformMode,
+    cycleScaleTransform,
     selectActor,
     selectAllActors,
     deselectAllActors,
@@ -381,9 +383,9 @@ export function Viewport() {
       if (Array.isArray(controls._pointers)) controls._pointers.length = 0;
     };
 
-    /** Alt + mouse move orbit (no button). Matches OrbitControls pixel→angle scale. */
-    const altOrbitTrack = { primed: false, lastX: 0, lastY: 0 };
-    const applyAltOrbit = (dx, dy) => {
+    /** Ctrl + mouse move orbit (no button). Matches OrbitControls pixel→angle scale. */
+    const ctrlOrbitTrack = { primed: false, lastX: 0, lastY: 0 };
+    const applyCtrlOrbit = (dx, dy) => {
       if (runtime.mode !== 'edit' || flyModeRef.current) return;
       if (isOrthographicMode(activeCameraMode())) return;
       const h = Math.max(1, canvas.clientHeight || shell.clientHeight || 1);
@@ -446,11 +448,22 @@ export function Viewport() {
     ro.observe(shell);
     const sizeRaf = requestAnimationFrame(applySize);
 
+    const isTypingTarget = (el) => {
+      if (!el || el === document.body || el === document.documentElement) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName;
+      if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (tag !== 'INPUT') return false;
+      // Number scrub fields should yield to WASD fly; text/search keep keyboard.
+      const type = (el.type || 'text').toLowerCase();
+      return type !== 'number' && type !== 'range';
+    };
+
     const onFlyKeyDown = (e) => {
-      if (e.code === 'AltLeft' || e.code === 'AltRight') {
-        altOrbitHeldRef.current = true;
-        altOrbitTrack.primed = false;
-        // Alt+move owns orbit — drop RMB freelook if it was active.
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        ctrlOrbitHeldRef.current = true;
+        ctrlOrbitTrack.primed = false;
+        // Ctrl+move owns orbit — drop RMB freelook if it was active.
         if (rmbLookHeldRef.current) {
           rmbLookHeldRef.current = false;
           if (!flyModeRef.current) {
@@ -458,39 +471,54 @@ export function Viewport() {
             lookRef.current.pointerId = null;
           }
         }
-        e.preventDefault();
+        // Do not preventDefault — Ctrl+S / Ctrl+Z / multi-select must keep working.
+        return;
       }
-      if (e.repeat) return;
-      const tag = e.target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (e.target?.isContentEditable) return;
+
+      const flyCodes = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'];
+      if (!flyCodes.includes(e.code)) return;
+
+      // Text name fields keep typing; number fields blur so WASD can fly.
+      if (isTypingTarget(e.target)) return;
+      if (e.target?.tagName === 'INPUT' && e.target.type === 'number' && FLY_MOVE_KEYS.has(e.code)) {
+        e.target.blur();
+      }
+
       // Free-fly is perspective-only; orthographic panes keep RMB orbit + pan/zoom.
       if (isOrthographicMode(activeCameraMode())) return;
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
-        flyKeysRef.current.add(e.code);
-        if (FLY_MOVE_KEYS.has(e.code)) {
-          e.preventDefault();
-          if (runtime.mode === 'edit') enterFlyMode();
-        }
+
+      // Important: handle e.repeat. After window blur clears flyKeys while WASD is
+      // still held, browsers resume keydown repeats — ignoring them left fly dead
+      // until the user released and pressed again.
+      flyKeysRef.current.add(e.code);
+      if (FLY_MOVE_KEYS.has(e.code)) {
+        e.preventDefault();
+        if (runtime.mode === 'edit') enterFlyMode();
       }
     };
     const onFlyKeyUp = (e) => {
-      if (e.code === 'AltLeft' || e.code === 'AltRight') {
-        altOrbitHeldRef.current = false;
-        altOrbitTrack.primed = false;
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        ctrlOrbitHeldRef.current = false;
+        ctrlOrbitTrack.primed = false;
       }
       flyKeysRef.current.delete(e.code);
       if (!isFlyMoving(flyKeysRef.current)) exitFlyMode();
     };
-    const onFlyBlur = () => {
+    const clearFlyInputState = () => {
       flyKeysRef.current.clear();
-      altOrbitHeldRef.current = false;
-      altOrbitTrack.primed = false;
+      ctrlOrbitHeldRef.current = false;
+      ctrlOrbitTrack.primed = false;
       rmbLookHeldRef.current = false;
       exitFlyMode();
       lookRef.current.active = false;
       lookRef.current.pointerId = null;
       syncOrbitRightButton();
+    };
+    const onFlyBlur = () => {
+      clearFlyInputState();
+    };
+    const onFlyVisibility = () => {
+      if (typeof document !== 'undefined' && document.hidden) clearFlyInputState();
     };
 
     const LOOK_SENS_BASE = 0.009;
@@ -510,11 +538,15 @@ export function Viewport() {
     };
 
     const onLookPointerDown = (e) => {
+      // Clicking the viewport steals focus from Details number fields so WASD works.
+      const ae = document.activeElement;
+      if (ae?.tagName === 'INPUT' && ae.type === 'number') ae.blur();
+
       if (e.button !== 2 || runtime.mode !== 'edit') return;
       // Perspective only — ortho/isometric keep plain RMB orbit.
       if (isOrthographicMode(activeCameraMode())) return;
-      // Alt+move is orbit; plain RMB is freelook.
-      if (altOrbitHeldRef.current || e.altKey) return;
+      // Ctrl+move is orbit; plain RMB is freelook.
+      if (ctrlOrbitHeldRef.current || e.ctrlKey || e.metaKey) return;
       rmbLookHeldRef.current = true;
       beginFlyLook(e);
       try {
@@ -526,23 +558,23 @@ export function Viewport() {
     const onLookPointerMove = (e) => {
       if (runtime.mode !== 'edit') return;
 
-      // Perspective: hold Alt and move the mouse to orbit — no button required.
+      // Perspective: hold Ctrl and move the mouse to orbit — no button required.
       if (
-        altOrbitHeldRef.current
+        ctrlOrbitHeldRef.current
         && !flyModeRef.current
         && !isOrthographicMode(activeCameraMode())
       ) {
-        if (!altOrbitTrack.primed) {
-          altOrbitTrack.lastX = e.clientX;
-          altOrbitTrack.lastY = e.clientY;
-          altOrbitTrack.primed = true;
+        if (!ctrlOrbitTrack.primed) {
+          ctrlOrbitTrack.lastX = e.clientX;
+          ctrlOrbitTrack.lastY = e.clientY;
+          ctrlOrbitTrack.primed = true;
           return;
         }
-        const odx = e.clientX - altOrbitTrack.lastX;
-        const ody = e.clientY - altOrbitTrack.lastY;
-        altOrbitTrack.lastX = e.clientX;
-        altOrbitTrack.lastY = e.clientY;
-        if (odx !== 0 || ody !== 0) applyAltOrbit(odx, ody);
+        const odx = e.clientX - ctrlOrbitTrack.lastX;
+        const ody = e.clientY - ctrlOrbitTrack.lastY;
+        ctrlOrbitTrack.lastX = e.clientX;
+        ctrlOrbitTrack.lastY = e.clientY;
+        if (odx !== 0 || ody !== 0) applyCtrlOrbit(odx, ody);
         return;
       }
 
@@ -587,6 +619,7 @@ export function Viewport() {
     window.addEventListener('keydown', onFlyKeyDown);
     window.addEventListener('keyup', onFlyKeyUp);
     window.addEventListener('blur', onFlyBlur);
+    document.addEventListener('visibilitychange', onFlyVisibility);
     canvas.addEventListener('pointerdown', onLookPointerDown);
     window.addEventListener('pointermove', onLookPointerMove);
     window.addEventListener('pointerup', onLookPointerUp);
@@ -633,10 +666,10 @@ export function Viewport() {
           !flyModeRef.current
           && !rmbLookHeldRef.current
           && !lookRef.current.active
-          && !altOrbitHeldRef.current
+          && !ctrlOrbitHeldRef.current
         ) {
           // Keep OrbitControls in sync (damping is off — no post-drag coast).
-          // Skip while Alt orbit / RMB / WASD freelook owns the camera.
+          // Skip while Ctrl orbit / RMB / WASD freelook owns the camera.
           controls.update();
         }
 
@@ -665,6 +698,7 @@ export function Viewport() {
       window.removeEventListener('keydown', onFlyKeyDown);
       window.removeEventListener('keyup', onFlyKeyUp);
       window.removeEventListener('blur', onFlyBlur);
+      document.removeEventListener('visibilitychange', onFlyVisibility);
       canvas.removeEventListener('pointerdown', onLookPointerDown);
       window.removeEventListener('pointermove', onLookPointerMove);
       window.removeEventListener('pointerup', onLookPointerUp);
@@ -734,6 +768,10 @@ export function Viewport() {
   useEffect(() => {
     runtimeRef.current?.sceneView?.setTransformMode?.(transformMode);
   }, [runtimeRef, transformMode]);
+
+  useEffect(() => {
+    runtimeRef.current?.sceneView?.setScaleHandleStyle?.(scaleHandleStyle);
+  }, [runtimeRef, scaleHandleStyle]);
 
   const focusSelected = useCallback((paneId = null) => {
     const sceneView = runtimeRef.current?.sceneView;
@@ -864,7 +902,8 @@ export function Viewport() {
         return;
       }
 
-      // W/E/R — transform · F — focus · [ ] — grid · Shift+G — snap
+      // W/E/R — transform · F — focus · G — game view · [ ] — grid · Shift+G — snap
+      // R enters scale; pressing R again toggles face-resize ↔ Unreal axis gizmo.
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         const k = e.key.toLowerCase();
         if (k === 'w') {
@@ -874,20 +913,33 @@ export function Viewport() {
           setTransformMode('rotate');
           setTool('select');
         } else if (k === 'r') {
-          setTransformMode('scale');
+          e.preventDefault();
           setTool('select');
+          const style = cycleScaleTransform();
+          setStatus(
+            style === 'gizmo'
+              ? 'Scale: Unreal gizmo (R)'
+              : 'Scale: face resize (R)',
+          );
         } else if (k === 'f') {
           e.preventDefault();
           focusSelected();
+        } else if (k === 'g' && e.shiftKey) {
+          e.preventDefault();
+          toggleGridSnap();
+        } else if (k === 'g') {
+          // Unreal-style Game View: hide light icons, grid, gizmos, editor overlays.
+          e.preventDefault();
+          if (mode === 'edit') {
+            const on = runtimeRef.current?.sceneView?.toggleGameView?.();
+            setStatus(on ? 'Game View on (G)' : 'Game View off (G)');
+          }
         } else if (e.key === '[') {
           e.preventDefault();
           cycleGridSize(-1);
         } else if (e.key === ']') {
           e.preventDefault();
           cycleGridSize(1);
-        } else if (k === 'g' && e.shiftKey) {
-          e.preventDefault();
-          toggleGridSnap();
         }
       }
 
@@ -928,6 +980,7 @@ export function Viewport() {
     cycleGridSize,
     toggleGridSnap,
     setTransformMode,
+    cycleScaleTransform,
     setTool,
     setSelectedSurface,
     setAlignReferenceSurface,
@@ -941,6 +994,7 @@ export function Viewport() {
     resolveSurfacePose,
     updatePlacementPreview,
     focusSelected,
+    setStatus,
   ]);
 
   const pointerNorm = (e, { activate = true } = {}) => {
@@ -1216,8 +1270,26 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny, cam);
       sceneView.gizmo.beginDrag(gizmoHit, raycaster.ray);
 
+      // Unreal-style Alt+drag on move/rotate/scale: duplicate, then transform the copies.
+      const altDuplicateKind = gizmoHit.kind === 'move'
+        || gizmoHit.kind === 'rotate'
+        || gizmoHit.kind === 'scale';
+      let transformIds = selectedActorIds;
+      if (altDuplicateKind && e.altKey) {
+        const copyIds = duplicateSelected({
+          offset: { x: 0, y: 0, z: 0 },
+          label: 'Duplicate (Alt-drag)',
+        }) || [];
+        if (!copyIds.length) {
+          sceneView.gizmo.endDrag?.();
+          return;
+        }
+        transformIds = copyIds;
+        setStatus(`Duplicated ${copyIds.length} · dragging copies`);
+      }
+
       if (gizmoHit.kind === 'move') {
-        const beforeStates = selectedActorIds.map((id) => {
+        const beforeStates = transformIds.map((id) => {
           const actor = world.getActor(id);
           if (!actor) return null;
           const worldPos = runtimeRef.current
@@ -1246,10 +1318,16 @@ export function Viewport() {
           };
         }).filter(Boolean);
 
+        if (!beforeStates.length) {
+          sceneView.gizmo.endDrag?.();
+          return;
+        }
+
         dragRef.current = {
           type: 'move',
           axis: gizmoHit.axis,
           beforeStates,
+          duplicated: Boolean(e.altKey),
         };
       } else if (gizmoHit.kind === 'resize') {
         const actorId = selectedActorIds[selectedActorIds.length - 1];
@@ -1278,7 +1356,7 @@ export function Viewport() {
           },
         };
       } else if (gizmoHit.kind === 'rotate') {
-        const beforeStates = selectedActorIds.map((id) => {
+        const beforeStates = transformIds.map((id) => {
           const actor = world.getActor(id);
           if (!actor) return null;
           return {
@@ -1287,13 +1365,18 @@ export function Viewport() {
             startRot: { ...actor.transform.rotation },
           };
         }).filter(Boolean);
+        if (!beforeStates.length) {
+          sceneView.gizmo.endDrag?.();
+          return;
+        }
         dragRef.current = {
           type: 'rotate',
           axis: gizmoHit.axis,
           beforeStates,
+          duplicated: Boolean(e.altKey),
         };
       } else if (gizmoHit.kind === 'scale') {
-        const beforeStates = selectedActorIds.map((id) => {
+        const beforeStates = transformIds.map((id) => {
           const actor = world.getActor(id);
           if (!actor) return null;
           return {
@@ -1302,10 +1385,15 @@ export function Viewport() {
             startScale: { ...actor.transform.scale },
           };
         }).filter(Boolean);
+        if (!beforeStates.length) {
+          sceneView.gizmo.endDrag?.();
+          return;
+        }
         dragRef.current = {
           type: 'scale',
           axis: gizmoHit.axis,
           beforeStates,
+          duplicated: Boolean(e.altKey),
         };
       }
 
@@ -1432,9 +1520,11 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
+      // Alt fine-snap only when not Alt-duplicating — duplicates stay on the construction grid.
+      const altFine = e.altKey && !drag.duplicated;
       // Snap off = freeform. Alt = temporary 1-unit snap. Otherwise construction grid.
-      const freeMove = !gridSnap && !e.altKey;
-      const snapStep = e.altKey ? 1 : gridSize;
+      const freeMove = !gridSnap && !altFine && !drag.duplicated;
+      const snapStep = altFine ? 1 : gridSize;
       const delta = sample.deltaEditor;
       const updates = drag.beforeStates.map((s) => {
         const position = { ...s.startPos };
@@ -1460,7 +1550,13 @@ export function Viewport() {
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample || sample.deltaDegrees == null) return;
       const raw = sample.deltaDegrees;
-      const snapDeg = e.altKey ? raw : Math.round(raw / 5) * 5;
+      const rotStep = editorSettingsRef.current?.rotationSnapDegrees ?? 5;
+      // Alt free-rotate only when not Alt-duplicating — duplicates use rotation snap.
+      const altFree = e.altKey && !drag.duplicated;
+      const useRotSnap = (gridSnap || drag.duplicated) && !altFree;
+      const snapDeg = useRotSnap
+        ? Math.round(raw / rotStep) * rotStep
+        : raw;
       const updates = drag.beforeStates.map((s) => {
         const rotation = { ...s.startRot };
         rotation[drag.axis] = s.startRot[drag.axis] + snapDeg;
@@ -1474,11 +1570,22 @@ export function Viewport() {
       const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample || sample.deltaEditor == null) return;
-      // 100 editor units of drag ≈ +1.0 scale on that axis.
+      // 100 editor units of drag ≈ +1.0 scale on that axis (or all axes for xyz).
       const factor = sample.deltaEditor / 100;
+      const scaleStep = editorSettingsRef.current?.scaleSnapIncrement ?? 0.1;
+      const altFree = e.altKey && !drag.duplicated;
+      const useScaleSnap = (gridSnap || drag.duplicated) && !altFree && scaleStep > 0;
+      const uniform = drag.axis === 'xyz';
+      const axes = uniform ? ['x', 'y', 'z'] : [drag.axis];
       const updates = drag.beforeStates.map((s) => {
         const scale = { ...s.startScale };
-        scale[drag.axis] = Math.max(0.01, s.startScale[drag.axis] + factor);
+        for (const axis of axes) {
+          let next = s.startScale[axis] + factor;
+          if (useScaleSnap) {
+            next = Math.round(next / scaleStep) * scaleStep;
+          }
+          scale[axis] = Math.max(0.01, next);
+        }
         return { actorId: s.actorId, scale };
       });
       previewActorLocalTransforms(updates);
@@ -1869,7 +1976,7 @@ export function Viewport() {
       flying: flyModeRef.current,
       settings: editorSettingsRef.current,
     });
-    // configureOrbitForPane resets RMB — keep perspective RIGHT disabled (Alt+move orbits).
+    // configureOrbitForPane resets RMB — keep perspective RIGHT disabled (Ctrl+move orbits).
     if (orbitRef.current && !flyModeRef.current && mode === 'edit') {
       const pane = viewportPrefs.panes.find((p) => p.id === viewportPrefs.activePaneId);
       const camMode = pane?.cameraMode || 'perspective';

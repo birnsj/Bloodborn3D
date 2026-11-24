@@ -9,6 +9,10 @@ import { useHoverHelp } from '../ui/hoverHelp/HoverHelpContext.jsx';
 import { DEFAULT_HOVER_HELP_PREFS } from '../ui/hoverHelp/hoverHelpPrefs.js';
 import { helpProps } from '../ui/hoverHelp/helpProps.js';
 import { DISPLAY_MODES } from './viewport/viewportPrefs.js';
+import {
+  ROTATION_SNAP_INCREMENTS,
+  SCALE_SNAP_INCREMENTS,
+} from './editorSettingsPrefs.js';
 
 const DISPLAY_MODE_LABELS = {
   lit: 'Lit',
@@ -280,9 +284,29 @@ export function EditorSettingsDialog({ open, onClose }) {
             />
             <CheckRow
               label="Grid snap"
-              hint="Snap placement and gizmo moves to the grid. Same as the Level toolbar."
+              hint="Snap placement and gizmo move / rotate / scale. Same as the Level toolbar."
               checked={gridSnap}
               onChange={(v) => setGridSnap(v)}
+            />
+            <SelectRow
+              label="Rotation snap"
+              hint="Gizmo rotate step in degrees when snap is on. Alt+drag duplicates (free rotate while Alt held)."
+              value={String(settings.rotationSnapDegrees)}
+              options={ROTATION_SNAP_INCREMENTS.map((n) => ({
+                value: String(n),
+                label: `${n}°`,
+              }))}
+              onChange={(v) => patchSettings({ rotationSnapDegrees: Number(v) })}
+            />
+            <SelectRow
+              label="Scale snap"
+              hint="Gizmo scale step when snap is on. Alt+drag duplicates (free scale while Alt held)."
+              value={String(settings.scaleSnapIncrement)}
+              options={SCALE_SNAP_INCREMENTS.map((n) => ({
+                value: String(n),
+                label: String(n),
+              }))}
+              onChange={(v) => patchSettings({ scaleSnapIncrement: Number(v) })}
             />
           </section>
 

@@ -10,6 +10,7 @@ import {
   FLOOR_THICKNESS,
   CEILING_THICKNESS,
 } from '../core/units.js';
+import { snapCenterByEdges, snapPivotToGrid } from './gridSnap.js';
 
 export const BRUSH_PRESETS = {
   box: {
@@ -130,18 +131,25 @@ export function createBrushFromBounds({
 }
 
 /**
- * Duplicate actors with new persistent IDs and a grid-snapped offset.
+ * Duplicate actors with new persistent IDs.
+ * Offset is snapped to grid increments; final position lands on the grid
+ * (brush edge snap, otherwise pivot snap).
  */
 export function duplicateActors(actors, { offset = { x: 25, y: 0, z: 0 }, gridSize = 25 } = {}) {
+  const g = Math.max(1, gridSize || 25);
   return actors.map((actor) => {
     const data = structuredClone(actor.toJSON());
     data.id = createId('actor');
     data.name = `${actor.name} Copy`;
-    // Offset by grid increments without re-snapping authored absolute coords
-    // (existing brushes may not sit on the active grid).
-    data.transform.position.x += snapToGrid(offset.x, gridSize);
-    data.transform.position.y += snapToGrid(offset.y, gridSize);
-    data.transform.position.z += snapToGrid(offset.z, gridSize);
+    const pos = {
+      x: data.transform.position.x + snapToGrid(offset.x, g),
+      y: data.transform.position.y + snapToGrid(offset.y, g),
+      z: data.transform.position.z + snapToGrid(offset.z, g),
+    };
+    const brush = data.components?.find((c) => c.type === 'Brush');
+    data.transform.position = brush?.size
+      ? snapCenterByEdges(pos, brush.size, g)
+      : snapPivotToGrid(pos, g);
     for (const comp of data.components) {
       comp.id = createId('comp');
     }

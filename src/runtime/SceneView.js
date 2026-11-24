@@ -5,6 +5,15 @@ import {
   GRID_EXTENT_EDITOR_UNITS,
   WALL_MODULE_SIZE,
 } from '../core/units.js';
+import {
+  DEFAULT_WORLD_AMBIENT,
+  WORLD_AMBIENT_LIGHT_RATIO,
+  migrateLegacyWorldAmbient,
+  worldAmbientFillStrength,
+} from '../core/World.js';
+
+const EDIT_FILL_BASE_INTENSITY = 0.06;
+const EDIT_FILL2_BASE_INTENSITY = 0.03;
 import { BrushGizmo } from '../editor/BrushGizmo.js';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import {
@@ -93,6 +102,8 @@ export class SceneView {
   constructor({ canvas, editMode = true } = {}) {
     this.canvas = canvas;
     this.editMode = editMode;
+    /** Unreal-style Game View (G) — hides editor helpers while editing. */
+    this.gameView = false;
     this.viewportColors = { ...DEFAULT_VIEWPORT_COLORS };
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.viewportColors.background);
@@ -113,7 +124,9 @@ export class SceneView {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
 
-    this._studioEnv = installStudioEnvironment(this.renderer, this.scene, { intensity: 0.12 });
+    this._studioEnv = installStudioEnvironment(this.renderer, this.scene, {
+      intensity: DEFAULT_WORLD_AMBIENT.intensity,
+    });
 
     const maxAniso = this.renderer.capabilities.getMaxAnisotropy?.() || 8;
     this.maxAnisotropy = Math.min(16, maxAniso);
@@ -123,15 +136,19 @@ export class SceneView {
     this.scene.add(this.root);
 
     // Editor fill lights — hidden in play so authored lights dominate.
-    // Very dim cool fill so authored bluish moonlight / window wash stay moody.
-    this.ambient = new THREE.AmbientLight(0x3a4a68, 0.05);
+    // Levels override via world.ambient (World Settings) — drives IBL + AmbientLight.
+    this._worldAmbient = { ...DEFAULT_WORLD_AMBIENT };
+    this.ambient = new THREE.AmbientLight(
+      DEFAULT_WORLD_AMBIENT.color,
+      DEFAULT_WORLD_AMBIENT.intensity * WORLD_AMBIENT_LIGHT_RATIO,
+    );
     this.scene.add(this.ambient);
 
-    this.editFill = new THREE.DirectionalLight(0x7a9ac0, 0.06);
+    this.editFill = new THREE.DirectionalLight(0x7a9ac0, EDIT_FILL_BASE_INTENSITY);
     this.editFill.position.set(6, 10, 4);
     this.editFill.castShadow = false;
     this.scene.add(this.editFill);
-    this.editFill2 = new THREE.DirectionalLight(0x405070, 0.03);
+    this.editFill2 = new THREE.DirectionalLight(0x405070, EDIT_FILL2_BASE_INTENSITY);
     this.editFill2.position.set(-5, 4, -6);
     this.editFill2.castShadow = false;
     this.scene.add(this.editFill2);
@@ -262,21 +279,120 @@ export class SceneView {
     }
   }
 
-  setEditMode(editMode) {
-    this.editMode = editMode;
-    if (this.gridHelper) this.gridHelper.visible = editMode;
-    if (this.editFill) this.editFill.visible = editMode;
-    if (this.editFill2) this.editFill2.visible = editMode;
-    // Soft ambient remains in play as a minimal fill if no ambient actor exists.
-    if (this.ambient) this.ambient.intensity = editMode ? 0.05 : 0.02;
-    if (this.gizmo) this.gizmo.setVisible(editMode && this.selectedActorIds.length > 0);
-    if (this._createPreview) this._createPreview.visible = editMode;
+  /**
+   * Apply level-authored scene ambient fill (color + edit/play intensity).
+   * Does not affect Ambient Light actors.
+   */
+  applyWorldAmbient(settings) {
+    this._worldAmbient = migrateLegacyWorldAmbient(settings);
+    this._syncAmbientFromWorld();
+  }
 
+  _syncAmbientFromWorld() {
+    const { color } = this._worldAmbient;
+    // Black (or intensity 0) must kill fill: IBL + AmbientLight + editor fill dir lights.
+    // Strength is intensity × luminance(color) normalized so the default color keeps look.
+    const fill = worldAmbientFillStrength(this._worldAmbient, { editMode: this.editMode });
+    const defaultFill = DEFAULT_WORLD_AMBIENT.intensity || 0.12;
+    const fillScale = defaultFill > 1e-8 ? fill / defaultFill : 0;
+    const dark = fill < 1e-6;
+
+    if (this.scene) {
+      // Intensity 0 alone can still leave a faint IBL contribution — detach env when dark.
+      this.scene.environment = dark ? null : this._studioEnv;
+      this.scene.environmentIntensity = dark ? 0 : fill;
+    }
+    if (this.ambient) {
+      this.ambient.color.set(color);
+      this.ambient.intensity = dark ? 0 : fill * WORLD_AMBIENT_LIGHT_RATIO;
+      this.ambient.visible = !dark;
+    }
+    const showEditorFill = this.editMode && !this.gameView && !dark;
+    if (this.editFill) {
+      this.editFill.color.set(color);
+      this.editFill.intensity = dark ? 0 : EDIT_FILL_BASE_INTENSITY * fillScale;
+      this.editFill.visible = showEditorFill;
+    }
+    if (this.editFill2) {
+      this.editFill2.color.set(color);
+      this.editFill2.intensity = dark ? 0 : EDIT_FILL2_BASE_INTENSITY * fillScale;
+      this.editFill2.visible = showEditorFill;
+    }
+
+    // Kill leftover fallback-brush emissive glow from older material builds.
+    this._suppressFallbackEmissiveWhenDark(dark);
+  }
+
+  _suppressFallbackEmissiveWhenDark(dark) {
     for (const entry of this._actorMeshes.values()) {
-      entry.group.traverse((obj) => {
-        if (obj.userData?.editorOnly) obj.visible = editMode;
+      entry.group?.traverse((obj) => {
+        if (!obj.isMesh) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const mat of mats) {
+          if (!mat?.isMeshStandardMaterial) continue;
+          if (mat.userData.bbKeepEmissive) continue;
+          // Authored materials keep emissive; fallback brushes used color-matched emissive.
+          if (mat.userData.bbFallbackBrush || (
+            mat.emissiveIntensity > 0
+            && mat.emissive
+            && mat.color
+            && mat.emissive.getHex() === mat.color.getHex()
+            && mat.emissiveIntensity <= 0.1
+          )) {
+            if (mat.userData._bbEmissiveBackup == null) {
+              mat.userData._bbEmissiveBackup = mat.emissiveIntensity;
+            }
+            mat.emissiveIntensity = dark ? 0 : (mat.userData._bbEmissiveBackup || 0);
+          }
+        }
       });
     }
+  }
+
+  /**
+   * Unreal-style Game View (G): hide editor-only helpers (light icons, grid, gizmos,
+   * edge overlays) while keeping authored meshes and real lights.
+   */
+  setGameView(enabled) {
+    this.gameView = Boolean(enabled);
+    this._applyEditorOverlayVisibility();
+    this._syncAmbientFromWorld();
+  }
+
+  toggleGameView() {
+    this.setGameView(!this.gameView);
+    return this.gameView;
+  }
+
+  /** Editor chrome visible only in edit mode when Game View is off. */
+  _showEditorOverlays() {
+    return this.editMode && !this.gameView;
+  }
+
+  _applyEditorOverlayVisibility() {
+    const show = this._showEditorOverlays();
+    if (this.gridHelper) this.gridHelper.visible = show;
+    if (this.gizmo) this.gizmo.setVisible(show && this.selectedActorIds.length > 0);
+    if (this._createPreview) this._createPreview.visible = show;
+    if (this._surfaceHighlight) this._surfaceHighlight.visible = show;
+    for (const helper of this._selectionHelpers) {
+      if (helper) helper.visible = show;
+    }
+    for (const overlay of this._geometryFaceOverlays) {
+      if (overlay) overlay.visible = show;
+    }
+    for (const entry of this._actorMeshes.values()) {
+      entry.group?.traverse((obj) => {
+        if (obj.userData?.editorOnly) obj.visible = show;
+      });
+    }
+  }
+
+  setEditMode(editMode) {
+    this.editMode = editMode;
+    if (!editMode) this.gameView = false;
+    this._syncAmbientFromWorld();
+    this._applyEditorOverlayVisibility();
   }
 
   setSize(width, height) {
@@ -383,7 +499,7 @@ export class SceneView {
       this.renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
       this.renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
 
-      if (this.editMode && this.gridHelper) {
+      if (this._showEditorOverlays() && this.gridHelper) {
         this._applyGridPlane(gridPlaneForCameraMode(pane.cameraMode));
       }
 
@@ -423,6 +539,10 @@ export class SceneView {
 
   syncFromWorld(world) {
     const token = ++this._syncToken;
+    if (world) {
+      world.ambient = migrateLegacyWorldAmbient(world.ambient);
+      this.applyWorldAmbient(world.ambient);
+    }
     this.clearWorldMeshes();
     // Build root-first so parents exist before children attach.
     const roots = getRootActors(world);
@@ -441,6 +561,7 @@ export class SceneView {
     }
     this.setSelection(this.selectedActorIds);
     if (this.selectedSurface) this._refreshSurfaceHighlight();
+    this._applyEditorOverlayVisibility();
   }
 
   addOrUpdateActorVisual(actor) {
@@ -1382,6 +1503,7 @@ export class SceneView {
       if (box.isEmpty()) continue;
       const helper = new THREE.Box3Helper(box, this.viewportColors.selection);
       helper.name = 'SelectionHelper';
+      helper.visible = this._showEditorOverlays();
       this.scene.add(helper);
       this._selectionHelpers.push(helper);
     }
@@ -1391,6 +1513,11 @@ export class SceneView {
 
   setTransformMode(mode) {
     this.gizmo?.setMode?.(mode);
+  }
+
+  /** @param {'face'|'gizmo'} style */
+  setScaleHandleStyle(style) {
+    this.gizmo?.setScaleHandleStyle?.(style);
   }
 
   /**
@@ -1602,7 +1729,10 @@ export class SceneView {
   }
 
   _updateGizmo(world) {
-    if (!this.gizmo || !this.editMode) return;
+    if (!this.gizmo || !this._showEditorOverlays()) {
+      this.gizmo?.setVisible?.(false);
+      return;
+    }
     if (this.geometrySelection?.items?.length) {
       this._updateGeometryGizmo(world);
       return;
@@ -1641,7 +1771,7 @@ export class SceneView {
   }
 
   pickGizmo(normalizedX, normalizedY, camera = this.camera) {
-    if (!this.gizmo || !this.editMode) return null;
+    if (!this.gizmo || !this._showEditorOverlays()) return null;
     this.gizmo.updateScreenScale?.(camera);
     const raycaster = this.getRaycaster(normalizedX, normalizedY, camera);
     return this.gizmo.pick(raycaster);

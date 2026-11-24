@@ -7,7 +7,12 @@ import { normalizeDisplayMode } from './viewport/viewportPrefs.js';
 const STORAGE_KEY = 'bloodbound.editor.settings.v1';
 const USER_DEFAULTS_KEY = 'bloodbound.editor.settings.defaults.v1';
 /** Bump to force one-shot migrations on existing installs. */
-export const EDITOR_SETTINGS_SCHEMA = 4;
+export const EDITOR_SETTINGS_SCHEMA = 5;
+
+/** Allowed rotation snap steps (degrees) when grid snap is on. */
+export const ROTATION_SNAP_INCREMENTS = [1, 5, 15, 30, 45, 90];
+/** Allowed scale snap steps when grid snap is on. */
+export const SCALE_SNAP_INCREMENTS = [0.05, 0.1, 0.25, 0.5, 1];
 
 /** Factory defaults — snappy cameras (no orbit float). */
 export const DEFAULT_EDITOR_SETTINGS = {
@@ -34,8 +39,12 @@ export const DEFAULT_EDITOR_SETTINGS = {
 
   /** Construction grid size in editor units (toolbar + View menu). */
   gridSize: DEFAULT_GRID_EDITOR_UNITS,
-  /** When true, placement/gizmo moves snap to the grid. */
+  /** When true, placement/gizmo moves/rotates/scales snap. */
   gridSnap: true,
+  /** Gizmo rotate snap step in degrees (when grid snap is on). Alt = free. */
+  rotationSnapDegrees: 5,
+  /** Gizmo scale snap step (when grid snap is on). Alt = free. */
+  scaleSnapIncrement: 0.1,
   /** Default / applied viewport shading mode (lit, wireframe, …). */
   defaultDisplayMode: 'lit',
 
@@ -135,6 +144,17 @@ export function clampEditorSettings(partial = {}) {
     ? grid
     : DEFAULT_EDITOR_SETTINGS.gridSize;
   next.gridSnap = next.gridSnap !== false;
+
+  const rotSnap = Number(next.rotationSnapDegrees);
+  next.rotationSnapDegrees = ROTATION_SNAP_INCREMENTS.includes(rotSnap)
+    ? rotSnap
+    : DEFAULT_EDITOR_SETTINGS.rotationSnapDegrees;
+
+  const scaleSnap = Number(next.scaleSnapIncrement);
+  next.scaleSnapIncrement = SCALE_SNAP_INCREMENTS.includes(scaleSnap)
+    ? scaleSnap
+    : DEFAULT_EDITOR_SETTINGS.scaleSnapIncrement;
+
   next.defaultDisplayMode = normalizeDisplayMode(next.defaultDisplayMode);
 
   next.viewportBackground = normalizeHexColor(

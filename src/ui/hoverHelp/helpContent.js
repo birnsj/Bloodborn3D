@@ -22,6 +22,12 @@ export const HELP_CONTENT = {
     tips: 'Map mode is set at create time and shown in Details → Level and the status bar. Existing levels without a mode load as Additive. World Solid stays locked in the Outliner as a faint wire outline.',
   },
 
+  'world.ambient': {
+    title: 'World Ambient',
+    body: 'Scene fill for the whole level (studio IBL, tint, and editor fill lights). Separate from placeable Ambient Light actors. Edit intensity applies in the editor; Play intensity applies when you enter Play.',
+    tips: 'Black color or intensity 0 removes fill light. G = Game View. Ctrl+move = orbit. Alt+Move/Rotate/Scale = duplicate.',
+  },
+
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
@@ -54,7 +60,7 @@ export const HELP_CONTENT = {
   'toolbar.select': {
     title: 'Select',
     body: 'Select actors in the viewport and use the transform gizmo. Drag on empty space for a marquee. Switch modes with W (move), E (rotate), or R (scale).',
-    tips: 'W/E/R · F focus · Ctrl/Shift+LMB multi-select · Esc deselect · Del delete. Drag a material onto a face to paint it. Alt while dragging = fine snap / free rotate.',
+    tips: 'W/E/R · R again toggles face-resize ↔ Unreal scale gizmo · F focus · Alt+gizmo = duplicate.',
   },
   'toolbar.surface': {
     title: 'Surface Selection',
@@ -228,15 +234,25 @@ export const HELP_CONTENT = {
     title: 'Cell',
     body: 'Creates an empty Cell root for organizing room hierarchy. Drag into the viewport or click then click to place.',
   },
+  'toolbar.rotationSnap': {
+    title: 'Rotation Snap',
+    body: 'Gizmo rotate step in degrees when Snap is on. Alt+drag duplicates then rotates the copies (free rotate while Alt is held).',
+    tips: 'Also in Edit → Settings → Grid.',
+  },
+  'toolbar.scaleSnap': {
+    title: 'Scale Snap',
+    body: 'Gizmo scale step when Snap is on. Alt+drag duplicates then scales the copies (free scale while Alt is held).',
+    tips: 'Also in Edit → Settings → Grid.',
+  },
   'toolbar.grid': {
-    title: 'Grid Snap',
-    body: 'Controls the spacing used when placing and resizing structural brushes. Brushes snap by edges (faces on grid lines); props snap by pivot. Hold Alt while dragging a gizmo to temporarily snap to 1 unit instead. Use the Snap checkbox to disable snapping entirely.',
+    title: 'Move Grid',
+    body: 'Spacing for placement and gizmo moves. Brushes snap by edges; props by pivot. Hold Alt while dragging for 1-unit move snap. Rot / Scale next to this set rotate and scale snap steps.',
     tips: '[ / ] cycle grid size · Shift+G toggle snap. Values are editor units (100 = 1 m).',
     meta: 'Also under View → Smaller/Larger Grid.',
   },
   'toolbar.gridSnap': {
     title: 'Enable Snap',
-    body: 'When enabled, structural geo snaps edges to the grid; props/lights snap their pivot (e.g. chair bottom-center). When disabled, props keep freeform XZ while still sticking to the support surface elevation.',
+    body: 'When enabled, move / rotate / scale gizmo snaps use Grid, Rot, and Scale steps. When disabled, transforms are freeform (props still stick to support elevation).',
     shortcut: 'Shift+G',
   },
   'creation.toolbar': {
@@ -274,7 +290,7 @@ export const HELP_CONTENT = {
   },
   'toolbar.duplicate': {
     title: 'Duplicate',
-    body: 'Duplicates the current selection with a grid-sized offset along X.',
+    body: 'Duplicates the current selection with a grid-sized offset along X. Copies are snapped onto the construction grid (brush edges or pivot).',
     shortcut: 'Ctrl+D',
   },
   'toolbar.delete': {
@@ -535,7 +551,7 @@ export const HELP_CONTENT = {
   'viewport.camera': {
     title: 'Camera Mode',
     body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane.',
-    tips: 'Perspective: hold Alt + move to orbit · RMB drag looks · WASD free-fly. Ortho/isometric: RMB orbits · wheel zooms. MMB pans.',
+    tips: 'Perspective: hold Ctrl + move to orbit · Alt+Move/Rotate/Scale duplicates · RMB drag looks · WASD free-fly. Ortho: RMB orbits.',
   },
   'viewport.display': {
     title: 'Display Mode',

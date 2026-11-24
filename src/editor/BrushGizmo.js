@@ -5,18 +5,45 @@ const AXIS_COLORS = {
   x: 0xe74c3c,
   y: 0x2ecc71,
   z: 0x3498db,
+  /** Unreal-style uniform scale handle in the middle. */
+  xyz: 0xffffff,
 };
 
 export const TRANSFORM_MODES = ['move', 'rotate', 'scale'];
 
-/** Perspective distance (m) where axis-gizmo scale is 1. */
+/** Perspective distance (m) where axis-gizmo scale is 1 (before visual mul). */
 const GIZMO_REF_DISTANCE = 10;
-/** Ortho frustum height (m) where axis-gizmo scale is 1. */
+/** Ortho frustum height (m) where axis-gizmo scale is 1 (before visual mul). */
 const GIZMO_REF_FRUSTUM = 12;
-const GIZMO_SCALE_MIN = 0.12;
-const GIZMO_SCALE_MAX = 12;
+/** Extra on-screen size for move/rotate/scale handles (face-resize stays object-sized). */
+export const GIZMO_SCREEN_SIZE_MUL = 2;
+const GIZMO_SCALE_MIN = 0.12 * GIZMO_SCREEN_SIZE_MUL;
+const GIZMO_SCALE_MAX = 12 * GIZMO_SCREEN_SIZE_MUL;
 
 const _gizmoWorldPos = new THREE.Vector3();
+
+/** Draw gizmo bits on top of scene meshes (pivot often sits inside brushes). */
+function makeGizmoOverlayMaterial(material) {
+  if (!material) return material;
+  const mats = Array.isArray(material) ? material : [material];
+  for (const mat of mats) {
+    mat.depthTest = false;
+    mat.depthWrite = false;
+    mat.transparent = true;
+    if (mat.opacity == null) mat.opacity = 1;
+    mat.toneMapped = false;
+  }
+  return material;
+}
+
+function applyGizmoOverlay(object, renderOrder = 20) {
+  if (!object) return;
+  object.renderOrder = renderOrder;
+  object.traverse((obj) => {
+    obj.renderOrder = renderOrder;
+    if (obj.material) makeGizmoOverlayMaterial(obj.material);
+  });
+}
 
 /**
  * Screen-constant factor for move/rotate/scale handles.
@@ -34,6 +61,7 @@ export function computeGizmoScreenScale(camera, worldPosition) {
     const dist = camera.position.distanceTo(worldPosition);
     scale = Math.max(0.01, dist) / GIZMO_REF_DISTANCE;
   }
+  scale *= GIZMO_SCREEN_SIZE_MUL;
   return Math.min(GIZMO_SCALE_MAX, Math.max(GIZMO_SCALE_MIN, scale));
 }
 
@@ -47,6 +75,7 @@ export class BrushGizmo {
     this.root = new THREE.Group();
     this.root.name = 'BrushGizmo';
     this.root.visible = false;
+    this.root.renderOrder = 20;
     scene.add(this.root);
 
     this.moveGroup = new THREE.Group();
@@ -59,6 +88,12 @@ export class BrushGizmo {
     this.root.add(this.scaleGroup);
 
     this.mode = 'move';
+    /**
+     * Scale sub-mode (R toggles):
+     * - face: brush face-resize boxes (manual)
+     * - gizmo: Unreal-style axis scale cubes
+     */
+    this.scaleHandleStyle = 'face';
     this._handles = [];
     this._primaryBrush = null;
     this._selectionCenter = new THREE.Vector3();
@@ -110,6 +145,14 @@ export class BrushGizmo {
     this._applyModeVisibility();
   }
 
+  /** @param {'face'|'gizmo'} style */
+  setScaleHandleStyle(style) {
+    const next = style === 'gizmo' ? 'gizmo' : 'face';
+    if (this.scaleHandleStyle === next) return;
+    this.scaleHandleStyle = next;
+    this._applyModeVisibility();
+  }
+
   /**
    * Lock gizmo to Move (+ optional face-normal). Used by Geometry Face mode.
    * @param {boolean} enabled
@@ -150,9 +193,12 @@ export class BrushGizmo {
     const moveOnly = this._geometryElementMode;
     this.moveGroup.visible = this.mode === 'move' || moveOnly;
     this.rotateGroup.visible = this.mode === 'rotate' && !moveOnly;
-    // Brushes: face resize. Others: axis scale boxes.
-    this.resizeGroup.visible = this.mode === 'scale' && this._hasBrushSize && !moveOnly;
-    this.scaleGroup.visible = this.mode === 'scale' && !this._hasBrushSize && !moveOnly;
+    // Face = brush face-resize. Gizmo = Unreal axis cubes (also used for non-brushes).
+    const scaleOn = this.mode === 'scale' && !moveOnly;
+    const faceResize = scaleOn && this._hasBrushSize && this.scaleHandleStyle === 'face';
+    const axisGizmo = scaleOn && (!this._hasBrushSize || this.scaleHandleStyle === 'gizmo');
+    this.resizeGroup.visible = faceResize;
+    this.scaleGroup.visible = axisGizmo;
     if (this._normalHandle) {
       this._normalHandle.visible = moveOnly && Boolean(this._faceNormalWorld);
     }
@@ -190,9 +236,10 @@ export class BrushGizmo {
       0.2,
       0.12,
     );
+    applyGizmoOverlay(arrow, 22);
     const pick = new THREE.Mesh(
       new THREE.CylinderGeometry(0.09, 0.09, 1.05, 8),
-      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false }),
     );
     pick.position.set(0, 0.525, 0);
     pick.userData = {
@@ -201,7 +248,7 @@ export class BrushGizmo {
       pickable: true,
       dir: [0, 1, 0],
     };
-    pick.renderOrder = 13;
+    pick.renderOrder = 23;
     group.add(arrow);
     group.add(pick);
     this.root.add(group);
@@ -236,15 +283,16 @@ export class BrushGizmo {
         axis === 'z' ? 1 : 0,
       );
       const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(), 0.9, color, 0.18, 0.1);
+      applyGizmoOverlay(arrow, 20);
       const pick = new THREE.Mesh(
         new THREE.CylinderGeometry(0.08, 0.08, 0.9, 8),
-        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false }),
       );
       pick.position.copy(dir.clone().multiplyScalar(0.45));
       if (axis === 'x') pick.rotation.z = -Math.PI / 2;
       if (axis === 'z') pick.rotation.x = Math.PI / 2;
       pick.userData = { kind: 'move', axis, pickable: true };
-      pick.renderOrder = 10;
+      pick.renderOrder = 21;
       const group = new THREE.Group();
       group.add(arrow);
       group.add(pick);
@@ -263,15 +311,17 @@ export class BrushGizmo {
         new THREE.MeshBasicMaterial({
           color,
           depthTest: false,
+          depthWrite: false,
           transparent: true,
           opacity: 0.9,
+          toneMapped: false,
         }),
       );
       // Torus lies in XY by default; orient so its plane is perpendicular to axis.
       if (axis === 'x') torus.rotation.y = Math.PI / 2;
       if (axis === 'y') torus.rotation.x = Math.PI / 2;
       // z: default
-      torus.renderOrder = 12;
+      torus.renderOrder = 22;
       torus.userData = { kind: 'rotate', axis, pickable: true };
       this.rotateGroup.add(torus);
     };
@@ -281,29 +331,33 @@ export class BrushGizmo {
   }
 
   _buildScaleAxisHandles() {
-    const makeBox = (axis, color) => {
+    const makeBox = (axis, color, { offset = 0.85, size = 0.14 } = {}) => {
       const dir = new THREE.Vector3(
         axis === 'x' ? 1 : 0,
         axis === 'y' ? 1 : 0,
         axis === 'z' ? 1 : 0,
       );
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.14, 0.14, 0.14),
+        new THREE.BoxGeometry(size, size, size),
         new THREE.MeshBasicMaterial({
           color,
           depthTest: false,
+          depthWrite: false,
           transparent: true,
           opacity: 0.95,
+          toneMapped: false,
         }),
       );
-      mesh.position.copy(dir.multiplyScalar(0.85));
-      mesh.renderOrder = 11;
+      if (offset) mesh.position.copy(dir.multiplyScalar(offset));
+      mesh.renderOrder = 21;
       mesh.userData = { kind: 'scale', axis, pickable: true };
       this.scaleGroup.add(mesh);
     };
     makeBox('x', AXIS_COLORS.x);
     makeBox('y', AXIS_COLORS.y);
     makeBox('z', AXIS_COLORS.z);
+    // Center cube — uniform XYZ scale (Unreal-style).
+    makeBox('xyz', AXIS_COLORS.xyz, { offset: 0, size: 0.18 });
   }
 
   setVisible(visible) {
@@ -382,8 +436,10 @@ export class BrushGizmo {
         new THREE.MeshBasicMaterial({
           color: AXIS_COLORS[face.axis],
           depthTest: false,
+          depthWrite: false,
           transparent: true,
           opacity: 0.95,
+          toneMapped: false,
         }),
       );
       mesh.position.set(
@@ -391,7 +447,7 @@ export class BrushGizmo {
         localOffset.y + face.pos[1],
         localOffset.z + face.pos[2],
       );
-      mesh.renderOrder = 11;
+      mesh.renderOrder = 21;
       mesh.userData = { kind: 'resize', axis: face.axis, sign: face.sign, pickable: true };
       this.resizeGroup.add(mesh);
     }
@@ -428,7 +484,7 @@ export class BrushGizmo {
       return this._drag;
     }
 
-    const dir = this._resolveDir(handle);
+    const dir = this._resolveDir(handle, pointerRay);
     this._drag = {
       kind: handle.kind,
       axis: handle.axis,
@@ -482,13 +538,23 @@ export class BrushGizmo {
     };
   }
 
-  _resolveDir(handle) {
+  _resolveDir(handle, pointerRay = null) {
     if (handle?.dir && Array.isArray(handle.dir) && handle.dir.length === 3) {
       const v = new THREE.Vector3(handle.dir[0], handle.dir[1], handle.dir[2]);
       if (v.lengthSq() > 1e-8) return v.normalize();
     }
     if (handle?.axis === 'normal' && this._faceNormalWorld) {
       return this._faceNormalWorld.clone();
+    }
+    // Uniform scale: drag along screen-right through the gizmo (Unreal-like).
+    if (handle?.axis === 'xyz') {
+      const view = pointerRay?.direction?.clone?.() || new THREE.Vector3(0, 0, -1);
+      const right = new THREE.Vector3().crossVectors(view, new THREE.Vector3(0, 1, 0));
+      if (right.lengthSq() < 1e-8) {
+        right.crossVectors(view, new THREE.Vector3(1, 0, 0));
+      }
+      if (right.lengthSq() > 1e-8) return right.normalize();
+      return new THREE.Vector3(1, 0, 0);
     }
     const axis = handle?.axis;
     return new THREE.Vector3(

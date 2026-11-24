@@ -119,11 +119,17 @@ export async function createThreeMaterial(definition, mapResolver = () => null, 
 
 /** Fallback when no material is assigned — preserves legacy brush color look. */
 export function createFallbackBrushMaterial(color = '#8a9099', { editMode = false } = {}) {
-  return new THREE.MeshStandardMaterial({
+  // No emissive boost — World ambient / authored lights own visibility.
+  // (Previously editMode used emissive so brushes stayed visible in the dark,
+  // which made World Ambient → black look broken.)
+  void editMode;
+  const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color),
     roughness: 0.75,
     metalness: 0.05,
-    emissive: new THREE.Color(color),
-    emissiveIntensity: editMode ? 0.08 : 0.02,
+    emissive: new THREE.Color(0x000000),
+    emissiveIntensity: 0,
   });
+  mat.userData.bbFallbackBrush = true;
+  return mat;
 }

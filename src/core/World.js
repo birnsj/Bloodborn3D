@@ -9,16 +9,95 @@ export function normalizeMapMode(value) {
   return value === 'subtractive' ? 'subtractive' : 'additive';
 }
 
+/**
+ * Built-in scene fill (SceneView AmbientLight + studio IBL intensity).
+ * `intensity` matches the studio environmentIntensity the editor shipped with (0.12);
+ * AmbientLight is derived as a smaller tint fill so the default look stays the same.
+ */
+export const DEFAULT_WORLD_AMBIENT = Object.freeze({
+  color: '#3a4a68',
+  intensity: 0.12,
+  playIntensity: 0.12,
+});
+
+/** AmbientLight intensity scale relative to world ambient intensity (preserves old 0.05 @ 0.12 IBL). */
+export const WORLD_AMBIENT_LIGHT_RATIO = 0.05 / 0.12;
+
+/** Rec. 709 relative luminance for a #RRGGBB (or 0xRRGGBB) color. */
+export function luminanceOfHex(color) {
+  let hex = color;
+  if (typeof hex === 'number' && Number.isFinite(hex)) {
+    hex = `#${(hex >>> 0).toString(16).padStart(6, '0')}`;
+  }
+  if (typeof hex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(hex)) return 0;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Effective scene-fill strength from world ambient.
+ * Black color → 0 (no fill). Default color at default intensity → default intensity.
+ */
+export function worldAmbientFillStrength(ambient, { editMode = true } = {}) {
+  const a = normalizeWorldAmbient(ambient);
+  const level = editMode ? a.intensity : a.playIntensity;
+  const lum = luminanceOfHex(a.color);
+  const baseLum = luminanceOfHex(DEFAULT_WORLD_AMBIENT.color) || 1;
+  return Math.max(0, level * (lum / baseLum));
+}
+
+export function normalizeWorldAmbient(value) {
+  const out = {
+    color: DEFAULT_WORLD_AMBIENT.color,
+    intensity: DEFAULT_WORLD_AMBIENT.intensity,
+    playIntensity: DEFAULT_WORLD_AMBIENT.playIntensity,
+  };
+  if (!value || typeof value !== 'object') return out;
+  if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) {
+    out.color = value.color.toLowerCase();
+  } else if (typeof value.color === 'number' && Number.isFinite(value.color)) {
+    out.color = `#${(value.color >>> 0).toString(16).padStart(6, '0')}`;
+  }
+  const intensity = Number(value.intensity);
+  if (Number.isFinite(intensity)) out.intensity = Math.max(0, intensity);
+  const playIntensity = Number(value.playIntensity);
+  if (Number.isFinite(playIntensity)) out.playIntensity = Math.max(0, playIntensity);
+  return out;
+}
+
+/** Promote first-pass AmbientLight-scale defaults (0.05/0.02) to IBL-scale fill. */
+export function migrateLegacyWorldAmbient(value) {
+  const raw = value && typeof value === 'object' ? value : null;
+  if (
+    raw
+    && Number(raw.intensity) === 0.05
+    && Number(raw.playIntensity) === 0.02
+    && (raw.color == null || String(raw.color).toLowerCase() === '#3a4a68')
+  ) {
+    return {
+      color: DEFAULT_WORLD_AMBIENT.color,
+      intensity: DEFAULT_WORLD_AMBIENT.intensity,
+      playIntensity: DEFAULT_WORLD_AMBIENT.playIntensity,
+    };
+  }
+  return normalizeWorldAmbient(value);
+}
+
 export class World {
   constructor({
     name = 'Untitled Level',
     schemaVersion = 1,
     mapMode = 'additive',
+    ambient = null,
   } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
     /** Additive = empty space + add brushes; subtractive = solid world + carve. */
     this.mapMode = normalizeMapMode(mapMode);
+    /** Scene AmbientLight fill — not an actor light. */
+    this.ambient = normalizeWorldAmbient(ambient);
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -64,6 +143,7 @@ export class World {
       schemaVersion: this.schemaVersion,
       name: this.name,
       mapMode: normalizeMapMode(this.mapMode),
+      ambient: normalizeWorldAmbient(this.ambient),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

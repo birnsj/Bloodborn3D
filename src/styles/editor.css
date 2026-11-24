@@ -285,6 +285,10 @@ select {
   width: 64px;
 }
 
+.bb-toolbar-field .bb-select--snap {
+  width: 72px;
+}
+
 .bb-toolbar-status {
   color: var(--bb-text-dim);
   font-size: var(--bb-font-size-sm);

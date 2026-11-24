@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useEditor } from '../EditorContext.jsx';
+import { useEditorSettings } from '../EditorSettingsContext.jsx';
+import {
+  ROTATION_SNAP_INCREMENTS,
+  SCALE_SNAP_INCREMENTS,
+} from '../editorSettingsPrefs.js';
 import {
   IconAlign,
   IconPlay,
@@ -41,6 +46,7 @@ export function LevelToolBar() {
     stop,
     status,
   } = useEditor();
+  const { settings, patchSettings } = useEditorSettings();
 
   const recorder = useSessionRecorder();
   const lastRecorderError = useRef(null);
@@ -105,7 +111,7 @@ export function LevelToolBar() {
           type="button"
           className={`bb-btn${tool === 'select' && !isPlay ? ' bb-btn--active' : ''}`}
           disabled={isPlay}
-          title="Select / gizmo · W move · E rotate · R scale"
+          title="Select / gizmo · W move · E rotate · R scale (R again = Unreal gizmo)"
           onClick={() => {
             setTool('select');
             setSelectedSurface(null);
@@ -217,6 +223,46 @@ export function LevelToolBar() {
           onChange={(e) => setGridSize(Number(e.target.value))}
         >
           {gridIncrements.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps(
+          'toolbar.rotationSnap',
+          playReason,
+          `Current: ${settings.rotationSnapDegrees}°`,
+        )}
+      >
+        <span>Rot</span>
+        <select
+          className="bb-select bb-select--snap"
+          value={settings.rotationSnapDegrees}
+          disabled={isPlay || !gridSnap}
+          onChange={(e) => patchSettings({ rotationSnapDegrees: Number(e.target.value) })}
+        >
+          {ROTATION_SNAP_INCREMENTS.map((n) => (
+            <option key={n} value={n}>{n}°</option>
+          ))}
+        </select>
+      </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps(
+          'toolbar.scaleSnap',
+          playReason,
+          `Current: ${settings.scaleSnapIncrement}`,
+        )}
+      >
+        <span>Scale</span>
+        <select
+          className="bb-select bb-select--snap"
+          value={settings.scaleSnapIncrement}
+          disabled={isPlay || !gridSnap}
+          onChange={(e) => patchSettings({ scaleSnapIncrement: Number(e.target.value) })}
+        >
+          {SCALE_SNAP_INCREMENTS.map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}
         </select>

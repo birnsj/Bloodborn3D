@@ -139,6 +139,7 @@ import {
   validateOpenings,
 } from '../runtime/wallOpenings.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
+import { migrateLegacyWorldAmbient, normalizeWorldAmbient } from '../core/World.js';
 import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
 import { patchFaceMaterial, patchFaceUv } from '../runtime/surfaces.js';
 import {
@@ -190,11 +191,32 @@ export function EditorProvider({ children }) {
   const faceMovePreviewRef = useRef(null);
   /** Gizmo mode: move (W) | rotate (E) | scale (R). */
   const [transformMode, setTransformModeState] = useState('move');
+  /**
+   * Scale sub-mode (R toggles while already in scale):
+   * face = brush face resize · gizmo = Unreal-style axis scale.
+   */
+  const [scaleHandleStyle, setScaleHandleStyleState] = useState('face');
   const setTransformMode = useCallback((mode) => {
     const next = mode === 'rotate' || mode === 'scale' ? mode : 'move';
     setTransformModeState(next);
     runtimeRef.current?.sceneView?.setTransformMode?.(next);
   }, []);
+  const setScaleHandleStyle = useCallback((style) => {
+    const next = style === 'gizmo' ? 'gizmo' : 'face';
+    setScaleHandleStyleState(next);
+    runtimeRef.current?.sceneView?.setScaleHandleStyle?.(next);
+  }, []);
+  /** Enter scale, or if already scaling toggle face ↔ Unreal gizmo. */
+  const cycleScaleTransform = useCallback(() => {
+    if (transformMode !== 'scale') {
+      setTransformMode('scale');
+      runtimeRef.current?.sceneView?.setScaleHandleStyle?.(scaleHandleStyle);
+      return scaleHandleStyle;
+    }
+    const next = scaleHandleStyle === 'face' ? 'gizmo' : 'face';
+    setScaleHandleStyle(next);
+    return next;
+  }, [transformMode, scaleHandleStyle, setTransformMode, setScaleHandleStyle]);
   const [levelName, setLevelName] = useState('test-room.json');
   const [levels, setLevels] = useState([]);
   const [status, setStatusState] = useState('Ready');
@@ -992,14 +1014,15 @@ export function EditorProvider({ children }) {
     );
   }, [world, mode, executeCommand]);
 
-  const duplicateSelected = useCallback(() => {
-    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+  const duplicateSelected = useCallback(({ offset = null, label = 'Duplicate' } = {}) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return [];
     const actors = selectedRef.current
       .map((id) => world.getActor(id))
       .filter(Boolean);
-    if (actors.length === 0) return;
+    if (actors.length === 0) return [];
     const copies = duplicateActors(actors, {
-      offset: { x: gridRef.current, y: 0, z: 0 },
+      // Alt+gizmo drag uses zero offset — the drag places the copies.
+      offset: offset || { x: gridRef.current, y: 0, z: 0 },
       gridSize: gridRef.current,
     });
     for (const copy of copies) world.addActor(copy);
@@ -1007,17 +1030,19 @@ export function EditorProvider({ children }) {
     if (rejectSubtractIfTooComplex(complexity)) {
       for (const copy of copies) world.removeActor(copy.id);
       runtimeRef.current?.resyncWorld();
-      return;
+      return [];
     }
     for (const copy of copies) world.removeActor(copy.id);
+    const ids = copies.map((a) => a.id);
     executeCommand(
       new AddActorsCommand({
         world,
         actorsJson: copies.map((a) => a.toJSON()),
-        label: 'Duplicate',
+        label,
       }),
-      { selectIds: copies.map((a) => a.id) },
+      { selectIds: ids },
     );
+    return ids;
   }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
 
   const autoCapturePrefabOverrides = useCallback(async (actorIds) => {
@@ -1729,6 +1754,20 @@ export function EditorProvider({ children }) {
     );
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  /** Level-authored scene fill (World Settings). Not an actor light. */
+  const updateWorldAmbient = useCallback((partial) => {
+    const current = worldRef.current;
+    if (!current || mode === 'play') return;
+    // Promote legacy AmbientLight-scale defaults once, then apply the edit.
+    const base = migrateLegacyWorldAmbient(current.ambient);
+    current.ambient = normalizeWorldAmbient({
+      ...base,
+      ...partial,
+    });
+    runtimeRef.current?.sceneView?.applyWorldAmbient?.(current.ambient);
+    bump();
+  }, [mode, bump]);
 
   const updateSelectedStaticMesh = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -3217,6 +3256,9 @@ export function EditorProvider({ children }) {
     cancelFaceMove,
     transformMode,
     setTransformMode,
+    scaleHandleStyle,
+    setScaleHandleStyle,
+    cycleScaleTransform,
     levelName,
     setLevelName,
     levels,
@@ -3281,6 +3323,7 @@ export function EditorProvider({ children }) {
     updateBrushOpening,
     removeBrushOpening,
     updateSelectedLight,
+    updateWorldAmbient,
     updateSelectedStaticMesh,
     updateSelectedRamp,
     updateSelectedStair,

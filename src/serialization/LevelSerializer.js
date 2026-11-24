@@ -2,8 +2,12 @@
  * Serialize a World to engine-neutral level JSON.
  * schemaVersion 2 adds parentId / visible / locked / prefab / Cell.
  * schemaVersion 3 is emitted only when the level contains a ConvexBrush (Phase 2F.0).
+ * Optional `ambient` (scene fill color / intensity / playIntensity) is written when
+ * present; older levels without it load with World defaults. No schema bump required.
  * v1 levels remain loadable.
  */
+
+import { normalizeWorldAmbient } from '../core/World.js';
 
 export const LEVEL_SCHEMA_VERSION = 3;
 /** Oldest level schema the deserializer still accepts. */
@@ -31,6 +35,7 @@ export function serializeLevel(world) {
     schemaVersion: schemaVersionForWorld(world),
     name: world.name ?? 'Untitled Level',
     mapMode,
+    ambient: normalizeWorldAmbient(world.ambient),
     actors: world.actors.map((actor) => actor.toJSON()),
   };
 }

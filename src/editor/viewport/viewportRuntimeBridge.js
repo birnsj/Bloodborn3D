@@ -25,7 +25,7 @@ export function configureOrbitForPane(controls, pane, settings = null) {
   if (!controls || !pane) return;
   const mode = normalizeCameraMode(pane.cameraMode);
 
-  // Ortho/isometric: RMB orbits. Perspective: RMB is freelook (Viewport); Alt+move
+  // Ortho/isometric: RMB orbits. Perspective: RMB is freelook (Viewport); Ctrl+move
   // orbits without a mouse button. Middle-mouse pans; wheel zooms.
   const perspective = mode === 'perspective';
   controls.enableRotate = true;
@@ -186,7 +186,7 @@ export function focusPaneOnSelection(sceneView, prefs, paneId, selectedActorIds,
 /** Reject gizmo axes that leave the orthographic view plane. */
 export function filterGizmoAxisForOrtho(cameraMode, axis) {
   if (!isOrthographicMode(cameraMode)) return axis;
-  if (axis === 'normal') return axis;
+  if (axis === 'normal' || axis === 'xyz') return axis;
   const allowed = orthoPlaneAxes(cameraMode);
   return allowed.includes(axis) ? axis : null;
 }

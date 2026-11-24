@@ -33,9 +33,10 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     rows: [
       { keys: ['W'], action: 'Move', note: 'also starts free-fly when held with A/S/D' },
       { keys: ['E'], action: 'Rotate', note: 'also fly-up while free-flying' },
-      { keys: ['R'], action: 'Scale', note: 'brush faces · or actor scale' },
+      { keys: ['R'], action: 'Scale', note: 'again toggles face-resize ↔ Unreal axis gizmo' },
       { keys: ['F'], action: 'Focus selection', note: 'frames selection · pane Reset = home zoom' },
-      { keys: ['Alt'], action: 'While dragging', note: '1-unit snap · free rotate (no 5° snap)' },
+      { keys: ['Alt', 'LMB'], action: 'Duplicate + drag', note: 'Move / Rotate / Scale · stays on grid snap' },
+      { keys: ['Alt'], action: 'While dragging', note: 'fine move / free rotate·scale (not during Alt-duplicate)' },
     ],
   },
   {
@@ -54,6 +55,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     rows: [
       { keys: ['['], action: 'Smaller grid' },
       { keys: [']'], action: 'Larger grid' },
+      { keys: ['G'], action: 'Game View', note: 'hide light icons, grid, gizmos (Unreal-style)' },
       { keys: ['Shift', 'G'], action: 'Toggle snap' },
       { keys: ['Alt'], action: 'Fine snap while dragging', note: '1 editor unit on gizmo' },
     ],
@@ -74,7 +76,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['Q', 'E'], action: 'Fly down / up', note: 'E also selects Rotate when not flying' },
       { keys: ['Shift'], action: 'Fly boost' },
       { keys: ['RMB'], action: 'Look (perspective)', note: 'drag while held' },
-      { keys: ['Alt'], action: 'Orbit (perspective)', note: 'hold + move mouse · no button · ortho: RMB' },
+      { keys: ['Ctrl'], action: 'Orbit (perspective)', note: 'hold + move mouse · no button · ortho: RMB' },
       { keys: ['MMB'], action: 'Pan', note: 'speed in Edit → Settings' },
       { keys: ['Wheel'], action: 'Zoom', note: 'ortho zooms frustum' },
     ],

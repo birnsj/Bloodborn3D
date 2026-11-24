@@ -133,4 +133,26 @@ describe('HistoryStack + brush commands', () => {
     expect(world.actors.length).toBe(1);
     expect(world.getActor(brush.id)).toBeTruthy();
   });
+
+  it('duplicate snaps brush edges onto the grid', () => {
+    const world = new World({ name: 'H', schemaVersion: 1 });
+    const brush = createBrushFromBounds({
+      kind: 'box',
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 100, y: 100, z: 100 },
+      gridSize: 25,
+    });
+    // Nudge off-grid; duplicate must still land on edge-aligned grid.
+    brush.transform.position.x = 13;
+    brush.transform.position.z = 7;
+    world.addActor(brush);
+    const copies = duplicateActors([brush], {
+      offset: { x: 25, y: 0, z: 0 },
+      gridSize: 25,
+    });
+    const size = copies[0].getComponent('Brush').size;
+    const pos = copies[0].transform.position;
+    expect(Math.abs((pos.x - size.x / 2) % 25)).toBe(0);
+    expect(Math.abs((pos.z - size.z / 2) % 25)).toBe(0);
+  });
 });

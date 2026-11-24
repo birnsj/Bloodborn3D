@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
-import { World, normalizeMapMode } from '../core/World.js';
+import {
+  World,
+  normalizeMapMode,
+  DEFAULT_WORLD_AMBIENT,
+  worldAmbientFillStrength,
+} from '../core/World.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import {
   STARTER_ROOM,
@@ -87,6 +92,46 @@ describe('mapMode serialize round-trip', () => {
     const world = deserializeLevel(data);
     expect(world.name).toBe('Fresh');
     expect(world.mapMode).toBe('additive');
+  });
+
+  it('preserves world ambient settings', () => {
+    const world = createNewMapWorld({ name: 'Lit' });
+    world.ambient = {
+      color: '#112233',
+      intensity: 0.4,
+      playIntensity: 0.1,
+    };
+    const json = serializeLevel(world);
+    expect(json.ambient).toEqual({
+      color: '#112233',
+      intensity: 0.4,
+      playIntensity: 0.1,
+    });
+    const restored = deserializeLevel(json);
+    expect(restored.ambient).toEqual(json.ambient);
+  });
+
+  it('defaults missing ambient to scene fill defaults', () => {
+    const world = new World({ name: 'Legacy', schemaVersion: 2 });
+    const json = serializeLevel(world);
+    delete json.ambient;
+    const restored = deserializeLevel({ ...json, schemaVersion: 2, actors: [] });
+    expect(restored.ambient).toEqual({ ...DEFAULT_WORLD_AMBIENT });
+    expect(restored.ambient.intensity).toBe(0.12);
+  });
+
+  it('black ambient color yields zero fill strength', () => {
+    expect(worldAmbientFillStrength({
+      color: '#000000',
+      intensity: 0.12,
+      playIntensity: 0.12,
+    })).toBe(0);
+    expect(worldAmbientFillStrength({
+      color: DEFAULT_WORLD_AMBIENT.color,
+      intensity: 0,
+      playIntensity: 0,
+    })).toBe(0);
+    expect(worldAmbientFillStrength(DEFAULT_WORLD_AMBIENT)).toBeCloseTo(0.12, 5);
   });
 });
 
