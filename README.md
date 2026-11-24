@@ -40,10 +40,11 @@ Authored JSON and the inspector use **editor units**. Three.js and Rapier conver
 - **Snapping.** Structural geometry (brushes, floors, walls, …) snaps its **edges and faces** to the grid. Props, lights and meshes snap by **pivot**.
 - **Hierarchy.** Cells and parenting; the outliner, reparenting and per-actor visible/locked flags.
 - **Prefabs and assets.** Content Browser with materials, textures, meshes and prefabs (dev file API writes under `public/assets`); prefab instances with overrides and source updates.
+- **Materials and surfaces (Phase 2E).** Local UV density at 100 eu; Surface / Align tools; per-surface materials and UV; Materials workspace with Save/Cancel drafts; persistence through save/load, prefabs, undo and Play/Stop.
 - **Editing.** Every edit is a command on a 100-step undo/redo stack. Selection, move/rotate/scale gizmos, duplicate, delete.
 - **Play / Stop.** Play snapshots the authored level and runs Rapier with a first-person controller. Stop restores the snapshot. See *Editing safety* below.
 - **Workspace.** Dockable panels with named layouts, UI scale, four color themes (View → Theme), Edit → Settings (camera, viewport colors, play look), hover help, keyboard-shortcut reference, 13 in-app tutorial lessons, and a session recorder.
-- **Workspace tabs** other than *Level Editor* (World Map, Characters, Animation, Materials, Visual Scripting, Dialogue, UI Editor, AI Assets) are placeholders only.
+- **Workspace tabs.** *Level Editor* and *Materials* are implemented. World Map, Characters, Animation, Visual Scripting, Dialogue, UI Editor and AI Assets remain placeholders.
 
 ### Editing safety
 

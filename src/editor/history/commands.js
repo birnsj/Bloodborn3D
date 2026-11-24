@@ -1,9 +1,25 @@
 import { Actor } from '../../core/Actor.js';
 import { createComponentFromJSON } from '../../components/componentRegistry.js';
 import { getDescendants } from '../../core/hierarchy.js';
+import {
+  allowedSurfacesForComponentType,
+  normalizeFaceMaterials,
+  normalizeFaceUVs,
+} from '../../runtime/surfaces.js';
 
 function cloneActorJson(actor) {
   return structuredClone(actor.toJSON());
+}
+
+/** Keep faceMaterials / faceUVs normalized when history applies snapshots (Phase 2E.5). */
+function applySurfaceFields(comp, state) {
+  const allowed = allowedSurfacesForComponentType(comp.type);
+  if ('faceMaterials' in state) {
+    comp.faceMaterials = normalizeFaceMaterials(state.faceMaterials, allowed);
+  }
+  if ('faceUVs' in state) {
+    comp.faceUVs = normalizeFaceUVs(state.faceUVs, allowed);
+  }
 }
 
 function restoreActorFromJson(data) {
@@ -239,16 +255,7 @@ export class SetBrushMaterialCommand {
     const brush = this.world.getActor(this.actorId)?.getComponent('Brush');
     if (!brush) return;
     if ('materialId' in state) brush.materialId = state.materialId;
-    if ('faceMaterials' in state) {
-      brush.faceMaterials = state.faceMaterials
-        ? { ...state.faceMaterials }
-        : null;
-    }
-    if ('faceUVs' in state) {
-      brush.faceUVs = state.faceUVs
-        ? structuredClone(state.faceUVs)
-        : null;
-    }
+    applySurfaceFields(brush, state);
     if ('uv' in state && state.uv) {
       brush.uv = {
         scale: { ...(state.uv.scale || brush.uv.scale) },
@@ -367,6 +374,7 @@ export class SetStairPropertiesCommand {
     const stair = this.world.getActor(this.actorId)?.getComponent('Stair');
     if (!stair) return;
     for (const key of Object.keys(state)) {
+      if (key === 'faceMaterials' || key === 'faceUVs') continue;
       if (key === 'uv' && state.uv) {
         stair.uv = {
           scale: { ...(state.uv.scale || stair.uv.scale) },
@@ -379,6 +387,7 @@ export class SetStairPropertiesCommand {
         stair[key] = state[key];
       }
     }
+    applySurfaceFields(stair, state);
   }
 }
 
@@ -406,6 +415,7 @@ export class SetRampPropertiesCommand {
     const ramp = this.world.getActor(this.actorId)?.getComponent('Ramp');
     if (!ramp) return;
     for (const key of Object.keys(state)) {
+      if (key === 'faceMaterials' || key === 'faceUVs') continue;
       if (key === 'uv' && state.uv) {
         ramp.uv = {
           scale: { ...(state.uv.scale || ramp.uv.scale) },
@@ -416,6 +426,7 @@ export class SetRampPropertiesCommand {
         ramp[key] = state[key];
       }
     }
+    applySurfaceFields(ramp, state);
   }
 }
 
@@ -443,6 +454,7 @@ export class SetColumnPropertiesCommand {
     const column = this.world.getActor(this.actorId)?.getComponent('Column');
     if (!column) return;
     for (const key of Object.keys(state)) {
+      if (key === 'faceMaterials' || key === 'faceUVs') continue;
       if (key === 'uv' && state.uv) {
         column.uv = {
           scale: { ...(state.uv.scale || column.uv.scale) },
@@ -455,6 +467,7 @@ export class SetColumnPropertiesCommand {
         column[key] = state[key];
       }
     }
+    applySurfaceFields(column, state);
   }
 }
 
@@ -482,6 +495,7 @@ export class SetCurvedWallPropertiesCommand {
     const wall = this.world.getActor(this.actorId)?.getComponent('CurvedWall');
     if (!wall) return;
     for (const key of Object.keys(state)) {
+      if (key === 'faceMaterials' || key === 'faceUVs') continue;
       if (key === 'uv' && state.uv) {
         wall.uv = {
           scale: { ...(state.uv.scale || wall.uv.scale) },
@@ -496,6 +510,7 @@ export class SetCurvedWallPropertiesCommand {
         wall[key] = state[key];
       }
     }
+    applySurfaceFields(wall, state);
   }
 }
 
@@ -523,6 +538,7 @@ export class SetArchPropertiesCommand {
     const arch = this.world.getActor(this.actorId)?.getComponent('Arch');
     if (!arch) return;
     for (const key of Object.keys(state)) {
+      if (key === 'faceMaterials' || key === 'faceUVs') continue;
       if (key === 'uv' && state.uv) {
         arch.uv = {
           scale: { ...(state.uv.scale || arch.uv.scale) },
@@ -535,6 +551,7 @@ export class SetArchPropertiesCommand {
         arch[key] = state[key];
       }
     }
+    applySurfaceFields(arch, state);
   }
 }
 

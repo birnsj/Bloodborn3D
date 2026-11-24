@@ -40,9 +40,9 @@ Identity defaults on every layer (`scale` 1, `offset` 0, `rotation` 0) leave exi
 | **2E.2** | Per-surface UV offset / scale / rotation bound to selection; undoable actor state. | **Done** |
 | **2E.3** | Explicit Align to Neighbor for adjoining architectural surfaces. | **Done** |
 | **2E.4** | Materials workspace (reuse existing editor/registry/preview); Save/Cancel for asset edits. | **Done** |
-| **2E.5** | Persistence audit: save/load, prefabs, undo/redo for surface + material actor fields. | Planned |
+| **2E.5** | Persistence audit: save/load, prefabs, undo/redo for surface + material actor fields. | **Done** |
 
-**Do not start 2E.5 until 2E.4 is accepted.**
+**Phase 2E is complete.** Do not begin the next development phase until directed.
 
 ### Phase 2E.1 notes
 
@@ -77,6 +77,14 @@ Identity defaults on every layer (`scale` 1, `offset` 0, `rotation` 0) leave exi
 - After Save, placed instances refresh via asset revision + `resyncWorld` (no level reload).
 - Details panel material fields also use Save/Cancel (with a Materials… shortcut).
 - Out of scope: shader graphs, procedural textures, AI integration.
+
+### Phase 2E.5 notes
+
+- Persistence audit for the full 2E materials/surfaces pipeline (no new features).
+- Verified: level save/load (`acceptance-surfaces.json`, schema 1→2), brush resize retention, prefab create/instantiate/override/sync for `faceMaterials`/`faceUVs`, undo/redo (assign, UV, Align), Play/Stop snapshot restore, material asset Save/Cancel drafts, shared-asset draft contract.
+- History apply paths normalize `faceMaterials` / `faceUVs`; editor surface assign/UV uses `patchFaceMaterial` / `patchFaceUv`.
+- Regression suite: `phase2e5Persistence.test.js` (plus prior 2E.0–2E.4 tests).
+- Known 2E limitations remain: Align is coplanar Brush faces only; no world-space / triplanar projection; Materials workspace is the only non-level workspace completed in 2E.
 
 ### Dependencies
 

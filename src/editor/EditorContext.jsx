@@ -99,6 +99,7 @@ import {
 } from '../runtime/wallOpenings.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
 import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
+import { patchFaceMaterial, patchFaceUv } from '../runtime/surfaces.js';
 import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
@@ -2058,13 +2059,15 @@ export function EditorProvider({ children }) {
     const column = actor.getComponent('Column');
     const arch = actor.getComponent('Arch');
     const curved = actor.getComponent('CurvedWall');
+    // Scratch patch via surfaces helpers so history snapshots stay normalized.
     const patchFace = (comp, updateFn) => {
-      const next = { ...(comp.faceMaterials || {}) };
-      if (!materialId) delete next[selectedSurface.surfaceId];
-      else next[selectedSurface.surfaceId] = materialId;
-      updateFn({
-        faceMaterials: Object.keys(next).length ? next : null,
-      });
+      const scratch = {
+        type: comp.type,
+        faceMaterials: comp.faceMaterials ? { ...comp.faceMaterials } : null,
+      };
+      const result = patchFaceMaterial(scratch, selectedSurface.surfaceId, materialId || null);
+      if (!result) return;
+      updateFn({ faceMaterials: result.after });
     };
     if (brush) patchFace(brush, updateSelectedBrush);
     else if (ramp) patchFace(ramp, updateSelectedRamp);
@@ -2112,15 +2115,13 @@ export function EditorProvider({ children }) {
         },
         rotation: uvPartial?.rotation ?? current.rotation,
       };
-      const next = { ...(comp.faceUVs || {}) };
-      const identity = nextUv.scale.x === 1 && nextUv.scale.y === 1
-        && nextUv.offset.x === 0 && nextUv.offset.y === 0
-        && nextUv.rotation === 0;
-      if (identity) delete next[sid];
-      else next[sid] = nextUv;
-      updateFn({
-        faceUVs: Object.keys(next).length ? structuredClone(next) : null,
-      });
+      const scratch = {
+        type: comp.type,
+        faceUVs: comp.faceUVs ? structuredClone(comp.faceUVs) : null,
+      };
+      const result = patchFaceUv(scratch, sid, nextUv);
+      if (!result) return;
+      updateFn({ faceUVs: result.after });
     };
     if (brush) patchUv(brush, updateSelectedBrush);
     else if (ramp) patchUv(ramp, updateSelectedRamp);
