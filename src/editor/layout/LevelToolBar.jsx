@@ -6,6 +6,7 @@ import {
   IconRedo,
   IconSave,
   IconSelect,
+  IconSurface,
   IconStop,
   IconUndo,
 } from '../../ui/icons.jsx';
@@ -19,6 +20,7 @@ export function LevelToolBar() {
     mode,
     tool,
     setTool,
+    setSelectedSurface,
     gridSize,
     setGridSize,
     gridSnap,
@@ -100,10 +102,23 @@ export function LevelToolBar() {
           className={`bb-btn${tool === 'select' && !isPlay ? ' bb-btn--active' : ''}`}
           disabled={isPlay}
           title="Select / gizmo · W move · E rotate · R scale"
-          onClick={() => setTool('select')}
+          onClick={() => {
+            setTool('select');
+            setSelectedSurface(null);
+          }}
           {...helpProps('toolbar.select', playReason)}
         >
           <IconSelect /> Select
+        </button>
+        <button
+          type="button"
+          className={`bb-btn${tool === 'surface' && !isPlay ? ' bb-btn--active' : ''}`}
+          disabled={isPlay}
+          title="Surface Selection — click a face to assign materials"
+          onClick={() => setTool('surface')}
+          {...helpProps('toolbar.surface', playReason)}
+        >
+          <IconSurface /> Surface
         </button>
       </div>
 

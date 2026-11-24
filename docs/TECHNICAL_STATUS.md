@@ -1,18 +1,19 @@
 # BloodBound3D — Technical Status
 
-Records what is implemented, which audit findings were fixed, and what remains. It does **not** define a roadmap: the repository contains no roadmap file, and nothing here is a planning decision.
+Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by one stabilization pass.
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), then Phase 2E.0–2E.1 materials/surfaces work.
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
-## 1. Verification (after the stabilization pass)
+## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 351 / 351 pass, 47 files (252 / 39 before this pass) |
-| `npm run lint` | exit 0, 88 warnings, 0 errors (85 before; the 3 new ones are the same refs-during-render pattern already used in `EditorContext.jsx`) |
+| `npm test` | 374 / 374 pass, 49 files |
+| `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
-| Regression-test sensitivity | New suites were run against the pre-fix source of the files they cover: they fail there (C1: 7 failures; runtime/commands/physics/cache/schema/SceneView suites: 41 failures) and pass on the fixed code. |
+| Phase 2E.0 | UV density + composition contract; `uvMapping.test.js` |
+| Phase 2E.1 | Semantic surfaces + Surface tool; `surfaces.test.js`; level `acceptance-surfaces.json` |
 
 ## 2. Implemented systems
 
@@ -34,6 +35,8 @@ Status is what the code does today, not an intent.
 | Tutorials | Implemented | 13 lessons with starter levels under `public/levels/tutorials/`. |
 | Session recorder | Implemented | Record button in the toolbar. |
 | Non-level workspaces | Placeholder only | World Map, Characters, Animation, Materials, Visual Scripting, Dialogue, UI Editor, AI Assets render `PlaceholderWorkspace`. |
+| Structural UV (2E.0) | Implemented | Local tiling at 100 eu; actor UV + material UV composition; stairs/ramps density-corrected. |
+| Surface selection (2E.1) | Implemented | Toolbar **Surface** mode; semantic `faceMaterials` IDs; emissive highlight; actor material fallback. Brush/miter/openings/ramp/stair/column/arch/curved wall. |
 
 ## 3. Audit findings addressed in this pass
 
@@ -105,3 +108,4 @@ These need a real browser, GPU, display and pointer-lock; they cannot be run in 
 7. **Asset retry.** Make a texture or mesh URL fail (rename the file), load the level, restore the file, trigger a resync (any edit): the asset appears without a page reload.
 8. **Future schema.** Edit a copy of a level to `"schemaVersion": 3` and open it: an explicit "Unsupported level schemaVersion 3" message appears, and the current level is untouched.
 9. **Existing visuals (unchanged, still worth a spot check).** Mitered corners, openings, curved walls and stairs; edge snapping for walls/floors, pivot snapping for props and lights; the four color themes and UI scale.
+10. **Phase 2E.1 surfaces.** File → `acceptance-surfaces.json`. Enable **Surface**, click faces on wall/ramp/stair/column/arch/curved wall: highlight + Details “Selected Surface”. Assign a Content Browser material; Undo/Redo; Save/reload. Confirm Select mode still picks whole actors and actor material remains the fallback.

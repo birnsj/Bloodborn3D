@@ -31,6 +31,12 @@ import {
   createFallbackBrushMaterial,
   assetUrl,
 } from './materialFactory.js';
+import {
+  BOX_SURFACE_IDS,
+  getStructuralComponent,
+  resolveSurfaceMaterialId,
+  surfaceIdFromHit,
+} from './surfaces.js';
 import { cloneLoadedMesh } from './meshLoader.js';
 import { installStudioEnvironment } from './studioEnvironment.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
@@ -104,6 +110,9 @@ export class SceneView {
     this.gridSize = DEFAULT_GRID_EDITOR_UNITS;
     this._actorMeshes = new Map();
     this._selectionHelpers = [];
+    this._surfaceHighlight = null;
+    /** @type {{ actorId: string, surfaceId: string } | null} */
+    this.selectedSurface = null;
     this.selectedActorIds = [];
     this._syncToken = 0;
 
@@ -237,6 +246,7 @@ export class SceneView {
       }
     }
     this.setSelection(this.selectedActorIds);
+    if (this.selectedSurface) this._refreshSurfaceHighlight();
   }
 
   addOrUpdateActorVisual(actor) {
@@ -468,12 +478,16 @@ export class SceneView {
       const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
         editMode: this.editMode,
       });
-      const mesh = new THREE.Mesh(geom, fallback);
+      const surfaceIds = geom.userData.surfaceIds || [...BOX_SURFACE_IDS];
+      const mats = surfaceIds.map(() => fallback.clone());
+      const mesh = new THREE.Mesh(geom, mats);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.miteredWall = true;
+      mesh.userData.surfaceScheme = 'grouped';
+      mesh.userData.surfaceIds = surfaceIds;
       group.add(mesh);
       if (this.editMode) {
         const edges = new THREE.LineSegments(
@@ -484,7 +498,7 @@ export class SceneView {
         edges.userData.editorOnly = true;
         group.add(edges);
       }
-      void this._applySimpleParamMaterial(mesh, comp, syncToken);
+      void this._applySurfaceMaterials(mesh, comp, syncToken);
       return;
     }
 
@@ -540,6 +554,8 @@ export class SceneView {
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.brushSolid = solid.role;
+      mesh.userData.surfaceScheme = 'box';
+      mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
       group.add(mesh);
 
       if (this.editMode) {
@@ -564,12 +580,16 @@ export class SceneView {
     });
     steps.traverse((child) => {
       if (!child.isMesh) return;
-      child.material = fallback.clone();
+      const surfaceIds = child.geometry.userData.surfaceIds || [...BOX_SURFACE_IDS];
+      const isBox = !child.geometry.userData.surfaceIds;
+      child.material = surfaceIds.map(() => fallback.clone());
       child.castShadow = true;
       child.receiveShadow = true;
       child.userData.actorId = actor.id;
       child.userData.pickable = true;
       child.userData.stair = true;
+      child.userData.surfaceScheme = isBox ? 'box' : 'grouped';
+      child.userData.surfaceIds = surfaceIds;
       if (this.editMode) {
         const edges = new THREE.LineSegments(
           new THREE.EdgesGeometry(child.geometry),
@@ -579,7 +599,7 @@ export class SceneView {
         edges.userData.editorOnly = true;
         child.add(edges);
       }
-      void this._applyRampMaterial(child, comp, syncToken);
+      void this._applySurfaceMaterials(child, comp, syncToken);
     });
     group.add(steps);
   }
@@ -589,12 +609,15 @@ export class SceneView {
     const fallback = createFallbackBrushMaterial(comp.color || '#7a8494', {
       editMode: this.editMode,
     });
-    const mesh = new THREE.Mesh(geom, fallback);
+    const surfaceIds = geom.userData.surfaceIds || ['slope'];
+    const mesh = new THREE.Mesh(geom, surfaceIds.map(() => fallback.clone()));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.actorId = actor.id;
     mesh.userData.pickable = true;
     mesh.userData.ramp = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
     group.add(mesh);
 
     if (this.editMode) {
@@ -607,7 +630,7 @@ export class SceneView {
       group.add(edges);
     }
 
-    void this._applyRampMaterial(mesh, comp, syncToken);
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   _addColumnVisual(group, actor, comp, syncToken) {
@@ -615,12 +638,15 @@ export class SceneView {
     const fallback = createFallbackBrushMaterial(comp.color || '#8a9098', {
       editMode: this.editMode,
     });
-    const mesh = new THREE.Mesh(geom, fallback);
+    const surfaceIds = geom.userData.surfaceIds || ['shaft'];
+    const mesh = new THREE.Mesh(geom, surfaceIds.map(() => fallback.clone()));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.actorId = actor.id;
     mesh.userData.pickable = true;
     mesh.userData.column = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
     group.add(mesh);
 
     if (this.editMode) {
@@ -633,7 +659,7 @@ export class SceneView {
       group.add(edges);
     }
 
-    void this._applySimpleParamMaterial(mesh, comp, syncToken);
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   _addArchVisual(group, actor, comp, syncToken) {
@@ -641,12 +667,15 @@ export class SceneView {
     const fallback = createFallbackBrushMaterial(comp.color || '#7a8494', {
       editMode: this.editMode,
     });
-    const mesh = new THREE.Mesh(geom, fallback);
+    const surfaceIds = geom.userData.surfaceIds || ['outer'];
+    const mesh = new THREE.Mesh(geom, surfaceIds.map(() => fallback.clone()));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.actorId = actor.id;
     mesh.userData.pickable = true;
     mesh.userData.arch = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
     group.add(mesh);
 
     if (this.editMode) {
@@ -659,28 +688,11 @@ export class SceneView {
       group.add(edges);
     }
 
-    void this._applySimpleParamMaterial(mesh, comp, syncToken);
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   async _applySimpleParamMaterial(mesh, comp, syncToken) {
-    if (!comp.materialId || !this.assetResolver?.getMaterialDefinition) return;
-    const def = await this.assetResolver.getMaterialDefinition(comp.materialId);
-    if (syncToken !== this._syncToken || !def) return;
-    const mapResolver = (assetId) => {
-      if (!this.assetResolver?.getTextureUrl) return null;
-      return assetUrl(this.assetResolver.getTextureUrl(assetId));
-    };
-    const mat = await createThreeMaterial(def, mapResolver, {
-      maxAnisotropy: this.maxAnisotropy,
-    });
-    if (syncToken !== this._syncToken) {
-      mat.dispose?.();
-      return;
-    }
-    const prev = mesh.material;
-    mesh.material = mat;
-    if (Array.isArray(prev)) prev.forEach((m) => m.dispose?.());
-    else prev?.dispose?.();
+    return this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   _addCurvedWallVisual(group, actor, comp, syncToken) {
@@ -688,12 +700,15 @@ export class SceneView {
     const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
       editMode: this.editMode,
     });
-    const mesh = new THREE.Mesh(geom, fallback);
+    const surfaceIds = geom.userData.surfaceIds || ['outer'];
+    const mesh = new THREE.Mesh(geom, surfaceIds.map(() => fallback.clone()));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.actorId = actor.id;
     mesh.userData.pickable = true;
     mesh.userData.curvedWall = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
     group.add(mesh);
 
     if (this.editMode) {
@@ -706,29 +721,84 @@ export class SceneView {
       group.add(edges);
     }
 
-    void this._applySimpleParamMaterial(mesh, comp, syncToken);
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   async _applyRampMaterial(mesh, comp, syncToken) {
-    if (!comp.materialId || !this.assetResolver?.getMaterialDefinition) return;
-    const def = await this.assetResolver.getMaterialDefinition(comp.materialId);
-    if (syncToken !== this._syncToken || !def) return;
+    return this._applySurfaceMaterials(mesh, comp, syncToken);
+  }
+
+  /**
+   * Apply actor materialId + faceMaterials overrides onto a multi-material mesh.
+   * surfaceIds come from mesh.userData (semantic IDs, not triangle indices).
+   */
+  async _applySurfaceMaterials(mesh, comp, syncToken) {
+    const resolver = this.assetResolver;
+    if (!resolver?.getMaterialDefinition) return;
+    const surfaceIds = mesh.userData?.surfaceIds
+      || mesh.geometry?.userData?.surfaceIds
+      || null;
+
     const mapResolver = (assetId) => {
-      if (!this.assetResolver?.getTextureUrl) return null;
-      return assetUrl(this.assetResolver.getTextureUrl(assetId));
+      if (!resolver?.getTextureUrl) return null;
+      return assetUrl(resolver.getTextureUrl(assetId));
     };
-    const mat = await createThreeMaterial(def, mapResolver, {
-      maxAnisotropy: this.maxAnisotropy,
-    });
-    if (syncToken !== this._syncToken) {
-      mat.dispose?.();
+    const resolveDef = async (materialId) => {
+      if (!materialId) return null;
+      return resolver.getMaterialDefinition(materialId);
+    };
+
+    // Single-material fallback path (no surface groups).
+    if (!surfaceIds?.length || !Array.isArray(mesh.material)) {
+      const matId = comp.materialId;
+      if (!matId) return;
+      const def = await resolveDef(matId);
+      if (syncToken !== this._syncToken || !def) return;
+      const mat = await createThreeMaterial(def, mapResolver, {
+        maxAnisotropy: this.maxAnisotropy,
+      });
+      if (syncToken !== this._syncToken) {
+        disposeMaterial(mat);
+        return;
+      }
+      const prev = mesh.material;
+      mesh.material = mat;
+      if (prev && prev !== mat) {
+        if (Array.isArray(prev)) prev.forEach((m) => disposeMaterial(m));
+        else disposeMaterial(prev);
+      }
       return;
     }
-    const prev = mesh.material;
-    mesh.material = mat;
-    if (prev && prev !== mat) {
-      if (Array.isArray(prev)) prev.forEach((m) => m.dispose?.());
-      else prev.dispose?.();
+
+    const defaultDef = await resolveDef(comp.materialId);
+    if (syncToken !== this._syncToken) return;
+
+    for (let i = 0; i < surfaceIds.length; i += 1) {
+      const surfaceId = surfaceIds[i];
+      const faceMatId = resolveSurfaceMaterialId(comp, surfaceId);
+      let def = null;
+      if (faceMatId && faceMatId === comp.materialId) def = defaultDef;
+      else if (faceMatId) def = await resolveDef(faceMatId);
+      if (syncToken !== this._syncToken) return;
+      if (!def) continue;
+
+      const mat = await createThreeMaterial(def, mapResolver, {
+        maxAnisotropy: this.maxAnisotropy,
+      });
+      if (syncToken !== this._syncToken) {
+        disposeMaterial(mat);
+        return;
+      }
+      for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
+        if (mat[key]) mat[key].anisotropy = this.maxAnisotropy;
+      }
+      const old = mesh.material[i];
+      mesh.material[i] = mat;
+      disposeMaterial(old);
+    }
+    mesh.material.needsUpdate = true;
+    if (this.selectedSurface?.actorId === mesh.userData.actorId) {
+      this._refreshSurfaceHighlight();
     }
   }
 
@@ -1054,6 +1124,97 @@ export class SceneView {
   pickActorId(normalizedX, normalizedY, camera = this.camera) {
     const hits = this.pickWorldHits(normalizedX, normalizedY, camera);
     return hits[0]?.actorId || null;
+  }
+
+  /**
+   * Pick a semantic surface under the cursor (Phase 2E.1).
+   * @returns {{ actorId: string, surfaceId: string, componentType: string } | null}
+   */
+  pickSurface(normalizedX, normalizedY, camera = this.camera) {
+    const raycaster = this.getRaycaster(normalizedX, normalizedY, camera);
+    const meshes = [];
+    this.root.traverse((obj) => {
+      if (obj.isMesh && obj.userData.pickable && !obj.userData.placementIgnore && !obj.userData.editorOnly) {
+        meshes.push(obj);
+      }
+    });
+    const intersects = raycaster.intersectObjects(meshes, false);
+    for (const inter of intersects) {
+      const actorId = inter.object.userData.actorId;
+      if (!actorId) continue;
+      const entry = this._actorMeshes.get(actorId);
+      const actor = entry?.actor;
+      const comp = getStructuralComponent(actor);
+      if (!comp) continue;
+      const surfaceId = surfaceIdFromHit(inter.object, inter.faceIndex);
+      if (!surfaceId) continue;
+      return {
+        actorId,
+        surfaceId,
+        componentType: comp.type,
+        faceIndex: inter.faceIndex,
+      };
+    }
+    return null;
+  }
+
+  /**
+   * @param {{ actorId: string, surfaceId: string } | null} selection
+   */
+  setSurfaceSelection(selection) {
+    this.selectedSurface = selection && selection.actorId && selection.surfaceId
+      ? { actorId: selection.actorId, surfaceId: selection.surfaceId }
+      : null;
+    this._refreshSurfaceHighlight();
+  }
+
+  _clearSurfaceHighlight() {
+    this._restoreSurfaceEmissives();
+  }
+
+  _restoreSurfaceEmissives() {
+    for (const entry of this._actorMeshes.values()) {
+      entry.group.traverse((obj) => {
+        if (!obj.isMesh || !Array.isArray(obj.material)) return;
+        for (const mat of obj.material) {
+          if (!mat?.userData?._bbSurfaceHighlight) continue;
+          if (mat.userData._bbPrevEmissive && mat.emissive) {
+            mat.emissive.copy(mat.userData._bbPrevEmissive);
+          }
+          if (mat.userData._bbPrevEmissiveIntensity != null) {
+            mat.emissiveIntensity = mat.userData._bbPrevEmissiveIntensity;
+          }
+          delete mat.userData._bbPrevEmissive;
+          delete mat.userData._bbPrevEmissiveIntensity;
+          delete mat.userData._bbSurfaceHighlight;
+          mat.needsUpdate = true;
+        }
+      });
+    }
+  }
+
+  _refreshSurfaceHighlight() {
+    this._restoreSurfaceEmissives();
+    const sel = this.selectedSurface;
+    if (!sel || !this.editMode) return;
+    const entry = this._actorMeshes.get(sel.actorId);
+    if (!entry) return;
+    const highlight = new THREE.Color(this.viewportColors.selection);
+    entry.group.traverse((obj) => {
+      if (!obj.isMesh || !obj.userData.pickable) return;
+      const ids = obj.userData.surfaceIds;
+      if (!ids?.length || !Array.isArray(obj.material)) return;
+      const matIndex = ids.indexOf(sel.surfaceId);
+      if (matIndex < 0) return;
+      const mat = obj.material[matIndex];
+      if (!mat?.emissive) return;
+      mat.userData._bbPrevEmissive = mat.emissive.clone();
+      mat.userData._bbPrevEmissiveIntensity = mat.emissiveIntensity;
+      mat.userData._bbSurfaceHighlight = true;
+      mat.emissive.copy(highlight);
+      mat.emissiveIntensity = Math.max(mat.emissiveIntensity || 0, 0.55);
+      mat.needsUpdate = true;
+    });
   }
 
   /**

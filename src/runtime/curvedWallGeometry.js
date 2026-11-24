@@ -12,6 +12,7 @@ import {
 } from '../components/CurvedWallComponent.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import { CURVED_WALL_SURFACE_IDS, applySurfaceGroups } from './surfaces.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -172,8 +173,12 @@ export function createCurvedWallGeometry(wall) {
   const n = Math.max(4, d.res);
   const closed = isClosedCurvedWall(wall);
 
-  const pos = [];
-  const densityUv = [];
+  const buckets = Object.fromEntries(
+    CURVED_WALL_SURFACE_IDS.map((id) => [id, { pos: [], uv: [] }]),
+  );
+  const push = (surface, a, b, c, ua, ub, uc) => {
+    pushTri(buckets[surface].pos, buckets[surface].uv, a, b, c, ua, ub, uc);
+  };
 
   const point = (r, a, y) => ({
     x: Math.cos(a) * r,
@@ -202,45 +207,51 @@ export function createCurvedWallGeometry(wall) {
     const ii10 = point(d.innerR, a1, d.y0);
     const ii11 = point(d.innerR, a1, d.y1);
 
-    // Outer face (outward)
-    pushTri(pos, densityUv, oi00, oi10, oi11, [u0, vBottom], [u1, vBottom], [u1, vTop]);
-    pushTri(pos, densityUv, oi00, oi11, oi01, [u0, vBottom], [u1, vTop], [u0, vTop]);
-    // Inner face (inward — wind opposite)
-    pushTri(pos, densityUv, ii00, ii11, ii10, [u0, vBottom], [u1, vTop], [u1, vBottom]);
-    pushTri(pos, densityUv, ii00, ii01, ii11, [u0, vBottom], [u0, vTop], [u1, vTop]);
-    // Top
-    pushTri(pos, densityUv, oi01, oi11, ii11, [u0, 0], [u1, 0], [u1, d.thickness / TILE]);
-    pushTri(pos, densityUv, oi01, ii11, ii01, [u0, 0], [u1, d.thickness / TILE], [u0, d.thickness / TILE]);
-    // Bottom
-    pushTri(pos, densityUv, oi00, ii10, oi10, [u0, 0], [u1, d.thickness / TILE], [u1, 0]);
-    pushTri(pos, densityUv, oi00, ii00, ii10, [u0, 0], [u0, d.thickness / TILE], [u1, d.thickness / TILE]);
+    push('outer', oi00, oi10, oi11, [u0, vBottom], [u1, vBottom], [u1, vTop]);
+    push('outer', oi00, oi11, oi01, [u0, vBottom], [u1, vTop], [u0, vTop]);
+    push('inner', ii00, ii11, ii10, [u0, vBottom], [u1, vTop], [u1, vBottom]);
+    push('inner', ii00, ii01, ii11, [u0, vBottom], [u0, vTop], [u1, vTop]);
+    push('top', oi01, oi11, ii11, [u0, 0], [u1, 0], [u1, d.thickness / TILE]);
+    push('top', oi01, ii11, ii01, [u0, 0], [u1, d.thickness / TILE], [u0, d.thickness / TILE]);
+    push('bottom', oi00, ii10, oi10, [u0, 0], [u1, d.thickness / TILE], [u1, 0]);
+    push('bottom', oi00, ii00, ii10, [u0, 0], [u0, d.thickness / TILE], [u1, d.thickness / TILE]);
   }
 
   if (!closed) {
-    // Start cap
     const aS = d.startRad;
     const o0 = point(d.outerR, aS, d.y0);
     const o1 = point(d.outerR, aS, d.y1);
     const i0 = point(d.innerR, aS, d.y0);
     const i1 = point(d.innerR, aS, d.y1);
     const uCap = 0;
-    pushTri(pos, densityUv, o0, i0, i1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE]);
-    pushTri(pos, densityUv, o0, i1, o1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE], [uCap, d.y1 / TILE]);
-    // End cap
+    push('startCap', o0, i0, i1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE]);
+    push('startCap', o0, i1, o1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE], [uCap, d.y1 / TILE]);
     const aE = d.startRad + d.sign * d.sweepRad;
     const eo0 = point(d.outerR, aE, d.y0);
     const eo1 = point(d.outerR, aE, d.y1);
     const ei0 = point(d.innerR, aE, d.y0);
     const ei1 = point(d.innerR, aE, d.y1);
     const uE = arcLen / TILE;
-    pushTri(pos, densityUv, eo0, ei1, ei0, [uE, d.y0 / TILE], [uE + d.thickness / TILE, d.y1 / TILE], [uE + d.thickness / TILE, d.y0 / TILE]);
-    pushTri(pos, densityUv, eo0, eo1, ei1, [uE, d.y0 / TILE], [uE, d.y1 / TILE], [uE + d.thickness / TILE, d.y1 / TILE]);
+    push('endCap', eo0, ei1, ei0, [uE, d.y0 / TILE], [uE + d.thickness / TILE, d.y1 / TILE], [uE + d.thickness / TILE, d.y0 / TILE]);
+    push('endCap', eo0, eo1, ei1, [uE, d.y0 / TILE], [uE, d.y1 / TILE], [uE + d.thickness / TILE, d.y1 / TILE]);
+  }
+
+  const pos = [];
+  const densityUv = [];
+  const batches = [];
+  for (const sid of CURVED_WALL_SURFACE_IDS) {
+    const b = buckets[sid];
+    if (!b.pos.length) continue;
+    pos.push(...b.pos);
+    densityUv.push(...b.uv);
+    batches.push({ surfaceId: sid, triCount: b.pos.length / 9 });
   }
 
   const uvs = mapDensityUvArray(densityUv, wall?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geom.userData.surfaceIds = applySurfaceGroups(geom, batches);
   geom.computeVertexNormals();
   return geom;
 }

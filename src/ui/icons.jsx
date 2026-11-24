@@ -41,6 +41,17 @@ export function IconRedo(props) {
   );
 }
 
+export function IconSurface(props) {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" {...props}>
+      <path
+        fill="currentColor"
+        d="M2 3h5v5H2zm7 0h5v2H9zm0 3h5v2H9zm0 3h5v2H9zM2 9h5v5H2z"
+      />
+    </svg>
+  );
+}
+
 export function IconSelect(props) {
   return (
     <Svg {...props}>

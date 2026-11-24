@@ -1,6 +1,10 @@
 import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
+import {
+  CURVED_WALL_SURFACE_IDS,
+  normalizeFaceMaterials,
+} from '../runtime/surfaces.js';
 
 export const DEFAULT_CURVED_WALL_RADIUS = 200;
 export const DEFAULT_CURVED_WALL_SWEEP = 90;
@@ -29,6 +33,7 @@ export class CurvedWallComponent extends Component {
     color = '#8a9099',
     collidable = true,
     materialId = null,
+    faceMaterials = null,
     uv = null,
   } = {}) {
     super({ id, type: CurvedWallComponent.componentType, enabled });
@@ -47,6 +52,7 @@ export class CurvedWallComponent extends Component {
     this.color = color;
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
+    this.faceMaterials = normalizeFaceMaterials(faceMaterials, CURVED_WALL_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -67,6 +73,7 @@ export class CurvedWallComponent extends Component {
       color: this.color,
       collidable: this.collidable,
       materialId: this.materialId,
+      faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

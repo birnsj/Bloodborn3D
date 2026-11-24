@@ -1,7 +1,11 @@
 import { Component } from '../core/Component.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
-import { createBrushUvState, FACE_KEYS } from '../materials/MaterialDefinition.js';
+import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { normalizeOpenings } from '../runtime/wallOpenings.js';
+import {
+  BOX_SURFACE_IDS,
+  normalizeFaceMaterials,
+} from '../runtime/surfaces.js';
 
 /**
  * Axis-aligned box brush for structural geometry.
@@ -32,7 +36,7 @@ export class BrushComponent extends Component {
     this.color = color;
     this.collidable = collidable;
     this.materialId = materialId || null;
-    this.faceMaterials = normalizeFaceMaterials(faceMaterials);
+    this.faceMaterials = normalizeFaceMaterials(faceMaterials, BOX_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
     this.openings = normalizeOpenings(openings);
     this.operation = operation === 'subtract' ? 'subtract' : 'add';
@@ -81,16 +85,3 @@ export class BrushComponent extends Component {
 }
 
 BrushComponent.componentType = 'Brush';
-
-function normalizeFaceMaterials(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const next = {};
-  let any = false;
-  for (const key of FACE_KEYS) {
-    if (raw[key]) {
-      next[key] = String(raw[key]);
-      any = true;
-    }
-  }
-  return any ? next : null;
-}

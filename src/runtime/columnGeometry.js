@@ -11,6 +11,7 @@ import {
   DEFAULT_COLUMN_RADIUS,
 } from '../components/ColumnComponent.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import { COLUMN_SURFACE_IDS, applySurfaceGroups } from './surfaces.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -170,10 +171,18 @@ export function createColumnGeometry(column) {
   const shape = column.shape || 'round';
   const sections = getColumnSections(column);
 
-  const posOut = [];
-  const densityUv = [];
+  const buckets = Object.fromEntries(
+    COLUMN_SURFACE_IDS.map((id) => [id, { pos: [], uv: [] }]),
+  );
+  const push = (surface, a, b, c, ua, ub, uc) => {
+    pushTri(buckets[surface].pos, buckets[surface].uv, a, b, c, ua, ub, uc);
+  };
+
+  const yMin = sections[0]?.y0 ?? 0;
+  const yMax = sections[sections.length - 1]?.y1 ?? 0;
 
   for (const sec of sections) {
+    const role = sec.role === 'base' || sec.role === 'capital' ? sec.role : 'shaft';
     const bottom = getColumnPolygonXZ(sec.radius, sides, shape).map((p) => ({
       x: p.x, y: sec.y0, z: p.z,
     }));
@@ -188,11 +197,10 @@ export function createColumnGeometry(column) {
       const u1 = ((j / sides) * circ) / TILE;
       const v0 = sec.y0 / TILE;
       const v1 = sec.y1 / TILE;
-      pushTri(posOut, densityUv, bottom[i], bottom[j], top[j], [u0, v0], [u1, v0], [u1, v1]);
-      pushTri(posOut, densityUv, bottom[i], top[j], top[i], [u0, v0], [u1, v1], [u0, v1]);
+      push(role, bottom[i], bottom[j], top[j], [u0, v0], [u1, v0], [u1, v1]);
+      push(role, bottom[i], top[j], top[i], [u0, v0], [u1, v1], [u0, v1]);
     }
 
-    // Caps
     const bc = { x: 0, y: sec.y0, z: 0 };
     const tc = { x: 0, y: sec.y1, z: 0 };
     for (let i = 0; i < sides; i += 1) {
@@ -201,21 +209,35 @@ export function createColumnGeometry(column) {
       const v0 = bottom[i].z / TILE;
       const u1 = bottom[j].x / TILE;
       const v1 = bottom[j].z / TILE;
-      // Bottom facing down
-      pushTri(posOut, densityUv, bottom[j], bottom[i], bc, [u1, v1], [u0, v0], [0, 0]);
-      // Top facing up
-      const ut0 = top[i].x / TILE;
-      const vt0 = top[i].z / TILE;
-      const ut1 = top[j].x / TILE;
-      const vt1 = top[j].z / TILE;
-      pushTri(posOut, densityUv, top[i], top[j], tc, [ut0, vt0], [ut1, vt1], [0, 0]);
+      if (Math.abs(sec.y0 - yMin) < 1e-6) {
+        push('capBottom', bottom[j], bottom[i], bc, [u1, v1], [u0, v0], [0, 0]);
+      }
+      if (Math.abs(sec.y1 - yMax) < 1e-6) {
+        const ut0 = top[i].x / TILE;
+        const vt0 = top[i].z / TILE;
+        const ut1 = top[j].x / TILE;
+        const vt1 = top[j].z / TILE;
+        push('capTop', top[i], top[j], tc, [ut0, vt0], [ut1, vt1], [0, 0]);
+      }
     }
+  }
+
+  const posOut = [];
+  const densityUv = [];
+  const batches = [];
+  for (const sid of COLUMN_SURFACE_IDS) {
+    const b = buckets[sid];
+    if (!b.pos.length) continue;
+    posOut.push(...b.pos);
+    densityUv.push(...b.uv);
+    batches.push({ surfaceId: sid, triCount: b.pos.length / 9 });
   }
 
   const uvOut = mapDensityUvArray(densityUv, column?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvOut, 2));
+  geom.userData.surfaceIds = applySurfaceGroups(geom, batches);
   geom.computeVertexNormals();
   return geom;
 }

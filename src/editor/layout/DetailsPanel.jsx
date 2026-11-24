@@ -79,6 +79,10 @@ export function DetailsPanel({ docked = false } = {}) {
     unpackSelectedPrefab,
     recordSelectedPrefabOverride,
     revertSelectedPrefabOverride,
+    selectedSurface,
+    assignSelectedSurfaceMaterial,
+    setSelectedSurface,
+    tool,
   } = useEditor();
   const { prompt } = useEditorDialogs();
 
@@ -183,6 +187,40 @@ export function DetailsPanel({ docked = false } = {}) {
               {staticMesh && <span>StaticMesh</span>}
               {spawn && <span>PlayerSpawn</span>}
             </div>
+
+            {selectedSurface && selectedSurface.actorId === selectedActor.id && (
+              <Collapsible title="Selected Surface" storageKey="details.surface" defaultOpen>
+                <p className="bb-muted">
+                  Surface <code>{selectedSurface.surfaceId}</code>
+                  {tool === 'surface' ? ' · Surface Selection mode' : ''}
+                </p>
+                <label className="bb-field">
+                  <span className="bb-field__label">Surface material</span>
+                  <select
+                    className="bb-select"
+                    disabled={disabled}
+                    value={
+                      (brush || ramp || stair || column || arch || curvedWall)
+                        ?.faceMaterials?.[selectedSurface.surfaceId] || ''
+                    }
+                    onChange={(e) => assignSelectedSurfaceMaterial(e.target.value || null)}
+                  >
+                    <option value="">(actor material)</option>
+                    {materials.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="bb-btn"
+                  disabled={disabled}
+                  onClick={() => setSelectedSurface(null)}
+                >
+                  Clear surface selection
+                </button>
+              </Collapsible>
+            )}
 
             <Collapsible title="Hierarchy" storageKey="details.hierarchy">
               <label className="bb-field" {...helpProps('details.parent')}>

@@ -121,7 +121,9 @@ export function EditorProvider({ children }) {
   const [world, setWorld] = useState(null);
   const [selectedActorIds, setSelectedActorIds] = useState([]);
   const [mode, setMode] = useState('edit');
-  const [tool, setTool] = useState('select'); // select | box | wall | floor | ceiling | subtract
+  const [tool, setTool] = useState('select'); // select | surface | box | wall | floor | ceiling | subtract
+  /** @type {[{ actorId: string, surfaceId: string } | null]} */
+  const [selectedSurface, setSelectedSurfaceState] = useState(null);
   /** Gizmo mode: move (W) | rotate (E) | scale (R). */
   const [transformMode, setTransformModeState] = useState('move');
   const setTransformMode = useCallback((mode) => {
@@ -538,6 +540,13 @@ export function EditorProvider({ children }) {
     }
     setSelectedActorIds(next);
     syncSelectionVisual(next);
+    // Actor selection clears surface pick unless the surface actor stays selected.
+    setSelectedSurfaceState((prev) => {
+      if (!prev) return null;
+      if (next.includes(prev.actorId)) return prev;
+      runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
+      return null;
+    });
   }, [syncSelectionVisual]);
 
   const selectActor = useCallback((id, options) => {
@@ -1972,8 +1981,56 @@ export function EditorProvider({ children }) {
     await applyPrefabSourceUpdate(prefabId);
   }, [world, mode, executeCommand, applyPrefabSourceUpdate]);
 
+  const setSelectedSurface = useCallback((next) => {
+    const normalized = next?.actorId && next?.surfaceId
+      ? { actorId: next.actorId, surfaceId: next.surfaceId }
+      : null;
+    setSelectedSurfaceState(normalized);
+    runtimeRef.current?.sceneView?.setSurfaceSelection?.(normalized);
+  }, []);
+
+  const assignSelectedSurfaceMaterial = useCallback((materialId) => {
+    if (!world || mode === 'play' || !selectedSurface) return;
+    const actor = world.getActor(selectedSurface.actorId);
+    if (!actor) return;
+    const brush = actor.getComponent('Brush');
+    const ramp = actor.getComponent('Ramp');
+    const stair = actor.getComponent('Stair');
+    const column = actor.getComponent('Column');
+    const arch = actor.getComponent('Arch');
+    const curved = actor.getComponent('CurvedWall');
+    const patchFace = (comp, updateFn) => {
+      const next = { ...(comp.faceMaterials || {}) };
+      if (!materialId) delete next[selectedSurface.surfaceId];
+      else next[selectedSurface.surfaceId] = materialId;
+      updateFn({
+        faceMaterials: Object.keys(next).length ? next : null,
+      });
+    };
+    if (brush) patchFace(brush, updateSelectedBrush);
+    else if (ramp) patchFace(ramp, updateSelectedRamp);
+    else if (stair) patchFace(stair, updateSelectedStair);
+    else if (column) patchFace(column, updateSelectedColumn);
+    else if (arch) patchFace(arch, updateSelectedArch);
+    else if (curved) patchFace(curved, updateSelectedCurvedWall);
+  }, [
+    world,
+    mode,
+    selectedSurface,
+    updateSelectedBrush,
+    updateSelectedRamp,
+    updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+  ]);
+
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
+    if (selectedSurface) {
+      assignSelectedSurfaceMaterial(materialId);
+      return;
+    }
     if (!world || selectedRef.current.length === 0) {
       updateSelectedBrush({ materialId });
       return;
@@ -2000,7 +2057,17 @@ export function EditorProvider({ children }) {
       return;
     }
     updateSelectedBrush({ materialId });
-  }, [world, updateSelectedBrush, updateSelectedRamp, updateSelectedStair, updateSelectedColumn, updateSelectedArch, updateSelectedCurvedWall]);
+  }, [
+    world,
+    selectedSurface,
+    assignSelectedSurfaceMaterial,
+    updateSelectedBrush,
+    updateSelectedRamp,
+    updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+  ]);
 
   const renameSelected = useCallback((name) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -2075,6 +2142,9 @@ export function EditorProvider({ children }) {
     mode,
     tool,
     setTool,
+    selectedSurface,
+    setSelectedSurface,
+    assignSelectedSurfaceMaterial,
     transformMode,
     setTransformMode,
     levelName,

@@ -8,6 +8,11 @@ import { toMeters } from '../core/units.js';
 import { getWallAxes } from './wallOpenings.js';
 import { getMiteredWallFootprint } from './wallEndpoints.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import {
+  BOX_SURFACE_IDS,
+  boxSurfaceIdFromLocalNormal,
+  regroupTrianglesBySurface,
+} from './surfaces.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -99,6 +104,23 @@ export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEn
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geom.computeVertexNormals();
+  // Semantic box faces from local triangle normals (stable across regen).
+  regroupTrianglesBySurface(geom, BOX_SURFACE_IDS, (i0, i1, i2, getPos) => {
+    const a = getPos(i0);
+    const b = getPos(i1);
+    const c = getPos(i2);
+    const e1x = b[0] - a[0];
+    const e1y = b[1] - a[1];
+    const e1z = b[2] - a[2];
+    const e2x = c[0] - a[0];
+    const e2y = c[1] - a[1];
+    const e2z = c[2] - a[2];
+    const nx = e1y * e2z - e1z * e2y;
+    const ny = e1z * e2x - e1x * e2z;
+    const nz = e1x * e2y - e1y * e2x;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    return boxSurfaceIdFromLocalNormal(nx / len, ny / len, nz / len);
+  });
   return geom;
 }
 

@@ -61,6 +61,8 @@ export function Viewport() {
     mode,
     tool,
     setTool,
+    setSelectedSurface,
+    setStatus,
     transformMode,
     setTransformMode,
     selectActor,
@@ -518,7 +520,11 @@ export function Viewport() {
         e.preventDefault();
         if (placeSessionRef.current) {
           clearPlacementSession();
+        } else if (tool === 'surface') {
+          setSelectedSurface(null);
+          setTool('select');
         } else {
+          setSelectedSurface(null);
           deselectAllActors();
         }
         return;
@@ -760,7 +766,22 @@ export function Viewport() {
       return;
     }
 
+    // Surface Selection mode — pick semantic surfaces without replacing actor select tool.
+    if (tool === 'surface') {
+      const hit = sceneView.pickSurface?.(nx, ny);
+      if (hit) {
+        selectActor(hit.actorId, { additive: false });
+        setSelectedSurface({ actorId: hit.actorId, surfaceId: hit.surfaceId });
+        setStatus(`Surface ${hit.surfaceId} on ${hit.componentType}`);
+      } else {
+        setSelectedSurface(null);
+        selectActor(null);
+      }
+      return;
+    }
+
     // Actor pick / multi-select
+    setSelectedSurface(null);
     const actorId = sceneView.pickActorId(nx, ny);
     selectActor(actorId, { additive: e.ctrlKey || e.metaKey });
   };

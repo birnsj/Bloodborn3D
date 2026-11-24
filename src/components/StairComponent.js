@@ -1,6 +1,13 @@
 import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { RAMP_DIRECTIONS } from './RampComponent.js';
+import {
+  BOX_SURFACE_IDS,
+  STAIR_WEDGE_SURFACE_IDS,
+  normalizeFaceMaterials,
+} from '../runtime/surfaces.js';
+
+const STAIR_SURFACE_IDS = [...BOX_SURFACE_IDS, ...STAIR_WEDGE_SURFACE_IDS];
 
 export const DEFAULT_STEP_HEIGHT = 20;
 export const DEFAULT_TREAD_DEPTH = 30;
@@ -31,6 +38,7 @@ export class StairComponent extends Component {
     color = '#8a9099',
     collidable = true,
     materialId = null,
+    faceMaterials = null,
     uv = null,
   } = {}) {
     super({ id, type: StairComponent.componentType, enabled });
@@ -47,6 +55,7 @@ export class StairComponent extends Component {
     this.color = color;
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
+    this.faceMaterials = normalizeFaceMaterials(faceMaterials, STAIR_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -84,6 +93,7 @@ export class StairComponent extends Component {
       color: this.color,
       collidable: this.collidable,
       materialId: this.materialId,
+      faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

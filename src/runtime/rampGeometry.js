@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
 import { DEFAULT_RAMP_THICKNESS } from '../components/RampComponent.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import { RAMP_SURFACE_IDS, applySurfaceGroups } from './surfaces.js';
 
 /**
  * Horizontal run / vertical rise / width axes for a direction.
@@ -138,33 +139,39 @@ export function createRampWedgeGeometry(ramp) {
 
   const faces = [
     // bottom
-    { i: [0, 2, 1], uv: [[0, 0], [length / tile, 0], [0, width / tile]] },
-    { i: [1, 2, 3], uv: [[0, width / tile], [length / tile, 0], [length / tile, width / tile]] },
+    { surface: 'bottom', i: [0, 2, 1], uv: [[0, 0], [length / tile, 0], [0, width / tile]] },
+    { surface: 'bottom', i: [1, 2, 3], uv: [[0, width / tile], [length / tile, 0], [length / tile, width / tile]] },
     // slope (walkable)
-    { i: [0, 1, 5], uv: [[0, 0], [width / tile, 0], [width / tile, hyp / tile]] },
-    { i: [0, 5, 4], uv: [[0, 0], [width / tile, hyp / tile], [0, hyp / tile]] },
+    { surface: 'slope', i: [0, 1, 5], uv: [[0, 0], [width / tile, 0], [width / tile, hyp / tile]] },
+    { surface: 'slope', i: [0, 5, 4], uv: [[0, 0], [width / tile, hyp / tile], [0, hyp / tile]] },
     // high end
-    { i: [2, 4, 3], uv: [[0, 0], [0, rise / tile], [width / tile, 0]] },
-    { i: [3, 4, 5], uv: [[width / tile, 0], [0, rise / tile], [width / tile, rise / tile]] },
+    { surface: 'high', i: [2, 4, 3], uv: [[0, 0], [0, rise / tile], [width / tile, 0]] },
+    { surface: 'high', i: [3, 4, 5], uv: [[width / tile, 0], [0, rise / tile], [width / tile, rise / tile]] },
     // left / right sides
-    { i: [0, 4, 2], uv: [[0, 0], [hyp / tile, rise / tile], [length / tile, 0]] },
-    { i: [1, 3, 5], uv: [[0, 0], [length / tile, 0], [hyp / tile, rise / tile]] },
+    { surface: 'sideNeg', i: [0, 4, 2], uv: [[0, 0], [hyp / tile, rise / tile], [length / tile, 0]] },
+    { surface: 'sidePos', i: [1, 3, 5], uv: [[0, 0], [length / tile, 0], [hyp / tile, rise / tile]] },
   ];
 
   const posOut = [];
   const densityUv = [];
+  const batchCounts = Object.fromEntries(RAMP_SURFACE_IDS.map((id) => [id, 0]));
   for (const face of faces) {
     for (let t = 0; t < 3; t += 1) {
       const p = verts[face.i[t]];
       posOut.push(toMeters(p.x), toMeters(p.y), toMeters(p.z));
       densityUv.push(face.uv[t][0], face.uv[t][1]);
     }
+    batchCounts[face.surface] += 1;
   }
 
   const uvFinal = mapDensityUvArray(densityUv, ramp?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));
+  geom.userData.surfaceIds = applySurfaceGroups(
+    geom,
+    RAMP_SURFACE_IDS.map((surfaceId) => ({ surfaceId, triCount: batchCounts[surfaceId] })),
+  );
   geom.computeVertexNormals();
   return geom;
 }

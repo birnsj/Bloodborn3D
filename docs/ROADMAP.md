@@ -36,13 +36,21 @@ Identity defaults on both layers (`scale` 1, `offset` 0, `rotation` 0) leave exi
 | Phase | Goal | Status |
 | --- | --- | --- |
 | **2E.0** | Correct texture density and UV inconsistencies across structural geometry; document/implement the composition contract. | **Done** |
-| **2E.1** | Individual surface selection and material assignment (semantic surface IDs; viewport pick; start with brush faces). | Planned |
+| **2E.1** | Individual surface selection and material assignment (semantic surface IDs; viewport pick; start with brush faces). | **Done** |
 | **2E.2** | Per-surface UV offset / scale / rotation bound to selection; undoable actor state. | Planned |
 | **2E.3** | Explicit Align to Neighbor for adjoining architectural surfaces. | Planned |
 | **2E.4** | Materials workspace (reuse existing editor/registry/preview); Save/Cancel for asset edits. | Planned |
 | **2E.5** | Persistence audit: save/load, prefabs, undo/redo for surface + material actor fields. | Planned |
 
-**Do not start 2E.1 until 2E.0 is accepted.**
+**Do not start 2E.2 until 2E.1 is accepted.**
+
+### Phase 2E.1 notes
+
+- Tool: **Surface** (toolbar) — separate from Select; Esc returns to Select.
+- Semantic IDs live in `src/runtime/surfaces.js`; stored as `component.faceMaterials[surfaceId]`.
+- Actor `materialId` remains the fallback when a surface has no override.
+- Supported: brush faces (incl. openings/cut solids), mitered walls, ramps, straight/curved stairs, columns, arches, curved walls.
+- Acceptance level: `public/levels/acceptance-surfaces.json`.
 
 ### Dependencies
 

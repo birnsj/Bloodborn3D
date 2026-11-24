@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance Surfaces 2E.1",
+  "actors": [
+    {
+      "id": "actor_floor",
+      "name": "Floor",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1600, "y": 20, "z": 1200 },
+          "color": "#4a5560",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "py": "mat_hall_floor"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_wall",
+      "name": "Demo Wall",
+      "transform": {
+        "position": { "x": -400, "y": 160, "z": -200 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_wall",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 400, "y": 300, "z": 20 },
+          "color": "#8a9099",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "pz": "mat_hall_stone",
+            "nz": "mat_hall_wood"
+          },
+          "openings": [
+            {
+              "id": "opening_door",
+              "type": "door",
+              "profile": "rect",
+              "offset": 0,
+              "bottom": 0,
+              "width": 100,
+              "height": 200
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "actor_miter",
+      "name": "Mitered Wall",
+      "transform": {
+        "position": { "x": 0, "y": 160, "z": -400 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_miter",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 300, "y": 300, "z": 20 },
+          "color": "#8a9099",
+          "collidable": true,
+          "operation": "add",
+          "miterStart": 45,
+          "miterEnd": 45,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "pz": "mat_hall_stone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_ramp",
+      "name": "Demo Ramp",
+      "transform": {
+        "position": { "x": 350, "y": 85, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "ramp"],
+      "components": [
+        {
+          "id": "comp_ramp",
+          "type": "Ramp",
+          "enabled": true,
+          "width": 120,
+          "length": 300,
+          "rise": 150,
+          "direction": "z+",
+          "thickness": 20,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "slope": "mat_hall_wood",
+            "high": "mat_hall_stone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_stair",
+      "name": "Straight Stairs",
+      "transform": {
+        "position": { "x": -350, "y": 100, "z": 200 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "stair"],
+      "components": [
+        {
+          "id": "comp_stair",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "straight",
+          "width": 120,
+          "stepCount": 10,
+          "stepHeight": 20,
+          "treadDepth": 30,
+          "direction": "z+",
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "py": "mat_hall_floor"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_curved_stair",
+      "name": "Curved Stairs",
+      "transform": {
+        "position": { "x": 200, "y": 100, "z": 350 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "stair", "curved"],
+      "components": [
+        {
+          "id": "comp_curved_stair",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "curved",
+          "width": 100,
+          "stepCount": 12,
+          "stepHeight": 16.67,
+          "innerRadius": 120,
+          "sweepAngle": 90,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "tread": "mat_hall_floor",
+            "outer": "mat_hall_stone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_column",
+      "name": "Column",
+      "transform": {
+        "position": { "x": -100, "y": 160, "z": 100 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "column"],
+      "components": [
+        {
+          "id": "comp_column",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 30,
+          "baseEnabled": true,
+          "baseHeight": 24,
+          "capitalEnabled": true,
+          "capitalHeight": 20,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "shaft": "mat_hall_stone",
+            "base": "mat_hall_wood"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_arch",
+      "name": "Arch",
+      "transform": {
+        "position": { "x": 100, "y": 160, "z": -150 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "arch"],
+      "components": [
+        {
+          "id": "comp_arch",
+          "type": "Arch",
+          "enabled": true,
+          "archType": "roman",
+          "openingWidth": 180,
+          "openingHeight": 200,
+          "archRise": 90,
+          "thickness": 40,
+          "depth": 40,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "passage": "mat_hall_wood",
+            "front": "mat_hall_stone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_curved_wall",
+      "name": "Curved Wall",
+      "transform": {
+        "position": { "x": 500, "y": 160, "z": 250 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "curvedWall"],
+      "components": [
+        {
+          "id": "comp_curved_wall",
+          "type": "CurvedWall",
+          "enabled": true,
+          "radius": 180,
+          "sweepAngle": 120,
+          "startAngle": 0,
+          "height": 300,
+          "thickness": 20,
+          "clockwise": false,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "outer": "mat_hall_stone",
+            "inner": "mat_hall_wood"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_light",
+      "name": "Key Light",
+      "transform": {
+        "position": { "x": 0, "y": 450, "z": 200 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light"],
+      "components": [
+        {
+          "id": "comp_light",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#fff4e0",
+          "intensity": 2.2,
+          "range": 1200,
+          "castShadow": true
+        }
+      ]
+    },
+    {
+      "id": "actor_spawn",
+      "name": "Player Spawn",
+      "transform": {
+        "position": { "x": 0, "y": 40, "z": 450 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

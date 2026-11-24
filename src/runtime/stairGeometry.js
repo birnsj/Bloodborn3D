@@ -10,6 +10,7 @@ import { toMeters } from '../core/units.js';
 import { getRampAxes } from './rampGeometry.js';
 import { createBrushBoxGeometry } from './brushGeometry.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import { STAIR_WEDGE_SURFACE_IDS, applySurfaceGroups } from './surfaces.js';
 
 export function isCurvedStair(stair) {
   const t = stair?.stairType || 'straight';
@@ -164,6 +165,7 @@ export function createStairGeometry(stair) {
 export function createWedgeStepGeometry(step, stair) {
   const v = step.vertices;
   // Indices: bottom, top, sides (radial a0, radial a1, inner arc, outer arc)
+  // Two tris per semantic surface (matches STAIR_WEDGE_SURFACE_IDS order).
   const faces = [
     // bottom (down)
     [0, 2, 1], [0, 3, 2],
@@ -210,6 +212,10 @@ export function createWedgeStepGeometry(step, stair) {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));
+  geom.userData.surfaceIds = applySurfaceGroups(
+    geom,
+    STAIR_WEDGE_SURFACE_IDS.map((surfaceId) => ({ surfaceId, triCount: 2 })),
+  );
   geom.computeVertexNormals();
   return geom;
 }

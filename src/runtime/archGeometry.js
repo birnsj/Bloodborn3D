@@ -14,6 +14,10 @@ import {
   DEFAULT_ARCH_THICKNESS,
 } from '../components/ArchComponent.js';
 import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import {
+  ARCH_SURFACE_IDS,
+  regroupTrianglesBySurface,
+} from './surfaces.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -223,6 +227,40 @@ export function createArchGeometry(arch) {
   }
   const uvs = mapDensityUvArray(densityUv, arch?.uv);
   extrude.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  extrude.computeVertexNormals();
-  return extrude;
+  // Indexed extrusions → triangle soup so surface groups stay stable.
+  const geom = extrude.index ? extrude.toNonIndexed() : extrude;
+  if (geom !== extrude) extrude.dispose();
+  geom.computeVertexNormals();
+  const halfD = toMeters(L.halfD);
+  const halfInner = toMeters(L.halfInnerW);
+  regroupTrianglesBySurface(geom, ARCH_SURFACE_IDS, (i0, i1, i2, getPos) => {
+    const a = getPos(i0);
+    const b = getPos(i1);
+    const c = getPos(i2);
+    const cx = (a[0] + b[0] + c[0]) / 3;
+    const cy = (a[1] + b[1] + c[1]) / 3;
+    const cz = (a[2] + b[2] + c[2]) / 3;
+    const e1x = b[0] - a[0];
+    const e1y = b[1] - a[1];
+    const e1z = b[2] - a[2];
+    const e2x = c[0] - a[0];
+    const e2y = c[1] - a[1];
+    const e2z = c[2] - a[2];
+    let nx = e1y * e2z - e1z * e2y;
+    let ny = e1z * e2x - e1x * e2z;
+    let nz = e1x * e2y - e1y * e2x;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    nx /= len; ny /= len; nz /= len;
+    if (Math.abs(nz) > 0.7) return nz > 0 ? 'front' : 'back';
+    if (ny > 0.7) return 'top';
+    if (ny < -0.7) return 'bottom';
+    const radial = Math.hypot(cx, 0); // in XY of shape before extrude; after extrude X is width
+    const distFromAxis = Math.abs(cx);
+    if (distFromAxis < halfInner * 1.05 && Math.abs(cz) < halfD * 0.95) {
+      return 'passage';
+    }
+    void cy;
+    return 'outer';
+  });
+  return geom;
 }
