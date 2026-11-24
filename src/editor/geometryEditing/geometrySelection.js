@@ -1,7 +1,9 @@
 /**
- * Geometry-element selection helpers (Phase 2F.1).
+ * Geometry-element selection helpers (Phase 2F.1 / 2F.2).
  * Mirrors surfaceSelection.js — UI state only; never serialized.
  */
+
+import { liveEdgeKeySet } from '../../geometry/edits.js';
 
 export const GEOMETRY_MODES = ['face', 'edge', 'vertex'];
 
@@ -111,6 +113,9 @@ export function nextGeometrySelectionAfterActorChange(prev, nextActorIds, world 
     if (convex?.geometry && sel.mode === 'face') {
       const live = new Set((convex.geometry.faces || []).map((f) => f.id));
       ids = ids.filter((id) => live.has(id));
+    } else if (convex?.geometry && sel.mode === 'edge') {
+      const live = liveEdgeKeySet(convex.geometry);
+      ids = ids.filter((id) => live.has(id));
     }
     if (!ids.length) continue;
     items.push({ actorId: it.actorId, ids });
@@ -130,6 +135,15 @@ export function remappedGeometrySelection(prev, world, lineageByActor = null) {
     const actor = world?.getActor?.(it.actorId);
     const convex = actor?.getComponent?.('ConvexBrush');
     if (!convex?.geometry) continue;
+
+    if (sel.mode === 'edge') {
+      const live = liveEdgeKeySet(convex.geometry);
+      const nextIds = it.ids.filter((id) => live.has(id));
+      if (!nextIds.length) continue;
+      items.push({ actorId: it.actorId, ids: nextIds });
+      continue;
+    }
+
     const liveFaces = convex.geometry.faces || [];
     const live = new Set(liveFaces.map((f) => f.id));
     const lineage = lineageByActor?.[it.actorId]?.faces || null;
@@ -168,15 +182,23 @@ export function shouldApplyGeometryEdit({ tool, geometrySelection, world = null 
     if (sel.mode === 'face') {
       const live = new Set((convex.geometry.faces || []).map((f) => f.id));
       if (it.ids.some((id) => !live.has(id))) return false;
+    } else if (sel.mode === 'edge') {
+      const live = liveEdgeKeySet(convex.geometry);
+      if (it.ids.some((id) => !live.has(id))) return false;
     }
   }
   return true;
 }
 
-export function listSelectedFaceIds(sel, actorId) {
+export function listSelectedElementIds(sel, actorId) {
   const n = normalizeGeometrySelection(sel);
   const entry = n.items.find((it) => it.actorId === actorId);
   return entry ? [...entry.ids] : [];
+}
+
+/** @deprecated alias — prefer listSelectedElementIds */
+export function listSelectedFaceIds(sel, actorId) {
+  return listSelectedElementIds(sel, actorId);
 }
 
 export function selectionActorIds(sel) {

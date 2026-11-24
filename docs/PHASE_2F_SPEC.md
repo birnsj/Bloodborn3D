@@ -1,7 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
-**Implementation:** 2F.0 **Done**; 2F.1 **Done** (2026-11-24). 2F.2+ not started.
+**Implementation:** 2F.0 **Done**; 2F.1 **Done**; 2F.2 **Done** (2026-11-24). 2F.3+ not started.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -435,11 +435,17 @@ wiring, `phase2f1FaceEditing.test.js`, `public/levels/acceptance-face-editing.js
 
 ### 7.3 2F.2 — Edge editing
 
+**Status: Done (2026-11-24).**
+
 - Edge picking: screen-space proximity to projected edges (threshold in px), nearest-first, with a
   depth check against the brush (toggle: x-ray picking through the brush).
 - Edge highlight, derived edge keys, edge multi-select; moves via the **same** primitive.
 - Added test focus: edge moves that force triangulation; edges shared by split faces; silhouette
   ambiguity.
+
+**Shipped:** Edge toolbar mode; `pickGeometryEdge` + `Line2` overlays; edge-aware selection/
+`applyGeometryMove`; `phase2f2EdgeEditing.test.js`; `public/levels/acceptance-edge-editing.json`;
+`public/dev/phase2f2Acceptance.js`; `docs/ACCEPTANCE_EDGE_EDITING.md`.
 
 **Acceptance:** §12.3.
 

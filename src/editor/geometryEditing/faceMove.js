@@ -1,5 +1,5 @@
 /**
- * Face-move drag helpers (Phase 2F.1).
+ * Geometry-element move helpers (Phase 2F.1 Face / 2F.2 Edge).
  * Pure computation: world drag sample → per-actor local deltas + moveVertices results.
  */
 
@@ -13,21 +13,24 @@ import {
 } from '../../core/math3d.js';
 import {
   averageFaceNormal,
+  edgesCentroidLocal,
   facesCentroidLocal,
   moveVertices,
+  pickEdgeSnapAnchor,
   pickSnapAnchorVertex,
   snapDeltaAlongAxis,
+  vertexIdsForEdges,
   vertexIdsForFaces,
   vertexPosition,
 } from '../../geometry/edits.js';
-import { listSelectedFaceIds, normalizeGeometrySelection } from './geometrySelection.js';
+import { listSelectedElementIds, normalizeGeometrySelection } from './geometrySelection.js';
 
 /**
- * World-space unit direction of the primary face average normal.
+ * World-space unit direction of the primary face average normal (Face mode only).
  */
 export function primaryFaceNormalWorld(world, geometrySelection) {
   const sel = normalizeGeometrySelection(geometrySelection);
-  if (!sel.primary) return null;
+  if (sel.mode !== 'face' || !sel.primary) return null;
   const actor = world?.getActor?.(sel.primary.actorId);
   const convex = actor?.getComponent?.('ConvexBrush');
   if (!convex?.geometry) return null;
@@ -44,7 +47,7 @@ export function primaryFaceNormalWorld(world, geometrySelection) {
 }
 
 /**
- * World centroid of the current geometry selection.
+ * World centroid of the current geometry selection (faces or edges).
  */
 export function geometrySelectionWorldCenter(world, geometrySelection) {
   const sel = normalizeGeometrySelection(geometrySelection);
@@ -57,7 +60,9 @@ export function geometrySelectionWorldCenter(world, geometrySelection) {
     const actor = world?.getActor?.(it.actorId);
     const convex = actor?.getComponent?.('ConvexBrush');
     if (!convex?.geometry) continue;
-    const local = facesCentroidLocal(convex.geometry, it.ids);
+    const local = sel.mode === 'edge'
+      ? edgesCentroidLocal(convex.geometry, it.ids)
+      : facesCentroidLocal(convex.geometry, it.ids);
     const wp = mat4TransformPoint(getWorldMatrix(actor, world), {
       x: local[0],
       y: local[1],
@@ -74,15 +79,6 @@ export function geometrySelectionWorldCenter(world, geometrySelection) {
 
 /**
  * Snap a world-space delta along the drag constraint using the primary anchor vertex.
- *
- * @param {object} world
- * @param {object} geometrySelection
- * @param {'x'|'y'|'z'|'normal'} constraint
- * @param {number} rawDeltaEditor signed distance along world constraint direction
- * @param {[number,number,number]|null} worldDir unit dir for normal constraint
- * @param {number} gridSize
- * @param {boolean} snapEnabled
- * @param {[number,number,number]|null} hintLocal pick hint for anchor
  */
 export function snapWorldDelta(
   world,
@@ -110,8 +106,14 @@ export function snapWorldDelta(
     return { deltaEditor: d, worldDelta: worldDeltaFromConstraint(constraint, d, worldDir) };
   }
 
-  const faceIds = listSelectedFaceIds(sel, primary.actorId);
-  const anchorId = pickSnapAnchorVertex(convex.geometry, faceIds, hintLocal);
+  const elementIds = listSelectedElementIds(sel, primary.actorId);
+  let anchorId;
+  if (sel.mode === 'edge') {
+    anchorId = pickEdgeSnapAnchor(convex.geometry, primary.id, hintLocal)
+      || pickSnapAnchorVertex(convex.geometry, elementIds, hintLocal, 'edge');
+  } else {
+    anchorId = pickSnapAnchorVertex(convex.geometry, elementIds, hintLocal, 'face');
+  }
   const localP = vertexPosition(convex.geometry, anchorId);
   if (!localP) {
     return { deltaEditor: d, worldDelta: worldDeltaFromConstraint(constraint, d, worldDir) };
@@ -126,7 +128,6 @@ export function snapWorldDelta(
 
   if (constraint === 'normal' && worldDir) {
     const dir = asVec3(worldDir);
-    // Snap the plane offset: project anchor onto the normal line, snap that scalar.
     const start = anchorW.x * dir[0] + anchorW.y * dir[1] + anchorW.z * dir[2];
     const snapped = snapDeltaAlongAxis(start, d, gridSize);
     return {
@@ -135,7 +136,6 @@ export function snapWorldDelta(
     };
   }
 
-  // Axis constraint: snap the moved world axis of the anchor.
   const axis = constraint;
   const startVal = anchorW[axis];
   const snapped = snapDeltaAlongAxis(startVal, d, gridSize);
@@ -162,20 +162,19 @@ function worldDeltaFromConstraint(constraint, d, worldDir) {
   return [0, 0, 0];
 }
 
+function vertexIdsForSelection(geometry, ids, mode) {
+  return mode === 'edge'
+    ? vertexIdsForEdges(geometry, ids)
+    : vertexIdsForFaces(geometry, ids);
+}
+
 /**
- * Apply a world-space translation delta to every selected face set.
- *
- * @returns {{
- *   ok: boolean,
- *   code?: string,
- *   message?: string,
- *   changes?: Array<{ actorId, before, after, lineage }>,
- * }}
+ * Apply a world-space translation delta to every selected face or edge set.
  */
-export function applyFaceMove(world, geometrySelection, worldDelta) {
+export function applyGeometryMove(world, geometrySelection, worldDelta) {
   const sel = normalizeGeometrySelection(geometrySelection);
   if (!sel.items.length) {
-    return { ok: false, code: 'NO_SELECTION', message: 'No faces selected.' };
+    return { ok: false, code: 'NO_SELECTION', message: 'No geometry elements selected.' };
   }
   const dx = Number(worldDelta?.[0]) || 0;
   const dy = Number(worldDelta?.[1]) || 0;
@@ -198,7 +197,14 @@ export function applyFaceMove(world, geometrySelection, worldDelta) {
     const inv = mat4Invert(getWorldMatrix(actor, world));
     const localDeltaObj = mat4TransformDirection(inv, { x: dx, y: dy, z: dz });
     const localDelta = [localDeltaObj.x, localDeltaObj.y, localDeltaObj.z];
-    const vids = vertexIdsForFaces(convex.geometry, it.ids);
+    const vids = vertexIdsForSelection(convex.geometry, it.ids, sel.mode);
+    if (!vids.length) {
+      return {
+        ok: false,
+        code: 'NO_VERTICES',
+        message: `No vertices for selection on ${it.actorId}.`,
+      };
+    }
     const before = {
       geometry: structuredClone(convex.geometry),
       faceMaterials: convex.faceMaterials ? structuredClone(convex.faceMaterials) : null,
@@ -213,7 +219,7 @@ export function applyFaceMove(world, geometrySelection, worldDelta) {
       return {
         ok: false,
         code: result.code,
-        message: result.message || 'Invalid face move.',
+        message: result.message || 'Invalid geometry move.',
         actorId: it.actorId,
       };
     }
@@ -231,17 +237,22 @@ export function applyFaceMove(world, geometrySelection, worldDelta) {
   return { ok: true, changes };
 }
 
+/** @deprecated alias for applyGeometryMove (Face-era name). */
+export function applyFaceMove(world, geometrySelection, worldDelta) {
+  return applyGeometryMove(world, geometrySelection, worldDelta);
+}
+
 /**
- * Capture start snapshots for a geometry face drag.
+ * Capture start snapshots for a geometry element drag.
  */
-export function captureFaceMoveStart(world, geometrySelection) {
+export function captureGeometryMoveStart(world, geometrySelection) {
   const sel = normalizeGeometrySelection(geometrySelection);
   return sel.items.map((it) => {
     const actor = world.getActor(it.actorId);
     const convex = actor?.getComponent?.('ConvexBrush');
     return {
       actorId: it.actorId,
-      faceIds: [...it.ids],
+      elementIds: [...it.ids],
       before: {
         geometry: structuredClone(convex.geometry),
         faceMaterials: convex.faceMaterials ? structuredClone(convex.faceMaterials) : null,
@@ -249,4 +260,9 @@ export function captureFaceMoveStart(world, geometrySelection) {
       },
     };
   });
+}
+
+/** @deprecated alias */
+export function captureFaceMoveStart(world, geometrySelection) {
+  return captureGeometryMoveStart(world, geometrySelection);
 }

@@ -175,6 +175,44 @@ export function moveVertices(geometry, vertexIds, deltaLocal, options = {}) {
 }
 
 /**
+ * Canonical undirected edge key: numerically sorted vertex ids joined by `|`.
+ * Spec §4.2 — edges are derived, never persisted as entities.
+ */
+export function edgeKey(a, b) {
+  const aa = String(a);
+  const bb = String(b);
+  return aa < bb ? `${aa}|${bb}` : `${bb}|${aa}`;
+}
+
+export function parseEdgeKey(key) {
+  if (!key || typeof key !== 'string') return null;
+  const parts = key.split('|');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return [parts[0], parts[1]];
+}
+
+/**
+ * Unique undirected edges of a geometry (manifold: each shared by 2 faces).
+ * @returns {string[]}
+ */
+export function listGeometryEdges(geometry) {
+  const g = normalizeGeometry(geometry);
+  if (!g) return [];
+  const edges = new Set();
+  for (const face of g.faces) {
+    const loop = face.loop || [];
+    for (let i = 0; i < loop.length; i += 1) {
+      edges.add(edgeKey(loop[i], loop[(i + 1) % loop.length]));
+    }
+  }
+  return [...edges];
+}
+
+export function liveEdgeKeySet(geometry) {
+  return new Set(listGeometryEdges(geometry));
+}
+
+/**
  * Collect unique vertex ids for the given face ids on a geometry.
  */
 export function vertexIdsForFaces(geometry, faceIds) {
@@ -238,13 +276,58 @@ export function facesCentroidLocal(geometry, faceIds) {
 }
 
 /**
- * Pick an anchor vertex for grid snapping among selected faces.
- * Prefer the vertex of the primary face nearest to `hintLocal` (if provided).
+ * Collect unique vertex ids for the given edge keys.
  */
-export function pickSnapAnchorVertex(geometry, faceIds, hintLocal = null) {
+export function vertexIdsForEdges(geometry, edgeKeys) {
+  const g = normalizeGeometry(geometry);
+  if (!g) return [];
+  const live = liveEdgeKeySet(g);
+  const out = new Set();
+  for (const key of edgeKeys || []) {
+    const k = String(key);
+    if (!live.has(k)) continue;
+    const parts = parseEdgeKey(k);
+    if (!parts) continue;
+    out.add(parts[0]);
+    out.add(parts[1]);
+  }
+  return [...out];
+}
+
+/**
+ * Centroid of vertices belonging to the given edge keys (actor-local).
+ */
+export function edgesCentroidLocal(geometry, edgeKeys) {
+  const g = normalizeGeometry(geometry);
+  if (!g) return [0, 0, 0];
+  const vids = vertexIdsForEdges(g, edgeKeys);
+  const vmap = vertexMap(g);
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  let n = 0;
+  for (const id of vids) {
+    const p = vmap.get(id);
+    if (!p) continue;
+    x += p[0];
+    y += p[1];
+    z += p[2];
+    n += 1;
+  }
+  if (!n) return [0, 0, 0];
+  return [x / n, y / n, z / n];
+}
+
+/**
+ * Pick an anchor vertex for grid snapping among selected faces or edges.
+ * Prefer the vertex nearest to `hintLocal` (if provided).
+ */
+export function pickSnapAnchorVertex(geometry, elementIds, hintLocal = null, mode = 'face') {
   const g = normalizeGeometry(geometry);
   if (!g) return null;
-  const vids = vertexIdsForFaces(g, faceIds);
+  const vids = mode === 'edge'
+    ? vertexIdsForEdges(g, elementIds)
+    : vertexIdsForFaces(g, elementIds);
   const vmap = vertexMap(g);
   if (!vids.length) return null;
   if (!hintLocal) return vids[0];
@@ -260,6 +343,21 @@ export function pickSnapAnchorVertex(geometry, faceIds, hintLocal = null) {
     }
   }
   return best;
+}
+
+/** Nearer endpoint of an edge to hintLocal (or first endpoint). Spec §10.4. */
+export function pickEdgeSnapAnchor(geometry, edgeKeyStr, hintLocal = null) {
+  const g = normalizeGeometry(geometry);
+  const parts = parseEdgeKey(edgeKeyStr);
+  if (!g || !parts) return null;
+  const vmap = vertexMap(g);
+  const p0 = vmap.get(parts[0]);
+  const p1 = vmap.get(parts[1]);
+  if (!p0 || !p1) return null;
+  if (!hintLocal) return parts[0];
+  const d0 = Math.hypot(p0[0] - hintLocal[0], p0[1] - hintLocal[1], p0[2] - hintLocal[2]);
+  const d1 = Math.hypot(p1[0] - hintLocal[0], p1[1] - hintLocal[1], p1[2] - hintLocal[2]);
+  return d0 <= d1 ? parts[0] : parts[1];
 }
 
 export function vertexPosition(geometry, vertexId) {

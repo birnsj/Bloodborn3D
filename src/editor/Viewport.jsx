@@ -689,8 +689,8 @@ export function Viewport() {
       return;
     }
 
-    // Geometry Face mode — gizmo moves faces; click picks faces.
-    if (tool === 'geometry' && geometryMode === 'face') {
+    // Geometry Face / Edge mode — gizmo moves elements; click picks.
+    if (tool === 'geometry' && (geometryMode === 'face' || geometryMode === 'edge')) {
       const gizmoHit = sceneView.pickGizmo(nx, ny);
       if (gizmoHit && geometrySelection?.items?.length && gizmoHit.kind === 'move') {
         const raycaster = sceneView.getRaycaster(nx, ny);
@@ -704,6 +704,29 @@ export function Viewport() {
         };
         if (orbitRef.current) orbitRef.current.enabled = false;
         e.currentTarget.setPointerCapture(e.pointerId);
+        return;
+      }
+      if (geometryMode === 'edge') {
+        const edgeHit = sceneView.pickGeometryEdge?.(nx, ny, undefined, {
+          xray: e.altKey,
+        });
+        if (edgeHit) {
+          const next = toggleGeometryItem(geometrySelection, {
+            actorId: edgeHit.actorId,
+            id: edgeHit.edgeKey,
+            mode: 'edge',
+            additive: e.shiftKey || e.ctrlKey || e.metaKey,
+          });
+          setGeometrySelection(next);
+          setStatus(
+            next.items.length
+              ? `Edge ${edgeHit.edgeKey} (${next.items.reduce((n, it) => n + it.ids.length, 0)} selected)`
+              : 'Edge selection cleared',
+          );
+        } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
+          setGeometrySelection(null);
+          setStatus('Edge mode — click near a ConvexBrush edge (Alt = x-ray)');
+        }
         return;
       }
       const faceHit = sceneView.pickGeometryFace?.(nx, ny);
@@ -1100,9 +1123,10 @@ export function Viewport() {
       }
     } else if (drag.type === 'faceMove') {
       runtimeRef.current?.sceneView.gizmo.endDrag();
-      const result = commitFaceMove('Move faces');
+      const label = geometryMode === 'edge' ? 'Move edges' : 'Move faces';
+      const result = commitFaceMove(label);
       if (result?.ok) {
-        setStatus('Moved faces');
+        setStatus(geometryMode === 'edge' ? 'Moved edges' : 'Moved faces');
       }
     }
 
@@ -1127,6 +1151,9 @@ export function Viewport() {
     if (tool === 'archRoman' || tool === 'archGothic' || tool === 'arch') return 'Drag on grid to create an arch · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'geometry') {
+      if (geometryMode === 'edge') {
+        return 'Edge mode — click near edges (Shift multi · Alt x-ray) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
+      }
       return 'Face mode — click faces (Shift multi) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
     }
     return `LMB select · Ctrl+LMB multi · W move · E rotate · R scale (${transformMode}) · F focus · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly · Q/E up/down · Shift boost · MMB pan · wheel zoom`;

@@ -131,7 +131,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 | --- | --- | --- |
 | **2F.0** | Editable convex brush architecture (data model, convert, render, collision, persistence) | **Done** |
 | **2F.1** | Face editing | **Done** |
-| **2F.2** | Edge editing | Not started |
+| **2F.2** | Edge editing | **Done** |
 | **2F.3** | Vertex editing | Not started |
 | **2F.4** | Extrusion and clipping | Not started |
 | **2F.5** | Integration and persistence verification | Not started |
@@ -155,6 +155,13 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Grid-snapped world-space anchor moves; multi-actor atomic face moves; one drag = one undo step.
 - Acceptance: `public/levels/acceptance-face-editing.json`; harness `public/dev/phase2f1Acceptance.js`; `phase2f1FaceEditing.test.js`.
 - Edge / vertex / extrude / clip / multi-viewport are **not** in 2F.1.
+
+### Phase 2F.2 notes
+
+- Toolbar **Edge** mode (`geometryMode === 'edge'`); derived edge keys `vA|vB`; screen-space pick with depth check + Alt x-ray.
+- Edge highlight via Three.js `Line2`; moves reuse `moveVertices` / `SetConvexGeometryCommand` / geometry drag pipeline.
+- Acceptance: `public/levels/acceptance-edge-editing.json`; harness `public/dev/phase2f2Acceptance.js`; `phase2f2EdgeEditing.test.js`.
+- Vertex / extrude / clip / multi-viewport are **not** in 2F.2.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 

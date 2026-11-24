@@ -171,10 +171,17 @@ export function LevelToolBar() {
         </button>
         <button
           type="button"
-          className="bb-btn"
-          disabled
-          title="Geometry Edge — Phase 2F.2"
-          {...helpProps('toolbar.geometryEdge', 'Coming in Phase 2F.2')}
+          className={`bb-btn${tool === 'geometry' && geometryMode === 'edge' && !isPlay ? ' bb-btn--active' : ''}`}
+          disabled={isPlay}
+          title="Geometry Edge — select and move ConvexBrush edges"
+          onClick={() => {
+            setSelectedSurface(null);
+            setAlignReferenceSurface(null);
+            setGeometryMode('edge');
+            setTool('geometry');
+            setStatus?.('Edge mode — click near a ConvexBrush edge (Alt = x-ray).');
+          }}
+          {...helpProps('toolbar.geometryEdge', playReason)}
         >
           Edge
         </button>

@@ -1,0 +1,641 @@
+{
+  "schemaVersion": 3,
+  "name": "acceptance-edge-editing",
+  "actors": [
+    {
+      "id": "floor",
+      "name": "Floor",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": -5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 10,
+            "z": 600
+          },
+          "color": "#4a5058",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "edge_box",
+      "name": "Edge Demo Box",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_edge_box",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  100,
+                  50,
+                  50
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -100,
+                  50,
+                  50
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "edge_angled",
+      "name": "Angled Edge Brick",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_edge_angled",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -60,
+                  -50,
+                  -60
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  60,
+                  -50,
+                  -60
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  60,
+                  50,
+                  -60
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -60,
+                  50,
+                  -60
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -60,
+                  -50,
+                  60
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  60,
+                  -50,
+                  60
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  60,
+                  10,
+                  80
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -60,
+                  10,
+                  80
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "edge_box_b",
+      "name": "Edge Demo Box B",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 40,
+          "z": 220
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_edge_box_b",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -40,
+                  -40,
+                  -40
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  40,
+                  -40,
+                  -40
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  40,
+                  40,
+                  -40
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -40,
+                  40,
+                  -40
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -40,
+                  -40,
+                  40
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  40,
+                  -40,
+                  40
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  40,
+                  40,
+                  40
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -40,
+                  40,
+                  40
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    }
+  ]
+}

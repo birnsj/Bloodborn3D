@@ -56,8 +56,8 @@ import {
   toolKeepsGeometrySelection,
 } from './geometryEditing/geometrySelection.js';
 import {
-  applyFaceMove,
-  captureFaceMoveStart,
+  applyGeometryMove,
+  captureGeometryMoveStart,
   geometrySelectionWorldCenter,
   primaryFaceNormalWorld,
   snapWorldDelta,
@@ -256,7 +256,9 @@ export function EditorProvider({ children }) {
       sceneView.setGeometrySelection?.(null, worldRef.current);
       return;
     }
-    const faceNormalWorld = primaryFaceNormalWorld(worldRef.current, normalized);
+    const faceNormalWorld = normalized.mode === 'face'
+      ? primaryFaceNormalWorld(worldRef.current, normalized)
+      : null;
     const center = geometrySelectionWorldCenter(worldRef.current, normalized);
     sceneView.setGeometrySelection?.(normalized, worldRef.current, {
       faceNormalWorld,
@@ -1128,7 +1130,7 @@ export function EditorProvider({ children }) {
       options.hintLocal || null,
     );
 
-    const result = applyFaceMove(world, sel, snap.worldDelta);
+    const result = applyGeometryMove(world, sel, snap.worldDelta);
     if (!result.ok) {
       // Keep last valid preview on the brushes; restore start if none yet.
       const last = faceMovePreviewRef.current?.lastValid;
@@ -1176,7 +1178,7 @@ export function EditorProvider({ children }) {
   const beginFaceMoveDrag = useCallback(() => {
     if (!world || mode === 'play') return false;
     const sel = geometrySelectionRef.current;
-    const start = captureFaceMoveStart(world, sel);
+    const start = captureGeometryMoveStart(world, sel);
     if (!start.length) return false;
     faceMovePreviewRef.current = { start, lastValid: null, lastResult: null };
     return true;

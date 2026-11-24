@@ -15,7 +15,15 @@ import {
   isEffectivelyVisible,
 } from '../core/hierarchy.js';
 import { mat4TransformPoint } from '../core/math3d.js';
-import { facesCentroidLocal } from '../geometry/edits.js';
+import {
+  edgesCentroidLocal,
+  facesCentroidLocal,
+  listGeometryEdges,
+  parseEdgeKey,
+} from '../geometry/edits.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   createBrushBoxGeometry,
   createBrushSolidGeometry,
@@ -123,6 +131,8 @@ export class SceneView {
     /** @type {{ mode: string, items: Array<{actorId:string, ids:string[]}>, primary: {actorId:string,id:string}|null } | null} */
     this.geometrySelection = null;
     this._geometryFaceOverlays = [];
+    /** Screen-space edge pick threshold in CSS pixels (Phase 2F.2). */
+    this.geometryEdgePickThresholdPx = 12;
     this._syncToken = 0;
 
     /** @type {{ getTextureUrl:(id:string)=>string|null, getMaterialDefinition:(id:string)=>Promise<object|null>, getMeshUrl:(id:string)=>string|null } | null} */
@@ -1185,6 +1195,7 @@ export class SceneView {
   _refreshGeometryFaceOverlays(world = null) {
     this._clearGeometryFaceOverlays();
     if (!this.geometrySelection?.items?.length || !this.editMode) return;
+    const mode = this.geometrySelection.mode || 'face';
 
     for (const item of this.geometrySelection.items) {
       const actor = world?.getActor?.(item.actorId)
@@ -1193,6 +1204,17 @@ export class SceneView {
       const entry = this._actorMeshes.get(item.actorId);
       if (!convex?.geometry || !entry?.group) continue;
       const want = new Set(item.ids);
+
+      if (mode === 'edge') {
+        for (const key of want) {
+          const overlay = this._buildEdgeOverlayLine(convex.geometry, key);
+          if (!overlay) continue;
+          entry.group.add(overlay);
+          this._geometryFaceOverlays.push(overlay);
+        }
+        continue;
+      }
+
       for (const face of convex.geometry.faces || []) {
         if (!want.has(face.id)) continue;
         const overlay = this._buildFaceOverlayMesh(convex.geometry, face);
@@ -1202,6 +1224,39 @@ export class SceneView {
         this._geometryFaceOverlays.push(overlay);
       }
     }
+  }
+
+  _buildEdgeOverlayLine(geometry, edgeKeyStr) {
+    const parts = parseEdgeKey(edgeKeyStr);
+    if (!parts) return null;
+    const vmap = new Map((geometry.vertices || []).map((v) => [v.id, v.p]));
+    const p0 = vmap.get(parts[0]);
+    const p1 = vmap.get(parts[1]);
+    if (!p0 || !p1) return null;
+    const positions = [
+      toMeters(p0[0]), toMeters(p0[1]), toMeters(p0[2]),
+      toMeters(p1[0]), toMeters(p1[1]), toMeters(p1[2]),
+    ];
+    const lineGeom = new LineGeometry();
+    lineGeom.setPositions(positions);
+    const size = new THREE.Vector2();
+    this.renderer?.getSize?.(size);
+    const mat = new LineMaterial({
+      color: 0xf0c040,
+      linewidth: 3,
+      transparent: true,
+      opacity: 0.95,
+      depthTest: true,
+      worldUnits: false,
+      resolution: size.x > 0 ? size.clone() : new THREE.Vector2(1, 1),
+    });
+    const line = new Line2(lineGeom, mat);
+    line.computeLineDistances();
+    line.renderOrder = 10;
+    line.userData.editorOnly = true;
+    line.userData.geometryEdgeOverlay = true;
+    line.userData.pickable = false;
+    return line;
   }
 
   _buildFaceOverlayMesh(geometry, face) {
@@ -1258,12 +1313,15 @@ export class SceneView {
     let y = 0;
     let z = 0;
     let n = 0;
+    const mode = sel.mode || 'face';
     for (const item of sel.items) {
       const actor = world?.getActor?.(item.actorId)
         || this._actorMeshes.get(item.actorId)?.actor;
       const convex = actor?.getComponent?.('ConvexBrush');
       if (!convex?.geometry) continue;
-      const local = facesCentroidLocal(convex.geometry, item.ids);
+      const local = mode === 'edge'
+        ? edgesCentroidLocal(convex.geometry, item.ids)
+        : facesCentroidLocal(convex.geometry, item.ids);
       const worldMat = getWorldMatrix(actor, world || actor.world);
       const wp = mat4TransformPoint(worldMat, { x: local[0], y: local[1], z: local[2] });
       x += wp.x;
@@ -1382,6 +1440,99 @@ export class SceneView {
       actorId: hit.actorId,
       faceId: hit.surfaceId,
       pointLocal,
+    };
+  }
+
+  /**
+   * Screen-space edge pick (Phase 2F.2).
+   * Nearest projected edge within thresholdPx; depth-checked against brush hit unless xray.
+   * @returns {{ actorId: string, edgeKey: string, pointLocal: {x,y,z}|null } | null}
+   */
+  pickGeometryEdge(normalizedX, normalizedY, camera = this.camera, options = {}) {
+    const thresholdPx = Number(options.thresholdPx) > 0
+      ? Number(options.thresholdPx)
+      : this.geometryEdgePickThresholdPx;
+    const xray = Boolean(options.xray);
+    const cam = camera || this.camera;
+    if (!cam) return null;
+
+    const size = new THREE.Vector2();
+    this.renderer?.getSize?.(size);
+    const width = size.x || this.renderer?.domElement?.clientWidth || 1;
+    const height = size.y || this.renderer?.domElement?.clientHeight || 1;
+    const pointerPx = {
+      x: (normalizedX * 0.5 + 0.5) * width,
+      y: (-normalizedY * 0.5 + 0.5) * height,
+    };
+
+    const surfaceHit = this.pickSurface(normalizedX, normalizedY, cam);
+    const surfaceDist = surfaceHit?.point
+      ? cam.position.distanceTo(surfaceHit.point)
+      : null;
+
+    let best = null;
+    let bestDist = thresholdPx;
+
+    for (const [actorId, entry] of this._actorMeshes) {
+      const actor = entry?.actor;
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex?.isValid || !convex.geometry || !entry?.group) continue;
+      if (!xray && surfaceHit && surfaceHit.actorId !== actorId) continue;
+
+      const worldMat = getWorldMatrix(actor, actor.world);
+      const vmap = new Map((convex.geometry.vertices || []).map((v) => [v.id, v.p]));
+      const edges = listGeometryEdges(convex.geometry);
+
+      for (const key of edges) {
+        const parts = parseEdgeKey(key);
+        if (!parts) continue;
+        const a = vmap.get(parts[0]);
+        const b = vmap.get(parts[1]);
+        if (!a || !b) continue;
+
+        const wa = mat4TransformPoint(worldMat, { x: a[0], y: a[1], z: a[2] });
+        const wb = mat4TransformPoint(worldMat, { x: b[0], y: b[1], z: b[2] });
+        const pa = new THREE.Vector3(toMeters(wa.x), toMeters(wa.y), toMeters(wa.z));
+        const pb = new THREE.Vector3(toMeters(wb.x), toMeters(wb.y), toMeters(wb.z));
+
+        // Depth check: reject edges clearly behind the surface hit.
+        if (!xray && surfaceDist != null) {
+          const mid = pa.clone().add(pb).multiplyScalar(0.5);
+          const midDist = cam.position.distanceTo(mid);
+          if (midDist > surfaceDist + 0.05) continue;
+        }
+
+        const sa = this._projectToScreenPx(pa, cam, width, height);
+        const sb = this._projectToScreenPx(pb, cam, width, height);
+        if (!sa || !sb) continue;
+        const dist = distPointToSegment2D(pointerPx, sa, sb);
+        if (dist < bestDist) {
+          bestDist = dist;
+          const t = closestParamOnSegment2D(pointerPx, sa, sb);
+          const localHint = [
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+            a[2] + (b[2] - a[2]) * t,
+          ];
+          best = {
+            actorId,
+            edgeKey: key,
+            pointLocal: { x: localHint[0], y: localHint[1], z: localHint[2] },
+            screenDist: dist,
+          };
+        }
+      }
+    }
+    return best;
+  }
+
+  _projectToScreenPx(worldMeters, camera, width, height) {
+    const v = worldMeters.clone().project(camera);
+    if (!Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.z)) return null;
+    if (v.z < -1 || v.z > 1) return null;
+    return {
+      x: (v.x * 0.5 + 0.5) * width,
+      y: (-v.y * 0.5 + 0.5) * height,
     };
   }
 
@@ -1876,6 +2027,27 @@ export class SceneView {
     this.scene.environment = null;
     this.renderer.dispose();
   }
+}
+
+function distPointToSegment2D(p, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const lenSq = abx * abx + aby * aby;
+  if (lenSq < 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const cx = a.x + abx * t;
+  const cy = a.y + aby * t;
+  return Math.hypot(p.x - cx, p.y - cy);
+}
+
+function closestParamOnSegment2D(p, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const lenSq = abx * abx + aby * aby;
+  if (lenSq < 1e-12) return 0;
+  let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / lenSq;
+  return Math.max(0, Math.min(1, t));
 }
 
 function disposeObject(obj) {
