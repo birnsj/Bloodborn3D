@@ -319,17 +319,54 @@ export function edgesCentroidLocal(geometry, edgeKeys) {
 }
 
 /**
- * Pick an anchor vertex for grid snapping among selected faces or edges.
- * Prefer the vertex nearest to `hintLocal` (if provided).
+ * Centroid of the given vertex ids (actor-local).
+ */
+export function verticesCentroidLocal(geometry, vertexIds) {
+  const g = normalizeGeometry(geometry);
+  if (!g) return [0, 0, 0];
+  const want = new Set((vertexIds || []).map(String));
+  const vmap = vertexMap(g);
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  let n = 0;
+  for (const id of want) {
+    const p = vmap.get(id);
+    if (!p) continue;
+    x += p[0];
+    y += p[1];
+    z += p[2];
+    n += 1;
+  }
+  if (!n) return [0, 0, 0];
+  return [x / n, y / n, z / n];
+}
+
+/** Number of faces incident to a vertex (degree). */
+export function vertexFaceDegree(geometry, vertexId) {
+  const g = normalizeGeometry(geometry);
+  if (!g) return 0;
+  let count = 0;
+  for (const face of g.faces) {
+    if ((face.loop || []).includes(vertexId)) count += 1;
+  }
+  return count;
+}
+
+/**
+ * Pick an anchor vertex for grid snapping among selected faces, edges, or vertices.
+ * Prefer the vertex nearest to `hintLocal` (if provided). Spec §10.4: vertex → itself.
  */
 export function pickSnapAnchorVertex(geometry, elementIds, hintLocal = null, mode = 'face') {
   const g = normalizeGeometry(geometry);
   if (!g) return null;
-  const vids = mode === 'edge'
-    ? vertexIdsForEdges(g, elementIds)
-    : vertexIdsForFaces(g, elementIds);
+  let vids;
+  if (mode === 'edge') vids = vertexIdsForEdges(g, elementIds);
+  else if (mode === 'vertex') vids = uniqueIds(elementIds);
+  else vids = vertexIdsForFaces(g, elementIds);
   const vmap = vertexMap(g);
   if (!vids.length) return null;
+  if (mode === 'vertex' && elementIds?.length === 1) return String(elementIds[0]);
   if (!hintLocal) return vids[0];
   let best = vids[0];
   let bestD = Infinity;

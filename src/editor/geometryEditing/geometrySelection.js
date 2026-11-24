@@ -116,6 +116,9 @@ export function nextGeometrySelectionAfterActorChange(prev, nextActorIds, world 
     } else if (convex?.geometry && sel.mode === 'edge') {
       const live = liveEdgeKeySet(convex.geometry);
       ids = ids.filter((id) => live.has(id));
+    } else if (convex?.geometry && sel.mode === 'vertex') {
+      const live = new Set((convex.geometry.vertices || []).map((v) => v.id));
+      ids = ids.filter((id) => live.has(id));
     }
     if (!ids.length) continue;
     items.push({ actorId: it.actorId, ids });
@@ -138,6 +141,14 @@ export function remappedGeometrySelection(prev, world, lineageByActor = null) {
 
     if (sel.mode === 'edge') {
       const live = liveEdgeKeySet(convex.geometry);
+      const nextIds = it.ids.filter((id) => live.has(id));
+      if (!nextIds.length) continue;
+      items.push({ actorId: it.actorId, ids: nextIds });
+      continue;
+    }
+
+    if (sel.mode === 'vertex') {
+      const live = new Set((convex.geometry.vertices || []).map((v) => v.id));
       const nextIds = it.ids.filter((id) => live.has(id));
       if (!nextIds.length) continue;
       items.push({ actorId: it.actorId, ids: nextIds });
@@ -184,6 +195,9 @@ export function shouldApplyGeometryEdit({ tool, geometrySelection, world = null 
       if (it.ids.some((id) => !live.has(id))) return false;
     } else if (sel.mode === 'edge') {
       const live = liveEdgeKeySet(convex.geometry);
+      if (it.ids.some((id) => !live.has(id))) return false;
+    } else if (sel.mode === 'vertex') {
+      const live = new Set((convex.geometry.vertices || []).map((v) => v.id));
       if (it.ids.some((id) => !live.has(id))) return false;
     }
   }

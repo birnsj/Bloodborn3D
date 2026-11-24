@@ -132,7 +132,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 | **2F.0** | Editable convex brush architecture (data model, convert, render, collision, persistence) | **Done** |
 | **2F.1** | Face editing | **Done** |
 | **2F.2** | Edge editing | **Done** |
-| **2F.3** | Vertex editing | Not started |
+| **2F.3** | Vertex editing | **Done** |
 | **2F.4** | Extrusion and clipping | Not started |
 | **2F.5** | Integration and persistence verification | Not started |
 | **2F.6** | Multiple viewports and orthographic editing | Not started (appended; does not renumber 2F.0–2F.5) |
@@ -162,6 +162,14 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Edge highlight via Three.js `Line2`; moves reuse `moveVertices` / `SetConvexGeometryCommand` / geometry drag pipeline.
 - Acceptance: `public/levels/acceptance-edge-editing.json`; harness `public/dev/phase2f2Acceptance.js`; `phase2f2EdgeEditing.test.js`.
 - Vertex / extrude / clip / multi-viewport are **not** in 2F.2.
+
+### Phase 2F.3 notes
+
+- Toolbar **Vertex** mode (`geometryMode === 'vertex'`); screen-space pick + Alt x-ray; sphere handles; Move only.
+- Rejects interior / coincident (VERTEX_MERGE) / invalid topology without mutating authored geometry.
+- Degree ≥ 4 apex moves covered (pyramid acceptance actor); marquee deferred to 2F.6.
+- Acceptance: `public/levels/acceptance-vertex-editing.json`; harness `public/dev/phase2f3Acceptance.js`; `phase2f3VertexEditing.test.js`.
+- Extrude / clip / multi-viewport are **not** in 2F.3.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 

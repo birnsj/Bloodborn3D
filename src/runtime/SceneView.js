@@ -20,6 +20,7 @@ import {
   facesCentroidLocal,
   listGeometryEdges,
   parseEdgeKey,
+  verticesCentroidLocal,
 } from '../geometry/edits.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
@@ -131,8 +132,9 @@ export class SceneView {
     /** @type {{ mode: string, items: Array<{actorId:string, ids:string[]}>, primary: {actorId:string,id:string}|null } | null} */
     this.geometrySelection = null;
     this._geometryFaceOverlays = [];
-    /** Screen-space edge pick threshold in CSS pixels (Phase 2F.2). */
+    /** Screen-space edge/vertex pick threshold in CSS pixels (Phase 2F.2 / 2F.3). */
     this.geometryEdgePickThresholdPx = 12;
+    this.geometryVertexPickThresholdPx = 12;
     this._syncToken = 0;
 
     /** @type {{ getTextureUrl:(id:string)=>string|null, getMaterialDefinition:(id:string)=>Promise<object|null>, getMeshUrl:(id:string)=>string|null } | null} */
@@ -1215,6 +1217,16 @@ export class SceneView {
         continue;
       }
 
+      if (mode === 'vertex') {
+        for (const vid of want) {
+          const overlay = this._buildVertexOverlayHandle(convex.geometry, vid);
+          if (!overlay) continue;
+          entry.group.add(overlay);
+          this._geometryFaceOverlays.push(overlay);
+        }
+        continue;
+      }
+
       for (const face of convex.geometry.faces || []) {
         if (!want.has(face.id)) continue;
         const overlay = this._buildFaceOverlayMesh(convex.geometry, face);
@@ -1224,6 +1236,26 @@ export class SceneView {
         this._geometryFaceOverlays.push(overlay);
       }
     }
+  }
+
+  _buildVertexOverlayHandle(geometry, vertexId) {
+    const v = (geometry.vertices || []).find((x) => x.id === vertexId);
+    if (!v?.p) return null;
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 12, 10),
+      new THREE.MeshBasicMaterial({
+        color: 0xf0c040,
+        depthTest: true,
+        transparent: true,
+        opacity: 0.95,
+      }),
+    );
+    mesh.position.set(toMeters(v.p[0]), toMeters(v.p[1]), toMeters(v.p[2]));
+    mesh.renderOrder = 11;
+    mesh.userData.editorOnly = true;
+    mesh.userData.geometryVertexOverlay = true;
+    mesh.userData.pickable = false;
+    return mesh;
   }
 
   _buildEdgeOverlayLine(geometry, edgeKeyStr) {
@@ -1321,7 +1353,9 @@ export class SceneView {
       if (!convex?.geometry) continue;
       const local = mode === 'edge'
         ? edgesCentroidLocal(convex.geometry, item.ids)
-        : facesCentroidLocal(convex.geometry, item.ids);
+        : mode === 'vertex'
+          ? verticesCentroidLocal(convex.geometry, item.ids)
+          : facesCentroidLocal(convex.geometry, item.ids);
       const worldMat = getWorldMatrix(actor, world || actor.world);
       const wp = mat4TransformPoint(worldMat, { x: local[0], y: local[1], z: local[2] });
       x += wp.x;
@@ -1534,6 +1568,71 @@ export class SceneView {
       x: (v.x * 0.5 + 0.5) * width,
       y: (-v.y * 0.5 + 0.5) * height,
     };
+  }
+
+  /**
+   * Screen-space vertex pick (Phase 2F.3).
+   * Nearest projected vertex within thresholdPx; depth-checked unless xray.
+   * @returns {{ actorId: string, vertexId: string, pointLocal: {x,y,z}|null } | null}
+   */
+  pickGeometryVertex(normalizedX, normalizedY, camera = this.camera, options = {}) {
+    const thresholdPx = Number(options.thresholdPx) > 0
+      ? Number(options.thresholdPx)
+      : this.geometryVertexPickThresholdPx;
+    const xray = Boolean(options.xray);
+    const cam = camera || this.camera;
+    if (!cam) return null;
+
+    const size = new THREE.Vector2();
+    this.renderer?.getSize?.(size);
+    const width = size.x || this.renderer?.domElement?.clientWidth || 1;
+    const height = size.y || this.renderer?.domElement?.clientHeight || 1;
+    const pointerPx = {
+      x: (normalizedX * 0.5 + 0.5) * width,
+      y: (-normalizedY * 0.5 + 0.5) * height,
+    };
+
+    const surfaceHit = this.pickSurface(normalizedX, normalizedY, cam);
+    const surfaceDist = surfaceHit?.point
+      ? cam.position.distanceTo(surfaceHit.point)
+      : null;
+
+    let best = null;
+    let bestDist = thresholdPx;
+
+    for (const [actorId, entry] of this._actorMeshes) {
+      const actor = entry?.actor;
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex?.isValid || !convex.geometry || !entry?.group) continue;
+      if (!xray && surfaceHit && surfaceHit.actorId !== actorId) continue;
+
+      const worldMat = getWorldMatrix(actor, actor.world);
+      for (const vert of convex.geometry.vertices || []) {
+        const p = vert.p;
+        if (!p) continue;
+        const wp = mat4TransformPoint(worldMat, { x: p[0], y: p[1], z: p[2] });
+        const wm = new THREE.Vector3(toMeters(wp.x), toMeters(wp.y), toMeters(wp.z));
+
+        if (!xray && surfaceDist != null) {
+          const d = cam.position.distanceTo(wm);
+          if (d > surfaceDist + 0.05) continue;
+        }
+
+        const sp = this._projectToScreenPx(wm, cam, width, height);
+        if (!sp) continue;
+        const dist = Math.hypot(pointerPx.x - sp.x, pointerPx.y - sp.y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = {
+            actorId,
+            vertexId: vert.id,
+            pointLocal: { x: p[0], y: p[1], z: p[2] },
+            screenDist: dist,
+          };
+        }
+      }
+    }
+    return best;
   }
 
   /**

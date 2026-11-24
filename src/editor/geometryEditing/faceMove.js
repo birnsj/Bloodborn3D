@@ -22,6 +22,7 @@ import {
   vertexIdsForEdges,
   vertexIdsForFaces,
   vertexPosition,
+  verticesCentroidLocal,
 } from '../../geometry/edits.js';
 import { listSelectedElementIds, normalizeGeometrySelection } from './geometrySelection.js';
 
@@ -47,7 +48,7 @@ export function primaryFaceNormalWorld(world, geometrySelection) {
 }
 
 /**
- * World centroid of the current geometry selection (faces or edges).
+ * World centroid of the current geometry selection (faces, edges, or vertices).
  */
 export function geometrySelectionWorldCenter(world, geometrySelection) {
   const sel = normalizeGeometrySelection(geometrySelection);
@@ -62,7 +63,9 @@ export function geometrySelectionWorldCenter(world, geometrySelection) {
     if (!convex?.geometry) continue;
     const local = sel.mode === 'edge'
       ? edgesCentroidLocal(convex.geometry, it.ids)
-      : facesCentroidLocal(convex.geometry, it.ids);
+      : sel.mode === 'vertex'
+        ? verticesCentroidLocal(convex.geometry, it.ids)
+        : facesCentroidLocal(convex.geometry, it.ids);
     const wp = mat4TransformPoint(getWorldMatrix(actor, world), {
       x: local[0],
       y: local[1],
@@ -111,6 +114,8 @@ export function snapWorldDelta(
   if (sel.mode === 'edge') {
     anchorId = pickEdgeSnapAnchor(convex.geometry, primary.id, hintLocal)
       || pickSnapAnchorVertex(convex.geometry, elementIds, hintLocal, 'edge');
+  } else if (sel.mode === 'vertex') {
+    anchorId = pickSnapAnchorVertex(convex.geometry, elementIds, hintLocal, 'vertex');
   } else {
     anchorId = pickSnapAnchorVertex(convex.geometry, elementIds, hintLocal, 'face');
   }
@@ -163,13 +168,13 @@ function worldDeltaFromConstraint(constraint, d, worldDir) {
 }
 
 function vertexIdsForSelection(geometry, ids, mode) {
-  return mode === 'edge'
-    ? vertexIdsForEdges(geometry, ids)
-    : vertexIdsForFaces(geometry, ids);
+  if (mode === 'edge') return vertexIdsForEdges(geometry, ids);
+  if (mode === 'vertex') return [...new Set((ids || []).map(String))];
+  return vertexIdsForFaces(geometry, ids);
 }
 
 /**
- * Apply a world-space translation delta to every selected face or edge set.
+ * Apply a world-space translation delta to every selected face, edge, or vertex set.
  */
 export function applyGeometryMove(world, geometrySelection, worldDelta) {
   const sel = normalizeGeometrySelection(geometrySelection);

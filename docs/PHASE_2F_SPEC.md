@@ -1,7 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
-**Implementation:** 2F.0 **Done**; 2F.1 **Done**; 2F.2 **Done** (2026-11-24). 2F.3+ not started.
+**Implementation:** 2F.0–2F.3 **Done** (2026-11-24). 2F.4+ not started.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -451,12 +451,18 @@ wiring, `phase2f1FaceEditing.test.js`, `public/levels/acceptance-face-editing.js
 
 ### 7.4 2F.3 — Vertex editing
 
+**Status: Done (2026-11-24).**
+
 - Vertex picking (screen-space), handles, multi-select.
 - Vertices of degree ≥ 4, moves that fold faces (rehull + lineage), moves that would make a vertex
   interior or coincident (rejected).
 - Explicitly **no** vertex merge/weld, split, insert or delete in 2F (Q2).
 - Rotate/scale for element selections: **not implemented** (Move only); the gizmo hides those modes
   in geometry modes with a status hint. (Q6.)
+
+**Shipped:** Vertex toolbar mode; `pickGeometryVertex` + sphere handles; vertex-aware selection/
+`applyGeometryMove`; `phase2f3VertexEditing.test.js`; `public/levels/acceptance-vertex-editing.json`;
+`public/dev/phase2f3Acceptance.js`; `docs/ACCEPTANCE_VERTEX_EDITING.md`. Marquee remains 2F.6.
 
 **Acceptance:** §12.4.
 

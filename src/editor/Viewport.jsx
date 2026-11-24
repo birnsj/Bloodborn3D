@@ -689,8 +689,11 @@ export function Viewport() {
       return;
     }
 
-    // Geometry Face / Edge mode — gizmo moves elements; click picks.
-    if (tool === 'geometry' && (geometryMode === 'face' || geometryMode === 'edge')) {
+    // Geometry Face / Edge / Vertex mode — gizmo moves elements; click picks.
+    if (
+      tool === 'geometry'
+      && (geometryMode === 'face' || geometryMode === 'edge' || geometryMode === 'vertex')
+    ) {
       const gizmoHit = sceneView.pickGizmo(nx, ny);
       if (gizmoHit && geometrySelection?.items?.length && gizmoHit.kind === 'move') {
         const raycaster = sceneView.getRaycaster(nx, ny);
@@ -726,6 +729,29 @@ export function Viewport() {
         } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
           setGeometrySelection(null);
           setStatus('Edge mode — click near a ConvexBrush edge (Alt = x-ray)');
+        }
+        return;
+      }
+      if (geometryMode === 'vertex') {
+        const vertHit = sceneView.pickGeometryVertex?.(nx, ny, undefined, {
+          xray: e.altKey,
+        });
+        if (vertHit) {
+          const next = toggleGeometryItem(geometrySelection, {
+            actorId: vertHit.actorId,
+            id: vertHit.vertexId,
+            mode: 'vertex',
+            additive: e.shiftKey || e.ctrlKey || e.metaKey,
+          });
+          setGeometrySelection(next);
+          setStatus(
+            next.items.length
+              ? `Vertex ${vertHit.vertexId} (${next.items.reduce((n, it) => n + it.ids.length, 0)} selected) · Move only`
+              : 'Vertex selection cleared',
+          );
+        } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
+          setGeometrySelection(null);
+          setStatus('Vertex mode — click near a ConvexBrush vertex (Alt = x-ray) · Move only');
         }
         return;
       }
@@ -1123,10 +1149,20 @@ export function Viewport() {
       }
     } else if (drag.type === 'faceMove') {
       runtimeRef.current?.sceneView.gizmo.endDrag();
-      const label = geometryMode === 'edge' ? 'Move edges' : 'Move faces';
+      const label = geometryMode === 'edge'
+        ? 'Move edges'
+        : geometryMode === 'vertex'
+          ? 'Move vertices'
+          : 'Move faces';
       const result = commitFaceMove(label);
       if (result?.ok) {
-        setStatus(geometryMode === 'edge' ? 'Moved edges' : 'Moved faces');
+        setStatus(
+          geometryMode === 'edge'
+            ? 'Moved edges'
+            : geometryMode === 'vertex'
+              ? 'Moved vertices'
+              : 'Moved faces',
+        );
       }
     }
 
@@ -1153,6 +1189,9 @@ export function Viewport() {
     if (tool === 'geometry') {
       if (geometryMode === 'edge') {
         return 'Edge mode — click near edges (Shift multi · Alt x-ray) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
+      }
+      if (geometryMode === 'vertex') {
+        return 'Vertex mode — click near vertices (Shift multi · Alt x-ray) · Move only · Esc cancel · RMB orbit · WASD free-fly';
       }
       return 'Face mode — click faces (Shift multi) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
     }

@@ -187,10 +187,17 @@ export function LevelToolBar() {
         </button>
         <button
           type="button"
-          className="bb-btn"
-          disabled
-          title="Geometry Vertex — Phase 2F.3"
-          {...helpProps('toolbar.geometryVertex', 'Coming in Phase 2F.3')}
+          className={`bb-btn${tool === 'geometry' && geometryMode === 'vertex' && !isPlay ? ' bb-btn--active' : ''}`}
+          disabled={isPlay}
+          title="Geometry Vertex — select and move ConvexBrush vertices"
+          onClick={() => {
+            setSelectedSurface(null);
+            setAlignReferenceSurface(null);
+            setGeometryMode('vertex');
+            setTool('geometry');
+            setStatus?.('Vertex mode — click near a ConvexBrush vertex (Alt = x-ray). Move only.');
+          }}
+          {...helpProps('toolbar.geometryVertex', playReason)}
         >
           Vertex
         </button>
