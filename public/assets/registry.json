@@ -401,6 +401,39 @@
       },
       "createdAt": 1795449232038,
       "updatedAt": 1795449232038
+    },
+    {
+      "id": "mat_0d7229acc49d",
+      "kind": "material",
+      "name": "Mansion Accent",
+      "folder": "Materials",
+      "path": "materials/mat_0d7229acc49d.json",
+      "originalName": "mat_0d7229acc49d.json",
+      "tags": [],
+      "meta": {
+        "baseColor": "#8a9099",
+        "roughness": 0.75,
+        "metalness": 0.05,
+        "hasBaseMap": false
+      },
+      "createdAt": 1795496202588,
+      "updatedAt": 1795496202588
+    },
+    {
+      "id": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
+      "kind": "prefab",
+      "name": "Gothic Column Prefab",
+      "folder": "Prefabs",
+      "path": "prefabs/prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224.json",
+      "originalName": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224.json",
+      "tags": [],
+      "meta": {
+        "actorCount": 1,
+        "nestedCount": 0,
+        "rootCount": 1
+      },
+      "createdAt": 1795497051318,
+      "updatedAt": 1795497051323
     }
   ]
 }

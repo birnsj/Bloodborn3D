@@ -1,0 +1,1965 @@
+{
+  "schemaVersion": 2,
+  "name": "Gothic Mansion Acceptance",
+  "actors": [
+    {
+      "id": "actor_1386b0a9-e72c-43c5-943c-6c7a23455ccf",
+      "name": "Mansion Ground",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_17b7eee9-06f5-439a-800d-84ce653c95c4",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_b526ab4b-e921-4b04-821c-ee4fe833b6b2",
+      "name": "Mansion Upper",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e21106fa-dba4-41a8-8fc0-0c77cc6094ca",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_b5a0a509-49fa-46e2-a01c-e1aabd09bebd",
+      "name": "Spiral Tower",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 0,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_26a355a6-702e-4ca9-9013-23de82aa58f6",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_d79d43b7-5dc5-4e70-8640-56b9b6d0d86e",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 12.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_25d61aa9-c6ad-420d-8437-9191bb473d44",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 25,
+            "z": 1200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_961d1e37-5711-4135-a3c5-ecd42babd533",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 12.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_395f4acf-5a16-43d5-92a1-f27cc6d47116",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 25,
+            "z": 300
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_7abf52da-8323-45a6-b8e0-9d55af9dc0fa",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 12.5,
+          "z": -700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f2e949f0-6c0c-4ae7-9560-4a391c77569c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 25,
+            "z": 400
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_582b2d0c-a6e8-4c6b-8f05-a4ad2aba7d8c",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": -587.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a1d1d689-547a-4afb-bda4-89b96ba8b3c7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_95e8b54b-f09e-45c5-a94c-535e3c594c72",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": 612.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_065a007c-a4af-485c-9a5b-fd7678fa7e1d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_5fd28c61-342c-4500-8426-a4b2ca5a4274",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -587.5,
+          "y": 150,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f966502a-0c32-47ca-b2c1-7a60935fb33f",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 1200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": {
+            "px": "mat_hall_ceiling"
+          },
+          "faceUVs": {
+            "px": {
+              "scale": {
+                "x": 1.5,
+                "y": 1
+              },
+              "offset": {
+                "x": 0,
+                "y": 0.1
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6605efaf-78d2-49d2-917d-94cc1c9a15c7",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 612.5,
+          "y": 150,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3f891f7b-59f7-49ad-920a-8cec101ab0d1",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 800
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_debd3067-86f8-45f1-a3ea-3c95ca22c804",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 150,
+          "z": 412.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_bfc42bbc-46af-4b13-9c79-0eba3cdf0032",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": {
+            "pz": "mat_hall_stone"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1,
+                "y": 1
+              },
+              "offset": {
+                "x": 0.15,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c3b76780-aa99-4d5b-a892-b6c5eb508333",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 150,
+          "z": 412.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_75842c66-e4c3-420f-a8fb-91c6cf52107e",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 300,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1,
+                "y": 1
+              },
+              "offset": {
+                "x": 2.15,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_d6502220-77cb-41a8-af27-5137903b5a01",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -400,
+          "y": 150,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_65defa25-9f71-4951-b0a8-fdcc1b758952",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_df85dc5f-1e0e-408e-aec7-15d4a2d517d3",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -487.5,
+          "y": 150,
+          "z": 350
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e30fb73b-37a5-4902-ab5d-c14e9be4c15d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8aa6024c-a16b-4497-bf75-303e38ed07e6",
+      "name": "Subtract Box",
+      "transform": {
+        "position": {
+          "x": 600,
+          "y": 112.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3f762d0e-6efd-4b21-8158-efae313a7bba",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 175,
+            "z": 100
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_33c2d86f-015f-40bd-8e15-217289ab5ba2",
+      "name": "Gothic Arch",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 220,
+          "z": -575
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "arch"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9d49a9a8-4ca7-4200-9fd5-43ec5f81145f",
+          "type": "Arch",
+          "enabled": true,
+          "archType": "gothic",
+          "openingWidth": 200,
+          "openingHeight": 225,
+          "archRise": 175,
+          "thickness": 40,
+          "depth": 50,
+          "curveResolution": 16,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f6a2c887-a351-4711-82fa-0f3c36a78735",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": -250,
+          "y": 150,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6b5102a-693d-4f98-bd1c-091dafae0382",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_945f76d2-3be4-42f1-a2f8-c0d3fda01763",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 150,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_5dfdfaec-e86d-41bb-99fc-5e8b1d930ee9",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_437db504-c651-4ad8-ba12-9c580fceac5c",
+      "name": "Curved Wall",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": 700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "curvedWall",
+        "wall"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d795d61e-aef8-44c5-8cb4-cb61672af84d",
+          "type": "CurvedWall",
+          "enabled": true,
+          "radius": 200,
+          "sweepAngle": 90,
+          "startAngle": 0,
+          "height": 300,
+          "thickness": 25,
+          "clockwise": false,
+          "curveResolution": 24,
+          "miterStart": 0,
+          "miterEnd": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_14dee2d9-e7ef-47cb-a5ee-2b782f892d6a",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 150,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ab340381-af83-496b-bc1f-ed837e36f6c1",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "straight",
+          "width": 150,
+          "stepCount": 15,
+          "stepHeight": 20,
+          "treadDepth": 30,
+          "direction": "z+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e85a06c6-eb3d-4b7b-9988-90d316329b02",
+      "name": "Ramp",
+      "transform": {
+        "position": {
+          "x": 550,
+          "y": 150,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "ramp"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3dbfd3bb-6042-4793-b91a-fbe615b5601c",
+          "type": "Ramp",
+          "enabled": true,
+          "width": 120,
+          "length": 300,
+          "rise": 300,
+          "direction": "z+",
+          "thickness": 20,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_feadaaf8-e36a-4de8-bd15-bc1ea2b77fc2",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": -350,
+          "y": 150,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f6d25d20-7f12-4f93-833f-d832cae86cb7",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "curved",
+          "width": 150,
+          "stepCount": 16,
+          "stepHeight": 25,
+          "treadDepth": 30,
+          "direction": "x+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_884466d2-fcd5-4b6c-b07c-aecd6bebdff6",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 150,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_34629ea4-249e-48e9-a65e-2d7e490b782b",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "spiral",
+          "width": 100,
+          "stepCount": 24,
+          "stepHeight": 25,
+          "treadDepth": 30,
+          "direction": "x+",
+          "innerRadius": 50,
+          "sweepAngle": 360,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8e27687c-687f-4eb6-b6e4-3fae50787b3f",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 312.5,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_8ebbb0f2-c5f8-461c-bdc7-17947351f613",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 25,
+            "z": 600
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6011d895-a5c1-406a-9ef5-e7b6aef21ad4",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 462.5,
+          "z": -487.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1d1cd06e-38b8-4058-84cc-e4c01c5993b5",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 275,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c8e679e3-f9be-45dc-9e72-b2abc9ce7374",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 462.5,
+          "z": 112.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_8eb6ef47-cbbb-4f6b-adda-fe4665bd83a9",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 275,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f8cc1dd7-a4b5-4ed7-b194-fc3a2c8e9800",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 312.5,
+          "z": -700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b4451164-27a3-4810-b176-0d8b07e71da7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 25,
+            "z": 400
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e97243cc-91eb-4bc9-b7bc-d7f518014939",
+      "name": "Point Light",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 250,
+          "z": 0
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_de74d321-6b2f-41c4-9130-346f0ee79620",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffffff",
+          "intensity": 1.5,
+          "range": 1200,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_44aab66b-5b0d-4a4b-872c-93627ac35ac2",
+      "name": "Point Light",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 225,
+          "z": -700
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1df0fda3-4b55-48ae-9b36-d4301817cde6",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffffff",
+          "intensity": 1.5,
+          "range": 1200,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_b066dd9c-94fc-4392-bcc7-ed356751e113",
+      "name": "Spot Light",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 275,
+          "z": -100
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "spot"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9a1e5f3b-d66d-40ae-b92a-0061ee57ee7e",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "spot",
+          "color": "#ffffff",
+          "intensity": 1.5,
+          "range": 1200,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_e64df8e4-a9df-42eb-84a2-d43aaf7fc145",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -75,
+          "y": 40,
+          "z": 75
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1ef00ace-34e1-45db-a094-9ba56a29f670",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_2f958774-369c-4754-bb4e-d80629ecc414",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 40,
+          "z": -650
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ef001b85-4e49-48d3-a8b3-2feb2cb7299e",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_362a27bd-aa01-4f0e-acf1-3bd0ccfdeb7b",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 200,
+          "y": 40,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_730016e1-16d5-41a8-b639-8d6612871e8f",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_4cac6ed9-480f-4988-9758-a6ba2850af9f",
+      "name": "Player Spawn",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 40,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn",
+        "gameplay"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0e20b521-24bb-48b4-8d7d-38289cd94f7b",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    },
+    {
+      "id": "actor_c4d56ac3-c796-489c-9525-d8103275d29c",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": -250,
+          "y": 150,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6b5102a-693d-4f98-bd1c-091dafae0382",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "prefab": {
+        "prefabId": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
+        "instanceId": "pinst_0dcd17b9-bd0f-4ce6-a395-a9c82681d03f",
+        "templateId": "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117",
+        "isRoot": true,
+        "overrides": {
+          "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117": {
+            "transform": {
+              "position": {
+                "x": -250,
+                "y": 150,
+                "z": 250
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 1,
+                "y": 1,
+                "z": 1
+              }
+            },
+            "components": {
+              "Column": {
+                "materialId": "mat_hall_stone"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

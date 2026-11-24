@@ -18,6 +18,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2E.3 | Align to Neighbor; `alignSurfaces.test.js`; adjoining walls in acceptance level |
 | Phase 2E.4 | Materials workspace; `materialDraft.test.js`; Save/Cancel asset drafts |
 | Phase 2E.5 | Persistence audit; `phase2e5Persistence.test.js`; **Phase 2E complete** |
+| Post-2E acceptance | Gothic mansion level + browser harness; see [`ACCEPTANCE_GOTHIC_MANSION.md`](./ACCEPTANCE_GOTHIC_MANSION.md) |
 
 ## 2. Implemented systems
 
@@ -120,3 +121,4 @@ These need a real browser, GPU, display and pointer-lock; they cannot be run in 
 11. **Phase 2E.3 Align to Neighbor.** File → `acceptance-surfaces.json`. Confirm **Align Wall A** / **Align Wall B** show continuous stone on adjoining `pz` faces. Enable **Align**, click A’s `pz` (amber reference), then B’s `pz` — target `faceUVs` updates; Undo restores prior UVs. Click a column/curved/non-coplanar face as target: status rejects and nothing changes. Esc returns to Select.
 12. **Phase 2E.4 Materials workspace.** Open **Materials**. Search/select a material; edit PBR/UV fields — Save stays disabled until dirty; Cancel restores; Save writes the asset and refreshes level instances without reload. Leave to Level Editor with unsaved edits: confirm discard. New / Duplicate create assets. Preview Sphere/Cube/Plane.
 13. **Phase 2E.5 persistence.** File → `acceptance-surfaces.json`. Assign a surface material + UV; Undo/Redo; Save and reload — overrides remain. Resize a brush face; surfaces unchanged. Play then Stop — authored surfaces restored. Prefab: create from a brush with `faceMaterials`/`faceUVs`, override one face UV, update source — override kept. Materials workspace: Cancel/leave warnings; Save does not mark the level dirty.
+14. **Gothic mansion acceptance.** File → `acceptance-gothic-mansion.json`. Multi-floor mansion with stairs (straight/curved/spiral), arch, columns, curved wall, subtract, prefab instance, surface Align pair, lights and mesh props. Play/Stop and walk (pointer lock). See [`ACCEPTANCE_GOTHIC_MANSION.md`](./ACCEPTANCE_GOTHIC_MANSION.md).

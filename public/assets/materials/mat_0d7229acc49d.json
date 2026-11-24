@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_0d7229acc49d",
+  "name": "Mansion Accent",
+  "type": "material",
+  "baseColor": "#8a9099",
+  "baseColorMapId": null,
+  "normalMapId": null,
+  "normalScale": 1,
+  "roughness": 0.75,
+  "metalness": 0.05,
+  "roughnessMapId": null,
+  "metalnessMapId": null,
+  "envMapIntensity": 1,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 1,
+    "y": 1
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": null,
+  "createdAt": 1795496202588,
+  "updatedAt": 1795496202588
+}

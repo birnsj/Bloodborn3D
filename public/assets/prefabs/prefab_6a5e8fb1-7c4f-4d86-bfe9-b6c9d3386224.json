@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
+  "name": "Gothic Column Prefab",
+  "type": "prefab",
+  "rootTemplateIds": [
+    "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117"
+  ],
+  "actors": [
+    {
+      "id": "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": -250,
+          "y": 150,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6b5102a-693d-4f98-bd1c-091dafae0382",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    }
+  ],
+  "nestedPrefabIds": [],
+  "createdAt": 1795497051318,
+  "updatedAt": 1795497051323
+}
