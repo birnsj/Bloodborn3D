@@ -1,7 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
-**Implementation:** 2F.0–2F.3 **Done** (2026-11-24). 2F.4+ not started.
+**Implementation:** 2F.0–2F.4 **Done** (2026-11-24). 2F.5+ not started.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -127,7 +127,9 @@ src/geometry/               NEW  engine-neutral, no Three.js, no React, no DOM
   validate.js               V1–V7 validators (§6)
   hull.js                   convex hull builder with coplanar merge
   lineage.js                face-ID / vertex-ID continuity after a rebuild (§5.4)
-  edits.js                  moveVertices, extrudeFace, clipByPlane (pure; return {ok,...})
+  edits.js                  moveVertices (pure; return {ok,...})
+  extrude.js                extrudeFace (pure; new prism)
+  clip.js                   clipByPlane / planeFromPoints / planeFromFace
   convert.js                Brush → convex geometry, mitered wall → convex geometry
   uvProjection.js           per-face planar projection → density UVs (§5.5)
 
@@ -490,6 +492,11 @@ existing face plane). Modes: **keep front**, **keep back**, **split** (two brush
   (Q11); otherwise rejected with the §9 reason.
 - Multiple selected brushes are clipped by the same plane atomically (all or nothing).
 - UI: preview of the plane polygon and kept volume, Enter = apply, Esc = cancel.
+
+**Shipped:** `src/geometry/extrude.js`, `src/geometry/clip.js`, `src/editor/geometryEditing/extrudeClip.js`;
+Details Extrude/Clip panel; clip session (3-point / face plane, Enter/Esc); `phase2f4ExtrusionClipping.test.js`;
+`public/levels/acceptance-extrusion-clipping.json`; `public/dev/phase2f4Acceptance.js`;
+`docs/ACCEPTANCE_EXTRUSION_CLIPPING.md`.
 
 **Acceptance:** §12.5.
 

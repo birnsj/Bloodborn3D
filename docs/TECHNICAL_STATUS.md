@@ -2,14 +2,14 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.3** (ConvexBrush + Face + Edge + Vertex editing).
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.4** (ConvexBrush + Face + Edge + Vertex + Extrude/Clip).
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 457 / 457 pass, 57 files |
+| `npm test` | 466 / 466 pass, 58 files |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
@@ -17,7 +17,8 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.1 | Face mode; `phase2f1FaceEditing.test.js`; `acceptance-face-editing.json`; browser PASS (`34af8bd`) |
 | Phase 2F.2 | Edge mode; `phase2f2EdgeEditing.test.js`; `acceptance-edge-editing.json`; browser PASS (`e4d33d7`) |
 | Phase 2F.3 | Vertex mode; `phase2f3VertexEditing.test.js`; `acceptance-vertex-editing.json`; browser PASS |
-| Phase 2F.4+ | Not started (extrude/clip deferred; marquee → 2F.6) |
+| Phase 2F.4 | Extrude + clip; `phase2f4ExtrusionClipping.test.js`; `acceptance-extrusion-clipping.json`; browser PASS (`phase2f4Acceptance.js`) |
+| Phase 2F.5+ | Not started (integration verification; marquee → 2F.6) |
 
 ## 2. Implemented systems
 
@@ -34,6 +35,7 @@ Status is what the code does today, not an intent.
 | Geometry Face editing (2F.1) | Implemented | Toolbar Face mode; `geometrySelection`; face overlays; gizmo + normal handle; grid snap; reject invalid; multi-actor atomic undo. |
 | Geometry Edge editing (2F.2) | Implemented | Toolbar Edge mode; derived edge keys; screen-space pick + Alt x-ray; `Line2` highlight; same moveVertices pipeline. |
 | Geometry Vertex editing (2F.3) | Implemented | Toolbar Vertex mode; screen-space pick + Alt x-ray; sphere handles; Move only; reject merge/interior. |
+| Extrusion / clipping (2F.4) | Implemented | Face extrude → new prism sibling; clip keep-front/back/split with preview; auto-convert Brush (Q11); Details + Enter/Esc. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |

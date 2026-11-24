@@ -91,6 +91,11 @@ export function Viewport() {
     previewFaceMove,
     commitFaceMove,
     cancelFaceMove,
+    clipSession,
+    beginClipSession,
+    cancelClipSession,
+    addClipPoint,
+    commitClipSession,
     deleteSelected,
     duplicateSelected,
     undo,
@@ -529,7 +534,9 @@ export function Viewport() {
 
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (placeSessionRef.current) {
+        if (clipSession) {
+          cancelClipSession?.();
+        } else if (placeSessionRef.current) {
           clearPlacementSession();
         } else if (dragRef.current?.type === 'faceMove') {
           runtimeRef.current?.sceneView?.gizmo?.endDrag?.();
@@ -549,6 +556,11 @@ export function Viewport() {
           setSelectedSurface(null);
           deselectAllActors();
         }
+        return;
+      }
+      if (e.key === 'Enter' && clipSession) {
+        e.preventDefault();
+        commitClipSession?.();
         return;
       }
       if (e.key === 'Tab' && placeSessionRef.current) {
@@ -637,6 +649,9 @@ export function Viewport() {
     setAlignReferenceSurface,
     setGeometrySelection,
     cancelFaceMove,
+    clipSession,
+    cancelClipSession,
+    commitClipSession,
     saveLevel,
     clearPlacementSession,
     resolveSurfacePose,
@@ -686,6 +701,19 @@ export function Viewport() {
       if (orbitRef.current) orbitRef.current.enabled = false;
       e.currentTarget.setPointerCapture(e.pointerId);
       updateCreatePreview(dragRef.current);
+      return;
+    }
+
+    // Clip session: pick grid-snapped world points on brush surfaces.
+    if (clipSession && tool === 'geometry') {
+      const hits = sceneView.pickWorldHits?.(nx, ny) || [];
+      const hit = hits.find((h) => h.point && (
+        world.getActor(h.actorId)?.getComponent('ConvexBrush')
+        || world.getActor(h.actorId)?.getComponent('Brush')
+      )) || hits.find((h) => h.point);
+      if (hit?.point) {
+        addClipPoint([hit.point.x, hit.point.y, hit.point.z]);
+      }
       return;
     }
 

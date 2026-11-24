@@ -133,7 +133,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 | **2F.1** | Face editing | **Done** |
 | **2F.2** | Edge editing | **Done** |
 | **2F.3** | Vertex editing | **Done** |
-| **2F.4** | Extrusion and clipping | Not started |
+| **2F.4** | Extrusion and clipping | **Done** |
 | **2F.5** | Integration and persistence verification | Not started |
 | **2F.6** | Multiple viewports and orthographic editing | Not started (appended; does not renumber 2F.0–2F.5) |
 
@@ -170,6 +170,15 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Degree ≥ 4 apex moves covered (pyramid acceptance actor); marquee deferred to 2F.6.
 - Acceptance: `public/levels/acceptance-vertex-editing.json`; harness `public/dev/phase2f3Acceptance.js`; `phase2f3VertexEditing.test.js`.
 - Extrude / clip / multi-viewport are **not** in 2F.3.
+
+### Phase 2F.4 notes
+
+- Face extrude creates a new convex prism sibling (`"<name> Extrusion"`); source brush unchanged; front cap inherits face material/UV.
+- Clip by three grid-snapped points or selected face plane; modes keep-front / keep-back / split; preview before Enter; Esc cancels.
+- Surviving face IDs/materials preserved; new caps get new IDs and actor material fallback (Q3).
+- Eligible plain Brush auto-converts inside the same undo step (Q11); multi-brush clips are atomic.
+- Acceptance: `public/levels/acceptance-extrusion-clipping.json`; harness `public/dev/phase2f4Acceptance.js`; `phase2f4ExtrusionClipping.test.js`.
+- Integration verification / multi-viewport are **not** in 2F.4.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 
