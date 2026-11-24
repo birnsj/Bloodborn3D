@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "name": "Acceptance Surfaces 2E.2",
+  "name": "Acceptance Surfaces 2E.3",
   "actors": [
     {
       "id": "actor_floor",
@@ -299,6 +299,70 @@
             "outer": {
               "scale": { "x": 1, "y": 1 },
               "offset": { "x": 0.5, "y": 0 },
+              "rotation": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_align_a",
+      "name": "Align Wall A",
+      "transform": {
+        "position": { "x": -250, "y": 150, "z": 500 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall", "align"],
+      "components": [
+        {
+          "id": "comp_align_a",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 400, "y": 300, "z": 20 },
+          "color": "#8a9099",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "pz": "mat_hall_stone"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": { "x": 1, "y": 1 },
+              "offset": { "x": 0.4, "y": 0.15 },
+              "rotation": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_align_b",
+      "name": "Align Wall B",
+      "transform": {
+        "position": { "x": 100, "y": 150, "z": 500 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall", "align"],
+      "components": [
+        {
+          "id": "comp_align_b",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 300, "y": 250, "z": 20 },
+          "color": "#8a9099",
+          "collidable": true,
+          "operation": "add",
+          "materialId": "mat_verify_wall",
+          "faceMaterials": {
+            "pz": "mat_hall_stone"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": { "x": 1, "y": 1 },
+              "offset": { "x": 4.4, "y": 0.4 },
               "rotation": 0
             }
           }

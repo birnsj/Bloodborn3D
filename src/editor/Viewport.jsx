@@ -62,6 +62,9 @@ export function Viewport() {
     tool,
     setTool,
     setSelectedSurface,
+    setAlignReferenceSurface,
+    alignReferenceSurface,
+    alignSurfaceToReference,
     setStatus,
     transformMode,
     setTransformMode,
@@ -520,6 +523,10 @@ export function Viewport() {
         e.preventDefault();
         if (placeSessionRef.current) {
           clearPlacementSession();
+        } else if (tool === 'align') {
+          setAlignReferenceSurface(null);
+          setSelectedSurface(null);
+          setTool('select');
         } else if (tool === 'surface') {
           setSelectedSurface(null);
           setTool('select');
@@ -600,6 +607,7 @@ export function Viewport() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [
     mode,
+    tool,
     undo,
     redo,
     duplicateSelected,
@@ -610,6 +618,8 @@ export function Viewport() {
     toggleGridSnap,
     setTransformMode,
     setTool,
+    setSelectedSurface,
+    setAlignReferenceSurface,
     saveLevel,
     clearPlacementSession,
     resolveSurfacePose,
@@ -776,6 +786,28 @@ export function Viewport() {
       } else {
         setSelectedSurface(null);
         selectActor(null);
+      }
+      return;
+    }
+
+    // Align to Neighbor — first click reference, second click target.
+    if (tool === 'align') {
+      const hit = sceneView.pickSurface?.(nx, ny);
+      if (!hit) {
+        setStatus('Align: click a surface (Esc cancels).');
+        return;
+      }
+      const picked = { actorId: hit.actorId, surfaceId: hit.surfaceId };
+      selectActor(hit.actorId, { additive: false });
+      setSelectedSurface(picked);
+      if (!alignReferenceSurface) {
+        setAlignReferenceSurface(picked);
+        setStatus(`Align reference: ${hit.surfaceId} — click target surface.`);
+        return;
+      }
+      const result = alignSurfaceToReference(picked);
+      if (!result.ok) {
+        setStatus(result.reason || 'Align failed.');
       }
       return;
     }

@@ -52,6 +52,18 @@ export function IconSurface(props) {
   );
 }
 
+/** Align to Neighbor — two faces with a join mark. */
+export function IconAlign(props) {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" {...props}>
+      <path
+        fill="currentColor"
+        d="M2 3h5v10H2zm7 0h5v10H9zm-1 4h2v2H8z"
+      />
+    </svg>
+  );
+}
+
 export function IconSelect(props) {
   return (
     <Svg {...props}>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import {
+  IconAlign,
   IconPlay,
   IconRecord,
   IconRedo,
@@ -21,6 +22,8 @@ export function LevelToolBar() {
     tool,
     setTool,
     setSelectedSurface,
+    setAlignReferenceSurface,
+    setStatus,
     gridSize,
     setGridSize,
     gridSnap,
@@ -105,6 +108,7 @@ export function LevelToolBar() {
           onClick={() => {
             setTool('select');
             setSelectedSurface(null);
+            setAlignReferenceSurface(null);
           }}
           {...helpProps('toolbar.select', playReason)}
         >
@@ -115,10 +119,28 @@ export function LevelToolBar() {
           className={`bb-btn${tool === 'surface' && !isPlay ? ' bb-btn--active' : ''}`}
           disabled={isPlay}
           title="Surface Selection — click a face to assign materials"
-          onClick={() => setTool('surface')}
+          onClick={() => {
+            setAlignReferenceSurface(null);
+            setTool('surface');
+          }}
           {...helpProps('toolbar.surface', playReason)}
         >
           <IconSurface /> Surface
+        </button>
+        <button
+          type="button"
+          className={`bb-btn${tool === 'align' && !isPlay ? ' bb-btn--active' : ''}`}
+          disabled={isPlay}
+          title="Align to Neighbor — click reference face, then target face"
+          onClick={() => {
+            setSelectedSurface(null);
+            setAlignReferenceSurface(null);
+            setTool('align');
+            setStatus?.('Align: click reference surface.');
+          }}
+          {...helpProps('toolbar.align', playReason)}
+        >
+          <IconAlign /> Align
         </button>
       </div>
 

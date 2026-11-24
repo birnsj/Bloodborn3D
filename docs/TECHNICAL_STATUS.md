@@ -2,19 +2,20 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), then Phase 2E.0–2E.2 materials/surfaces work.
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), then Phase 2E.0–2E.3 materials/surfaces work.
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 382 / 382 pass, 49 files |
+| `npm test` | 388 / 388 pass, 50 files |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E.0 | UV density + composition contract; `uvMapping.test.js` |
 | Phase 2E.1 | Semantic surfaces + Surface tool; `surfaces.test.js`; level `acceptance-surfaces.json` |
 | Phase 2E.2 | Per-surface `faceUVs`; Details UV controls + Reset; acceptance level extended |
+| Phase 2E.3 | Align to Neighbor; `alignSurfaces.test.js`; adjoining walls in acceptance level |
 
 ## 2. Implemented systems
 
@@ -39,6 +40,7 @@ Status is what the code does today, not an intent.
 | Structural UV (2E.0) | Implemented | Local tiling at 100 eu; actor UV + material UV composition; stairs/ramps density-corrected. |
 | Surface selection (2E.1) | Implemented | Toolbar **Surface** mode; semantic `faceMaterials` IDs; emissive highlight; actor material fallback. Brush/miter/openings/ramp/stair/column/arch/curved wall. |
 | Per-surface UV (2E.2) | Implemented | `faceUVs[surfaceId]` after actor UV; Details Scale/Offset/Rotation + Reset; identity preserves authored look; undo/save/prefab via component JSON. |
+| Align to Neighbor (2E.3) | Implemented | Toolbar **Align**; coplanar Brush faces; target-only `faceUVs`; rejects incompatible pairs; no world projection. |
 
 ## 3. Audit findings addressed in this pass
 
@@ -111,3 +113,4 @@ These need a real browser, GPU, display and pointer-lock; they cannot be run in 
 8. **Future schema.** Edit a copy of a level to `"schemaVersion": 3` and open it: an explicit "Unsupported level schemaVersion 3" message appears, and the current level is untouched.
 9. **Existing visuals (unchanged, still worth a spot check).** Mitered corners, openings, curved walls and stairs; edge snapping for walls/floors, pivot snapping for props and lights; the four color themes and UI scale.
 10. **Phase 2E.1 surfaces.** File → `acceptance-surfaces.json`. Enable **Surface**, click faces on wall/ramp/stair/column/arch/curved wall: highlight + Details “Selected Surface”. Assign a Content Browser material; Undo/Redo; Save/reload. Confirm Select mode still picks whole actors and actor material remains the fallback.
+11. **Phase 2E.3 Align to Neighbor.** File → `acceptance-surfaces.json`. Confirm **Align Wall A** / **Align Wall B** show continuous stone on adjoining `pz` faces. Enable **Align**, click A’s `pz` (amber reference), then B’s `pz` — target `faceUVs` updates; Undo restores prior UVs. Click a column/curved/non-coplanar face as target: status rejects and nothing changes. Esc returns to Select.

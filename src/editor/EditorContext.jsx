@@ -98,6 +98,7 @@ import {
   validateOpenings,
 } from '../runtime/wallOpenings.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
+import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
 import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
@@ -121,9 +122,11 @@ export function EditorProvider({ children }) {
   const [world, setWorld] = useState(null);
   const [selectedActorIds, setSelectedActorIds] = useState([]);
   const [mode, setMode] = useState('edit');
-  const [tool, setTool] = useState('select'); // select | surface | box | wall | floor | ceiling | subtract
+  const [tool, setTool] = useState('select'); // select | surface | align | box | wall | floor | ceiling | subtract
   /** @type {[{ actorId: string, surfaceId: string } | null]} */
   const [selectedSurface, setSelectedSurfaceState] = useState(null);
+  /** Align-to-Neighbor reference surface (Phase 2E.3). */
+  const [alignReferenceSurface, setAlignReferenceSurfaceState] = useState(null);
   /** Gizmo mode: move (W) | rotate (E) | scale (R). */
   const [transformMode, setTransformModeState] = useState('move');
   const setTransformMode = useCallback((mode) => {
@@ -1993,6 +1996,53 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.sceneView?.setSurfaceSelection?.(normalized);
   }, []);
 
+  const setAlignReferenceSurface = useCallback((next) => {
+    const normalized = next?.actorId && next?.surfaceId
+      ? { actorId: next.actorId, surfaceId: next.surfaceId }
+      : null;
+    setAlignReferenceSurfaceState(normalized);
+    runtimeRef.current?.sceneView?.setAlignReferenceSurface?.(normalized);
+  }, []);
+
+  useEffect(() => {
+    if (tool !== 'align') {
+      setAlignReferenceSurface(null);
+    }
+  }, [tool, setAlignReferenceSurface]);
+
+  /**
+   * Align target surface UV to the current Align reference.
+   * Only mutates target faceUVs. Returns { ok, reason }.
+   */
+  const alignSurfaceToReference = useCallback((target) => {
+    if (!world || mode === 'play' || !alignReferenceSurface || !target) {
+      return { ok: false, reason: 'Select a reference surface first.' };
+    }
+    const result = computeAlignFaceUv(world, alignReferenceSurface, target);
+    if (!result.ok) {
+      setStatus(result.reason || 'Align failed.');
+      return result;
+    }
+    const actor = world.getActor(target.actorId);
+    const brush = actor?.getComponent('Brush');
+    if (!brush) {
+      return { ok: false, reason: 'Target is not a Brush surface.' };
+    }
+    // Select target so updateSelectedBrush addresses the right actor.
+    selectedRef.current = [target.actorId];
+    setSelectedActorIds([target.actorId]);
+    updateSelectedBrush({ faceUVs: result.faceUVs });
+    setSelectedSurface({ actorId: target.actorId, surfaceId: target.surfaceId });
+    setStatus(`Aligned ${target.surfaceId} to ${alignReferenceSurface.surfaceId}.`);
+    return { ok: true };
+  }, [
+    world,
+    mode,
+    alignReferenceSurface,
+    updateSelectedBrush,
+    setSelectedSurface,
+  ]);
+
   const assignSelectedSurfaceMaterial = useCallback((materialId) => {
     if (!world || mode === 'play' || !selectedSurface) return;
     const actor = world.getActor(selectedSurface.actorId);
@@ -2240,6 +2290,9 @@ export function EditorProvider({ children }) {
     setTool,
     selectedSurface,
     setSelectedSurface,
+    alignReferenceSurface,
+    setAlignReferenceSurface,
+    alignSurfaceToReference,
     assignSelectedSurfaceMaterial,
     assignSelectedSurfaceUv,
     resetSelectedSurfaceUv,

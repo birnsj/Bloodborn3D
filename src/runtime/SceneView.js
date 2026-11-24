@@ -113,6 +113,8 @@ export class SceneView {
     this._surfaceHighlight = null;
     /** @type {{ actorId: string, surfaceId: string } | null} */
     this.selectedSurface = null;
+    /** Align-to-Neighbor reference (Phase 2E.3); highlighted separately from selection. */
+    this.alignReferenceSurface = null;
     this.selectedActorIds = [];
     this._syncToken = 0;
 
@@ -1169,6 +1171,16 @@ export class SceneView {
     this._refreshSurfaceHighlight();
   }
 
+  /**
+   * @param {{ actorId: string, surfaceId: string } | null} selection
+   */
+  setAlignReferenceSurface(selection) {
+    this.alignReferenceSurface = selection && selection.actorId && selection.surfaceId
+      ? { actorId: selection.actorId, surfaceId: selection.surfaceId }
+      : null;
+    this._refreshSurfaceHighlight();
+  }
+
   _clearSurfaceHighlight() {
     this._restoreSurfaceEmissives();
   }
@@ -1194,13 +1206,11 @@ export class SceneView {
     }
   }
 
-  _refreshSurfaceHighlight() {
-    this._restoreSurfaceEmissives();
-    const sel = this.selectedSurface;
-    if (!sel || !this.editMode) return;
+  _paintSurfaceHighlight(sel, color, intensity = 0.55) {
+    if (!sel) return;
     const entry = this._actorMeshes.get(sel.actorId);
     if (!entry) return;
-    const highlight = new THREE.Color(this.viewportColors.selection);
+    const highlight = color instanceof THREE.Color ? color : new THREE.Color(color);
     entry.group.traverse((obj) => {
       if (!obj.isMesh || !obj.userData.pickable) return;
       const ids = obj.userData.surfaceIds;
@@ -1209,13 +1219,31 @@ export class SceneView {
       if (matIndex < 0) return;
       const mat = obj.material[matIndex];
       if (!mat?.emissive) return;
-      mat.userData._bbPrevEmissive = mat.emissive.clone();
-      mat.userData._bbPrevEmissiveIntensity = mat.emissiveIntensity;
-      mat.userData._bbSurfaceHighlight = true;
+      if (!mat.userData._bbSurfaceHighlight) {
+        mat.userData._bbPrevEmissive = mat.emissive.clone();
+        mat.userData._bbPrevEmissiveIntensity = mat.emissiveIntensity;
+        mat.userData._bbSurfaceHighlight = true;
+      }
       mat.emissive.copy(highlight);
-      mat.emissiveIntensity = Math.max(mat.emissiveIntensity || 0, 0.55);
+      mat.emissiveIntensity = Math.max(mat.emissiveIntensity || 0, intensity);
       mat.needsUpdate = true;
     });
+  }
+
+  _refreshSurfaceHighlight() {
+    this._restoreSurfaceEmissives();
+    if (!this.editMode) return;
+    // Reference (amber) then selection (viewport selection color) so target wins if same.
+    if (this.alignReferenceSurface) {
+      this._paintSurfaceHighlight(this.alignReferenceSurface, 0xe8a838, 0.5);
+    }
+    if (this.selectedSurface) {
+      this._paintSurfaceHighlight(
+        this.selectedSurface,
+        this.viewportColors.selection,
+        0.55,
+      );
+    }
   }
 
   /**

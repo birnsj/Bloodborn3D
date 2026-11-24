@@ -80,6 +80,7 @@ export function DetailsPanel({ docked = false } = {}) {
     recordSelectedPrefabOverride,
     revertSelectedPrefabOverride,
     selectedSurface,
+    alignReferenceSurface,
     assignSelectedSurfaceMaterial,
     assignSelectedSurfaceUv,
     resetSelectedSurfaceUv,
@@ -203,6 +204,12 @@ export function DetailsPanel({ docked = false } = {}) {
                   <p className="bb-muted">
                     Surface <code>{selectedSurface.surfaceId}</code>
                     {tool === 'surface' ? ' · Surface Selection mode' : ''}
+                    {tool === 'align' ? ' · Align to Neighbor' : ''}
+                    {alignReferenceSurface
+                      && `${alignReferenceSurface.actorId}:${alignReferenceSurface.surfaceId}`
+                        !== `${selectedSurface.actorId}:${selectedSurface.surfaceId}`
+                      ? ` · ref ${alignReferenceSurface.surfaceId}`
+                      : ''}
                   </p>
                   <label className="bb-field">
                     <span className="bb-field__label">Surface material</span>
