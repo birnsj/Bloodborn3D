@@ -3,7 +3,9 @@ import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
 import {
   CURVED_WALL_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 export const DEFAULT_CURVED_WALL_RADIUS = 200;
@@ -34,6 +36,7 @@ export class CurvedWallComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
   } = {}) {
     super({ id, type: CurvedWallComponent.componentType, enabled });
@@ -53,6 +56,7 @@ export class CurvedWallComponent extends Component {
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, CURVED_WALL_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, CURVED_WALL_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -74,6 +78,7 @@ export class CurvedWallComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

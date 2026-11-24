@@ -4,7 +4,9 @@ import { RAMP_DIRECTIONS } from './RampComponent.js';
 import {
   BOX_SURFACE_IDS,
   STAIR_WEDGE_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 const STAIR_SURFACE_IDS = [...BOX_SURFACE_IDS, ...STAIR_WEDGE_SURFACE_IDS];
@@ -39,6 +41,7 @@ export class StairComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
   } = {}) {
     super({ id, type: StairComponent.componentType, enabled });
@@ -56,6 +59,7 @@ export class StairComponent extends Component {
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, STAIR_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, STAIR_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -94,6 +98,7 @@ export class StairComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

@@ -247,7 +247,11 @@ export function createCurvedWallGeometry(wall) {
     batches.push({ surfaceId: sid, triCount: b.pos.length / 9 });
   }
 
-  const uvs = mapDensityUvArray(densityUv, wall?.uv);
+  const surfacePerVert = [];
+  for (const b of batches) {
+    for (let i = 0; i < b.triCount * 3; i += 1) surfacePerVert.push(b.surfaceId);
+  }
+  const uvs = mapDensityUvArray(densityUv, wall?.uv, wall?.faceUVs, surfacePerVert);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));

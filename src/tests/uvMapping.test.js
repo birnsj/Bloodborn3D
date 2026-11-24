@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createBrushBoxGeometry, TEXTURE_TILE_EDITOR_UNITS } from '../runtime/brushGeometry.js';
 import {
   composeActorUv,
+  composeGeometryUv,
+  isIdentityUv,
   mapDensityUvArray,
   normalizeActorUv,
   TEXTURE_TILE_EDITOR_UNITS as TILE,
@@ -62,6 +64,33 @@ describe('Phase 2E.0 — UV composition contract', () => {
   it('mapDensityUvArray leaves density UVs unchanged under identity actor UV', () => {
     const src = [0, 0, 3, 1.5, 1, 2];
     expect(mapDensityUvArray(src, {})).toEqual(src);
+  });
+
+  it('composeGeometryUv applies actor then surface UV; identity surface is a no-op', () => {
+    expect(isIdentityUv({})).toBe(true);
+    expect(composeGeometryUv(1, 0, { scale: { x: 2, y: 1 } }, null)).toEqual([2, 0]);
+    expect(composeGeometryUv(1, 0, { scale: { x: 2, y: 1 } }, {})).toEqual([2, 0]);
+    const [u, v] = composeGeometryUv(1, 0, { scale: { x: 2, y: 1 } }, {
+      scale: { x: 1, y: 1 },
+      offset: { x: 0.25, y: 0 },
+      rotation: 0,
+    });
+    expect(u).toBeCloseTo(2.25, 5);
+    expect(v).toBeCloseTo(0, 5);
+  });
+
+  it('mapDensityUvArray applies per-surface UV when surface ids are provided', () => {
+    const src = [1, 0, 1, 0];
+    const out = mapDensityUvArray(
+      src,
+      {},
+      { slope: { scale: { x: 2, y: 1 }, offset: { x: 0, y: 0 }, rotation: 0 } },
+      ['slope', 'bottom'],
+    );
+    expect(out[0]).toBeCloseTo(2, 5);
+    expect(out[1]).toBeCloseTo(0, 5);
+    expect(out[2]).toBeCloseTo(1, 5);
+    expect(out[3]).toBeCloseTo(0, 5);
   });
 });
 

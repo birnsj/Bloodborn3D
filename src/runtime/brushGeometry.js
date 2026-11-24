@@ -9,6 +9,7 @@ import {
 } from './brushBoolean.js';
 import {
   TEXTURE_TILE_EDITOR_UNITS,
+  applyFaceUvsToGeometry,
   composeActorUv,
 } from './uvMapping.js';
 
@@ -18,6 +19,7 @@ import {
  * Brick / ashlar module size belongs in the texture pixels (or material uvScale), not here.
  *
  * Actor UV (scale → rotation → offset) is Layer 1 of the Phase 2E.0 composition contract;
+ * optional faceUVs[surfaceId] apply after actor UV (Phase 2E.2);
  * material uvScale/offset/rotation is Layer 2 (see uvMapping.js / materialFactory.js).
  */
 export { TEXTURE_TILE_EDITOR_UNITS };
@@ -30,12 +32,13 @@ export const TARGET_TEXEL_DENSITY = 2048 / TEXTURE_TILE_METERS;
  *
  * Face order matches Three.js BoxGeometry materials: +x -x +y -y +z -z
  */
-export function createBrushBoxGeometry(sizeEditor, uv = {}) {
+export function createBrushBoxGeometry(sizeEditor, uv = {}, faceUVs = null) {
   const sx = Math.max(1, sizeEditor.x);
   const sy = Math.max(1, sizeEditor.y);
   const sz = Math.max(1, sizeEditor.z);
   const geom = new THREE.BoxGeometry(toMeters(sx), toMeters(sy), toMeters(sz));
   applyBrushUvs(geom, sx, sy, sz, uv);
+  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
   return geom;
 }
 
@@ -44,12 +47,13 @@ export function createBrushBoxGeometry(sizeEditor, uv = {}) {
  * Optional uvBias shifts tiling so pieces of a cut wall stay continuous in wall space.
  * Bias is applied in scaled-density space (before rotation), matching historical cut-wall continuity.
  */
-export function createBrushSolidGeometry(sizeEditor, uv = {}, uvBias = null) {
+export function createBrushSolidGeometry(sizeEditor, uv = {}, uvBias = null, faceUVs = null) {
   const sx = Math.max(1e-4, sizeEditor.x);
   const sy = Math.max(1e-4, sizeEditor.y);
   const sz = Math.max(1e-4, sizeEditor.z);
   const geom = new THREE.BoxGeometry(toMeters(sx), toMeters(sy), toMeters(sz));
   applyBrushUvs(geom, sx, sy, sz, uv, uvBias);
+  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
   return geom;
 }
 

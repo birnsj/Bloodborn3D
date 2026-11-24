@@ -145,7 +145,7 @@ export function createStairGeometry(stair) {
       mesh.userData.stepIndex = step.index;
       group.add(mesh);
     } else {
-      const geom = createBrushBoxGeometry(step.size, stair?.uv);
+      const geom = createBrushBoxGeometry(step.size, stair?.uv, stair?.faceUVs);
       const mesh = new THREE.Mesh(geom);
       mesh.position.set(
         toMeters(step.center.x),
@@ -189,11 +189,14 @@ export function createWedgeStepGeometry(step, stair) {
 
   const pos = [];
   const densityUv = [];
+  const surfacePerVert = [];
   for (let f = 0; f < faces.length; f += 1) {
     const tri = faces[f];
+    const surfaceId = STAIR_WEDGE_SURFACE_IDS[(f / 2) | 0];
     for (const vi of tri) {
       const p = v[vi];
       pos.push(toMeters(p.x), toMeters(p.y), toMeters(p.z));
+      surfacePerVert.push(surfaceId);
     }
     if (f < 2) {
       densityUv.push(0, 0, width / tile, 0, 0, arcLen / tile);
@@ -208,7 +211,7 @@ export function createWedgeStepGeometry(step, stair) {
     }
   }
 
-  const uvFinal = mapDensityUvArray(densityUv, stair?.uv);
+  const uvFinal = mapDensityUvArray(densityUv, stair?.uv, stair?.faceUVs, surfacePerVert);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));

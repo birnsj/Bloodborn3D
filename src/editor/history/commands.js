@@ -244,6 +244,11 @@ export class SetBrushMaterialCommand {
         ? { ...state.faceMaterials }
         : null;
     }
+    if ('faceUVs' in state) {
+      brush.faceUVs = state.faceUVs
+        ? structuredClone(state.faceUVs)
+        : null;
+    }
     if ('uv' in state && state.uv) {
       brush.uv = {
         scale: { ...(state.uv.scale || brush.uv.scale) },

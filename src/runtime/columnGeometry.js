@@ -233,7 +233,11 @@ export function createColumnGeometry(column) {
     batches.push({ surfaceId: sid, triCount: b.pos.length / 9 });
   }
 
-  const uvOut = mapDensityUvArray(densityUv, column?.uv);
+  const surfacePerVert = [];
+  for (const b of batches) {
+    for (let i = 0; i < b.triCount * 3; i += 1) surfacePerVert.push(b.surfaceId);
+  }
+  const uvOut = mapDensityUvArray(densityUv, column?.uv, column?.faceUVs, surfacePerVert);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvOut, 2));

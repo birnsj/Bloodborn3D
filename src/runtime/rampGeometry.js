@@ -154,17 +154,19 @@ export function createRampWedgeGeometry(ramp) {
 
   const posOut = [];
   const densityUv = [];
+  const surfacePerVert = [];
   const batchCounts = Object.fromEntries(RAMP_SURFACE_IDS.map((id) => [id, 0]));
   for (const face of faces) {
     for (let t = 0; t < 3; t += 1) {
       const p = verts[face.i[t]];
       posOut.push(toMeters(p.x), toMeters(p.y), toMeters(p.z));
       densityUv.push(face.uv[t][0], face.uv[t][1]);
+      surfacePerVert.push(face.surface);
     }
     batchCounts[face.surface] += 1;
   }
 
-  const uvFinal = mapDensityUvArray(densityUv, ramp?.uv);
+  const uvFinal = mapDensityUvArray(densityUv, ramp?.uv, ramp?.faceUVs, surfacePerVert);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));

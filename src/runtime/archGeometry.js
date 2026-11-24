@@ -13,7 +13,11 @@ import {
   DEFAULT_ARCH_RISE,
   DEFAULT_ARCH_THICKNESS,
 } from '../components/ArchComponent.js';
-import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import {
+  TEXTURE_TILE_EDITOR_UNITS,
+  applyFaceUvsToGeometry,
+  mapDensityUvArray,
+} from './uvMapping.js';
 import {
   ARCH_SURFACE_IDS,
   regroupTrianglesBySurface,
@@ -261,6 +265,10 @@ export function createArchGeometry(arch) {
     }
     void cy;
     return 'outer';
+  });
+  applyFaceUvsToGeometry(geom, arch?.faceUVs, {
+    scheme: 'grouped',
+    surfaceIds: geom.userData.surfaceIds,
   });
   return geom;
 }

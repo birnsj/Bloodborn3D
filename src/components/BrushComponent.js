@@ -4,7 +4,9 @@ import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { normalizeOpenings } from '../runtime/wallOpenings.js';
 import {
   BOX_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 /**
@@ -22,6 +24,7 @@ export class BrushComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
     openings = null,
     /** 'add' (default) or 'subtract' — subtractive brushes carve overlapping additive solids. */
@@ -37,6 +40,7 @@ export class BrushComponent extends Component {
     this.collidable = collidable;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, BOX_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, BOX_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
     this.openings = normalizeOpenings(openings);
     this.operation = operation === 'subtract' ? 'subtract' : 'add';
@@ -54,6 +58,7 @@ export class BrushComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       operation: this.operation === 'subtract' ? 'subtract' : 'add',
       miterStart: this.miterStart,
       miterEnd: this.miterEnd,

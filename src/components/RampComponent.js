@@ -2,7 +2,9 @@ import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import {
   RAMP_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 export const RAMP_DIRECTIONS = ['z+', 'z-', 'x+', 'x-'];
@@ -30,6 +32,7 @@ export class RampComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
   } = {}) {
     super({ id, type: RampComponent.componentType, enabled });
@@ -42,6 +45,7 @@ export class RampComponent extends Component {
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, RAMP_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, RAMP_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -59,6 +63,7 @@ export class RampComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

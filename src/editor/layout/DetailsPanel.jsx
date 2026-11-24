@@ -81,6 +81,8 @@ export function DetailsPanel({ docked = false } = {}) {
     revertSelectedPrefabOverride,
     selectedSurface,
     assignSelectedSurfaceMaterial,
+    assignSelectedSurfaceUv,
+    resetSelectedSurfaceUv,
     setSelectedSurface,
     tool,
   } = useEditor();
@@ -188,39 +190,128 @@ export function DetailsPanel({ docked = false } = {}) {
               {spawn && <span>PlayerSpawn</span>}
             </div>
 
-            {selectedSurface && selectedSurface.actorId === selectedActor.id && (
-              <Collapsible title="Selected Surface" storageKey="details.surface" defaultOpen>
-                <p className="bb-muted">
-                  Surface <code>{selectedSurface.surfaceId}</code>
-                  {tool === 'surface' ? ' · Surface Selection mode' : ''}
-                </p>
-                <label className="bb-field">
-                  <span className="bb-field__label">Surface material</span>
-                  <select
-                    className="bb-select"
-                    disabled={disabled}
-                    value={
-                      (brush || ramp || stair || column || arch || curvedWall)
-                        ?.faceMaterials?.[selectedSurface.surfaceId] || ''
-                    }
-                    onChange={(e) => assignSelectedSurfaceMaterial(e.target.value || null)}
-                  >
-                    <option value="">(actor material)</option>
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="bb-btn"
-                  disabled={disabled}
-                  onClick={() => setSelectedSurface(null)}
-                >
-                  Clear surface selection
-                </button>
-              </Collapsible>
-            )}
+            {selectedSurface && selectedSurface.actorId === selectedActor.id && (() => {
+              const surfaceComp = brush || ramp || stair || column || arch || curvedWall;
+              const surfaceUv = surfaceComp?.faceUVs?.[selectedSurface.surfaceId] || {
+                scale: { x: 1, y: 1 },
+                offset: { x: 0, y: 0 },
+                rotation: 0,
+              };
+              const hasSurfaceUv = Boolean(surfaceComp?.faceUVs?.[selectedSurface.surfaceId]);
+              return (
+                <Collapsible title="Selected Surface" storageKey="details.surface" defaultOpen>
+                  <p className="bb-muted">
+                    Surface <code>{selectedSurface.surfaceId}</code>
+                    {tool === 'surface' ? ' · Surface Selection mode' : ''}
+                  </p>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Surface material</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={surfaceComp?.faceMaterials?.[selectedSurface.surfaceId] || ''}
+                      onChange={(e) => assignSelectedSurfaceMaterial(e.target.value || null)}
+                    >
+                      <option value="">(actor material)</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="bb-muted">
+                    Surface UV overrides actor UV for this face only.
+                    {hasSurfaceUv ? '' : ' (inherited defaults)'}
+                  </p>
+                  <div className="bb-axis-row">
+                    <label className="bb-field">
+                      <span className="bb-field__label">Scale U</span>
+                      <input
+                        type="number"
+                        className="bb-input"
+                        step="0.1"
+                        disabled={disabled}
+                        value={surfaceUv.scale.x}
+                        onChange={(e) => assignSelectedSurfaceUv({
+                          scale: { x: Number(e.target.value), y: surfaceUv.scale.y },
+                        })}
+                      />
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Scale V</span>
+                      <input
+                        type="number"
+                        className="bb-input"
+                        step="0.1"
+                        disabled={disabled}
+                        value={surfaceUv.scale.y}
+                        onChange={(e) => assignSelectedSurfaceUv({
+                          scale: { x: surfaceUv.scale.x, y: Number(e.target.value) },
+                        })}
+                      />
+                    </label>
+                  </div>
+                  <div className="bb-axis-row">
+                    <label className="bb-field">
+                      <span className="bb-field__label">Offset U</span>
+                      <input
+                        type="number"
+                        className="bb-input"
+                        step="0.05"
+                        disabled={disabled}
+                        value={surfaceUv.offset.x}
+                        onChange={(e) => assignSelectedSurfaceUv({
+                          offset: { x: Number(e.target.value), y: surfaceUv.offset.y },
+                        })}
+                      />
+                    </label>
+                    <label className="bb-field">
+                      <span className="bb-field__label">Offset V</span>
+                      <input
+                        type="number"
+                        className="bb-input"
+                        step="0.05"
+                        disabled={disabled}
+                        value={surfaceUv.offset.y}
+                        onChange={(e) => assignSelectedSurfaceUv({
+                          offset: { x: surfaceUv.offset.x, y: Number(e.target.value) },
+                        })}
+                      />
+                    </label>
+                  </div>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Rotation (°)</span>
+                    <input
+                      type="number"
+                      className="bb-input"
+                      step="1"
+                      disabled={disabled}
+                      value={surfaceUv.rotation}
+                      onChange={(e) => assignSelectedSurfaceUv({
+                        rotation: Number(e.target.value),
+                      })}
+                    />
+                  </label>
+                  <div className="bb-details-actions">
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled || !hasSurfaceUv}
+                      onClick={() => resetSelectedSurfaceUv()}
+                    >
+                      Reset Surface UV
+                    </button>
+                    <button
+                      type="button"
+                      className="bb-btn"
+                      disabled={disabled}
+                      onClick={() => setSelectedSurface(null)}
+                    >
+                      Clear surface selection
+                    </button>
+                  </div>
+                </Collapsible>
+              );
+            })()}
 
             <Collapsible title="Hierarchy" storageKey="details.hierarchy">
               <label className="bb-field" {...helpProps('details.parent')}>

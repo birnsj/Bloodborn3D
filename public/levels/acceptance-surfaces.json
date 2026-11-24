@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "name": "Acceptance Surfaces 2E.1",
+  "name": "Acceptance Surfaces 2E.2",
   "actors": [
     {
       "id": "actor_floor",
@@ -49,6 +49,18 @@
           "faceMaterials": {
             "pz": "mat_hall_stone",
             "nz": "mat_hall_wood"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": { "x": 2, "y": 1 },
+              "offset": { "x": 0.25, "y": 0 },
+              "rotation": 0
+            },
+            "nz": {
+              "scale": { "x": 1, "y": 1 },
+              "offset": { "x": 0, "y": 0 },
+              "rotation": 90
+            }
           },
           "openings": [
             {
@@ -116,6 +128,13 @@
           "faceMaterials": {
             "slope": "mat_hall_wood",
             "high": "mat_hall_stone"
+          },
+          "faceUVs": {
+            "slope": {
+              "scale": { "x": 1.5, "y": 1 },
+              "offset": { "x": 0, "y": 0.1 },
+              "rotation": 0
+            }
           }
         }
       ]
@@ -208,6 +227,13 @@
           "faceMaterials": {
             "shaft": "mat_hall_stone",
             "base": "mat_hall_wood"
+          },
+          "faceUVs": {
+            "shaft": {
+              "scale": { "x": 1, "y": 2 },
+              "offset": { "x": 0, "y": 0 },
+              "rotation": 0
+            }
           }
         }
       ]
@@ -268,6 +294,13 @@
           "faceMaterials": {
             "outer": "mat_hall_stone",
             "inner": "mat_hall_wood"
+          },
+          "faceUVs": {
+            "outer": {
+              "scale": { "x": 1, "y": 1 },
+              "offset": { "x": 0.5, "y": 0 },
+              "rotation": 0
+            }
           }
         }
       ]

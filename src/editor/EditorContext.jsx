@@ -1175,7 +1175,7 @@ export function EditorProvider({ children }) {
 
     const before = {};
     const after = {};
-    for (const key of ['materialId', 'faceMaterials', 'uv', 'color', 'collidable', 'operation', 'miterStart', 'miterEnd']) {
+    for (const key of ['materialId', 'faceMaterials', 'faceUVs', 'uv', 'color', 'collidable', 'operation', 'miterStart', 'miterEnd']) {
       if (key in partial) {
         before[key] = key === 'uv'
           ? {
@@ -1185,7 +1185,9 @@ export function EditorProvider({ children }) {
           }
           : key === 'faceMaterials'
             ? (brush.faceMaterials ? { ...brush.faceMaterials } : null)
-            : brush[key];
+            : key === 'faceUVs'
+              ? (brush.faceUVs ? structuredClone(brush.faceUVs) : null)
+              : brush[key];
         after[key] = key === 'operation'
           ? (partial.operation === 'subtract' ? 'subtract' : 'add')
           : partial[key];
@@ -1203,9 +1205,11 @@ export function EditorProvider({ children }) {
       after,
       label: partial.materialId !== undefined
         ? 'Assign material'
-        : partial.operation !== undefined
-          ? (after.operation === 'subtract' ? 'Set subtractive' : 'Set additive')
-          : 'Edit brush material',
+        : partial.faceUVs !== undefined
+          ? 'Edit surface UV'
+          : partial.operation !== undefined
+            ? (after.operation === 'subtract' ? 'Set subtractive' : 'Set additive')
+            : 'Edit brush material',
     });
     matCmd.do();
     if (rejectSubtractIfTooComplex(validateWorldSubtractComplexity(world))) {
@@ -2025,6 +2029,98 @@ export function EditorProvider({ children }) {
     updateSelectedCurvedWall,
   ]);
 
+  const assignSelectedSurfaceUv = useCallback((uvPartial) => {
+    if (!world || mode === 'play' || !selectedSurface) return;
+    const actor = world.getActor(selectedSurface.actorId);
+    if (!actor) return;
+    const brush = actor.getComponent('Brush');
+    const ramp = actor.getComponent('Ramp');
+    const stair = actor.getComponent('Stair');
+    const column = actor.getComponent('Column');
+    const arch = actor.getComponent('Arch');
+    const curved = actor.getComponent('CurvedWall');
+    const patchUv = (comp, updateFn) => {
+      const sid = selectedSurface.surfaceId;
+      const current = comp.faceUVs?.[sid] || {
+        scale: { x: 1, y: 1 },
+        offset: { x: 0, y: 0 },
+        rotation: 0,
+      };
+      const nextUv = {
+        scale: {
+          x: uvPartial?.scale?.x ?? current.scale.x,
+          y: uvPartial?.scale?.y ?? current.scale.y,
+        },
+        offset: {
+          x: uvPartial?.offset?.x ?? current.offset.x,
+          y: uvPartial?.offset?.y ?? current.offset.y,
+        },
+        rotation: uvPartial?.rotation ?? current.rotation,
+      };
+      const next = { ...(comp.faceUVs || {}) };
+      const identity = nextUv.scale.x === 1 && nextUv.scale.y === 1
+        && nextUv.offset.x === 0 && nextUv.offset.y === 0
+        && nextUv.rotation === 0;
+      if (identity) delete next[sid];
+      else next[sid] = nextUv;
+      updateFn({
+        faceUVs: Object.keys(next).length ? structuredClone(next) : null,
+      });
+    };
+    if (brush) patchUv(brush, updateSelectedBrush);
+    else if (ramp) patchUv(ramp, updateSelectedRamp);
+    else if (stair) patchUv(stair, updateSelectedStair);
+    else if (column) patchUv(column, updateSelectedColumn);
+    else if (arch) patchUv(arch, updateSelectedArch);
+    else if (curved) patchUv(curved, updateSelectedCurvedWall);
+  }, [
+    world,
+    mode,
+    selectedSurface,
+    updateSelectedBrush,
+    updateSelectedRamp,
+    updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+  ]);
+
+  const resetSelectedSurfaceUv = useCallback(() => {
+    if (!world || mode === 'play' || !selectedSurface) return;
+    const actor = world.getActor(selectedSurface.actorId);
+    if (!actor) return;
+    const brush = actor.getComponent('Brush');
+    const ramp = actor.getComponent('Ramp');
+    const stair = actor.getComponent('Stair');
+    const column = actor.getComponent('Column');
+    const arch = actor.getComponent('Arch');
+    const curved = actor.getComponent('CurvedWall');
+    const clearUv = (comp, updateFn) => {
+      if (!comp.faceUVs?.[selectedSurface.surfaceId]) return;
+      const next = { ...(comp.faceUVs || {}) };
+      delete next[selectedSurface.surfaceId];
+      updateFn({
+        faceUVs: Object.keys(next).length ? structuredClone(next) : null,
+      });
+    };
+    if (brush) clearUv(brush, updateSelectedBrush);
+    else if (ramp) clearUv(ramp, updateSelectedRamp);
+    else if (stair) clearUv(stair, updateSelectedStair);
+    else if (column) clearUv(column, updateSelectedColumn);
+    else if (arch) clearUv(arch, updateSelectedArch);
+    else if (curved) clearUv(curved, updateSelectedCurvedWall);
+  }, [
+    world,
+    mode,
+    selectedSurface,
+    updateSelectedBrush,
+    updateSelectedRamp,
+    updateSelectedStair,
+    updateSelectedColumn,
+    updateSelectedArch,
+    updateSelectedCurvedWall,
+  ]);
+
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
     if (selectedSurface) {
@@ -2145,6 +2241,8 @@ export function EditorProvider({ children }) {
     selectedSurface,
     setSelectedSurface,
     assignSelectedSurfaceMaterial,
+    assignSelectedSurfaceUv,
+    resetSelectedSurfaceUv,
     transformMode,
     setTransformMode,
     levelName,

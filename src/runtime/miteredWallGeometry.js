@@ -7,7 +7,11 @@ import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
 import { getWallAxes } from './wallOpenings.js';
 import { getMiteredWallFootprint } from './wallEndpoints.js';
-import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
+import {
+  TEXTURE_TILE_EDITOR_UNITS,
+  applyFaceUvsToGeometry,
+  mapDensityUvArray,
+} from './uvMapping.js';
 import {
   BOX_SURFACE_IDS,
   boxSurfaceIdFromLocalNormal,
@@ -48,7 +52,7 @@ export function miteredWallPointsToMetersFlat(size, miterStart, miterEnd, scale 
   return out;
 }
 
-export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEnd = 0) {
+export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEnd = 0, faceUVs = null) {
   const { bottom, top, axes } = getMiteredWallCorners(size, miterStart, miterEnd);
 
   const pos = [];
@@ -120,6 +124,10 @@ export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEn
     const nz = e1x * e2y - e1y * e2x;
     const len = Math.hypot(nx, ny, nz) || 1;
     return boxSurfaceIdFromLocalNormal(nx / len, ny / len, nz / len);
+  });
+  applyFaceUvsToGeometry(geom, faceUVs, {
+    scheme: 'grouped',
+    surfaceIds: geom.userData.surfaceIds,
   });
   return geom;
 }

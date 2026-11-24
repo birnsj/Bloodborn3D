@@ -2,7 +2,9 @@ import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import {
   COLUMN_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 export const COLUMN_SHAPES = ['round', 'square', 'hexagon', 'octagon'];
@@ -39,6 +41,7 @@ export class ColumnComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
   } = {}) {
     super({ id, type: ColumnComponent.componentType, enabled });
@@ -62,6 +65,7 @@ export class ColumnComponent extends Component {
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, COLUMN_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, COLUMN_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -96,6 +100,7 @@ export class ColumnComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

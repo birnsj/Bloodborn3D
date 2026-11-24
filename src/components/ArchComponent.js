@@ -2,7 +2,9 @@ import { Component } from '../core/Component.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import {
   ARCH_SURFACE_IDS,
+  cloneFaceUVs,
   normalizeFaceMaterials,
+  normalizeFaceUVs,
 } from '../runtime/surfaces.js';
 
 export const ARCH_TYPES = ['roman', 'gothic'];
@@ -33,6 +35,7 @@ export class ArchComponent extends Component {
     collidable = true,
     materialId = null,
     faceMaterials = null,
+    faceUVs = null,
     uv = null,
   } = {}) {
     super({ id, type: ArchComponent.componentType, enabled });
@@ -50,6 +53,7 @@ export class ArchComponent extends Component {
     this.collidable = collidable !== false;
     this.materialId = materialId || null;
     this.faceMaterials = normalizeFaceMaterials(faceMaterials, ARCH_SURFACE_IDS);
+    this.faceUVs = normalizeFaceUVs(faceUVs, ARCH_SURFACE_IDS);
     this.uv = createBrushUvState(uv || {});
   }
 
@@ -69,6 +73,7 @@ export class ArchComponent extends Component {
       collidable: this.collidable,
       materialId: this.materialId,
       faceMaterials: this.faceMaterials ? { ...this.faceMaterials } : null,
+      faceUVs: cloneFaceUVs(this.faceUVs),
       uv: {
         scale: { ...this.uv.scale },
         offset: { ...this.uv.offset },

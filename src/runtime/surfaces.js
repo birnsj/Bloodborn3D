@@ -1,13 +1,16 @@
 /**
- * Phase 2E.1 — stable semantic surface IDs for structural geometry.
- * Stored in component.faceMaterials[surfaceId] → material asset id.
- * Actor materialId remains the fallback when a surface has no override.
+ * Phase 2E.1 / 2E.2 — stable semantic surface IDs for structural geometry.
+ * Stored in:
+ *   component.faceMaterials[surfaceId] → material asset id
+ *   component.faceUVs[surfaceId] → { scale, offset, rotation }
+ * Actor materialId / actor.uv remain the fallback when a surface has no override.
  *
  * IDs are semantic (not triangle indices) so they survive geometry regeneration.
  */
 
 import * as THREE from 'three';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
+import { isIdentityUv, normalizeActorUv } from './uvMapping.js';
 
 /** Axis-aligned box faces (Brush solids, mitered walls, straight stair steps). */
 export const BOX_SURFACE_IDS = [...FACE_KEYS];
@@ -92,6 +95,43 @@ export function normalizeFaceMaterials(raw, allowed = null) {
   return any ? next : null;
 }
 
+/**
+ * Normalize faceUVs map. Unknown keys and identity transforms are dropped.
+ * @param {object|null} raw
+ * @param {Iterable<string>|null} [allowed]
+ */
+export function normalizeFaceUVs(raw, allowed = null) {
+  if (!raw || typeof raw !== 'object') return null;
+  const allow = allowed
+    ? (allowed instanceof Set ? allowed : new Set(allowed))
+    : ALL_SURFACE_IDS;
+  const next = {};
+  let any = false;
+  for (const [key, value] of Object.entries(raw)) {
+    if (!allow.has(key) || !value || typeof value !== 'object') continue;
+    const uv = normalizeActorUv(value);
+    if (isIdentityUv(uv)) continue;
+    next[key] = uv;
+    any = true;
+  }
+  return any ? next : null;
+}
+
+/** Deep-clone a faceUVs map for serialization / undo snapshots. */
+export function cloneFaceUVs(faceUVs) {
+  if (!faceUVs || typeof faceUVs !== 'object') return null;
+  const out = {};
+  for (const [key, value] of Object.entries(faceUVs)) {
+    if (!value) continue;
+    out[key] = {
+      scale: { x: Number(value.scale?.x) || 1, y: Number(value.scale?.y) || 1 },
+      offset: { x: Number(value.offset?.x) || 0, y: Number(value.offset?.y) || 0 },
+      rotation: Number(value.rotation) || 0,
+    };
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export function allowedSurfacesForComponentType(type) {
   return ALLOWED_BY_TYPE[type] || ALL_SURFACE_IDS;
 }
@@ -118,6 +158,29 @@ export function resolveSurfaceMaterialId(comp, surfaceId) {
     return comp.faceMaterials[surfaceId];
   }
   return comp.materialId || null;
+}
+
+/**
+ * Resolve UV for a surface. Returns surface override when present, else actor uv
+ * (normalized). Does not compose — callers apply layers via composeGeometryUv.
+ */
+export function resolveSurfaceUv(comp, surfaceId) {
+  if (!comp) return normalizeActorUv();
+  if (surfaceId && comp.faceUVs?.[surfaceId]) {
+    return normalizeActorUv(comp.faceUVs[surfaceId]);
+  }
+  return normalizeActorUv(comp.uv);
+}
+
+/**
+ * Effective UV controls shown in Details for a selected surface.
+ * Missing override → identity (inherited / Reset state), not actor-composed values.
+ */
+export function getSurfaceUvOverrideOrDefault(comp, surfaceId) {
+  if (surfaceId && comp?.faceUVs?.[surfaceId]) {
+    return normalizeActorUv(comp.faceUVs[surfaceId]);
+  }
+  return normalizeActorUv();
 }
 
 /**
@@ -174,6 +237,24 @@ export function patchFaceMaterial(comp, surfaceId, materialId) {
   else next[surfaceId] = String(materialId);
   const after = normalizeFaceMaterials(next, allowed);
   comp.faceMaterials = after;
+  return { before, after };
+}
+
+/**
+ * Patch faceUVs on a component. uv null / identity clears the override.
+ * Returns { before, after } snapshots of faceUVs (or null).
+ */
+export function patchFaceUv(comp, surfaceId, uv) {
+  const allowed = allowedSurfacesForComponentType(comp.type);
+  if (!allowed.has(surfaceId)) {
+    return null;
+  }
+  const before = cloneFaceUVs(comp.faceUVs);
+  const next = { ...(comp.faceUVs || {}) };
+  if (!uv || isIdentityUv(uv)) delete next[surfaceId];
+  else next[surfaceId] = normalizeActorUv(uv);
+  const after = normalizeFaceUVs(next, allowed);
+  comp.faceUVs = after;
   return { before, after };
 }
 

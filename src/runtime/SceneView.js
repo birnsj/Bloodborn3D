@@ -474,6 +474,7 @@ export class SceneView {
         comp.uv,
         comp.miterStart,
         comp.miterEnd,
+        comp.faceUVs,
       );
       const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
         editMode: this.editMode,
@@ -532,8 +533,8 @@ export class SceneView {
         v: (solid.center.y / tile) * (Number(comp.uv?.scale?.y) || 1),
       };
       const geom = solids.length === 1 && solid.role === 'solid'
-        ? createBrushBoxGeometry(solid.size, comp.uv)
-        : createBrushSolidGeometry(solid.size, comp.uv, bias);
+        ? createBrushBoxGeometry(solid.size, comp.uv, comp.faceUVs)
+        : createBrushSolidGeometry(solid.size, comp.uv, bias, comp.faceUVs);
 
       // Cut pieces inherit brush materials; slightly darker fallback for newly exposed faces.
       const baseColor = solid.role === 'cut' && !comp.materialId
