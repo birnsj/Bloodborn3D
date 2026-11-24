@@ -134,7 +134,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 | **2F.2** | Edge editing | **Done** |
 | **2F.3** | Vertex editing | **Done** |
 | **2F.4** | Extrusion and clipping | **Done** |
-| **2F.5** | Integration and persistence verification | Not started |
+| **2F.5** | Integration and persistence verification | **Done** |
 | **2F.6** | Multiple viewports and orthographic editing | Not started (appended; does not renumber 2F.0–2F.5) |
 
 ### Phase 2F.0 notes
@@ -179,6 +179,14 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Eligible plain Brush auto-converts inside the same undo step (Q11); multi-brush clips are atomic.
 - Acceptance: `public/levels/acceptance-extrusion-clipping.json`; harness `public/dev/phase2f4Acceptance.js`; `phase2f4ExtrusionClipping.test.js`.
 - Integration verification / multi-viewport are **not** in 2F.4.
+
+### Phase 2F.5 notes
+
+- Integrated acceptance level `public/levels/acceptance-convex-brushes.json` covers convert, face/edge/vertex, extrude/clip, hierarchy, transformed actors, cutter conflicts, and parametric preservation.
+- Harness `public/dev/phase2f5Acceptance.js`; report `docs/ACCEPTANCE_CONVEX_BRUSHES.md`; unit suite `phase2f5Integration.test.js`.
+- Gothic mansion regression re-verified unmodified (no ConvexBrush injected).
+- Prefab create/override/sync/nested, schema 1–3, Play/Stop, and undo/redo covered by unit + browser passes.
+- Phase 2F is **not** fully complete — **2F.6** remains.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 

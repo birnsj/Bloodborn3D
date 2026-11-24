@@ -1,0 +1,1626 @@
+{
+  "schemaVersion": 3,
+  "name": "acceptance-convex-brushes",
+  "actors": [
+    {
+      "id": "floor",
+      "name": "Floor",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": -5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "floor"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 10,
+            "z": 800
+          },
+          "color": "#4a5058",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "wall_convert",
+      "name": "Convertible Wall",
+      "transform": {
+        "position": {
+          "x": -400,
+          "y": 150,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_wall_convert",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 300,
+            "y": 300,
+            "z": 20
+          },
+          "color": "#7a8490",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "pz": "mat_wall_face"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1.5,
+                "y": 1
+              },
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "convex_demo",
+      "name": "Convex Demo",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_convex_demo",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#7a8899",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "pz": "mat_cap",
+            "px": "mat_side"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 2,
+                "y": 1
+              },
+              "offset": {
+                "x": 0.1,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  100,
+                  50,
+                  50
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -100,
+                  50,
+                  50
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wedge",
+      "name": "Clipped Wedge Source",
+      "transform": {
+        "position": {
+          "x": 200,
+          "y": 50,
+          "z": -150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_wedge",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#9a8070",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "py": "mat_roof"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -75,
+                  -50,
+                  -75
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  75,
+                  -50,
+                  -75
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  75,
+                  50,
+                  -75
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -75,
+                  50,
+                  -75
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -75,
+                  -50,
+                  75
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  75,
+                  -50,
+                  75
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  75,
+                  10,
+                  75
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -75,
+                  10,
+                  75
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "extrude_src",
+      "name": "Extrude Source",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_extrude_src",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#6a7a8a",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "pz": "mat_buttress"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -50,
+                  -50,
+                  -20
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  50,
+                  -50,
+                  -20
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  50,
+                  50,
+                  -20
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -50,
+                  50,
+                  -20
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -50,
+                  -50,
+                  20
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  50,
+                  -50,
+                  20
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  50,
+                  50,
+                  20
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -50,
+                  50,
+                  20
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "clip_src",
+      "name": "Clip Source",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 50,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_clip_src",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#8a7060",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "px": "mat_keep"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  100,
+                  -50,
+                  -50
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -100,
+                  50,
+                  -50
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  100,
+                  -50,
+                  50
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  100,
+                  50,
+                  50
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -100,
+                  50,
+                  50
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plain_auto",
+      "name": "Plain Auto-Convert",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 400
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_plain",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 100,
+            "z": 100
+          },
+          "color": "#6a9080",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "py": "mat_top"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "cell_room",
+      "name": "Geometry Cell",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 0,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cell",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "cell_brush",
+      "name": "Cell Child Brush",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 40,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": "cell_room",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cell_brush",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#708090",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "ny": "mat_floor"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -60,
+                  -40,
+                  -60
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  60,
+                  -40,
+                  -60
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  60,
+                  40,
+                  -60
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -60,
+                  40,
+                  -60
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -60,
+                  -40,
+                  60
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  60,
+                  -40,
+                  60
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  60,
+                  40,
+                  60
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -60,
+                  40,
+                  60
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rotated_box",
+      "name": "Rotated Convex",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 40,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0.7853981633974483,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_rotated_box",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#809070",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "pz": "mat_rot"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -50,
+                  -40,
+                  -50
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  50,
+                  -40,
+                  -50
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  50,
+                  40,
+                  -50
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -50,
+                  40,
+                  -50
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -50,
+                  -40,
+                  50
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  50,
+                  -40,
+                  50
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  50,
+                  40,
+                  50
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -50,
+                  40,
+                  50
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cutter_near",
+      "name": "Subtract Near Convex",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cutter",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 40,
+            "y": 40,
+            "z": 40
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "spawn",
+      "name": "Player Spawn",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 20,
+          "z": -300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    },
+    {
+      "id": "param_ramp",
+      "name": "Parametric Ramp",
+      "transform": {
+        "position": {
+          "x": -400,
+          "y": 25,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "ramp"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ramp",
+          "type": "Ramp",
+          "enabled": true,
+          "width": 120,
+          "length": 200,
+          "rise": 50,
+          "direction": "x+",
+          "thickness": 20,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "param_column",
+      "name": "Parametric Column",
+      "transform": {
+        "position": {
+          "x": 500,
+          "y": 100,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_col",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 200,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    }
+  ]
+}

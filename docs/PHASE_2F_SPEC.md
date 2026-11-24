@@ -1,7 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
-**Implementation:** 2F.0–2F.4 **Done** (2026-11-24). 2F.5+ not started.
+**Implementation:** 2F.0–2F.5 **Done** (2026-11-24). 2F.6 not started.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -506,6 +506,10 @@ Mirrors 2E.5: audit the whole pipeline, add the acceptance level, run the browse
 fix **confirmed** defects only, update `ROADMAP.md` / `TECHNICAL_STATUS.md` / `README.md`.
 Includes nested-prefab ConvexBrush schema round-trips and cutter-intersection reporting.
 Does **not** mark all of Phase 2F complete — 2F.6 remains after 2F.5.
+
+**Shipped:** `public/levels/acceptance-convex-brushes.json`; `public/dev/phase2f5Acceptance.js`;
+`docs/ACCEPTANCE_CONVEX_BRUSHES.md`; `src/tests/phase2f5Integration.test.js`. Gothic mansion regression
+re-run unmodified. Performance budgets recorded in the acceptance report. No new geometry features.
 
 **Acceptance:** §12.6.
 
