@@ -2,19 +2,20 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, then Phase **2F.0** (editable convex brush architecture).
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0**, then Phase **2F.1** (face editing).
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 420 / 420 pass, 54 files |
+| `npm test` | 433 / 433 pass, 55 files |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
 | Phase 2F.0 | ConvexBrush architecture; convert / render / hull collision / schema 3; `phase2f0ConvexBrush.test.js` |
-| Phase 2F.1+ | Not started (face/edge/vertex editing deferred) |
+| Phase 2F.1 | Face mode select/move; `moveVertices` + validation; `phase2f1FaceEditing.test.js`; `acceptance-face-editing.json`; browser harness PASS |
+| Phase 2F.2+ | Not started (edge/vertex/extrude/clip deferred) |
 
 ## 2. Implemented systems
 
@@ -27,7 +28,8 @@ Status is what the code does today, not an intent.
 | Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads 1–3; rejects other versions (see M9). |
 | Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). ConvexBrush uses grouped per-face mesh + per-actor rebuild path. |
 | Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; static meshes use a unit-cube collider (see M10). |
-| ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported; face editing not yet. |
+| ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported. |
+| Geometry Face editing (2F.1) | Implemented | Toolbar Face mode; `geometrySelection`; face overlays; gizmo + normal handle; grid snap; reject invalid; multi-actor atomic undo. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |

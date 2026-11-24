@@ -171,6 +171,15 @@ export function matrixToTransform(m) {
 }
 
 /** Transform a point by a column-major 4×4 matrix. */
+/** Apply the 3×3 linear part only (directions / deltas; ignores translation). */
+export function mat4TransformDirection(m, v) {
+  return {
+    x: m[0] * v.x + m[4] * v.y + m[8] * v.z,
+    y: m[1] * v.x + m[5] * v.y + m[9] * v.z,
+    z: m[2] * v.x + m[6] * v.y + m[10] * v.z,
+  };
+}
+
 export function mat4TransformPoint(m, p) {
   const x = p.x ?? 0;
   const y = p.y ?? 0;

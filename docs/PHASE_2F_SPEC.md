@@ -1,6 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
+**Implementation:** 2F.0 **Done**; 2F.1 **Done** (2026-11-24). 2F.2+ not started.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -412,6 +413,8 @@ not start until the previous one is accepted.
 
 ### 7.2 2F.1 — Face editing
 
+**Status: Done (2026-11-24).**
+
 **Scope**
 
 - Geometry mode state and `geometrySelection` with the transition table (§4) and unit tests first.
@@ -423,6 +426,10 @@ not start until the previous one is accepted.
   (requires generalizing gizmo axis to a direction vector, §10.3). Rotate/Scale hidden.
 - Grid snapping (§10.4); drag preview via the per-actor rebuild; commit on release.
 - Multi-face selection, including faces on different selected ConvexBrush actors (atomic composite).
+
+**Shipped:** `src/geometry/edits.js`, `src/editor/geometryEditing/*`, Face toolbar + Viewport/EditorContext
+wiring, `phase2f1FaceEditing.test.js`, `public/levels/acceptance-face-editing.json`,
+`public/dev/phase2f1Acceptance.js`, `docs/ACCEPTANCE_FACE_EDITING.md`.
 
 **Acceptance:** §12.2.
 

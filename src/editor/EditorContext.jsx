@@ -46,7 +46,22 @@ import {
   SetPrefabOverridesCommand,
   ConvertBrushToConvexCommand,
   SetConvexBrushPropertiesCommand,
+  SetConvexGeometryCommand,
 } from './history/commands.js';
+import {
+  emptyGeometrySelection,
+  nextGeometrySelectionAfterActorChange,
+  normalizeGeometrySelection,
+  remappedGeometrySelection,
+  toolKeepsGeometrySelection,
+} from './geometryEditing/geometrySelection.js';
+import {
+  applyFaceMove,
+  captureFaceMoveStart,
+  geometrySelectionWorldCenter,
+  primaryFaceNormalWorld,
+  snapWorldDelta,
+} from './geometryEditing/faceMove.js';
 import { convertBrushToConvexGeometry } from '../geometry/convert.js';
 import { ConvexBrushComponent } from '../components/ConvexBrushComponent.js';
 import {
@@ -136,11 +151,18 @@ export function EditorProvider({ children }) {
   const [world, setWorld] = useState(null);
   const [selectedActorIds, setSelectedActorIds] = useState([]);
   const [mode, setMode] = useState('edit');
-  const [tool, setTool] = useState('select'); // select | surface | align | box | wall | floor | ceiling | subtract
+  const [tool, setTool] = useState('select'); // select | surface | align | geometry | box | …
   /** @type {[{ actorId: string, surfaceId: string } | null]} */
   const [selectedSurface, setSelectedSurfaceState] = useState(null);
   /** Align-to-Neighbor reference surface (Phase 2E.3). */
   const [alignReferenceSurface, setAlignReferenceSurfaceState] = useState(null);
+  /** Geometry Face/Edge/Vertex mode (Phase 2F.1). UI state only. */
+  const [geometryMode, setGeometryModeState] = useState('face');
+  const [geometrySelection, setGeometrySelectionState] = useState(() => emptyGeometrySelection('face'));
+  const geometrySelectionRef = useRef(geometrySelection);
+  geometrySelectionRef.current = geometrySelection;
+  /** Last valid preview during a face-move drag (restored on invalid release). */
+  const faceMovePreviewRef = useRef(null);
   /** Gizmo mode: move (W) | rotate (E) | scale (R). */
   const [transformMode, setTransformModeState] = useState('move');
   const setTransformMode = useCallback((mode) => {
@@ -225,8 +247,32 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
   }, []);
 
+  const syncGeometrySelectionVisual = useCallback((sel) => {
+    const normalized = normalizeGeometrySelection(sel);
+    const empty = !normalized.items.length;
+    const sceneView = runtimeRef.current?.sceneView;
+    if (!sceneView) return;
+    if (empty) {
+      sceneView.setGeometrySelection?.(null, worldRef.current);
+      return;
+    }
+    const faceNormalWorld = primaryFaceNormalWorld(worldRef.current, normalized);
+    const center = geometrySelectionWorldCenter(worldRef.current, normalized);
+    sceneView.setGeometrySelection?.(normalized, worldRef.current, {
+      faceNormalWorld,
+      gizmoCenter: center,
+    });
+  }, []);
+
+  const clearGeometrySelectionState = useCallback(() => {
+    const empty = emptyGeometrySelection(geometrySelectionRef.current?.mode || 'face');
+    setGeometrySelectionState(empty);
+    geometrySelectionRef.current = empty;
+    runtimeRef.current?.sceneView?.setGeometrySelection?.(null, worldRef.current);
+  }, []);
+
   const afterWorldMutation = useCallback((options = {}) => {
-    const { resync = true, selectIds } = options;
+    const { resync = true, selectIds, geometryLineageByActor = null } = options;
     if (resync) {
       runtimeRef.current?.resyncWorld();
     }
@@ -245,8 +291,20 @@ export function EditorProvider({ children }) {
       }
       return next;
     });
+    // Re-validate geometry element selection against live ConvexBrush faces.
+    setGeometrySelectionState((prev) => {
+      let next = nextGeometrySelectionAfterActorChange(prev, nextIds, worldRef.current);
+      if (geometryLineageByActor) {
+        next = remappedGeometrySelection(next, worldRef.current, geometryLineageByActor);
+      } else if (prev?.items?.length) {
+        next = remappedGeometrySelection(next, worldRef.current, null);
+      }
+      geometrySelectionRef.current = next;
+      syncGeometrySelectionVisual(next);
+      return next;
+    });
     bump();
-  }, [bump, syncSelectionVisual]);
+  }, [bump, syncSelectionVisual, syncGeometrySelectionVisual]);
 
   const executeCommand = useCallback((command, options) => {
     historyRef.current.execute(command);
@@ -317,9 +375,15 @@ export function EditorProvider({ children }) {
     if (fileName != null) setLevelName(fileName);
     setSelectedActorIds([]);
     setTool('select');
-    // Level load must not keep a stale surface/align pick from the prior world.
+    // Level load must not keep a stale surface/align/geometry pick from the prior world.
     setSelectedSurfaceState(null);
     setAlignReferenceSurfaceState(null);
+    {
+      const empty = emptyGeometrySelection('face');
+      setGeometryModeState('face');
+      setGeometrySelectionState(empty);
+      geometrySelectionRef.current = empty;
+    }
     if (session) setLevelSession(session);
     if (runtimeRef.current) {
       if (runtimeRef.current.mode === 'play') {
@@ -329,6 +393,7 @@ export function EditorProvider({ children }) {
       runtimeRef.current.setSelection([]);
       runtimeRef.current.sceneView?.setSurfaceSelection?.(null);
       runtimeRef.current.sceneView?.setAlignReferenceSurface?.(null);
+      runtimeRef.current.sceneView?.setGeometrySelection?.(null, resolved);
     }
     if (statusMessage) setStatus(statusMessage);
     bump();
@@ -599,7 +664,13 @@ export function EditorProvider({ children }) {
       }
       return kept;
     });
-  }, [syncSelectionVisual]);
+    setGeometrySelectionState((prev) => {
+      const kept = nextGeometrySelectionAfterActorChange(prev, next, worldRef.current);
+      geometrySelectionRef.current = kept;
+      syncGeometrySelectionVisual(kept);
+      return kept;
+    });
+  }, [syncSelectionVisual, syncGeometrySelectionVisual]);
 
   const selectActor = useCallback((id, options) => {
     if (!id) {
@@ -1020,6 +1091,175 @@ export function EditorProvider({ children }) {
     // No React bump during drag — avoids remount/churn while meshes rebuild.
     runtimeRef.current?.setSelection(selectedRef.current);
   }, [world, mode]);
+
+  /**
+   * Live ConvexBrush geometry preview during face-move drag (no history until commit).
+   * Mutates components in place; commitFaceMove wraps the same result in one undo step.
+   */
+  const previewFaceMove = useCallback((constraint, rawDeltaEditor, options = {}) => {
+    if (!world || mode === 'play') return { ok: false, code: 'NO_WORLD' };
+    const sel = geometrySelectionRef.current;
+    const start = faceMovePreviewRef.current?.start;
+    if (!start?.length || !sel?.items?.length) {
+      return { ok: false, code: 'NO_DRAG' };
+    }
+
+    // Restore start geometry before evaluating the new sample.
+    for (const s of start) {
+      const actor = world.getActor(s.actorId);
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex) continue;
+      convex.geometry = structuredClone(s.before.geometry);
+      convex.faceMaterials = s.before.faceMaterials
+        ? structuredClone(s.before.faceMaterials)
+        : null;
+      convex.faceUVs = s.before.faceUVs ? structuredClone(s.before.faceUVs) : null;
+    }
+
+    const worldDir = options.worldDir || null;
+    const snap = snapWorldDelta(
+      world,
+      sel,
+      constraint,
+      rawDeltaEditor,
+      worldDir,
+      options.gridSize ?? gridRef.current,
+      options.snapEnabled ?? gridSnapRef.current,
+      options.hintLocal || null,
+    );
+
+    const result = applyFaceMove(world, sel, snap.worldDelta);
+    if (!result.ok) {
+      // Keep last valid preview on the brushes; restore start if none yet.
+      const last = faceMovePreviewRef.current?.lastValid;
+      if (last?.length) {
+        for (const c of last) {
+          const actor = world.getActor(c.actorId);
+          const convex = actor?.getComponent?.('ConvexBrush');
+          if (!convex) continue;
+          convex.geometry = structuredClone(c.after.geometry);
+          convex.faceMaterials = c.after.faceMaterials
+            ? structuredClone(c.after.faceMaterials)
+            : null;
+          convex.faceUVs = c.after.faceUVs ? structuredClone(c.after.faceUVs) : null;
+        }
+      }
+      for (const s of start) {
+        const actor = world.getActor(s.actorId);
+        if (actor) runtimeRef.current?.sceneView?.updateBrushGeometry?.(actor);
+      }
+      syncGeometrySelectionVisual(sel);
+      return { ok: false, code: result.code, message: result.message, snapped: snap };
+    }
+
+    for (const c of result.changes) {
+      const actor = world.getActor(c.actorId);
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex) continue;
+      convex.geometry = structuredClone(c.after.geometry);
+      convex.faceMaterials = c.after.faceMaterials
+        ? structuredClone(c.after.faceMaterials)
+        : null;
+      convex.faceUVs = c.after.faceUVs ? structuredClone(c.after.faceUVs) : null;
+      runtimeRef.current?.sceneView?.updateBrushGeometry?.(actor);
+    }
+    faceMovePreviewRef.current = {
+      ...faceMovePreviewRef.current,
+      lastValid: result.changes,
+      lastResult: result,
+      snap,
+    };
+    syncGeometrySelectionVisual(sel);
+    return { ok: true, changes: result.changes, snapped: snap };
+  }, [world, mode, syncGeometrySelectionVisual]);
+
+  const beginFaceMoveDrag = useCallback(() => {
+    if (!world || mode === 'play') return false;
+    const sel = geometrySelectionRef.current;
+    const start = captureFaceMoveStart(world, sel);
+    if (!start.length) return false;
+    faceMovePreviewRef.current = { start, lastValid: null, lastResult: null };
+    return true;
+  }, [world, mode]);
+
+  /**
+   * Commit the current face-move preview as one undo step, or restore start if invalid.
+   */
+  const commitFaceMove = useCallback((label = 'Move faces') => {
+    if (!world || mode === 'play') return { ok: false };
+    const preview = faceMovePreviewRef.current;
+    faceMovePreviewRef.current = null;
+    if (!preview?.start?.length) return { ok: false, code: 'NO_DRAG' };
+
+    const last = preview.lastValid;
+    if (!last?.length) {
+      // Restore start geometry — no history entry.
+      for (const s of preview.start) {
+        const actor = world.getActor(s.actorId);
+        const convex = actor?.getComponent?.('ConvexBrush');
+        if (!convex) continue;
+        convex.geometry = structuredClone(s.before.geometry);
+        convex.faceMaterials = s.before.faceMaterials
+          ? structuredClone(s.before.faceMaterials)
+          : null;
+        convex.faceUVs = s.before.faceUVs ? structuredClone(s.before.faceUVs) : null;
+        runtimeRef.current?.sceneView?.updateBrushGeometry?.(actor);
+      }
+      syncGeometrySelectionVisual(geometrySelectionRef.current);
+      setStatus(preview.lastResult?.message || 'Face move rejected.');
+      return { ok: false, code: 'REJECTED' };
+    }
+
+    // Ensure live state matches last valid, then wrap as one command.
+    // Command.do() re-applies `after` (already current) so undo restores `before`.
+    const lineageByActor = {};
+    for (const c of last) {
+      if (c.lineage) lineageByActor[c.actorId] = c.lineage;
+      const actor = world.getActor(c.actorId);
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex) continue;
+      // before from drag start; after from last valid
+      const start = preview.start.find((s) => s.actorId === c.actorId);
+      if (start) c.before = start.before;
+    }
+
+    executeCommand(
+      new SetConvexGeometryCommand({
+        world,
+        changes: last.map((c) => ({
+          actorId: c.actorId,
+          before: c.before,
+          after: c.after,
+        })),
+        label,
+      }),
+      {
+        resync: true,
+        geometryLineageByActor: Object.keys(lineageByActor).length
+          ? lineageByActor
+          : null,
+      },
+    );
+    return { ok: true };
+  }, [world, mode, executeCommand, syncGeometrySelectionVisual, setStatus]);
+
+  const cancelFaceMove = useCallback(() => {
+    const preview = faceMovePreviewRef.current;
+    faceMovePreviewRef.current = null;
+    if (!preview?.start?.length || !world) return;
+    for (const s of preview.start) {
+      const actor = world.getActor(s.actorId);
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex) continue;
+      convex.geometry = structuredClone(s.before.geometry);
+      convex.faceMaterials = s.before.faceMaterials
+        ? structuredClone(s.before.faceMaterials)
+        : null;
+      convex.faceUVs = s.before.faceUVs ? structuredClone(s.before.faceUVs) : null;
+      runtimeRef.current?.sceneView?.updateBrushGeometry?.(actor);
+    }
+    syncGeometrySelectionVisual(geometrySelectionRef.current);
+  }, [world, syncGeometrySelectionVisual]);
 
   const updateSelectedTransform = useCallback((partial, { snap = true } = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -2067,6 +2307,49 @@ export function EditorProvider({ children }) {
     clearSelectedSurfaceState();
   }, [tool, clearSelectedSurfaceState]);
 
+  // Leaving Geometry tool clears element selection.
+  useEffect(() => {
+    if (toolKeepsGeometrySelection(tool)) return;
+    clearGeometrySelectionState();
+  }, [tool, clearGeometrySelectionState]);
+
+  const setGeometryMode = useCallback((mode) => {
+    const next = mode === 'edge' || mode === 'vertex' ? mode : 'face';
+    setGeometryModeState(next);
+    // Mode change clears ids (different kind) per transition table.
+    const empty = emptyGeometrySelection(next);
+    setGeometrySelectionState(empty);
+    geometrySelectionRef.current = empty;
+    syncGeometrySelectionVisual(empty);
+  }, [syncGeometrySelectionVisual]);
+
+  const setGeometrySelection = useCallback((next) => {
+    const normalized = normalizeGeometrySelection(
+      next,
+      geometrySelectionRef.current?.mode || geometryMode,
+    );
+    setGeometrySelectionState(normalized);
+    geometrySelectionRef.current = normalized;
+    // Ensure actors for selected faces stay in the actor selection set.
+    if (normalized.items.length) {
+      const ids = normalized.items.map((it) => it.actorId);
+      const set = new Set(selectedRef.current);
+      let changed = false;
+      for (const id of ids) {
+        if (!set.has(id)) {
+          set.add(id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        const nextIds = [...set];
+        setSelectedActorIds(nextIds);
+        syncSelectionVisual(nextIds);
+      }
+    }
+    syncGeometrySelectionVisual(normalized);
+  }, [geometryMode, syncGeometrySelectionVisual, syncSelectionVisual]);
+
   /**
    * Align target surface UV to the current Align reference.
    * Only mutates target faceUVs. Returns { ok, reason }.
@@ -2428,9 +2711,11 @@ export function EditorProvider({ children }) {
     runtimeRef.current.stop();
     setWorld(runtimeRef.current.world);
     setSelectedActorIds([]);
+    clearGeometrySelectionState();
+    clearSelectedSurfaceState();
     setStatus('Edit mode restored');
     bump();
-  }, [bump]);
+  }, [bump, clearGeometrySelectionState, clearSelectedSurfaceState]);
 
   const selectedActor = useMemo(() => {
     if (!world || selectedActorIds.length === 0) return null;
@@ -2455,6 +2740,14 @@ export function EditorProvider({ children }) {
     assignSelectedSurfaceMaterial,
     assignSelectedSurfaceUv,
     resetSelectedSurfaceUv,
+    geometryMode,
+    setGeometryMode,
+    geometrySelection,
+    setGeometrySelection,
+    beginFaceMoveDrag,
+    previewFaceMove,
+    commitFaceMove,
+    cancelFaceMove,
     transformMode,
     setTransformMode,
     levelName,

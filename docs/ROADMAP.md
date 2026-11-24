@@ -130,7 +130,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 | Phase | Goal | Status |
 | --- | --- | --- |
 | **2F.0** | Editable convex brush architecture (data model, convert, render, collision, persistence) | **Done** |
-| **2F.1** | Face editing | Not started — do not begin until directed |
+| **2F.1** | Face editing | **Done** |
 | **2F.2** | Edge editing | Not started |
 | **2F.3** | Vertex editing | Not started |
 | **2F.4** | Extrusion and clipping | Not started |
@@ -146,6 +146,15 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Cutter ∩ ConvexBrush intersections are reported (create subtract after convert).
 - Regression: `phase2f0ConvexBrush.test.js`; browser harness `public/dev/phase2f0Acceptance.js`.
 - Face / edge / vertex editing, extrude, clip, and multi-viewport (2F.6) are **not** in 2F.0.
+
+### Phase 2F.1 notes
+
+- Toolbar **Face** mode (`tool === 'geometry'`, `geometryMode === 'face'`); Edge/Vertex disabled until 2F.2/2F.3.
+- `geometrySelection` UI state with transition table; face pick/highlight overlays; Move gizmo + face-normal handle.
+- `moveVertices` (fast path + rehull + lineage) via `SetConvexGeometryCommand`; invalid edits leave authored geometry unchanged.
+- Grid-snapped world-space anchor moves; multi-actor atomic face moves; one drag = one undo step.
+- Acceptance: `public/levels/acceptance-face-editing.json`; harness `public/dev/phase2f1Acceptance.js`; `phase2f1FaceEditing.test.js`.
+- Edge / vertex / extrude / clip / multi-viewport are **not** in 2F.1.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 

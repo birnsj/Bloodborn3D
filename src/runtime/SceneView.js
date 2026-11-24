@@ -10,9 +10,12 @@ import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import {
   getChildren,
   getRootActors,
+  getWorldMatrix,
   getWorldTransform,
   isEffectivelyVisible,
 } from '../core/hierarchy.js';
+import { mat4TransformPoint } from '../core/math3d.js';
+import { facesCentroidLocal } from '../geometry/edits.js';
 import {
   createBrushBoxGeometry,
   createBrushSolidGeometry,
@@ -117,6 +120,9 @@ export class SceneView {
     /** Align-to-Neighbor reference (Phase 2E.3); highlighted separately from selection. */
     this.alignReferenceSurface = null;
     this.selectedActorIds = [];
+    /** @type {{ mode: string, items: Array<{actorId:string, ids:string[]}>, primary: {actorId:string,id:string}|null } | null} */
+    this.geometrySelection = null;
+    this._geometryFaceOverlays = [];
     this._syncToken = 0;
 
     /** @type {{ getTextureUrl:(id:string)=>string|null, getMaterialDefinition:(id:string)=>Promise<object|null>, getMeshUrl:(id:string)=>string|null } | null} */
@@ -222,6 +228,7 @@ export class SceneView {
   }
 
   clearWorldMeshes() {
+    this._clearGeometryFaceOverlays();
     for (const entry of this._actorMeshes.values()) {
       this.root.remove(entry.group);
       disposeObject(entry.group);
@@ -338,6 +345,10 @@ export class SceneView {
     }
 
     this.updateActorTransform(actor);
+    if (this.geometrySelection?.items?.some((it) => it.actorId === actor.id)) {
+      this._refreshGeometryFaceOverlays(actor.world);
+      this._updateGeometryGizmo(actor.world);
+    }
   }
 
   /** Pull nested actor Three groups out of a parent group without disposing them. */
@@ -1136,8 +1147,141 @@ export class SceneView {
     this.gizmo?.setMode?.(mode);
   }
 
+  /**
+   * Geometry Face/Edge/Vertex selection overlays + gizmo (Phase 2F.1).
+   * @param {object|null} selection
+   * @param {object|null} world
+   * @param {{ faceNormalWorld?: {x:number,y:number,z:number}|null } } [options]
+   */
+  setGeometrySelection(selection, world = null, options = {}) {
+    this.geometrySelection = selection && selection.items?.length
+      ? {
+          mode: selection.mode || 'face',
+          items: selection.items.map((it) => ({
+            actorId: it.actorId,
+            ids: [...it.ids],
+          })),
+          primary: selection.primary || null,
+        }
+      : null;
+    this._refreshGeometryFaceOverlays(world);
+    if (this.geometrySelection) {
+      this.gizmo?.setGeometryElementMode?.(true, options.faceNormalWorld || null);
+      this._updateGeometryGizmo(world, options.gizmoCenter || null);
+    } else {
+      this.gizmo?.setGeometryElementMode?.(false, null);
+      this._updateGizmo(world);
+    }
+  }
+
+  _clearGeometryFaceOverlays() {
+    for (const overlay of this._geometryFaceOverlays) {
+      overlay.parent?.remove(overlay);
+      disposeObject(overlay);
+    }
+    this._geometryFaceOverlays = [];
+  }
+
+  _refreshGeometryFaceOverlays(world = null) {
+    this._clearGeometryFaceOverlays();
+    if (!this.geometrySelection?.items?.length || !this.editMode) return;
+
+    for (const item of this.geometrySelection.items) {
+      const actor = world?.getActor?.(item.actorId)
+        || this._actorMeshes.get(item.actorId)?.actor;
+      const convex = actor?.getComponent?.('ConvexBrush');
+      const entry = this._actorMeshes.get(item.actorId);
+      if (!convex?.geometry || !entry?.group) continue;
+      const want = new Set(item.ids);
+      for (const face of convex.geometry.faces || []) {
+        if (!want.has(face.id)) continue;
+        const overlay = this._buildFaceOverlayMesh(convex.geometry, face);
+        if (!overlay) continue;
+        // Parent under actor group so local coords match.
+        entry.group.add(overlay);
+        this._geometryFaceOverlays.push(overlay);
+      }
+    }
+  }
+
+  _buildFaceOverlayMesh(geometry, face) {
+    const vmap = new Map((geometry.vertices || []).map((v) => [v.id, v.p]));
+    const loop = face.loop || [];
+    if (loop.length < 3) return null;
+    const pos = [];
+    const p0 = vmap.get(loop[0]);
+    if (!p0) return null;
+    for (let i = 1; i < loop.length - 1; i += 1) {
+      const p1 = vmap.get(loop[i]);
+      const p2 = vmap.get(loop[i + 1]);
+      if (!p1 || !p2) continue;
+      for (const p of [p0, p1, p2]) {
+        pos.push(toMeters(p[0]), toMeters(p[1]), toMeters(p[2]));
+      }
+    }
+    if (!pos.length) return null;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geom.computeVertexNormals();
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xf0c040,
+      transparent: true,
+      opacity: 0.35,
+      depthTest: true,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.renderOrder = 9;
+    mesh.userData.editorOnly = true;
+    mesh.userData.geometryFaceOverlay = true;
+    mesh.userData.pickable = false;
+    return mesh;
+  }
+
+  _updateGeometryGizmo(world, centerOverride = null) {
+    if (!this.gizmo || !this.editMode) return;
+    const center = centerOverride || this._geometrySelectionWorldCenter(world);
+    if (!center) {
+      this.gizmo.update([], null);
+      return;
+    }
+    this.gizmo.update([{ position: center }], { position: center });
+  }
+
+  _geometrySelectionWorldCenter(world) {
+    const sel = this.geometrySelection;
+    if (!sel?.items?.length) return null;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    let n = 0;
+    for (const item of sel.items) {
+      const actor = world?.getActor?.(item.actorId)
+        || this._actorMeshes.get(item.actorId)?.actor;
+      const convex = actor?.getComponent?.('ConvexBrush');
+      if (!convex?.geometry) continue;
+      const local = facesCentroidLocal(convex.geometry, item.ids);
+      const worldMat = getWorldMatrix(actor, world || actor.world);
+      const wp = mat4TransformPoint(worldMat, { x: local[0], y: local[1], z: local[2] });
+      x += wp.x;
+      y += wp.y;
+      z += wp.z;
+      n += 1;
+    }
+    if (!n) return null;
+    return { x: x / n, y: y / n, z: z / n };
+  }
+
   _updateGizmo(world) {
     if (!this.gizmo || !this.editMode) return;
+    if (this.geometrySelection?.items?.length) {
+      this._updateGeometryGizmo(world);
+      return;
+    }
+    this.gizmo.setGeometryElementMode?.(false, null);
     const brushStates = [];
     let primary = null;
     for (const id of this.selectedActorIds) {
@@ -1208,9 +1352,37 @@ export class SceneView {
         surfaceId,
         componentType: comp.type,
         faceIndex: inter.faceIndex,
+        point: inter.point?.clone?.() || null,
       };
     }
     return null;
+  }
+
+  /**
+   * Pick a ConvexBrush face for Geometry Face mode (Phase 2F.1).
+   * @returns {{ actorId: string, faceId: string, pointLocal: {x,y,z}|null } | null}
+   */
+  pickGeometryFace(normalizedX, normalizedY, camera = this.camera) {
+    const hit = this.pickSurface(normalizedX, normalizedY, camera);
+    if (!hit || hit.componentType !== 'ConvexBrush') return null;
+    const entry = this._actorMeshes.get(hit.actorId);
+    const actor = entry?.actor;
+    const convex = actor?.getComponent?.('ConvexBrush');
+    if (!convex?.isValid) return null;
+    let pointLocal = null;
+    if (hit.point && entry?.group) {
+      const local = entry.group.worldToLocal(hit.point.clone());
+      pointLocal = {
+        x: local.x * 100,
+        y: local.y * 100,
+        z: local.z * 100,
+      };
+    }
+    return {
+      actorId: hit.actorId,
+      faceId: hit.surfaceId,
+      pointLocal,
+    };
   }
 
   /**

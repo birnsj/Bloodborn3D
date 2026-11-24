@@ -31,6 +31,7 @@ import {
   previewSizeForPayload,
   previewBoundsForPayload,
 } from './creation/commitCreatePlacement.js';
+import { toggleGeometryItem } from './geometryEditing/geometrySelection.js';
 
 export function Viewport() {
   const shellRef = useRef(null);
@@ -83,6 +84,13 @@ export function Viewport() {
     previewBrushGeometry,
     commitTransforms,
     commitBrushGeometry,
+    geometryMode,
+    geometrySelection,
+    setGeometrySelection,
+    beginFaceMoveDrag,
+    previewFaceMove,
+    commitFaceMove,
+    cancelFaceMove,
     deleteSelected,
     duplicateSelected,
     undo,
@@ -523,12 +531,19 @@ export function Viewport() {
         e.preventDefault();
         if (placeSessionRef.current) {
           clearPlacementSession();
+        } else if (dragRef.current?.type === 'faceMove') {
+          runtimeRef.current?.sceneView?.gizmo?.endDrag?.();
+          cancelFaceMove?.();
+          dragRef.current = null;
         } else if (tool === 'align') {
           setAlignReferenceSurface(null);
           setSelectedSurface(null);
           setTool('select');
         } else if (tool === 'surface') {
           setSelectedSurface(null);
+          setTool('select');
+        } else if (tool === 'geometry') {
+          setGeometrySelection(null);
           setTool('select');
         } else {
           setSelectedSurface(null);
@@ -620,6 +635,8 @@ export function Viewport() {
     setTool,
     setSelectedSurface,
     setAlignReferenceSurface,
+    setGeometrySelection,
+    cancelFaceMove,
     saveLevel,
     clearPlacementSession,
     resolveSurfacePose,
@@ -669,6 +686,44 @@ export function Viewport() {
       if (orbitRef.current) orbitRef.current.enabled = false;
       e.currentTarget.setPointerCapture(e.pointerId);
       updateCreatePreview(dragRef.current);
+      return;
+    }
+
+    // Geometry Face mode — gizmo moves faces; click picks faces.
+    if (tool === 'geometry' && geometryMode === 'face') {
+      const gizmoHit = sceneView.pickGizmo(nx, ny);
+      if (gizmoHit && geometrySelection?.items?.length && gizmoHit.kind === 'move') {
+        const raycaster = sceneView.getRaycaster(nx, ny);
+        sceneView.gizmo.beginDrag(gizmoHit, raycaster.ray);
+        if (!beginFaceMoveDrag()) return;
+        dragRef.current = {
+          type: 'faceMove',
+          axis: gizmoHit.axis,
+          dir: gizmoHit.dir || null,
+          hintLocal: null,
+        };
+        if (orbitRef.current) orbitRef.current.enabled = false;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        return;
+      }
+      const faceHit = sceneView.pickGeometryFace?.(nx, ny);
+      if (faceHit) {
+        const next = toggleGeometryItem(geometrySelection, {
+          actorId: faceHit.actorId,
+          id: faceHit.faceId,
+          mode: 'face',
+          additive: e.shiftKey || e.ctrlKey || e.metaKey,
+        });
+        setGeometrySelection(next);
+        setStatus(
+          next.items.length
+            ? `Face ${faceHit.faceId} (${next.items.reduce((n, it) => n + it.ids.length, 0)} selected)`
+            : 'Face selection cleared',
+        );
+      } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
+        setGeometrySelection(null);
+        setStatus('Face mode — click a ConvexBrush face');
+      }
       return;
     }
 
@@ -922,6 +977,24 @@ export function Viewport() {
       return;
     }
 
+    if (drag.type === 'faceMove') {
+      const raycaster = sceneView.getRaycaster(nx, ny);
+      const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
+      if (!sample || sample.deltaEditor == null) return;
+      const constraint = sample.axis === 'normal' ? 'normal' : sample.axis;
+      const worldDir = sample.dir || drag.dir || null;
+      const result = previewFaceMove(constraint, sample.deltaEditor, {
+        worldDir,
+        gridSize,
+        snapEnabled: e.altKey ? false : gridSnap,
+        hintLocal: drag.hintLocal,
+      });
+      if (!result.ok && result.code && result.code !== 'NO_CHANGE') {
+        setStatus(result.message || `Invalid: ${result.code}`);
+      }
+      return;
+    }
+
     if (drag.type === 'resize') {
       const raycaster = sceneView.getRaycaster(nx, ny);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
@@ -1025,6 +1098,12 @@ export function Viewport() {
           },
         }], 'Resize');
       }
+    } else if (drag.type === 'faceMove') {
+      runtimeRef.current?.sceneView.gizmo.endDrag();
+      const result = commitFaceMove('Move faces');
+      if (result?.ok) {
+        setStatus('Moved faces');
+      }
     }
 
     dragRef.current = null;
@@ -1047,6 +1126,9 @@ export function Viewport() {
     if (tool === 'curvedWall') return 'Drag on grid to create a curved wall · near-square → circle · RMB orbit · WASD free-fly · Q/E · Shift boost';
     if (tool === 'archRoman' || tool === 'archGothic' || tool === 'arch') return 'Drag on grid to create an arch · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
     if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
+    if (tool === 'geometry') {
+      return 'Face mode — click faces (Shift multi) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
+    }
     return `LMB select · Ctrl+LMB multi · W move · E rotate · R scale (${transformMode}) · F focus · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly · Q/E up/down · Shift boost · MMB pan · wheel zoom`;
   };
 

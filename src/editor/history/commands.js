@@ -751,6 +751,69 @@ export class ConvertBrushToConvexCommand {
 }
 
 /**
+ * Atomically set ConvexBrush geometry (+ face maps) for one or more actors.
+ * changes: [{ actorId, before: { geometry, faceMaterials, faceUVs }, after: {...} }]
+ */
+export class SetConvexGeometryCommand {
+  constructor({ world, changes, label = 'Edit ConvexBrush geometry' }) {
+    this.world = world;
+    this.label = label;
+    this.changes = (changes || []).map((c) => ({
+      actorId: c.actorId,
+      before: structuredClone(c.before),
+      after: structuredClone(c.after),
+    }));
+  }
+
+  do() {
+    this._apply('after');
+  }
+
+  undo() {
+    this._apply('before');
+  }
+
+  _apply(key) {
+    for (const c of this.changes) {
+      const convex = this.world.getActor(c.actorId)?.getComponent('ConvexBrush');
+      if (!convex) continue;
+      const state = c[key];
+      if (!state) continue;
+      if ('geometry' in state) convex.geometry = structuredClone(state.geometry);
+      applySurfaceFields(convex, state);
+      // Keep validity flags in sync with applied geometry.
+      if (convex.geometry) {
+        convex.invalidGeometry = null;
+        convex.geometryError = null;
+        if (convex.enabled === false && !convex.geometryError) {
+          convex.enabled = true;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Run several commands as one undo step.
+ */
+export class CompositeCommand {
+  constructor({ commands, label = 'Edit' }) {
+    this.commands = commands || [];
+    this.label = label;
+  }
+
+  do() {
+    for (const cmd of this.commands) cmd.do();
+  }
+
+  undo() {
+    for (let i = this.commands.length - 1; i >= 0; i -= 1) {
+      this.commands[i].undo();
+    }
+  }
+}
+
+/**
  * Patch ConvexBrush material / UV / face / color / collidable fields.
  */
 export class SetConvexBrushPropertiesCommand {

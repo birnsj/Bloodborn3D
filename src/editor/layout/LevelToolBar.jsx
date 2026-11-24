@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useEditor } from '../EditorContext.jsx';
+import { useEditorSettings } from '../EditorSettingsContext.jsx';
 import {
   IconAlign,
   IconPlay,
@@ -17,12 +18,16 @@ import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 
 export function LevelToolBar() {
   const { alert } = useEditorDialogs();
+  const { settings, patchSettings } = useEditorSettings();
   const {
     mode,
     tool,
     setTool,
     setSelectedSurface,
     setAlignReferenceSurface,
+    geometryMode,
+    setGeometryMode,
+    setGeometrySelection,
     setStatus,
     gridSize,
     setGridSize,
@@ -109,6 +114,7 @@ export function LevelToolBar() {
             setTool('select');
             setSelectedSurface(null);
             setAlignReferenceSurface(null);
+            setGeometrySelection(null);
           }}
           {...helpProps('toolbar.select', playReason)}
         >
@@ -146,6 +152,45 @@ export function LevelToolBar() {
 
       <div className="bb-toolbar-divider" />
 
+      <div className="bb-seg">
+        <button
+          type="button"
+          className={`bb-btn${tool === 'geometry' && geometryMode === 'face' && !isPlay ? ' bb-btn--active' : ''}`}
+          disabled={isPlay}
+          title="Geometry Face — select and move ConvexBrush faces"
+          onClick={() => {
+            setSelectedSurface(null);
+            setAlignReferenceSurface(null);
+            setGeometryMode('face');
+            setTool('geometry');
+            setStatus?.('Face mode — click a ConvexBrush face.');
+          }}
+          {...helpProps('toolbar.geometryFace', playReason)}
+        >
+          Face
+        </button>
+        <button
+          type="button"
+          className="bb-btn"
+          disabled
+          title="Geometry Edge — Phase 2F.2"
+          {...helpProps('toolbar.geometryEdge', 'Coming in Phase 2F.2')}
+        >
+          Edge
+        </button>
+        <button
+          type="button"
+          className="bb-btn"
+          disabled
+          title="Geometry Vertex — Phase 2F.3"
+          {...helpProps('toolbar.geometryVertex', 'Coming in Phase 2F.3')}
+        >
+          Vertex
+        </button>
+      </div>
+
+      <div className="bb-toolbar-divider" />
+
       <label
         className="bb-toolbar-field"
         {...helpProps(
@@ -177,6 +222,18 @@ export function LevelToolBar() {
           onChange={(e) => setGridSnap(e.target.checked)}
         />
         <span>Snap</span>
+      </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps('toolbar.orbitMode', playReason)}
+      >
+        <input
+          type="checkbox"
+          checked={settings.cameraOrbitMode}
+          disabled={isPlay}
+          onChange={(e) => patchSettings({ cameraOrbitMode: e.target.checked })}
+        />
+        <span>Orbit</span>
       </label>
 
       <input

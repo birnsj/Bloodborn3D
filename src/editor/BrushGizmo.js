@@ -36,26 +36,77 @@ export class BrushGizmo {
     this._selectionCenter = new THREE.Vector3();
     this._drag = null;
     this._hasBrushSize = false;
+    /** When true: Move only + optional face-normal handle (Phase 2F.1). */
+    this._geometryElementMode = false;
+    this._faceNormalWorld = null; // THREE.Vector3 unit or null
+    this._normalHandle = null;
 
     this._buildMoveHandles();
     this._buildRotateHandles();
     this._buildScaleAxisHandles();
+    this._buildNormalHandle();
     this._applyModeVisibility();
   }
 
   setMode(mode) {
     const next = TRANSFORM_MODES.includes(mode) ? mode : 'move';
+    if (this._geometryElementMode) {
+      // Geometry element editing is Move-only.
+      this.mode = 'move';
+      this._applyModeVisibility();
+      return;
+    }
     if (this.mode === next) return;
     this.mode = next;
     this._applyModeVisibility();
   }
 
+  /**
+   * Lock gizmo to Move (+ optional face-normal). Used by Geometry Face mode.
+   * @param {boolean} enabled
+   * @param {{ x:number, y:number, z:number }|null} [faceNormalWorld] unit direction
+   */
+  setGeometryElementMode(enabled, faceNormalWorld = null) {
+    this._geometryElementMode = !!enabled;
+    if (enabled) this.mode = 'move';
+    this.setFaceNormal(faceNormalWorld);
+    this._applyModeVisibility();
+  }
+
+  setFaceNormal(faceNormalWorld) {
+    if (
+      faceNormalWorld
+      && Number.isFinite(faceNormalWorld.x)
+      && Number.isFinite(faceNormalWorld.y)
+      && Number.isFinite(faceNormalWorld.z)
+    ) {
+      const v = new THREE.Vector3(
+        faceNormalWorld.x,
+        faceNormalWorld.y,
+        faceNormalWorld.z,
+      );
+      if (v.lengthSq() > 1e-8) {
+        this._faceNormalWorld = v.normalize();
+      } else {
+        this._faceNormalWorld = null;
+      }
+    } else {
+      this._faceNormalWorld = null;
+    }
+    this._updateNormalHandle();
+    this._rebuildHandleList();
+  }
+
   _applyModeVisibility() {
-    this.moveGroup.visible = this.mode === 'move';
-    this.rotateGroup.visible = this.mode === 'rotate';
+    const moveOnly = this._geometryElementMode;
+    this.moveGroup.visible = this.mode === 'move' || moveOnly;
+    this.rotateGroup.visible = this.mode === 'rotate' && !moveOnly;
     // Brushes: face resize. Others: axis scale boxes.
-    this.resizeGroup.visible = this.mode === 'scale' && this._hasBrushSize;
-    this.scaleGroup.visible = this.mode === 'scale' && !this._hasBrushSize;
+    this.resizeGroup.visible = this.mode === 'scale' && this._hasBrushSize && !moveOnly;
+    this.scaleGroup.visible = this.mode === 'scale' && !this._hasBrushSize && !moveOnly;
+    if (this._normalHandle) {
+      this._normalHandle.visible = moveOnly && Boolean(this._faceNormalWorld);
+    }
     this._rebuildHandleList();
   }
 
@@ -71,6 +122,61 @@ export class BrushGizmo {
     collect(this.rotateGroup, this.rotateGroup.visible);
     collect(this.resizeGroup, this.resizeGroup.visible);
     collect(this.scaleGroup, this.scaleGroup.visible);
+    if (this._normalHandle?.visible) {
+      this._normalHandle.traverse((obj) => {
+        if (obj.userData?.pickable && obj.userData?.kind) this._handles.push(obj);
+      });
+    }
+  }
+
+  _buildNormalHandle() {
+    const group = new THREE.Group();
+    group.name = 'FaceNormalHandle';
+    group.visible = false;
+    const arrow = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(),
+      1.05,
+      0xf0c040,
+      0.2,
+      0.12,
+    );
+    const pick = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 1.05, 8),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
+    );
+    pick.position.set(0, 0.525, 0);
+    pick.userData = {
+      kind: 'move',
+      axis: 'normal',
+      pickable: true,
+      dir: [0, 1, 0],
+    };
+    pick.renderOrder = 13;
+    group.add(arrow);
+    group.add(pick);
+    this.root.add(group);
+    this._normalHandle = group;
+    this._normalArrow = arrow;
+    this._normalPick = pick;
+  }
+
+  _updateNormalHandle() {
+    if (!this._normalHandle) return;
+    const dir = this._faceNormalWorld;
+    if (!dir) {
+      this._normalHandle.visible = false;
+      return;
+    }
+    this._normalHandle.visible = this._geometryElementMode;
+    // ArrowHelper default is +Y; orient so local +Y aligns with dir.
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.clone().normalize(),
+    );
+    this._normalHandle.quaternion.copy(quat);
+    this._normalPick.userData.dir = [dir.x, dir.y, dir.z];
+    this._normalPick.userData.axis = 'normal';
   }
 
   _buildMoveHandles() {
@@ -251,6 +357,7 @@ export class BrushGizmo {
       kind: obj.userData.kind,
       axis: obj.userData.axis,
       sign: obj.userData.sign ?? 1,
+      dir: obj.userData.dir ? [...obj.userData.dir] : null,
       point: hits[0].point.clone(),
     };
   }
@@ -272,11 +379,13 @@ export class BrushGizmo {
       return this._drag;
     }
 
+    const dir = this._resolveDir(handle);
     this._drag = {
       kind: handle.kind,
       axis: handle.axis,
       sign: handle.sign ?? 1,
-      startPoint: this._projectAxis(pointerRay, handle.axis, handle.point),
+      dir,
+      startPoint: this._projectAlongDir(pointerRay, dir, handle.point),
       primary: this._primaryBrush
         ? {
             position: { ...this._primaryBrush.position },
@@ -288,7 +397,7 @@ export class BrushGizmo {
   }
 
   /**
-   * @returns {{ axis, kind, deltaEditor?: number, deltaDegrees?: number, sign?: number } | null}
+   * @returns {{ axis, kind, deltaEditor?: number, deltaDegrees?: number, sign?: number, dir?: number[] } | null}
    */
   sampleDrag(pointerRay) {
     if (!this._drag) return null;
@@ -308,19 +417,36 @@ export class BrushGizmo {
       };
     }
 
-    const now = this._projectAxis(pointerRay, this._drag.axis, this._drag.startPoint);
+    const dir = this._drag.dir || this._resolveDir(this._drag);
+    const now = this._projectAlongDir(pointerRay, dir, this._drag.startPoint);
     if (!now || !this._drag.startPoint) return null;
     const deltaMeters =
-      this._axisComponent(now, this._drag.axis)
-      - this._axisComponent(this._drag.startPoint, this._drag.axis);
+      this._dirComponent(now, dir) - this._dirComponent(this._drag.startPoint, dir);
     if (!Number.isFinite(deltaMeters)) return null;
     return {
       kind: this._drag.kind,
       axis: this._drag.axis,
       sign: this._drag.sign,
+      dir: dir ? [dir.x, dir.y, dir.z] : null,
       deltaEditor: toEditorUnits(deltaMeters),
       primaryBefore: this._drag.primary,
     };
+  }
+
+  _resolveDir(handle) {
+    if (handle?.dir && Array.isArray(handle.dir) && handle.dir.length === 3) {
+      const v = new THREE.Vector3(handle.dir[0], handle.dir[1], handle.dir[2]);
+      if (v.lengthSq() > 1e-8) return v.normalize();
+    }
+    if (handle?.axis === 'normal' && this._faceNormalWorld) {
+      return this._faceNormalWorld.clone();
+    }
+    const axis = handle?.axis;
+    return new THREE.Vector3(
+      axis === 'x' ? 1 : 0,
+      axis === 'y' ? 1 : 0,
+      axis === 'z' ? 1 : 0,
+    );
   }
 
   endDrag() {
@@ -351,17 +477,32 @@ export class BrushGizmo {
     return point[axis];
   }
 
+  _dirComponent(point, dir) {
+    if (!dir) return 0;
+    return point.x * dir.x + point.y * dir.y + point.z * dir.z;
+  }
+
   _projectAxis(ray, axis, referencePoint) {
-    const axisVec = new THREE.Vector3(
-      axis === 'x' ? 1 : 0,
-      axis === 'y' ? 1 : 0,
-      axis === 'z' ? 1 : 0,
+    return this._projectAlongDir(
+      ray,
+      new THREE.Vector3(
+        axis === 'x' ? 1 : 0,
+        axis === 'y' ? 1 : 0,
+        axis === 'z' ? 1 : 0,
+      ),
+      referencePoint,
     );
+  }
+
+  _projectAlongDir(ray, dir, referencePoint) {
+    const axisVec = dir?.clone?.()?.normalize?.() || new THREE.Vector3(0, 1, 0);
     const ref = referencePoint?.clone?.() || this._selectionCenter.clone();
     const rayDir = ray.direction.clone().normalize();
     let planeNormal = rayDir.clone().sub(axisVec.clone().multiplyScalar(rayDir.dot(axisVec)));
     if (planeNormal.lengthSq() < 1e-6) {
-      planeNormal = axis === 'y' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+      planeNormal = Math.abs(axisVec.y) < 0.9
+        ? new THREE.Vector3(0, 1, 0)
+        : new THREE.Vector3(1, 0, 0);
     } else {
       planeNormal.normalize();
     }
