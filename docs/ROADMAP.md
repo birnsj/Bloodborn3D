@@ -186,20 +186,16 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Harness `public/dev/phase2f5Acceptance.js`; report `docs/ACCEPTANCE_CONVEX_BRUSHES.md`; unit suite `phase2f5Integration.test.js`.
 - Gothic mansion regression re-verified unmodified (no ConvexBrush injected).
 - Prefab create/override/sync/nested, schema 1–3, Play/Stop, and undo/redo covered by unit + browser passes.
-- Phase 2F is **not** fully complete — **2F.6** remains.
+- Phase 2F is **complete** after **2F.6**.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 
-Starts only after 2F.5 verification. Scope:
+**Done** (2026-11-24). Shared SceneView scissor multi-pane; default quad Perspective/Top/Front/Right;
+ortho cameras + grid plane; per-pane display modes; marquee; maximize/restore; prefs persistence;
+single vs quad frame timing in harness.
 
-- Single, dual, triple, and quad viewport layouts
-- Perspective and six orthographic camera directions
-- Lit, unlit, textured, wireframe, and solid-with-edges display modes
-- Shared selection and geometry editing across viewports
-- Independent camera controls; viewport maximization
-- Marquee selection
-- Persistent viewport preferences
-- Shared scene resources (no duplicated geometry or physics per viewport)
+- Acceptance: `docs/ACCEPTANCE_MULTI_VIEWPORT.md`; harness `public/dev/phase2f6Acceptance.js`
+- Units: `viewportPrefs.test.js`, `viewportCameras.test.js`, `marqueeSelection.test.js`, `phase2f6MultiViewport.test.js`
 
 ### Dependencies
 

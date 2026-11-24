@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { useEditor } from './EditorContext.jsx';
@@ -32,12 +32,38 @@ import {
   previewBoundsForPayload,
 } from './creation/commitCreatePlacement.js';
 import { toggleGeometryItem } from './geometryEditing/geometrySelection.js';
+import {
+  clampViewportPrefs,
+  loadViewportPrefs,
+  saveViewportPrefs,
+  isOrthographicMode,
+} from './viewport/viewportPrefs.js';
+import { LayoutModeToolbar, ViewportLayout } from './viewport/ViewportLayout.jsx';
+import {
+  buildViewportPanes,
+  capturePanePoses,
+  filterGizmoAxisForOrtho,
+  focusPaneOnSelection,
+  resolvePointerInPanes,
+  syncActivePaneCamera,
+} from './viewport/viewportRuntimeBridge.js';
+import {
+  normalizeMarqueeNdc,
+  marqueeSelectActors,
+  marqueeSelectGeometry,
+} from './viewport/marqueeSelection.js';
 
 export function Viewport() {
   const shellRef = useRef(null);
   const canvasRef = useRef(null);
   const orbitRef = useRef(null);
   const dragRef = useRef(null);
+  const viewportPrefsRef = useRef(loadViewportPrefs());
+  const shellSizeRef = useRef({ width: 1, height: 1 });
+  const persistTimerRef = useRef(0);
+  const [viewportPrefs, setViewportPrefsState] = useState(() => viewportPrefsRef.current);
+  const [shellSize, setShellSize] = useState({ width: 1, height: 1 });
+  const [marqueeScreen, setMarqueeScreen] = useState(null);
   /** Active toolbar/asset surface placement (preview only until commit). */
   const placeSessionRef = useRef(null);
   /** Edit-mode: idle = RMB orbit; WASD/QE = free-fly + RMB freelook. */
@@ -114,15 +140,28 @@ export function Viewport() {
 
   editorSettingsRef.current = editorSettings;
 
+  const setViewportPrefs = useCallback((next) => {
+    const clamped = clampViewportPrefs(
+      typeof next === 'function' ? next(viewportPrefsRef.current) : next,
+    );
+    viewportPrefsRef.current = clamped;
+    setViewportPrefsState(clamped);
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      saveViewportPrefs(viewportPrefsRef.current);
+    }, 200);
+  }, []);
+
   const clearPlacementSession = useCallback(() => {
     placeSessionRef.current = null;
     runtimeRef.current?.sceneView?.setPlacementPreview(null);
   }, [runtimeRef]);
 
-  const resolveSurfacePose = useCallback((nx, ny, payload, candidateIndex = 0) => {
+  const resolveSurfacePose = useCallback((nx, ny, payload, candidateIndex = 0, camera = undefined) => {
     const sceneView = runtimeRef.current?.sceneView;
     if (!sceneView) return { valid: false, position: null, reason: 'No view' };
-    const hits = sceneView.pickWorldHits(nx, ny);
+    const cam = camera || sceneView.camera;
+    const hits = sceneView.pickWorldHits(nx, ny, cam);
     const placement = payload?.placement || 'upright';
     const { hit, candidates, index } = selectPlacementHit(hits, {
       placement,
@@ -130,7 +169,7 @@ export function Viewport() {
     });
     if (!hit) {
       // Fall back to construction plane so empty scenes still place.
-      const plane = sceneView.pickConstructionPoint(nx, ny, 0);
+      const plane = sceneView.pickConstructionPoint(nx, ny, 0, cam);
       if (!plane) return { valid: false, position: null, reason: 'No surface', candidates: [] };
       const pose = computePlacePose(
         { point: plane, normal: { x: 0, y: 1, z: 0 }, surfaceKind: 'support' },
@@ -177,7 +216,15 @@ export function Viewport() {
     if (!canvas || !shell) return undefined;
 
     const runtime = attachCanvas(canvas);
-    const camera = runtime.sceneView.camera;
+    // Seed pane cameras from persisted prefs, then bind OrbitControls to active pane.
+    {
+      const vp = viewportPrefsRef.current;
+      for (const pane of vp.panes) {
+        runtime.sceneView.ensurePaneCamera(pane.id, pane.cameraMode, pane);
+      }
+    }
+    const camera = syncActivePaneCamera(runtime.sceneView, viewportPrefsRef.current)
+      || runtime.sceneView.camera;
     const controls = new OrbitControls(camera, canvas);
     {
       const prefs = editorSettingsRef.current;
@@ -199,13 +246,14 @@ export function Viewport() {
         invertY: Boolean(prefs?.cameraInvertY),
       });
     }
-    controls.target.set(0, 1.5, 0);
-    // Default: RMB orbits. While WASD/QE are held we switch to freelook.
-    controls.mouseButtons = {
-      LEFT: -1,
-      MIDDLE: THREE.MOUSE.PAN,
-      RIGHT: THREE.MOUSE.ROTATE,
-    };
+    {
+      const active = viewportPrefsRef.current.panes.find(
+        (p) => p.id === viewportPrefsRef.current.activePaneId,
+      );
+      if (active?.target) controls.target.set(...active.target);
+      else controls.target.set(0, 1.5, 0);
+      syncActivePaneCamera(runtime.sceneView, viewportPrefsRef.current, controls);
+    }
     controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.update();
     orbitRef.current = controls;
@@ -216,12 +264,14 @@ export function Viewport() {
     const worldUp = new THREE.Vector3(0, 1, 0);
     const move = new THREE.Vector3();
     const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    const activeCam = () => runtime.sceneView.camera;
 
     {
-      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      const cam0 = activeCam();
+      lookEuler.setFromQuaternion(cam0.quaternion, 'YXZ');
       lookRef.current.yaw = lookEuler.y;
       lookRef.current.pitch = lookEuler.x;
-      lookRef.current.distance = camera.position.distanceTo(controls.target) || 6;
+      lookRef.current.distance = cam0.position.distanceTo(controls.target) || 6;
     }
 
     const FLY_MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE']);
@@ -233,14 +283,15 @@ export function Viewport() {
     };
 
     const syncLookTarget = () => {
-      camera.getWorldDirection(forward);
-      controls.target.copy(camera.position).addScaledVector(forward, lookRef.current.distance);
+      const cam = activeCam();
+      cam.getWorldDirection(forward);
+      controls.target.copy(cam.position).addScaledVector(forward, lookRef.current.distance);
     };
 
     const applyLookRotation = () => {
       const { yaw, pitch } = lookRef.current;
       lookEuler.set(pitch, yaw, 0);
-      camera.quaternion.setFromEuler(lookEuler);
+      activeCam().quaternion.setFromEuler(lookEuler);
       syncLookTarget();
     };
 
@@ -249,10 +300,11 @@ export function Viewport() {
       flyModeRef.current = true;
       // Hand RMB to freelook so orbit rotate doesn't fight WASD.
       controls.mouseButtons.RIGHT = -1;
-      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      const cam = activeCam();
+      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
       lookRef.current.yaw = lookEuler.y;
       lookRef.current.pitch = lookEuler.x;
-      lookRef.current.distance = Math.max(0.5, camera.position.distanceTo(controls.target));
+      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
       syncLookTarget();
     };
 
@@ -269,7 +321,18 @@ export function Viewport() {
     const applySize = () => {
       const width = shell.clientWidth;
       const height = shell.clientHeight;
-      if (width > 0 && height > 0) runtime.setSize(width, height);
+      if (width > 0 && height > 0) {
+        runtime.setSize(width, height);
+        shellSizeRef.current = { width, height };
+        setShellSize({ width, height });
+        const panes = buildViewportPanes(
+          viewportPrefsRef.current,
+          width,
+          height,
+          runtime.sceneView,
+        );
+        runtime.setViewportPanes(panes);
+      }
     };
     applySize();
     const ro = new ResizeObserver(() => applySize());
@@ -281,6 +344,11 @@ export function Viewport() {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.target?.isContentEditable) return;
+      // Free-fly is perspective-only; orthographic panes use pan/zoom.
+      const activePane = viewportPrefsRef.current.panes.find(
+        (p) => p.id === viewportPrefsRef.current.activePaneId,
+      );
+      if (activePane && isOrthographicMode(activePane.cameraMode)) return;
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
         flyKeysRef.current.add(e.code);
         if (FLY_MOVE_KEYS.has(e.code)) {
@@ -308,10 +376,11 @@ export function Viewport() {
       lookRef.current.pointerId = e.pointerId;
       lookRef.current.lastX = e.clientX;
       lookRef.current.lastY = e.clientY;
-      lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+      const cam = activeCam();
+      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
       lookRef.current.yaw = lookEuler.y;
       lookRef.current.pitch = lookEuler.x;
-      lookRef.current.distance = Math.max(0.5, camera.position.distanceTo(controls.target));
+      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
       try {
         canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -397,6 +466,16 @@ export function Viewport() {
           // Idle orbit / pan / zoom — damping needs per-frame update.
           controls.update();
         }
+
+        // Keep scissor panes + persisted poses in sync with live cameras.
+        const { width, height } = shellSizeRef.current;
+        const panes = buildViewportPanes(
+          viewportPrefsRef.current,
+          width,
+          height,
+          runtime.sceneView,
+        );
+        runtime.setViewportPanes(panes);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -414,6 +493,12 @@ export function Viewport() {
       window.removeEventListener('pointerup', onLookPointerUp);
       window.removeEventListener('pointercancel', onLookPointerUp);
       canvas.removeEventListener('contextmenu', onContextMenu);
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+      saveViewportPrefs(capturePanePoses(
+        viewportPrefsRef.current,
+        runtime.sceneView,
+        controls.target,
+      ));
       controls.dispose();
       runtime.dispose();
       orbitRef.current = null;
@@ -473,52 +558,33 @@ export function Viewport() {
     runtimeRef.current?.sceneView?.setTransformMode?.(transformMode);
   }, [runtimeRef, transformMode]);
 
-  const focusSelected = useCallback(() => {
+  const focusSelected = useCallback((paneId = null) => {
     const sceneView = runtimeRef.current?.sceneView;
     const controls = orbitRef.current;
-    if (!sceneView || !controls || selectedActorIds.length === 0) return;
+    if (!sceneView || selectedActorIds.length === 0) return;
 
-    const box = new THREE.Box3();
-    let has = false;
-    for (const id of selectedActorIds) {
-      const entry = sceneView._actorMeshes?.get(id);
-      if (!entry?.group) continue;
-      box.expandByObject(entry.group);
-      has = true;
-    }
-    if (!has || box.isEmpty()) return;
-
-    const center = new THREE.Vector3();
-    const size = new THREE.Vector3();
-    box.getCenter(center);
-    box.getSize(size);
-    const radius = Math.max(size.length() * 0.5, 0.35);
-
-    const camera = sceneView.camera;
-    const fov = THREE.MathUtils.degToRad(camera.fov);
-    const dist = Math.max((radius / Math.sin(fov * 0.5)) * 1.2, 1.5);
-
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    if (dir.lengthSq() < 1e-6) dir.set(0.55, -0.35, 0.75);
-    dir.normalize();
-
-    // Leave free-fly so orbit framing sticks.
     flyModeRef.current = false;
     lookRef.current.active = false;
     lookRef.current.pointerId = null;
-    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
 
-    controls.target.copy(center);
-    camera.position.copy(center).addScaledVector(dir, -dist);
-    camera.lookAt(center);
-    lookRef.current.distance = dist;
+    const targetPaneId = paneId || viewportPrefsRef.current.activePaneId;
+    const next = focusPaneOnSelection(
+      sceneView,
+      viewportPrefsRef.current,
+      targetPaneId,
+      selectedActorIds,
+      controls,
+    );
+    setViewportPrefs(next);
+    syncActivePaneCamera(sceneView, next, controls);
+
+    const cam = sceneView.camera;
+    lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls?.target || new THREE.Vector3()));
     const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
-    lookEuler.setFromQuaternion(camera.quaternion, 'YXZ');
+    lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
     lookRef.current.yaw = lookEuler.y;
     lookRef.current.pitch = lookEuler.x;
-    controls.update();
-  }, [runtimeRef, selectedActorIds]);
+  }, [runtimeRef, selectedActorIds, setViewportPrefs]);
 
   useEffect(() => {
     const onFocusEvent = () => focusSelected();
@@ -659,14 +725,40 @@ export function Viewport() {
     focusSelected,
   ]);
 
-  const pointerNorm = (e) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+  const pointerNorm = (e, { activate = true } = {}) => {
+    const shell = shellRef.current;
+    const shellRect = shell?.getBoundingClientRect?.() || canvasRef.current?.getBoundingClientRect();
+    const { width, height } = shellSizeRef.current;
+    const hit = resolvePointerInPanes(
+      viewportPrefsRef.current,
+      width,
+      height,
+      e.clientX,
+      e.clientY,
+      shellRect,
+    );
+    if (activate && hit.paneId && hit.paneId !== viewportPrefsRef.current.activePaneId) {
+      const next = { ...viewportPrefsRef.current, activePaneId: hit.paneId };
+      setViewportPrefs(next);
+      syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current);
+    }
+    const sceneView = runtimeRef.current?.sceneView;
+    const camera = sceneView?.getPaneCamera?.(hit.paneId) || sceneView?.camera;
     return {
-      nx: ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      ny: -((e.clientY - rect.top) / rect.height) * 2 + 1,
-      rect,
+      nx: hit.nx,
+      ny: hit.ny,
+      paneId: hit.paneId,
+      paneRect: hit.rect,
+      localX: hit.localX,
+      localY: hit.localY,
+      camera,
+      rect: shellRect,
     };
+  };
+
+  const activePaneCameraMode = () => {
+    const p = viewportPrefsRef.current;
+    return p.panes.find((x) => x.id === p.activePaneId)?.cameraMode || 'perspective';
   };
 
   const onPointerDown = (e) => {
@@ -679,12 +771,13 @@ export function Viewport() {
       return;
     }
 
-    const { nx, ny } = pointerNorm(e);
+    const { nx, ny, camera, localX, localY } = pointerNorm(e);
     const sceneView = runtimeRef.current.sceneView;
+    const cam = camera || sceneView.camera;
 
     // Create tools: start footprint drag on construction plane
     if (tool === 'box' || tool === 'wall' || tool === 'floor' || tool === 'ceiling' || tool === 'ramp' || tool === 'stair' || tool === 'column' || tool === 'arch' || tool === 'archRoman' || tool === 'archGothic' || tool === 'curvedWall' || tool === 'subtract') {
-      const point = sceneView.pickConstructionPoint(nx, ny, 0);
+      const point = sceneView.pickConstructionPoint(nx, ny, 0, cam);
       if (!point) return;
       const g = gridSnap ? gridSize : 1;
       const snapped = {
@@ -706,7 +799,7 @@ export function Viewport() {
 
     // Clip session: pick grid-snapped world points on brush surfaces.
     if (clipSession && tool === 'geometry') {
-      const hits = sceneView.pickWorldHits?.(nx, ny) || [];
+      const hits = sceneView.pickWorldHits?.(nx, ny, cam) || [];
       const hit = hits.find((h) => h.point && (
         world.getActor(h.actorId)?.getComponent('ConvexBrush')
         || world.getActor(h.actorId)?.getComponent('Brush')
@@ -722,9 +815,14 @@ export function Viewport() {
       tool === 'geometry'
       && (geometryMode === 'face' || geometryMode === 'edge' || geometryMode === 'vertex')
     ) {
-      const gizmoHit = sceneView.pickGizmo(nx, ny);
+      const gizmoHit = sceneView.pickGizmo(nx, ny, cam);
       if (gizmoHit && geometrySelection?.items?.length && gizmoHit.kind === 'move') {
-        const raycaster = sceneView.getRaycaster(nx, ny);
+        const axisOk = filterGizmoAxisForOrtho(activePaneCameraMode(), gizmoHit.axis);
+        if (!axisOk && gizmoHit.axis !== 'normal') {
+          setStatus('Axis locked in orthographic view');
+          return;
+        }
+        const raycaster = sceneView.getRaycaster(nx, ny, cam);
         sceneView.gizmo.beginDrag(gizmoHit, raycaster.ray);
         if (!beginFaceMoveDrag()) return;
         dragRef.current = {
@@ -738,7 +836,7 @@ export function Viewport() {
         return;
       }
       if (geometryMode === 'edge') {
-        const edgeHit = sceneView.pickGeometryEdge?.(nx, ny, undefined, {
+        const edgeHit = sceneView.pickGeometryEdge?.(nx, ny, cam, {
           xray: e.altKey,
         });
         if (edgeHit) {
@@ -755,13 +853,23 @@ export function Viewport() {
               : 'Edge selection cleared',
           );
         } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
-          setGeometrySelection(null);
-          setStatus('Edge mode — click near a ConvexBrush edge (Alt = x-ray)');
+          // Empty click — start marquee
+          dragRef.current = {
+            type: 'marquee',
+            mode: 'edge',
+            startNdc: { x: nx, y: ny },
+            startLocal: { x: localX, y: localY },
+            additive: e.shiftKey || e.ctrlKey || e.metaKey,
+            camera: cam,
+          };
+          if (orbitRef.current) orbitRef.current.enabled = false;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setStatus('Edge mode — drag marquee or click near an edge (Alt = x-ray)');
         }
         return;
       }
       if (geometryMode === 'vertex') {
-        const vertHit = sceneView.pickGeometryVertex?.(nx, ny, undefined, {
+        const vertHit = sceneView.pickGeometryVertex?.(nx, ny, cam, {
           xray: e.altKey,
         });
         if (vertHit) {
@@ -778,12 +886,21 @@ export function Viewport() {
               : 'Vertex selection cleared',
           );
         } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
-          setGeometrySelection(null);
-          setStatus('Vertex mode — click near a ConvexBrush vertex (Alt = x-ray) · Move only');
+          dragRef.current = {
+            type: 'marquee',
+            mode: 'vertex',
+            startNdc: { x: nx, y: ny },
+            startLocal: { x: localX, y: localY },
+            additive: e.shiftKey || e.ctrlKey || e.metaKey,
+            camera: cam,
+          };
+          if (orbitRef.current) orbitRef.current.enabled = false;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setStatus('Vertex mode — drag marquee or click near a vertex · Move only');
         }
         return;
       }
-      const faceHit = sceneView.pickGeometryFace?.(nx, ny);
+      const faceHit = sceneView.pickGeometryFace?.(nx, ny, cam);
       if (faceHit) {
         const next = toggleGeometryItem(geometrySelection, {
           actorId: faceHit.actorId,
@@ -798,16 +915,31 @@ export function Viewport() {
             : 'Face selection cleared',
         );
       } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
-        setGeometrySelection(null);
-        setStatus('Face mode — click a ConvexBrush face');
+        dragRef.current = {
+          type: 'marquee',
+          mode: 'face',
+          startNdc: { x: nx, y: ny },
+          startLocal: { x: localX, y: localY },
+          additive: e.shiftKey || e.ctrlKey || e.metaKey,
+          camera: cam,
+        };
+        if (orbitRef.current) orbitRef.current.enabled = false;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setStatus('Face mode — drag marquee or click a face');
       }
       return;
     }
 
     // Gizmo first
-    const gizmoHit = sceneView.pickGizmo(nx, ny);
+    let gizmoHit = sceneView.pickGizmo(nx, ny, cam);
     if (gizmoHit && selectedActorIds.length > 0) {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const axisOk = filterGizmoAxisForOrtho(activePaneCameraMode(), gizmoHit.axis);
+      if (!axisOk) {
+        gizmoHit = null;
+      }
+    }
+    if (gizmoHit && selectedActorIds.length > 0) {
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       sceneView.gizmo.beginDrag(gizmoHit, raycaster.ray);
 
       if (gizmoHit.kind === 'move') {
@@ -910,7 +1042,7 @@ export function Viewport() {
 
     // Surface Selection mode — pick semantic surfaces without replacing actor select tool.
     if (tool === 'surface') {
-      const hit = sceneView.pickSurface?.(nx, ny);
+      const hit = sceneView.pickSurface?.(nx, ny, cam);
       if (hit) {
         selectActor(hit.actorId, { additive: false });
         setSelectedSurface({ actorId: hit.actorId, surfaceId: hit.surfaceId });
@@ -924,7 +1056,7 @@ export function Viewport() {
 
     // Align to Neighbor — first click reference, second click target.
     if (tool === 'align') {
-      const hit = sceneView.pickSurface?.(nx, ny);
+      const hit = sceneView.pickSurface?.(nx, ny, cam);
       if (!hit) {
         setStatus('Align: click a surface (Esc cancels).');
         return;
@@ -944,10 +1076,23 @@ export function Viewport() {
       return;
     }
 
-    // Actor pick / multi-select
+    // Actor pick / multi-select — empty space starts marquee.
     setSelectedSurface(null);
-    const actorId = sceneView.pickActorId(nx, ny);
-    selectActor(actorId, { additive: e.ctrlKey || e.metaKey });
+    const actorId = sceneView.pickActorId(nx, ny, cam);
+    if (actorId) {
+      selectActor(actorId, { additive: e.ctrlKey || e.metaKey });
+      return;
+    }
+    dragRef.current = {
+      type: 'marquee',
+      mode: 'actor',
+      startNdc: { x: nx, y: ny },
+      startLocal: { x: localX, y: localY },
+      additive: e.ctrlKey || e.metaKey || e.shiftKey,
+      camera: cam,
+    };
+    if (orbitRef.current) orbitRef.current.enabled = false;
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const updateCreatePreview = (drag) => {
@@ -981,11 +1126,23 @@ export function Viewport() {
   const onPointerMove = (e) => {
     const drag = dragRef.current;
     if (!drag || !runtimeRef.current || !world) return;
-    const { nx, ny } = pointerNorm(e);
+    const { nx, ny, localX, localY, camera } = pointerNorm(e, { activate: false });
     const sceneView = runtimeRef.current.sceneView;
+    const cam = drag.camera || camera || sceneView.camera;
+
+    if (drag.type === 'marquee') {
+      setMarqueeScreen({
+        x0: drag.startLocal.x,
+        y0: drag.startLocal.y,
+        x1: localX,
+        y1: localY,
+      });
+      drag.currentNdc = { x: nx, y: ny };
+      return;
+    }
 
     if (drag.type === 'create') {
-      const point = sceneView.pickConstructionPoint(nx, ny, 0);
+      const point = sceneView.pickConstructionPoint(nx, ny, 0, cam);
       if (!point) return;
       const g = gridSnap ? gridSize : 1;
       drag.current = {
@@ -998,7 +1155,7 @@ export function Viewport() {
     }
 
     if (drag.type === 'move') {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
       // Snap off = freeform. Alt = temporary 1-unit snap. Otherwise construction grid.
@@ -1025,7 +1182,7 @@ export function Viewport() {
     }
 
     if (drag.type === 'rotate') {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample || sample.deltaDegrees == null) return;
       const raw = sample.deltaDegrees;
@@ -1040,7 +1197,7 @@ export function Viewport() {
     }
 
     if (drag.type === 'scale') {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample || sample.deltaEditor == null) return;
       // 100 editor units of drag ≈ +1.0 scale on that axis.
@@ -1055,7 +1212,7 @@ export function Viewport() {
     }
 
     if (drag.type === 'faceMove') {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample || sample.deltaEditor == null) return;
       const constraint = sample.axis === 'normal' ? 'normal' : sample.axis;
@@ -1073,7 +1230,7 @@ export function Viewport() {
     }
 
     if (drag.type === 'resize') {
-      const raycaster = sceneView.getRaycaster(nx, ny);
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
       if (!sample) return;
       const snap = e.altKey || !gridSnap ? 1 : gridSize;
@@ -1106,8 +1263,14 @@ export function Viewport() {
   const commitArmedPlacement = async (e) => {
     const session = placeSessionRef.current;
     if (!session?.armed || !runtimeRef.current) return false;
-    const { nx, ny } = pointerNorm(e);
-    const pose = resolveSurfacePose(nx, ny, session.payload, session.candidateIndex || 0);
+    const { nx, ny, camera } = pointerNorm(e);
+    const pose = resolveSurfacePose(
+      nx,
+      ny,
+      session.payload,
+      session.candidateIndex || 0,
+      camera,
+    );
     clearPlacementSession();
     if (!pose.valid) return true;
     await commitCreatePlacement(session.payload, pose, {
@@ -1132,6 +1295,62 @@ export function Viewport() {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
       /* ignore */
+    }
+
+    if (drag.type === 'marquee') {
+      const { nx, ny, camera } = pointerNorm(e, { activate: false });
+      const endNdc = drag.currentNdc || { x: nx, y: ny };
+      const marquee = normalizeMarqueeNdc(drag.startNdc, endNdc);
+      const cam = drag.camera || camera || runtimeRef.current?.sceneView?.camera;
+      const sceneView = runtimeRef.current?.sceneView;
+      setMarqueeScreen(null);
+      const tiny = !marquee
+        || (Math.abs(marquee.maxX - marquee.minX) < 0.01
+          && Math.abs(marquee.maxY - marquee.minY) < 0.01);
+      if (!tiny && sceneView && cam) {
+        if (drag.mode === 'actor') {
+          const ids = marqueeSelectActors(sceneView._actorMeshes, cam, marquee);
+          if (drag.additive && selectedActorIds.length) {
+            const set = new Set(selectedActorIds);
+            for (const id of ids) set.add(id);
+            // select each newly added
+            for (const id of ids) selectActor(id, { additive: true });
+            if (!ids.length && !drag.additive) selectActor(null);
+          } else if (ids.length) {
+            selectActor(null);
+            for (let i = 0; i < ids.length; i += 1) {
+              selectActor(ids[i], { additive: i > 0 });
+            }
+            setStatus(`Marquee selected ${ids.length} actor(s)`);
+          } else {
+            selectActor(null);
+          }
+        } else {
+          const hits = marqueeSelectGeometry(drag.mode, sceneView, world, cam, marquee);
+          let next = drag.additive ? geometrySelection : null;
+          for (const hit of hits) {
+            next = toggleGeometryItem(next, {
+              actorId: hit.actorId,
+              id: hit.id,
+              mode: drag.mode,
+              additive: true,
+            });
+          }
+          setGeometrySelection(next);
+          setStatus(
+            hits.length
+              ? `Marquee selected ${hits.length} ${drag.mode}(s)`
+              : `${drag.mode} marquee — nothing hit`,
+          );
+        }
+      } else if (drag.mode === 'actor' && !drag.additive) {
+        selectActor(null);
+      } else if (drag.mode !== 'actor' && !drag.additive) {
+        setGeometrySelection(null);
+      }
+      dragRef.current = null;
+      if (orbitRef.current && mode === 'edit') orbitRef.current.enabled = true;
+      return;
     }
 
     if (drag.type === 'create') {
@@ -1235,7 +1454,7 @@ export function Viewport() {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
 
-    const { nx, ny } = pointerNorm(e);
+    const { nx, ny, camera } = pointerNorm(e, { activate: false });
     let payload = placeSessionRef.current?.payload || null;
     if (isCreate && !payload) {
       // Browser may not expose data until drop; use a generic upright preview.
@@ -1249,6 +1468,7 @@ export function Viewport() {
       ny,
       payload,
       placeSessionRef.current?.candidateIndex || 0,
+      camera,
     );
     placeSessionRef.current = {
       ...(placeSessionRef.current || {}),
@@ -1265,7 +1485,7 @@ export function Viewport() {
   const onCanvasDrop = async (e) => {
     if (mode !== 'edit' || !runtimeRef.current) return;
     e.preventDefault();
-    const { nx, ny } = pointerNorm(e);
+    const { nx, ny, camera } = pointerNorm(e);
 
     // Creation toolbar drag (custom MIME, text/plain backup, or live session).
     const createRaw = e.dataTransfer.getData(CREATE_DRAG_MIME)
@@ -1292,6 +1512,7 @@ export function Viewport() {
         ny,
         createPayload,
         placeSessionRef.current?.candidateIndex || 0,
+        camera,
       );
       clearPlacementSession();
       if (!pose.valid) return;
@@ -1336,7 +1557,7 @@ export function Viewport() {
       label: payload?.name || entry?.name || id,
       placement: 'upright',
     };
-    const pose = resolveSurfacePose(nx, ny, placePayload, 0);
+    const pose = resolveSurfacePose(nx, ny, placePayload, 0, camera);
     clearPlacementSession();
     if (!pose.valid) return;
     await commitCreatePlacement(placePayload, pose, {
@@ -1357,24 +1578,71 @@ export function Viewport() {
     }
   };
 
+  // Rebind OrbitControls + scissor panes when layout / active pane / camera mode changes.
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime?.sceneView) return;
+    syncActivePaneCamera(runtime.sceneView, viewportPrefs, orbitRef.current);
+    const { width, height } = shellSizeRef.current;
+    runtime.setViewportPanes(
+      buildViewportPanes(viewportPrefs, width, height, runtime.sceneView),
+    );
+  }, [runtimeRef, viewportPrefs]);
+
+  // Harness / debug bridge for Phase 2F.6 acceptance.
+  useEffect(() => {
+    window.__bloodboundViewport = {
+      getPrefs: () => ({ ...viewportPrefsRef.current }),
+      setPrefs: (partial) => {
+        setViewportPrefs({ ...viewportPrefsRef.current, ...partial });
+      },
+      getRuntime: () => runtimeRef.current,
+      getShellSize: () => ({ ...shellSizeRef.current }),
+      focusSelected: () => focusSelected(),
+      measureFrameTimes: async (seconds = 0.4) => {
+        const times = [];
+        let last = performance.now();
+        const end = last + seconds * 1000;
+        while (performance.now() < end) {
+          await new Promise((r) => requestAnimationFrame(r));
+          const now = performance.now();
+          times.push(now - last);
+          last = now;
+        }
+        const avgMs = times.length
+          ? times.reduce((a, b) => a + b, 0) / times.length
+          : 0;
+        return {
+          samples: times.length,
+          avgFrameMs: +avgMs.toFixed(2),
+          avgFps: avgMs > 0 ? +(1000 / avgMs).toFixed(1) : 0,
+        };
+      },
+    };
+    return () => {
+      delete window.__bloodboundViewport;
+    };
+  }, [setViewportPrefs, focusSelected]);
+
   return (
     <div className="bb-viewport" ref={shellRef}>
       <div className="bb-viewport-chrome">
-        <div className="bb-seg">
-          <button type="button" className="bb-btn bb-btn--active" disabled title="Perspective">
-            Perspective
-          </button>
-          <button type="button" className="bb-btn" disabled title="Lit shading">
-            Lit
-          </button>
-          <button type="button" className="bb-btn" disabled title="Show options">
-            Show
-          </button>
-        </div>
+        <LayoutModeToolbar
+          layoutMode={viewportPrefs.layoutMode}
+          maximizedPaneId={viewportPrefs.maximizedPaneId}
+          onLayoutMode={(layoutMode) => {
+            setViewportPrefs({
+              ...viewportPrefsRef.current,
+              layoutMode,
+              maximizedPaneId: null,
+              maximizeRestore: null,
+            });
+          }}
+        />
         <button
           type="button"
           className="bb-btn bb-btn--icon"
-          title={layout.viewportMaximized ? 'Restore viewport' : 'Maximize viewport'}
+          title={layout.viewportMaximized ? 'Restore dock viewport' : 'Maximize dock viewport'}
           onClick={() => toggleMaximizeViewport()}
         >
           {layout.viewportMaximized ? <IconRestore /> : <IconMaximize />}
@@ -1413,6 +1681,19 @@ export function Viewport() {
         onDragOver={onCanvasDragOver}
         onDragLeave={onCanvasDragLeave}
         onDrop={onCanvasDrop}
+      />
+      <ViewportLayout
+        prefs={viewportPrefs}
+        shellWidth={shellSize.width}
+        shellHeight={shellSize.height}
+        marqueeRect={marqueeScreen}
+        onChangePrefs={setViewportPrefs}
+        onActivatePane={(paneId) => {
+          const next = { ...viewportPrefsRef.current, activePaneId: paneId };
+          setViewportPrefs(next);
+          syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current);
+        }}
+        onFocusSelected={(paneId) => focusSelected(paneId)}
       />
       <div className="bb-viewport-hint">
         {toolHint()}

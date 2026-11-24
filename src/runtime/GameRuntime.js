@@ -49,6 +49,13 @@ export class GameRuntime {
     /** Editor camera pose captured on Play and restored on Stop. */
     this._editorCamera = null;
 
+    /**
+     * Multi-viewport edit panes for scissor rendering, or null for single-camera.
+     * Set by the Viewport UI each frame / on layout change.
+     * @type {Array<{ paneId: string, rect: object, cameraMode: string, displayMode: string, paneState?: object }>|null}
+     */
+    this.viewportPanes = null;
+
     this._frameCb = (now) => this._onFrame(now);
     this._visibilityCb = () => this._handleVisibilityChange();
     if (typeof document !== 'undefined') {
@@ -372,12 +379,18 @@ export class GameRuntime {
     this._scheduleFrame();
   }
 
+  setViewportPanes(panes) {
+    this.viewportPanes = Array.isArray(panes) && panes.length > 0 ? panes : null;
+  }
+
   _update(dt) {
     if (this.mode === 'play') {
       this.player?.update(dt);
       this.physics.step(dt);
       this.player?._syncCameraFromPhysics();
       this.sceneView.render(this.player.camera);
+    } else if (this.viewportPanes?.length) {
+      this.sceneView.renderViewports(this.viewportPanes);
     } else {
       this.sceneView.render(this.sceneView.camera);
     }

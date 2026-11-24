@@ -1,0 +1,124 @@
+import * as THREE from 'three';
+import { normalizeDisplayMode } from './viewportPrefs.js';
+
+/**
+ * Temporarily override materials/lights for one display-mode render pass.
+ * Call restoreDisplayMode after renderer.render.
+ */
+export function applyDisplayMode(scene, lights, mode) {
+  const display = normalizeDisplayMode(mode);
+  const state = {
+    display,
+    materials: [],
+    lights: [],
+    edgesVisible: [],
+  };
+
+  if (lights) {
+    for (const light of lights) {
+      if (!light) continue;
+      state.lights.push({ light, intensity: light.intensity, visible: light.visible });
+      if (display === 'unlit' || display === 'wireframe') {
+        light.intensity = 0;
+        if ('visible' in light) light.visible = false;
+      }
+    }
+  }
+
+  scene.traverse((obj) => {
+    if (obj.userData?.viewportEdgesOverlay) {
+      state.edgesVisible.push({ obj, visible: obj.visible });
+      obj.visible = display === 'solid-edges';
+      return;
+    }
+    if (!obj.isMesh && !obj.isLineSegments && !obj.isLine) return;
+    if (obj.userData?.editorOnly && !obj.userData?.viewportEdgesOverlay) {
+      // Keep existing editor helpers; wireframe mode still shows them.
+    }
+    const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+    for (const mat of mats) {
+      if (!mat) continue;
+      state.materials.push({
+        mat,
+        wireframe: mat.wireframe,
+        color: mat.color?.clone?.() || null,
+        map: mat.map,
+        emissive: mat.emissive?.clone?.() || null,
+        emissiveMap: mat.emissiveMap,
+        envMapIntensity: mat.envMapIntensity,
+        flatShading: mat.flatShading,
+      });
+
+      if (display === 'wireframe') {
+        mat.wireframe = true;
+      } else if (display === 'unlit') {
+        mat.wireframe = false;
+        if (mat.emissive) {
+          if (mat.color) mat.emissive.copy(mat.color);
+          else mat.emissive.setHex(0xffffff);
+        }
+        if (mat.map && 'emissiveMap' in mat) mat.emissiveMap = mat.map;
+      } else if (display === 'textured') {
+        mat.wireframe = false;
+        // Keep maps; flatten lighting via higher emissive from albedo if present.
+        if (mat.emissive && mat.color) {
+          mat.emissive.copy(mat.color).multiplyScalar(0.35);
+        }
+      } else if (display === 'solid-edges') {
+        mat.wireframe = false;
+      } else {
+        // lit — leave as authored; ensure wireframe off if we toggled earlier in same frame
+        mat.wireframe = false;
+      }
+    }
+  });
+
+  return state;
+}
+
+export function restoreDisplayMode(state) {
+  if (!state) return;
+  for (const entry of state.lights) {
+    entry.light.intensity = entry.intensity;
+    if ('visible' in entry.light) entry.light.visible = entry.visible;
+  }
+  for (const entry of state.materials) {
+    const { mat } = entry;
+    mat.wireframe = entry.wireframe;
+    if (entry.color && mat.color) mat.color.copy(entry.color);
+    if ('map' in mat) mat.map = entry.map;
+    if (entry.emissive && mat.emissive) mat.emissive.copy(entry.emissive);
+    if ('emissiveMap' in mat) mat.emissiveMap = entry.emissiveMap;
+    if ('envMapIntensity' in mat && entry.envMapIntensity != null) {
+      mat.envMapIntensity = entry.envMapIntensity;
+    }
+    if ('flatShading' in mat && entry.flatShading != null) {
+      mat.flatShading = entry.flatShading;
+    }
+  }
+  for (const entry of state.edgesVisible) {
+    entry.obj.visible = entry.visible;
+  }
+}
+
+/** Ensure a mesh has a sibling EdgesGeometry overlay tagged for solid-edges mode. */
+export function ensureEdgesOverlay(mesh, parentGroup) {
+  if (!mesh?.isMesh || !mesh.geometry) return null;
+  if (mesh.userData.viewportEdgesOverlayChild) return mesh.userData.viewportEdgesOverlayChild;
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 30);
+  const line = new THREE.LineSegments(
+    edges,
+    new THREE.LineBasicMaterial({ color: 0x111111, depth: 0.85 }),
+  );
+  line.userData.viewportEdgesOverlay = true;
+  line.userData.editorOnly = true;
+  line.visible = false;
+  line.position.copy(mesh.position);
+  line.quaternion.copy(mesh.quaternion);
+  line.scale.copy(mesh.scale);
+  const host = parentGroup || mesh.parent;
+  if (host) host.add(line);
+  else mesh.add(line);
+  mesh.userData.viewportEdgesOverlayChild = line;
+  return line;
+}

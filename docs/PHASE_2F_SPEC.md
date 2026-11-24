@@ -1,7 +1,7 @@
 # Phase 2F — Geometry Editing: Technical Specification
 
 Status: **APPROVED** (designer sign-off 2026-11-24). All §13 defaults accepted; additions below.
-**Implementation:** 2F.0–2F.5 **Done** (2026-11-24). 2F.6 not started.
+**Implementation:** 2F.0–2F.6 **Done** (2026-11-24). Phase 2F complete.
 Source of truth for scope: the Phase 2F design request + approval additions. Source of truth for
 current behavior: the repository as of Phase 2E complete (`b283a13` and successors).
 
@@ -530,6 +530,14 @@ Appended by approval; does **not** renumber 2F.0–2F.5. Starts only after 2F.5 
 
 **Out of scope for 2F.6:** rule-based map generation (reserved as **Phase 2G**).
 
+**Shipped:** shared `SceneView` scissor multi-pane render; `viewportPrefs` persistence
+(`bloodbound.editor.viewport.v1`); layout chrome + dividers + maximize; ortho cameras/grid;
+per-pane display modes; marquee; harness `public/dev/phase2f6Acceptance.js`; report
+`docs/ACCEPTANCE_MULTI_VIEWPORT.md`; unit suites `viewportPrefs` / `viewportCameras` /
+`marqueeSelection` / `phase2f6MultiViewport`.
+
+**Acceptance:** §12.7.
+
 ---
 
 ## 8. Undo/redo (commands)
@@ -792,7 +800,20 @@ All automated tests run in the existing Vitest setup; Rapier-based tests follow 
   create/override/sync → save/load → Play/Stop → undo/redo → duplicate.
 - Acceptance level + harness + report committed; Gothic mansion regression passes unchanged.
 - Performance budgets measured and recorded; remaining limitations and deferred debt listed.
-- ROADMAP / TECHNICAL_STATUS / README updated; Phase 2F marked complete only after verification.
+- ROADMAP / TECHNICAL_STATUS / README updated; Phase 2F marked complete only after 2F.6.
+
+### 12.7 2F.6
+
+- Single / dual / triple / quad layouts with dividers and maximize/restore; default quad is
+  Perspective / Top / Front / Right.
+- Perspective + six orthographic cameras; independent pose/zoom/display per pane; ortho pan/zoom;
+  grid aligned to the active ortho plane; focus selected.
+- Display modes lit / unlit / textured / wireframe / solid-with-edges, independent per pane.
+- Shared selection and geometry editing; marquee for actors and geometry elements; ortho axis
+  constraints; edits in one pane update all immediately.
+- One shared World / SceneView (scissor); no duplicated geometry/textures/physics; Play/Stop and
+  perspective controls preserved; prefs persisted; single vs quad frame times recorded.
+- Harness + report + unit suites committed; Phase 2F complete. Phase 2G not started.
 
 ---
 

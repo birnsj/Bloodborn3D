@@ -59,6 +59,19 @@ import { createColumnFromBounds } from '../editor/columnFactory.js';
 import { createArchFromBounds } from '../editor/archFactory.js';
 import { createCurvedWallFromBounds } from '../editor/curvedWallFactory.js';
 import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
+import {
+  applyDisplayMode,
+  restoreDisplayMode,
+  ensureEdgesOverlay,
+} from '../editor/viewport/viewportDisplay.js';
+import {
+  createPaneCamera,
+  applyPanePose,
+  updateOrthoFrustum,
+  updatePerspectiveAspect,
+  gridPlaneForCameraMode,
+} from '../editor/viewport/viewportCameras.js';
+import { normalizeCameraMode } from '../editor/viewport/viewportPrefs.js';
 
 const DEFAULT_VIEWPORT_COLORS = {
   background: 0x0e1218,
@@ -147,6 +160,13 @@ export class SceneView {
     this._createPreview = null;
     this._placementPreview = null;
 
+    /** @type {Map<string, THREE.Camera>} Independent cameras per viewport pane */
+    this._paneCameras = new Map();
+    /** Active pane id for input / Play capture (legacy `this.camera` mirrors it). */
+    this.activePaneId = 'pane-0';
+    this._gridPlane = 'xz';
+    this._size = { width: 1, height: 1 };
+
     if (editMode) {
       this._createEditHelpers();
       this.gizmo = new BrushGizmo(this.scene);
@@ -174,7 +194,30 @@ export class SceneView {
     const divisions = Math.max(2, Math.round(GRID_EXTENT_EDITOR_UNITS / this.gridSize));
     const { gridMajor, gridMinor } = this.viewportColors;
     this.gridHelper = new THREE.GridHelper(extentMeters, divisions, gridMajor, gridMinor);
+    this.gridHelper.userData.baseQuaternion = this.gridHelper.quaternion.clone();
     this.scene.add(this.gridHelper);
+    this._applyGridPlane(this._gridPlane);
+  }
+
+  /**
+   * Orient the edit grid to the active orthographic plane.
+   * @param {'xz'|'xy'|'zy'} plane
+   */
+  _applyGridPlane(plane) {
+    this._gridPlane = plane || 'xz';
+    if (!this.gridHelper) return;
+    this.gridHelper.rotation.set(0, 0, 0);
+    // GridHelper lies on XZ by default.
+    if (this._gridPlane === 'xy') {
+      this.gridHelper.rotation.x = Math.PI / 2;
+    } else if (this._gridPlane === 'zy') {
+      this.gridHelper.rotation.z = Math.PI / 2;
+    }
+    this.gridHelper.updateMatrixWorld(true);
+  }
+
+  setGridPlaneForCameraMode(cameraMode) {
+    this._applyGridPlane(gridPlaneForCameraMode(cameraMode));
   }
 
   /**
@@ -234,9 +277,135 @@ export class SceneView {
 
   setSize(width, height) {
     if (width <= 0 || height <= 0) return;
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    this._size.width = width;
+    this._size.height = height;
+    if (this.camera.isPerspectiveCamera) {
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+    } else if (this.camera.isOrthographicCamera) {
+      const frustum = this.camera.userData.frustumSize
+        || Math.abs(this.camera.top - this.camera.bottom)
+        || 12;
+      updateOrthoFrustum(this.camera, frustum, width / height);
+    }
     this.renderer.setSize(width, height, false);
+  }
+
+  /**
+   * Ensure a camera exists for a pane. Recreates when camera mode changes.
+   * @returns {THREE.Camera}
+   */
+  ensurePaneCamera(paneId, cameraMode, paneState = null) {
+    const mode = normalizeCameraMode(cameraMode);
+    let cam = this._paneCameras.get(paneId);
+    if (!cam || cam.userData.viewportMode !== mode) {
+      if (cam) {
+        // Drop old camera; not added to scene.
+        this._paneCameras.delete(paneId);
+      }
+      const aspect = this._size.width / Math.max(this._size.height, 1);
+      cam = createPaneCamera(mode, aspect);
+      this._paneCameras.set(paneId, cam);
+      if (paneState) applyPanePose(cam, { ...paneState, cameraMode: mode });
+    }
+    return cam;
+  }
+
+  getPaneCamera(paneId) {
+    return this._paneCameras.get(paneId) || null;
+  }
+
+  /**
+   * Promote a pane camera to `this.camera` so Play capture / legacy paths stay valid.
+   */
+  setActivePaneCamera(paneId, cameraMode, paneState = null) {
+    const cam = this.ensurePaneCamera(paneId, cameraMode, paneState);
+    this.activePaneId = paneId;
+    this.camera = cam;
+    return cam;
+  }
+
+  /** Update projection for a pane from its CSS pixel rect inside the canvas. */
+  updatePaneCameraProjection(camera, rect) {
+    if (!camera || !rect || rect.width <= 0 || rect.height <= 0) return;
+    const aspect = rect.width / rect.height;
+    if (camera.isPerspectiveCamera) {
+      updatePerspectiveAspect(camera, aspect);
+    } else if (camera.isOrthographicCamera) {
+      const frustum = camera.userData.frustumSize
+        || Math.abs(camera.top - camera.bottom)
+        || 12;
+      updateOrthoFrustum(camera, frustum, aspect);
+    }
+  }
+
+  _ensureActorEdgesOverlays() {
+    for (const entry of this._actorMeshes.values()) {
+      entry.group?.traverse((obj) => {
+        if (obj.isMesh && obj.geometry && !obj.userData?.editorOnly) {
+          ensureEdgesOverlay(obj, entry.group);
+        }
+      });
+    }
+  }
+
+  /**
+   * Render multiple panes with scissor. Shared scene — no duplicated geometry.
+   * @param {Array<{ paneId: string, rect: {x:number,y:number,width:number,height:number}, cameraMode: string, displayMode: string, paneState?: object }>} panes
+   * Rects use top-left CSS pixel origin (DOM); converted to WebGL bottom-left.
+   */
+  renderViewports(panes) {
+    if (!Array.isArray(panes) || panes.length === 0) {
+      this.render(this.camera);
+      return;
+    }
+
+    const canvasH = this._size.height || this.renderer.domElement.height || 1;
+    const dpr = this.renderer.getPixelRatio();
+    this._ensureActorEdgesOverlays();
+
+    this.renderer.setScissorTest(true);
+    const lights = [this.ambient, this.editFill, this.editFill2];
+
+    for (const pane of panes) {
+      const rect = pane.rect;
+      if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+
+      const cam = this.ensurePaneCamera(pane.paneId, pane.cameraMode, pane.paneState);
+      this.updatePaneCameraProjection(cam, rect);
+
+      // DOM y is top-origin; WebGL scissor is bottom-origin.
+      const vx = Math.round(rect.x * dpr);
+      const vy = Math.round((canvasH - rect.y - rect.height) * dpr);
+      const vw = Math.max(1, Math.round(rect.width * dpr));
+      const vh = Math.max(1, Math.round(rect.height * dpr));
+
+      this.renderer.setViewport(vx, vy, vw, vh);
+      this.renderer.setScissor(vx, vy, vw, vh);
+
+      if (this.editMode && this.gridHelper) {
+        this._applyGridPlane(gridPlaneForCameraMode(pane.cameraMode));
+      }
+
+      const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
+      this.renderer.render(this.scene, cam);
+      restoreDisplayMode(displayState);
+    }
+
+    this.renderer.setScissorTest(false);
+    // Reset full-canvas viewport for any follow-up readbacks.
+    const fullW = Math.max(1, Math.round(this._size.width * dpr));
+    const fullH = Math.max(1, Math.round(this._size.height * dpr));
+    this.renderer.setViewport(0, 0, fullW, fullH);
+  }
+
+  render(camera = this.camera) {
+    this.renderer.setScissorTest(false);
+    const dpr = this.renderer.getPixelRatio();
+    const fullW = Math.max(1, Math.round((this._size.width || 1) * dpr));
+    const fullH = Math.max(1, Math.round((this._size.height || 1) * dpr));
+    this.renderer.setViewport(0, 0, fullW, fullH);
+    this.renderer.render(this.scene, camera);
   }
 
   clearWorldMeshes() {
@@ -2106,10 +2275,6 @@ export class SceneView {
     }
   }
 
-  render(camera = this.camera) {
-    this.renderer.render(this.scene, camera);
-  }
-
   dispose() {
     this.clearWorldMeshes();
     this.setCreatePreview(null);
@@ -2124,6 +2289,7 @@ export class SceneView {
     }
     this._studioEnv?.dispose?.();
     this.scene.environment = null;
+    this._paneCameras.clear();
     this.renderer.dispose();
   }
 }
