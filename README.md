@@ -9,7 +9,7 @@ Project state, verified findings and known debt are tracked in [`docs/TECHNICAL_
 - Vite + React 19 (editor UI), dockview for the dockable panel layout
 - Three.js (rendering adapter)
 - Rapier 3D (`@dimforge/rapier3d-compat`, Play mode physics)
-- JSON level serialization (engine-neutral, `schemaVersion` 2)
+- JSON level serialization (engine-neutral, `schemaVersion` 2; **3** when a level contains a ConvexBrush)
 - vitest (tests), oxlint (lint)
 
 ## Scripts
@@ -41,6 +41,7 @@ Authored JSON and the inspector use **editor units**. Three.js and Rapier conver
 - **Hierarchy.** Cells and parenting; the outliner, reparenting and per-actor visible/locked flags.
 - **Prefabs and assets.** Content Browser with materials, textures, meshes and prefabs (dev file API writes under `public/assets`); prefab instances with overrides and source updates.
 - **Materials and surfaces (Phase 2E).** Local UV density at 100 eu; Surface / Align tools; per-surface materials and UV; Materials workspace with Save/Cancel drafts; persistence through save/load, prefabs, undo and Play/Stop. Production acceptance level: `acceptance-gothic-mansion.json` (see `docs/ACCEPTANCE_GOTHIC_MANSION.md`).
+- **Editable convex brushes (Phase 2F.0).** Explicit Convert to Convex Brush; engine-neutral geometry; Rapier convex-hull collision; materials/UVs preserved. Face/edge/vertex editing is 2F.1+. Spec: `docs/PHASE_2F_SPEC.md`.
 - **Editing.** Every edit is a command on a 100-step undo/redo stack. Selection, move/rotate/scale gizmos, duplicate, delete.
 - **Play / Stop.** Play snapshots the authored level and runs Rapier with a first-person controller. Stop restores the snapshot. See *Editing safety* below.
 - **Workspace.** Dockable panels with named layouts, UI scale, four color themes (View → Theme), Edit → Settings (camera, viewport colors, play look), hover help, keyboard-shortcut reference, 13 in-app tutorial lessons, and a session recorder.
@@ -52,7 +53,7 @@ Authored JSON and the inspector use **editor units**. Three.js and Rapier conver
 - **Dialogs** (alerts, confirms, prompts) never reload or replace the level.
 - **Deleting an actor deletes all of its descendants.** Undo restores them with their IDs, transforms, hierarchy links, prefab metadata and original order.
 - **Play/Stop** keeps the authored world, the editor camera pose and the undo/redo history. Only one Play session can run at a time; Rapier worlds are freed on Stop.
-- **Level files** declare a `schemaVersion`. Versions 1 and 2 load; anything newer (or malformed) is rejected with an explicit message. Saves always write version 2.
+- **Level files** declare a `schemaVersion`. Versions 1–3 load; anything newer (or malformed) is rejected with an explicit message. Saves write version 2 unless the level contains a ConvexBrush (then 3).
 - Failed texture/mesh loads are not cached, so a later request retries.
 - Rendering pauses while the browser tab is hidden and resumes when it is visible.
 

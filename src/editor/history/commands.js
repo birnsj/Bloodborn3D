@@ -2,7 +2,7 @@ import { Actor } from '../../core/Actor.js';
 import { createComponentFromJSON } from '../../components/componentRegistry.js';
 import { getDescendants } from '../../core/hierarchy.js';
 import {
-  allowedSurfacesForComponentType,
+  allowedSurfaceIdsForComponent,
   normalizeFaceMaterials,
   normalizeFaceUVs,
 } from '../../runtime/surfaces.js';
@@ -11,9 +11,9 @@ function cloneActorJson(actor) {
   return structuredClone(actor.toJSON());
 }
 
-/** Keep faceMaterials / faceUVs normalized when history applies snapshots (Phase 2E.5). */
+/** Keep faceMaterials / faceUVs normalized when history applies snapshots (Phase 2E.5 / 2F.0). */
 function applySurfaceFields(comp, state) {
-  const allowed = allowedSurfacesForComponentType(comp.type);
+  const allowed = allowedSurfaceIdsForComponent(comp);
   if ('faceMaterials' in state) {
     comp.faceMaterials = normalizeFaceMaterials(state.faceMaterials, allowed);
   }
@@ -707,5 +707,82 @@ export class SetPrefabOverridesCommand {
     const actor = this.world.getActor(this.actorId);
     if (!actor?.prefab) return;
     actor.prefab.overrides = structuredClone(overrides || {});
+  }
+}
+
+/**
+ * Replace a Brush component with a ConvexBrush (or reverse on undo).
+ * Snapshots are full component JSON; component id is preserved.
+ */
+export class ConvertBrushToConvexCommand {
+  constructor({
+    world,
+    actorId,
+    brushJson,
+    convexJson,
+    label = 'Convert to Convex Brush',
+  }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.brushJson = structuredClone(brushJson);
+    this.convexJson = structuredClone(convexJson);
+    this.label = label;
+  }
+
+  do() {
+    this._replace(this.brushJson?.type || 'Brush', this.convexJson);
+  }
+
+  undo() {
+    this._replace(this.convexJson?.type || 'ConvexBrush', this.brushJson);
+  }
+
+  _replace(removeType, nextJson) {
+    const actor = this.world.getActor(this.actorId);
+    if (!actor || !nextJson) return;
+    const existing = actor.getComponent(removeType);
+    if (existing) actor.removeComponent(existing);
+    // Also clear the other type if somehow both exist.
+    const other = removeType === 'Brush' ? 'ConvexBrush' : 'Brush';
+    const stray = actor.getComponent(other);
+    if (stray) actor.removeComponent(stray);
+    actor.addComponent(createComponentFromJSON(nextJson));
+  }
+}
+
+/**
+ * Patch ConvexBrush material / UV / face / color / collidable fields.
+ */
+export class SetConvexBrushPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'ConvexBrush properties' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const convex = this.world.getActor(this.actorId)?.getComponent('ConvexBrush');
+    if (!convex) return;
+    if ('materialId' in state) convex.materialId = state.materialId;
+    applySurfaceFields(convex, state);
+    if ('uv' in state && state.uv) {
+      convex.uv = {
+        scale: { ...(state.uv.scale || convex.uv.scale) },
+        offset: { ...(state.uv.offset || convex.uv.offset) },
+        rotation: state.uv.rotation ?? convex.uv.rotation,
+      };
+    }
+    if ('color' in state) convex.color = state.color;
+    if ('collidable' in state) convex.collidable = state.collidable;
   }
 }

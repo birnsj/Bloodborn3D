@@ -1,18 +1,33 @@
 /**
  * Serialize a World to engine-neutral level JSON.
  * schemaVersion 2 adds parentId / visible / locked / prefab / Cell.
+ * schemaVersion 3 is emitted only when the level contains a ConvexBrush (Phase 2F.0).
  * v1 levels remain loadable.
  */
-export const LEVEL_SCHEMA_VERSION = 2;
+
+export const LEVEL_SCHEMA_VERSION = 3;
 /** Oldest level schema the deserializer still accepts. */
 export const MIN_SUPPORTED_LEVEL_SCHEMA_VERSION = 1;
+/** Levels without ConvexBrush keep writing 2 so older builds re-save identically. */
+export const LEVEL_SCHEMA_VERSION_WITHOUT_CONVEX = 2;
+
+export function worldHasConvexBrush(world) {
+  if (!world?.actors) return false;
+  return world.actors.some((actor) => actor.getComponent?.('ConvexBrush'));
+}
+
+export function schemaVersionForWorld(world) {
+  return worldHasConvexBrush(world)
+    ? LEVEL_SCHEMA_VERSION
+    : LEVEL_SCHEMA_VERSION_WITHOUT_CONVEX;
+}
 
 export function serializeLevel(world) {
   if (!world) {
     throw new Error('Cannot serialize null world');
   }
   return {
-    schemaVersion: LEVEL_SCHEMA_VERSION,
+    schemaVersion: schemaVersionForWorld(world),
     name: world.name ?? 'Untitled Level',
     actors: world.actors.map((actor) => actor.toJSON()),
   };

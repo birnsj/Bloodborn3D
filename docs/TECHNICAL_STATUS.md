@@ -2,23 +2,19 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), then Phase **2E complete** (2E.0–2E.5 materials/surfaces).
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, then Phase **2F.0** (editable convex brush architecture).
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 408 / 408 pass, 53 files |
+| `npm test` | 420 / 420 pass, 54 files |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
-| Phase 2E.0 | UV density + composition contract; `uvMapping.test.js` |
-| Phase 2E.1 | Semantic surfaces + Surface tool; `surfaces.test.js`; level `acceptance-surfaces.json` |
-| Phase 2E.2 | Per-surface `faceUVs`; Details UV controls + Reset; acceptance level extended |
-| Phase 2E.3 | Align to Neighbor; `alignSurfaces.test.js`; adjoining walls in acceptance level |
-| Phase 2E.4 | Materials workspace; `materialDraft.test.js`; Save/Cancel asset drafts |
-| Phase 2E.5 | Persistence audit; `phase2e5Persistence.test.js`; **Phase 2E complete** |
-| Post-2E acceptance | Gothic mansion level + browser harness; see [`ACCEPTANCE_GOTHIC_MANSION.md`](./ACCEPTANCE_GOTHIC_MANSION.md) |
+| Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
+| Phase 2F.0 | ConvexBrush architecture; convert / render / hull collision / schema 3; `phase2f0ConvexBrush.test.js` |
+| Phase 2F.1+ | Not started (face/edge/vertex editing deferred) |
 
 ## 2. Implemented systems
 
@@ -27,10 +23,11 @@ Status is what the code does today, not an intent.
 | System | State | Notes |
 | --- | --- | --- |
 | Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | No Three.js / React dependency. Transforms are local to `parentId`. |
-| Component types | Implemented | Brush, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
-| Serialization | Implemented | Writes `schemaVersion` 2; reads 1–2; rejects other versions (see M9). No migration code exists, none is needed for 1→2. |
-| Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). |
-| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / ramp / stair / column / arch / curved wall / mitered wall; static meshes use a unit-cube collider (see M10). |
+| Component types | Implemented | Brush, **ConvexBrush**, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
+| Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads 1–3; rejects other versions (see M9). |
+| Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). ConvexBrush uses grouped per-face mesh + per-actor rebuild path. |
+| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; static meshes use a unit-cube collider (see M10). |
+| ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported; face editing not yet. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |

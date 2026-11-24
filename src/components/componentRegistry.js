@@ -2,6 +2,7 @@ import { ArchComponent } from './ArchComponent.js';
 import { BrushComponent } from './BrushComponent.js';
 import { CellComponent } from './CellComponent.js';
 import { ColumnComponent } from './ColumnComponent.js';
+import { ConvexBrushComponent } from './ConvexBrushComponent.js';
 import { CurvedWallComponent } from './CurvedWallComponent.js';
 import { LightComponent } from './LightComponent.js';
 import { PlayerSpawnComponent } from './PlayerSpawnComponent.js';
@@ -15,6 +16,7 @@ const REGISTRY = {
   [BrushComponent.componentType]: BrushComponent,
   [CellComponent.componentType]: CellComponent,
   [ColumnComponent.componentType]: ColumnComponent,
+  [ConvexBrushComponent.componentType]: ConvexBrushComponent,
   [CurvedWallComponent.componentType]: CurvedWallComponent,
   [LightComponent.componentType]: LightComponent,
   [PlayerSpawnComponent.componentType]: PlayerSpawnComponent,

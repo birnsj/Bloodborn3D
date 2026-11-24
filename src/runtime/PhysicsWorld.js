@@ -15,6 +15,7 @@ import {
 import { getArchColliderSolids } from './archGeometry.js';
 import { getCurvedWallColliderSolids } from './curvedWallGeometry.js';
 import { brushHasMiters, miteredWallPointsToMetersFlat } from './miteredWallGeometry.js';
+import { convexBrushPointsToMetersFlat } from './convexBrushGeometry.js';
 import { isWallBrush } from './wallOpenings.js';
 
 let rapierReady = null;
@@ -62,6 +63,12 @@ export class PhysicsWorld {
   buildFromWorld(gameWorld) {
     this.clear();
     for (const actor of gameWorld.actors) {
+      const convex = actor.getComponent('ConvexBrush');
+      if (convex && convex.enabled && convex.collidable !== false && convex.geometry) {
+        this._addConvexBrushCollider(actor, convex, gameWorld);
+        continue;
+      }
+
       const brush = actor.getComponent('Brush');
       // Subtractive brushes never generate colliders of their own.
       if (brush && brush.enabled && brush.collidable !== false && brush.operation !== 'subtract') {
@@ -110,6 +117,30 @@ export class PhysicsWorld {
         this._addBoxCollider(actor, { x: 0.5, y: 0.5, z: 0.5 });
       }
     }
+  }
+
+  _addConvexBrushCollider(actor, convex, gameWorld = null) {
+    const world = gameWorld || actor.world || null;
+    const worldXform = getWorldTransform(actor, world);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    const points = convexBrushPointsToMetersFlat(convex.geometry, scale);
+    const colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+    if (!colliderDesc) {
+      this.world.removeRigidBody(body);
+      console.error(
+        `[PhysicsWorld] ConvexBrush hull failed for actor ${actor.id} (${actor.name || 'unnamed'})`,
+      );
+      return;
+    }
+    colliderDesc.setFriction(0.9);
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
 
   _addBrushColliders(actor, brush, gameWorld = null) {

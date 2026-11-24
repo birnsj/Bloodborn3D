@@ -44,7 +44,15 @@ import {
   SetActorFlagsCommand,
   ReplaceActorsCommand,
   SetPrefabOverridesCommand,
+  ConvertBrushToConvexCommand,
+  SetConvexBrushPropertiesCommand,
 } from './history/commands.js';
+import { convertBrushToConvexGeometry } from '../geometry/convert.js';
+import { ConvexBrushComponent } from '../components/ConvexBrushComponent.js';
+import {
+  canConvertActorToConvex,
+  cutterConvexConflictMessage,
+} from '../rules/convexBrushRules.js';
 import {
   createBrushFromBounds,
   duplicateActors,
@@ -178,6 +186,16 @@ export function EditorProvider({ children }) {
     if (!check || check.ok) return false;
     notify(check.message, { title: 'Subtraction Too Complex' });
     return true;
+  }, [notify]);
+
+  /** Report unsupported cutter ∩ ConvexBrush intersections (non-blocking). */
+  const reportCutterConvexConflicts = useCallback(() => {
+    const message = cutterConvexConflictMessage(worldRef.current);
+    if (message) {
+      notify(message, { title: 'ConvexBrush / Cutter' });
+      return true;
+    }
+    return false;
   }, [notify]);
 
   const worldRef = useRef(null);
@@ -746,9 +764,10 @@ export function EditorProvider({ children }) {
       }),
       { selectIds: [actor.id] },
     );
+    if (isSubtract) reportCutterConvexConflicts();
     setTool('select');
     return actor;
-  }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
+  }, [world, mode, executeCommand, rejectSubtractIfTooComplex, reportCutterConvexConflicts]);
 
   const deleteSelected = useCallback(() => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -2081,11 +2100,90 @@ export function EditorProvider({ children }) {
     setSelectedSurface,
   ]);
 
+  const updateSelectedConvexBrush = useCallback((partial) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const actor = world.getActor(actorId);
+    const convex = actor?.getComponent('ConvexBrush');
+    if (!convex) return;
+    const before = {
+      materialId: convex.materialId,
+      faceMaterials: convex.faceMaterials ? { ...convex.faceMaterials } : null,
+      faceUVs: convex.faceUVs ? structuredClone(convex.faceUVs) : null,
+      uv: structuredClone(convex.uv),
+      color: convex.color,
+      collidable: convex.collidable,
+    };
+    const after = { ...before, ...partial };
+    if (partial.uv) {
+      after.uv = {
+        scale: { ...before.uv.scale, ...(partial.uv.scale || {}) },
+        offset: { ...before.uv.offset, ...(partial.uv.offset || {}) },
+        rotation: partial.uv.rotation ?? before.uv.rotation,
+      };
+    }
+    executeCommand(
+      new SetConvexBrushPropertiesCommand({
+        world,
+        actorId,
+        before,
+        after,
+        label: 'Edit ConvexBrush',
+      }),
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const convertSelectedToConvexBrush = useCallback(() => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return false;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const actor = world.getActor(actorId);
+    const eligibility = canConvertActorToConvex(actor, world);
+    if (!eligibility.ok) {
+      notify(eligibility.message, { title: 'Convert to Convex Brush' });
+      return false;
+    }
+    const brush = actor.getComponent('Brush');
+    const converted = convertBrushToConvexGeometry(actor, brush, world);
+    if (!converted.ok) {
+      notify(converted.message, { title: 'Convert to Convex Brush' });
+      return false;
+    }
+    const convex = new ConvexBrushComponent({
+      id: brush.id,
+      color: brush.color,
+      collidable: brush.collidable !== false,
+      materialId: brush.materialId,
+      faceMaterials: converted.faceMaterials,
+      faceUVs: converted.faceUVs,
+      uv: brush.uv,
+      geometry: converted.geometry,
+      provenance: converted.provenance,
+    });
+    if (!convex.isValid) {
+      notify(convex.geometryError?.message || 'Converted geometry is invalid.', {
+        title: 'Convert to Convex Brush',
+      });
+      return false;
+    }
+    executeCommand(
+      new ConvertBrushToConvexCommand({
+        world,
+        actorId,
+        brushJson: brush.toJSON(),
+        convexJson: convex.toJSON(),
+      }),
+    );
+    autoCapturePrefabOverrides([actorId]);
+    return true;
+  }, [world, mode, executeCommand, notify, autoCapturePrefabOverrides]);
+
   const assignSelectedSurfaceMaterial = useCallback((materialId) => {
     if (!world || mode === 'play' || !selectedSurface) return;
     const actor = world.getActor(selectedSurface.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
+    const convex = actor.getComponent('ConvexBrush');
     const ramp = actor.getComponent('Ramp');
     const stair = actor.getComponent('Stair');
     const column = actor.getComponent('Column');
@@ -2095,6 +2193,7 @@ export function EditorProvider({ children }) {
     const patchFace = (comp, updateFn) => {
       const scratch = {
         type: comp.type,
+        geometry: comp.geometry,
         faceMaterials: comp.faceMaterials ? { ...comp.faceMaterials } : null,
       };
       const result = patchFaceMaterial(scratch, selectedSurface.surfaceId, materialId || null);
@@ -2102,6 +2201,7 @@ export function EditorProvider({ children }) {
       updateFn({ faceMaterials: result.after });
     };
     if (brush) patchFace(brush, updateSelectedBrush);
+    else if (convex) patchFace(convex, updateSelectedConvexBrush);
     else if (ramp) patchFace(ramp, updateSelectedRamp);
     else if (stair) patchFace(stair, updateSelectedStair);
     else if (column) patchFace(column, updateSelectedColumn);
@@ -2112,6 +2212,7 @@ export function EditorProvider({ children }) {
     mode,
     selectedSurface,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
     updateSelectedRamp,
     updateSelectedStair,
     updateSelectedColumn,
@@ -2124,6 +2225,7 @@ export function EditorProvider({ children }) {
     const actor = world.getActor(selectedSurface.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
+    const convex = actor.getComponent('ConvexBrush');
     const ramp = actor.getComponent('Ramp');
     const stair = actor.getComponent('Stair');
     const column = actor.getComponent('Column');
@@ -2149,6 +2251,7 @@ export function EditorProvider({ children }) {
       };
       const scratch = {
         type: comp.type,
+        geometry: comp.geometry,
         faceUVs: comp.faceUVs ? structuredClone(comp.faceUVs) : null,
       };
       const result = patchFaceUv(scratch, sid, nextUv);
@@ -2156,6 +2259,7 @@ export function EditorProvider({ children }) {
       updateFn({ faceUVs: result.after });
     };
     if (brush) patchUv(brush, updateSelectedBrush);
+    else if (convex) patchUv(convex, updateSelectedConvexBrush);
     else if (ramp) patchUv(ramp, updateSelectedRamp);
     else if (stair) patchUv(stair, updateSelectedStair);
     else if (column) patchUv(column, updateSelectedColumn);
@@ -2166,6 +2270,7 @@ export function EditorProvider({ children }) {
     mode,
     selectedSurface,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
     updateSelectedRamp,
     updateSelectedStair,
     updateSelectedColumn,
@@ -2178,6 +2283,7 @@ export function EditorProvider({ children }) {
     const actor = world.getActor(selectedSurface.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
+    const convex = actor.getComponent('ConvexBrush');
     const ramp = actor.getComponent('Ramp');
     const stair = actor.getComponent('Stair');
     const column = actor.getComponent('Column');
@@ -2192,6 +2298,7 @@ export function EditorProvider({ children }) {
       });
     };
     if (brush) clearUv(brush, updateSelectedBrush);
+    else if (convex) clearUv(convex, updateSelectedConvexBrush);
     else if (ramp) clearUv(ramp, updateSelectedRamp);
     else if (stair) clearUv(stair, updateSelectedStair);
     else if (column) clearUv(column, updateSelectedColumn);
@@ -2202,6 +2309,7 @@ export function EditorProvider({ children }) {
     mode,
     selectedSurface,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
     updateSelectedRamp,
     updateSelectedStair,
     updateSelectedColumn,
@@ -2227,6 +2335,10 @@ export function EditorProvider({ children }) {
       return;
     }
     const actor = world.getActor(selectedRef.current[selectedRef.current.length - 1]);
+    if (actor?.getComponent('ConvexBrush')) {
+      updateSelectedConvexBrush({ materialId });
+      return;
+    }
     if (actor?.getComponent('Ramp')) {
       updateSelectedRamp({ materialId });
       return;
@@ -2254,6 +2366,7 @@ export function EditorProvider({ children }) {
     selectedSurface,
     assignSelectedSurfaceMaterial,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
     updateSelectedRamp,
     updateSelectedStair,
     updateSelectedColumn,
@@ -2386,6 +2499,9 @@ export function EditorProvider({ children }) {
     previewBrushGeometry,
     updateSelectedTransform,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
+    convertSelectedToConvexBrush,
+    reportCutterConvexConflicts,
     setSelectedBrushOpenings,
     addBrushOpening,
     updateBrushOpening,

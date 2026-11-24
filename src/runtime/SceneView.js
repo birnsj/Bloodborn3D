@@ -26,6 +26,7 @@ import { createColumnGeometry } from './columnGeometry.js';
 import { createArchGeometry } from './archGeometry.js';
 import { createCurvedWallGeometry } from './curvedWallGeometry.js';
 import { brushHasMiters, createMiteredWallGeometry } from './miteredWallGeometry.js';
+import { createConvexBrushGeometry } from './convexBrushGeometry.js';
 import {
   createThreeMaterial,
   createFallbackBrushMaterial,
@@ -303,14 +304,15 @@ export class SceneView {
   }
 
   /**
-   * Rebuild only this actor's brush meshes in place.
+   * Rebuild only this actor's brush / convex-brush meshes in place.
    * Avoids syncFromWorld on every gizmo resize sample (which was disposing the
    * entire scene graph and could make brushes vanish).
    */
   updateBrushGeometry(actor) {
     const brush = actor?.getComponent?.('Brush');
+    const convex = actor?.getComponent?.('ConvexBrush');
     const entry = this._actorMeshes.get(actor.id);
-    if (!brush) {
+    if (!brush && !convex) {
       if (actor?.world) this.syncFromWorld(actor.world);
       return;
     }
@@ -329,7 +331,8 @@ export class SceneView {
     }
 
     const token = ++this._syncToken;
-    this._addBrushVisual(entry.group, actor, brush, token);
+    if (convex) this._addConvexBrushVisual(entry.group, actor, convex, token);
+    else this._addBrushVisual(entry.group, actor, brush, token);
     for (const child of childGroups) {
       entry.group.add(child);
     }
@@ -376,6 +379,8 @@ export class SceneView {
 
       if (comp.type === 'Brush') {
         this._addBrushVisual(group, actor, comp, syncToken);
+      } else if (comp.type === 'ConvexBrush') {
+        this._addConvexBrushVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'Ramp') {
         this._addRampVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'Stair') {
@@ -426,6 +431,53 @@ export class SceneView {
     else this.root.add(group);
 
     this._actorMeshes.set(actor.id, { group, actor });
+  }
+
+  _addConvexBrushVisual(group, actor, comp, syncToken) {
+    if (!comp?.geometry) {
+      if (this.editMode) {
+        const ghost = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(0.5, 0.5, 0.5)),
+          new THREE.LineBasicMaterial({ color: 0xaa3344, transparent: true, opacity: 0.7 }),
+        );
+        ghost.userData.actorId = actor.id;
+        ghost.userData.pickable = true;
+        ghost.userData.editorOnly = true;
+        ghost.userData.convexInvalid = true;
+        group.add(ghost);
+      }
+      return;
+    }
+
+    const geom = createConvexBrushGeometry(comp);
+    if (!geom) return;
+
+    const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
+      editMode: this.editMode,
+    });
+    const surfaceIds = geom.userData.surfaceIds || [];
+    const mats = surfaceIds.map(() => fallback.clone());
+    const mesh = new THREE.Mesh(geom, mats.length ? mats : fallback);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.actorId = actor.id;
+    mesh.userData.pickable = true;
+    mesh.userData.convexBrush = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
+    group.add(mesh);
+
+    if (this.editMode) {
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geom),
+        new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
+      );
+      edges.userData.actorId = actor.id;
+      edges.userData.editorOnly = true;
+      group.add(edges);
+    }
+
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
   }
 
   _addBrushVisual(group, actor, comp, syncToken) {

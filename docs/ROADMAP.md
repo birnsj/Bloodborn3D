@@ -100,3 +100,85 @@ Identity defaults on every layer (`scale` 1, `offset` 0, `rotation` 0) leave exi
 - Incremental scene sync (audit M6)
 - Runtime/editor dependency split (M8)
 - Static-mesh collider redesign (M10)
+
+---
+
+## Phase 2F — Geometry Editing
+
+Approved design: [`PHASE_2F_SPEC.md`](./PHASE_2F_SPEC.md). TrenchBroom-style convex brush editing
+inside the existing editor. Parametric construction tools and all existing levels are preserved;
+editable geometry is a separate `ConvexBrush` component reached by explicit conversion.
+
+### Approved design decisions
+
+| Decision | Choice |
+| --- | --- |
+| Brush representation | New **`ConvexBrush`** component (vertex/face B-rep); do **not** overload `Brush.size` |
+| Conversion | Explicit, undoable **Convert to Convex Brush**; parametric Brush/Ramp/Stair/Column/Arch/CurvedWall unchanged |
+| Element modes | Face / Edge / Vertex (independent of Actor and Surface); Move only in 2F.0–2F.5 |
+| Validation | Reject invalid/ambiguous edits; never silently drop unselected vertices or face material/UV maps |
+| Subtract / openings / miters | Subtract + openings not convertible; mitered walls (no openings) convertible; cutter∩ConvexBrush prevented or explicitly reported |
+| Collision | Rapier `convexHull` matching rendered vertices |
+| Schema | Level `schemaVersion` **3** only when a ConvexBrush is present; otherwise continue emitting **2** |
+| Prefabs | ConvexBrush (including nested) must round-trip; geometry overrides are atomic |
+| Extrude | New prism brush from face (Face Move covers same-brush pull) |
+| Marquee selection | Deferred to **2F.6** |
+| Map generation | **Not** in 2F — reserved as **Phase 2G** |
+
+### Sub-phases
+
+| Phase | Goal | Status |
+| --- | --- | --- |
+| **2F.0** | Editable convex brush architecture (data model, convert, render, collision, persistence) | **Done** |
+| **2F.1** | Face editing | Not started — do not begin until directed |
+| **2F.2** | Edge editing | Not started |
+| **2F.3** | Vertex editing | Not started |
+| **2F.4** | Extrusion and clipping | Not started |
+| **2F.5** | Integration and persistence verification | Not started |
+| **2F.6** | Multiple viewports and orthographic editing | Not started (appended; does not renumber 2F.0–2F.5) |
+
+### Phase 2F.0 notes
+
+- New `ConvexBrush` component + `src/geometry/*` (validate, hull, convert, UV projection, cutter intersection).
+- Details → **Convert to Convex Brush** (undoable). Blocked for subtractive brushes, openings, and overlapping cutters.
+- Rapier `convexHull` collider; SceneView grouped surface mesh; Surface tool works via component-aware face IDs.
+- Level writer emits `schemaVersion` 3 only when a ConvexBrush is present; otherwise remains 2.
+- Cutter ∩ ConvexBrush intersections are reported (create subtract after convert).
+- Regression: `phase2f0ConvexBrush.test.js`; browser harness `public/dev/phase2f0Acceptance.js`.
+- Face / edge / vertex editing, extrude, clip, and multi-viewport (2F.6) are **not** in 2F.0.
+
+### Phase 2F.6 — Multiple Viewports and Orthographic Editing
+
+Starts only after 2F.5 verification. Scope:
+
+- Single, dual, triple, and quad viewport layouts
+- Perspective and six orthographic camera directions
+- Lit, unlit, textured, wireframe, and solid-with-edges display modes
+- Shared selection and geometry editing across viewports
+- Independent camera controls; viewport maximization
+- Marquee selection
+- Persistent viewport preferences
+- Shared scene resources (no duplicated geometry or physics per viewport)
+
+### Dependencies
+
+```
+2F.0 → 2F.1 → 2F.2
+2F.0 → 2F.1 → 2F.3
+2F.0 → 2F.1 → 2F.4
+2F.1–2F.4 → 2F.5 → 2F.6
+```
+
+### Out of scope for 2F
+
+- Rule-based map generation (**Phase 2G**)
+- General polygon / Blender-style modeling; concave meshes; true CSG
+- Replacing parametric construction tools
+- New npm dependencies for hull building
+
+---
+
+## Phase 2G — Rule-Based Map Generation (reserved)
+
+Reserved. Not started. Do not begin until Phase 2F (including 2F.6) is complete and the designer
+directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

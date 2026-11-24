@@ -49,6 +49,7 @@ export const ARCH_SURFACE_IDS = ['front', 'back', 'outer', 'passage', 'top', 'bo
 
 const STRUCTURAL_TYPES = [
   'Brush',
+  'ConvexBrush',
   'Ramp',
   'Stair',
   'Column',
@@ -58,6 +59,8 @@ const STRUCTURAL_TYPES = [
 
 const ALLOWED_BY_TYPE = {
   Brush: new Set(BOX_SURFACE_IDS),
+  // ConvexBrush face ids are instance-specific — use allowedSurfaceIdsForComponent.
+  ConvexBrush: null,
   Ramp: new Set(RAMP_SURFACE_IDS),
   Stair: new Set([...BOX_SURFACE_IDS, ...STAIR_WEDGE_SURFACE_IDS]),
   Column: new Set(COLUMN_SURFACE_IDS),
@@ -133,11 +136,32 @@ export function cloneFaceUVs(faceUVs) {
 }
 
 export function allowedSurfacesForComponentType(type) {
+  if (type === 'ConvexBrush') return ALL_SURFACE_IDS;
   return ALLOWED_BY_TYPE[type] || ALL_SURFACE_IDS;
+}
+
+/**
+ * Component-aware allowed surface IDs (Phase 2F.0).
+ * ConvexBrush uses its live face ids; other types keep the fixed type sets.
+ */
+export function allowedSurfaceIdsForComponent(comp) {
+  if (!comp?.type) return ALL_SURFACE_IDS;
+  if (comp.type === 'ConvexBrush') {
+    const faces = comp.geometry?.faces;
+    if (Array.isArray(faces) && faces.length) {
+      return new Set(faces.map((f) => f.id));
+    }
+    // Invalid / empty geometry: allow nothing new; keep existing keys only via normalize callers.
+    return new Set();
+  }
+  return ALLOWED_BY_TYPE[comp.type] || ALL_SURFACE_IDS;
 }
 
 export function listSurfaceIdsForComponent(comp) {
   if (!comp?.type) return [];
+  if (comp.type === 'ConvexBrush') {
+    return (comp.geometry?.faces || []).map((f) => f.id);
+  }
   const set = ALLOWED_BY_TYPE[comp.type];
   return set ? [...set] : [];
 }
@@ -227,7 +251,7 @@ export function surfaceIdFromHit(mesh, faceIndex) {
  * Returns { before, after } snapshots of faceMaterials (or null).
  */
 export function patchFaceMaterial(comp, surfaceId, materialId) {
-  const allowed = allowedSurfacesForComponentType(comp.type);
+  const allowed = allowedSurfaceIdsForComponent(comp);
   if (!allowed.has(surfaceId)) {
     return null;
   }
@@ -245,7 +269,7 @@ export function patchFaceMaterial(comp, surfaceId, materialId) {
  * Returns { before, after } snapshots of faceUVs (or null).
  */
 export function patchFaceUv(comp, surfaceId, uv) {
-  const allowed = allowedSurfacesForComponentType(comp.type);
+  const allowed = allowedSurfaceIdsForComponent(comp);
   if (!allowed.has(surfaceId)) {
     return null;
   }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
 import {
   LEVEL_SCHEMA_VERSION,
+  LEVEL_SCHEMA_VERSION_WITHOUT_CONVEX,
   MIN_SUPPORTED_LEVEL_SCHEMA_VERSION,
   serializeLevel,
 } from '../serialization/LevelSerializer.js';
@@ -62,8 +63,9 @@ describe('level schemaVersion gate (M9)', () => {
   )('accepts supported schema version %i', (version) => {
     const world = deserializeLevel(minimalLevel(version));
     expect(world.getActor('probe')).toBeTruthy();
-    // Files are always written back at the current version.
-    expect(serializeLevel(world).schemaVersion).toBe(LEVEL_SCHEMA_VERSION);
+    // Levels without ConvexBrush keep writing schema 2 (Phase 2F.0).
+    expect(serializeLevel(world).schemaVersion).toBe(LEVEL_SCHEMA_VERSION_WITHOUT_CONVEX);
+    expect(LEVEL_SCHEMA_VERSION).toBe(3);
   });
 
   it('loads every shipped level and tutorial starter unchanged in behavior', () => {

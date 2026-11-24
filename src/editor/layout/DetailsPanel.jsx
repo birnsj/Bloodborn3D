@@ -15,6 +15,11 @@ import {
   isMaterialDraftDirty,
   materialDraftToSavePayload,
 } from '../materials/materialDraft.js';
+import {
+  canConvertActorToConvex,
+  describeConvexBrush,
+  listCutterConvexConflicts,
+} from '../../rules/convexBrushRules.js';
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
@@ -62,6 +67,8 @@ export function DetailsPanel({ docked = false } = {}) {
     world,
     updateSelectedTransform,
     updateSelectedBrush,
+    updateSelectedConvexBrush,
+    convertSelectedToConvexBrush,
     addBrushOpening,
     updateBrushOpening,
     removeBrushOpening,
@@ -108,6 +115,7 @@ export function DetailsPanel({ docked = false } = {}) {
   const [tab, setTab] = useState('details');
   const disabled = mode === 'play' || !selectedActor;
   const brush = selectedActor?.getComponent('Brush');
+  const convexBrush = selectedActor?.getComponent('ConvexBrush');
   const ramp = selectedActor?.getComponent('Ramp');
   const stair = selectedActor?.getComponent('Stair');
   const column = selectedActor?.getComponent('Column');
@@ -189,6 +197,8 @@ export function DetailsPanel({ docked = false } = {}) {
               {selectedActor.getComponent('Cell') && <span>Cell</span>}
               {brush && <span>Brush</span>}
               {brush && <span>Collider (Box)</span>}
+              {convexBrush && <span>ConvexBrush</span>}
+              {convexBrush && <span>Collider (Convex Hull)</span>}
               {ramp && <span>Ramp</span>}
               {ramp && <span>Collider (Slope)</span>}
               {stair && <span>Stairs</span>}
@@ -199,7 +209,7 @@ export function DetailsPanel({ docked = false } = {}) {
             </div>
 
             {selectedSurface && selectedSurface.actorId === selectedActor.id && (() => {
-              const surfaceComp = brush || ramp || stair || column || arch || curvedWall;
+              const surfaceComp = brush || convexBrush || ramp || stair || column || arch || curvedWall;
               const surfaceUv = surfaceComp?.faceUVs?.[selectedSurface.surfaceId] || {
                 scale: { x: 1, y: 1 },
                 offset: { x: 0, y: 0 },
@@ -558,20 +568,101 @@ export function DetailsPanel({ docked = false } = {}) {
                     colliders and are hidden in Play mode.
                   </p>
                 )}
+                {brush.operation !== 'subtract' && (() => {
+                  const eligibility = canConvertActorToConvex(selectedActor, world);
+                  return (
+                    <div className="bb-details-actions" style={{ marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        className="bb-btn"
+                        disabled={disabled || !eligibility.ok}
+                        title={eligibility.ok ? 'Convert to editable ConvexBrush' : eligibility.message}
+                        onClick={() => convertSelectedToConvexBrush()}
+                      >
+                        Convert to Convex Brush
+                      </button>
+                      {!eligibility.ok && (
+                        <p className="bb-muted">{eligibility.message}</p>
+                      )}
+                      {eligibility.ok && (
+                        <p className="bb-muted">
+                          Creates an editable convex brush. Parametric size, openings, and miters
+                          are baked. Undo restores the original Brush.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </Collapsible>
             )}
 
-            {brush && (
+            {convexBrush && (() => {
+              const info = describeConvexBrush(selectedActor);
+              const conflicts = listCutterConvexConflicts(world)
+                .filter((c) => c.convexId === selectedActor.id);
+              return (
+                <Collapsible title="Convex Brush" storageKey="details.convexBrush" defaultOpen>
+                  {!info?.valid && (
+                    <p className="bb-muted">
+                      Invalid geometry
+                      {info?.error?.code ? ` (${info.error.code})` : ''}:
+                      {' '}
+                      {info?.message || 'disabled'}
+                    </p>
+                  )}
+                  {info?.valid && (
+                    <p className="bb-muted">
+                      {info.vertices} verts · {info.faces} faces · volume {info.volume.toFixed(1)} eu³
+                      {info.provenance ? ` · from ${info.provenance}` : ''}
+                    </p>
+                  )}
+                  <label className="bb-field">
+                    <span className="bb-field__label">Fallback Color</span>
+                    <input
+                      className="bb-input"
+                      type="color"
+                      value={normalizeHex(convexBrush.color)}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedConvexBrush({ color: e.target.value })}
+                    />
+                  </label>
+                  <label className="bb-field">
+                    <span className="bb-field__label">Collidable</span>
+                    <input
+                      type="checkbox"
+                      checked={convexBrush.collidable !== false}
+                      disabled={disabled}
+                      onChange={(e) => updateSelectedConvexBrush({ collidable: e.target.checked })}
+                    />
+                  </label>
+                  {conflicts.length > 0 && (
+                    <p className="bb-muted">
+                      Warning: {conflicts.length} subtractive cutter(s) overlap this ConvexBrush.
+                      Cutters do not carve ConvexBrush geometry.
+                    </p>
+                  )}
+                  <p className="bb-muted">
+                    Face / edge / vertex editing arrives in Phase 2F.1+. Surface materials and UVs
+                    work now via the Surface tool.
+                  </p>
+                </Collapsible>
+              );
+            })()}
+
+            {(brush || convexBrush) && (() => {
+              const matComp = brush || convexBrush;
+              const updateMat = brush ? updateSelectedBrush : updateSelectedConvexBrush;
+              return (
               <Collapsible title="Material" storageKey="details.material">
                 <label className="bb-field" {...helpProps('details.material.id')}>
                   <span className="bb-field__label">Material</span>
                   <select
                     className="bb-select"
                     disabled={disabled}
-                    value={brush.materialId || ''}
+                    value={matComp.materialId || ''}
                     onChange={(e) => {
                       const id = e.target.value || null;
-                      updateSelectedBrush({ materialId: id });
+                      updateMat({ materialId: id });
                       if (id) selectAsset(id);
                     }}
                   >
@@ -581,12 +672,12 @@ export function DetailsPanel({ docked = false } = {}) {
                     ))}
                   </select>
                 </label>
-                {selectedAsset?.type === 'material' && selectedAsset.id !== brush.materialId && (
+                {selectedAsset?.type === 'material' && selectedAsset.id !== matComp.materialId && (
                   <button
                     type="button"
                     className="bb-btn"
                     disabled={disabled}
-                    onClick={() => updateSelectedBrush({ materialId: selectedAsset.id })}
+                    onClick={() => updateMat({ materialId: selectedAsset.id })}
                   >
                     Assign selected: {selectedAsset.name}
                   </button>
@@ -599,11 +690,11 @@ export function DetailsPanel({ docked = false } = {}) {
                     type="number"
                     step={0.1}
                     disabled={disabled}
-                    value={brush.uv?.scale?.x ?? 1}
-                    onChange={(e) => updateSelectedBrush({
+                    value={matComp.uv?.scale?.x ?? 1}
+                    onChange={(e) => updateMat({
                       uv: {
-                        ...brush.uv,
-                        scale: { ...brush.uv.scale, x: Number(e.target.value) },
+                        ...matComp.uv,
+                        scale: { ...matComp.uv.scale, x: Number(e.target.value) },
                       },
                     })}
                   />
@@ -613,11 +704,11 @@ export function DetailsPanel({ docked = false } = {}) {
                     type="number"
                     step={0.1}
                     disabled={disabled}
-                    value={brush.uv?.scale?.y ?? 1}
-                    onChange={(e) => updateSelectedBrush({
+                    value={matComp.uv?.scale?.y ?? 1}
+                    onChange={(e) => updateMat({
                       uv: {
-                        ...brush.uv,
-                        scale: { ...brush.uv.scale, y: Number(e.target.value) },
+                        ...matComp.uv,
+                        scale: { ...matComp.uv.scale, y: Number(e.target.value) },
                       },
                     })}
                   />
@@ -630,11 +721,11 @@ export function DetailsPanel({ docked = false } = {}) {
                     type="number"
                     step={0.05}
                     disabled={disabled}
-                    value={brush.uv?.offset?.x ?? 0}
-                    onChange={(e) => updateSelectedBrush({
+                    value={matComp.uv?.offset?.x ?? 0}
+                    onChange={(e) => updateMat({
                       uv: {
-                        ...brush.uv,
-                        offset: { ...brush.uv.offset, x: Number(e.target.value) },
+                        ...matComp.uv,
+                        offset: { ...matComp.uv.offset, x: Number(e.target.value) },
                       },
                     })}
                   />
@@ -644,11 +735,11 @@ export function DetailsPanel({ docked = false } = {}) {
                     type="number"
                     step={0.05}
                     disabled={disabled}
-                    value={brush.uv?.offset?.y ?? 0}
-                    onChange={(e) => updateSelectedBrush({
+                    value={matComp.uv?.offset?.y ?? 0}
+                    onChange={(e) => updateMat({
                       uv: {
-                        ...brush.uv,
-                        offset: { ...brush.uv.offset, y: Number(e.target.value) },
+                        ...matComp.uv,
+                        offset: { ...matComp.uv.offset, y: Number(e.target.value) },
                       },
                     })}
                   />
@@ -660,31 +751,31 @@ export function DetailsPanel({ docked = false } = {}) {
                     type="number"
                     step={1}
                     disabled={disabled}
-                    value={brush.uv?.rotation ?? 0}
-                    onChange={(e) => updateSelectedBrush({
-                      uv: { ...brush.uv, rotation: Number(e.target.value) },
+                    value={matComp.uv?.rotation ?? 0}
+                    onChange={(e) => updateMat({
+                      uv: { ...matComp.uv, rotation: Number(e.target.value) },
                     })}
                   />
                 </label>
 
                 <div className="bb-field-caption">Per-face overrides</div>
-                {FACE_KEYS.map((face) => (
+                {(brush ? FACE_KEYS : (convexBrush?.geometry?.faces || []).map((f) => f.id)).map((face) => (
                   <label key={face} className="bb-field">
                     <span className="bb-field__label">{face}</span>
                     <select
                       className="bb-select"
                       disabled={disabled}
-                      value={brush.faceMaterials?.[face] || ''}
+                      value={matComp.faceMaterials?.[face] || ''}
                       onChange={(e) => {
-                        const next = { ...(brush.faceMaterials || {}) };
+                        const next = { ...(matComp.faceMaterials || {}) };
                         if (!e.target.value) delete next[face];
                         else next[face] = e.target.value;
-                        updateSelectedBrush({
+                        updateMat({
                           faceMaterials: Object.keys(next).length ? next : null,
                         });
                       }}
                     >
-                      <option value="">(brush material)</option>
+                      <option value="">(actor material)</option>
                       {materials.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
@@ -692,16 +783,17 @@ export function DetailsPanel({ docked = false } = {}) {
                   </label>
                 ))}
 
-                {brush.materialId && (
+                {matComp.materialId && (
                   <MaterialDefinitionEditor
-                    materialId={brush.materialId}
+                    materialId={matComp.materialId}
                     disabled={disabled}
                     getMaterialDefinition={getMaterialDefinition}
                     saveMaterialDefinition={saveMaterialDefinition}
                   />
                 )}
               </Collapsible>
-            )}
+              );
+            })()}
 
             {(brush && isWallBrush(selectedActor) && brush.operation !== 'subtract') || curvedWall ? (
               <Collapsible title="Wall Join" storageKey="details.wallJoin" defaultOpen={false}>
