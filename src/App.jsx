@@ -1,4 +1,5 @@
 import { EditorProvider } from './editor/EditorContext.jsx';
+import { EditorSettingsProvider } from './editor/EditorSettingsContext.jsx';
 import { LayoutProvider } from './editor/layout/LayoutContext.jsx';
 import { AssetBrowserProvider } from './editor/assets/AssetBrowserContext.jsx';
 import { HoverHelpProvider } from './ui/hoverHelp/HoverHelpContext.jsx';
@@ -11,13 +12,15 @@ export default function App() {
     <EditorDialogProvider>
       <AssetBrowserProvider>
         <EditorProvider>
-          <LayoutProvider>
-            <HoverHelpProvider>
-              <TutorialProvider>
-                <EditorShell />
-              </TutorialProvider>
-            </HoverHelpProvider>
-          </LayoutProvider>
+          <EditorSettingsProvider>
+            <LayoutProvider>
+              <HoverHelpProvider>
+                <TutorialProvider>
+                  <EditorShell />
+                </TutorialProvider>
+              </HoverHelpProvider>
+            </LayoutProvider>
+          </EditorSettingsProvider>
         </EditorProvider>
       </AssetBrowserProvider>
     </EditorDialogProvider>

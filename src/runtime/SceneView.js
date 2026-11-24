@@ -41,7 +41,13 @@ import { createArchFromBounds } from '../editor/archFactory.js';
 import { createCurvedWallFromBounds } from '../editor/curvedWallFactory.js';
 import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
 
-const SUBTRACT_COLOR = 0xc23b4a;
+const DEFAULT_VIEWPORT_COLORS = {
+  background: 0x0e1218,
+  gridMajor: 0x4a5568,
+  gridMinor: 0x2a3038,
+  selection: 0xffcc33,
+  subtract: 0xc23b4a,
+};
 
 /**
  * Three.js adapter: builds and syncs visual representation of a World.
@@ -51,8 +57,9 @@ export class SceneView {
   constructor({ canvas, editMode = true } = {}) {
     this.canvas = canvas;
     this.editMode = editMode;
+    this.viewportColors = { ...DEFAULT_VIEWPORT_COLORS };
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0e1218);
+    this.scene.background = new THREE.Color(this.viewportColors.background);
 
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.05, 500);
     this.camera.position.set(6, 5, 8);
@@ -135,8 +142,47 @@ export class SceneView {
 
     const extentMeters = toMeters(GRID_EXTENT_EDITOR_UNITS);
     const divisions = Math.max(2, Math.round(GRID_EXTENT_EDITOR_UNITS / this.gridSize));
-    this.gridHelper = new THREE.GridHelper(extentMeters, divisions, 0x4a5568, 0x2a3038);
+    const { gridMajor, gridMinor } = this.viewportColors;
+    this.gridHelper = new THREE.GridHelper(extentMeters, divisions, gridMajor, gridMinor);
     this.scene.add(this.gridHelper);
+  }
+
+  /**
+   * Apply editor viewport color prefs (background, grid, selection, subtract).
+   * @param {Partial<typeof DEFAULT_VIEWPORT_COLORS>} colors integer RGB colors
+   * @param {import('../core/World.js').World|null} [world] used to refresh selection helpers
+   */
+  setViewportColors(colors = {}, world = null) {
+    if (!colors || typeof colors !== 'object') return;
+    for (const key of Object.keys(DEFAULT_VIEWPORT_COLORS)) {
+      const value = colors[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        this.viewportColors[key] = value >>> 0;
+      }
+    }
+    this.scene.background.set(this.viewportColors.background);
+    if (this.editMode) this.setGridSize(this.gridSize);
+    this._applySubtractColorsToMeshes();
+    if (this.selectedActorIds.length) {
+      this.setSelection([...this.selectedActorIds], world);
+    }
+  }
+
+  _applySubtractColorsToMeshes() {
+    const color = this.viewportColors.subtract;
+    for (const entry of this._actorMeshes.values()) {
+      entry.group.traverse((obj) => {
+        if (obj.userData?.brushOperation !== 'subtract') return;
+        if (obj.material?.color) obj.material.color.setHex(color);
+      });
+      // Edge lines paired with subtract meshes (no brushOperation flag on edges).
+      entry.group.traverse((obj) => {
+        if (!obj.isLineSegments || !obj.userData?.editorOnly) return;
+        if (obj.material?.color && entry.actor?.getComponent?.('Brush')?.operation === 'subtract') {
+          obj.material.color.setHex(color);
+        }
+      });
+    }
   }
 
   setEditMode(editMode) {
@@ -379,8 +425,9 @@ export class SceneView {
         toMeters(comp.size.y),
         toMeters(comp.size.z),
       );
+      const subtractColor = this.viewportColors.subtract;
       const mat = new THREE.MeshBasicMaterial({
-        color: SUBTRACT_COLOR,
+        color: subtractColor,
         transparent: true,
         opacity: 0.28,
         depthWrite: false,
@@ -396,7 +443,7 @@ export class SceneView {
       group.add(mesh);
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(geom),
-        new THREE.LineBasicMaterial({ color: SUBTRACT_COLOR }),
+        new THREE.LineBasicMaterial({ color: subtractColor }),
       );
       edges.userData.actorId = actor.id;
       edges.userData.editorOnly = true;
@@ -945,7 +992,7 @@ export class SceneView {
       if (!entry) continue;
       const box = new THREE.Box3().setFromObject(entry.group);
       if (box.isEmpty()) continue;
-      const helper = new THREE.Box3Helper(box, 0xffcc33);
+      const helper = new THREE.Box3Helper(box, this.viewportColors.selection);
       helper.name = 'SelectionHelper';
       this.scene.add(helper);
       this._selectionHelpers.push(helper);
@@ -1199,14 +1246,15 @@ export class SceneView {
       };
     }
     if (subtract) {
+      const subtractColor = this.viewportColors.subtract;
       return {
         mat: new THREE.MeshBasicMaterial({
-          color: SUBTRACT_COLOR,
+          color: subtractColor,
           transparent: true,
           opacity: 0.28,
           depthWrite: false,
         }),
-        edgeMat: new THREE.LineBasicMaterial({ color: SUBTRACT_COLOR }),
+        edgeMat: new THREE.LineBasicMaterial({ color: subtractColor }),
       };
     }
     return {

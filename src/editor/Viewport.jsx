@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { useEditor } from './EditorContext.jsx';
+import { useEditorSettings } from './EditorSettingsContext.jsx';
+import {
+  orbitDampingFromFloatiness,
+  viewportColorsFromSettings,
+} from './editorSettingsPrefs.js';
 import { useLayout } from './layout/LayoutContext.jsx';
 import {
   snapToGrid,
@@ -47,6 +52,8 @@ export function Viewport() {
     pitch: 0,
     distance: 6,
   });
+  /** Live editor camera prefs (read by orbit setup / freelook handlers). */
+  const editorSettingsRef = useRef(null);
 
   const {
     attachCanvas,
@@ -83,8 +90,11 @@ export function Viewport() {
     createCell,
     updateSelectedBrush,
   } = useEditor();
+  const { settings: editorSettings } = useEditorSettings();
   const { layout, toggleMaximizeViewport } = useLayout();
   const { dragMime, registry } = useAssetBrowser();
+
+  editorSettingsRef.current = editorSettings;
 
   const clearPlacementSession = useCallback(() => {
     placeSessionRef.current = null;
@@ -151,8 +161,26 @@ export function Viewport() {
     const runtime = attachCanvas(canvas);
     const camera = runtime.sceneView.camera;
     const controls = new OrbitControls(camera, canvas);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    {
+      const prefs = editorSettingsRef.current;
+      const damping = orbitDampingFromFloatiness(prefs?.cameraOrbitFloatiness);
+      controls.enableDamping = damping.enableDamping;
+      controls.dampingFactor = damping.dampingFactor;
+      controls.rotateSpeed = prefs?.cameraOrbitSpeed ?? 1;
+      controls.zoomSpeed = prefs?.cameraOrbitZoomSpeed ?? 1;
+      controls.panSpeed = prefs?.cameraOrbitPanSpeed ?? 1;
+      // Invert vertical orbit by flipping phi deltas when the setting is on.
+      const baseRotateUp = controls._rotateUp.bind(controls);
+      controls._rotateUp = (angle) => {
+        const invert = editorSettingsRef.current?.cameraInvertY;
+        baseRotateUp(invert ? -angle : angle);
+      };
+      runtime.setViewportColors?.(viewportColorsFromSettings(prefs));
+      runtime.setPlayLookOptions?.({
+        sensitivityMul: prefs?.playLookSensitivity ?? 1,
+        invertY: Boolean(prefs?.cameraInvertY),
+      });
+    }
     controls.target.set(0, 1.5, 0);
     // Default: RMB orbits. While WASD/QE are held we switch to freelook.
     controls.mouseButtons = {
@@ -252,7 +280,7 @@ export function Viewport() {
       exitFlyMode();
     };
 
-    const LOOK_SENS = 0.005;
+    const LOOK_SENS_BASE = 0.005;
     const PITCH_LIMIT = Math.PI / 2 - 0.05;
 
     const onLookPointerDown = (e) => {
@@ -279,8 +307,11 @@ export function Viewport() {
       const dy = e.clientY - look.lastY;
       look.lastX = e.clientX;
       look.lastY = e.clientY;
-      look.yaw -= dx * LOOK_SENS;
-      look.pitch -= dy * LOOK_SENS;
+      const prefs = editorSettingsRef.current;
+      const lookSens = LOOK_SENS_BASE * (prefs?.cameraFlyLookSensitivity ?? 1);
+      const ySign = prefs?.cameraInvertY ? -1 : 1;
+      look.yaw -= dx * lookSens;
+      look.pitch -= dy * lookSens * ySign;
       look.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, look.pitch));
       applyLookRotation();
     };
@@ -308,9 +339,7 @@ export function Viewport() {
     window.addEventListener('pointercancel', onLookPointerUp);
     canvas.addEventListener('contextmenu', onContextMenu);
 
-    // ~4.5 m/s feel in editor units (100 eu = 1 m); Shift boosts.
-    const FLY_SPEED = 450;
-    const FLY_BOOST = 2.75;
+    // ~4.5 m/s feel in editor units (100 eu = 1 m); Shift boosts. Speeds come from settings.
 
     let raf = 0;
     flyClockRef.current = performance.now();
@@ -337,8 +366,11 @@ export function Viewport() {
           if (keys.has('KeyE')) move.add(worldUp);
           if (keys.has('KeyQ')) move.sub(worldUp);
           if (move.lengthSq() > 0) {
-            const boost = keys.has('ShiftLeft') || keys.has('ShiftRight') ? FLY_BOOST : 1;
-            move.normalize().multiplyScalar(FLY_SPEED * boost * dt);
+            const prefs = editorSettingsRef.current;
+            const flySpeed = prefs?.cameraFlySpeed ?? 450;
+            const flyBoost = prefs?.cameraFlyBoost ?? 2.75;
+            const boost = keys.has('ShiftLeft') || keys.has('ShiftRight') ? flyBoost : 1;
+            move.normalize().multiplyScalar(flySpeed * boost * dt);
             const meters = move.multiplyScalar(0.01);
             cam.position.add(meters);
             syncLookTarget();
@@ -378,6 +410,46 @@ export function Viewport() {
       orbitRef.current.enabled = mode === 'edit' && !dragRef.current;
     }
   }, [mode]);
+
+  useEffect(() => {
+    const controls = orbitRef.current;
+    if (!controls) return;
+    const damping = orbitDampingFromFloatiness(editorSettings.cameraOrbitFloatiness);
+    controls.enableDamping = damping.enableDamping;
+    controls.dampingFactor = damping.dampingFactor;
+    controls.rotateSpeed = editorSettings.cameraOrbitSpeed;
+    controls.zoomSpeed = editorSettings.cameraOrbitZoomSpeed;
+    controls.panSpeed = editorSettings.cameraOrbitPanSpeed;
+  }, [
+    editorSettings.cameraOrbitFloatiness,
+    editorSettings.cameraOrbitSpeed,
+    editorSettings.cameraOrbitZoomSpeed,
+    editorSettings.cameraOrbitPanSpeed,
+  ]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    runtime.setViewportColors?.(viewportColorsFromSettings(editorSettings));
+  }, [
+    runtimeRef,
+    editorSettings.viewportBackground,
+    editorSettings.viewportGridMajor,
+    editorSettings.viewportGridMinor,
+    editorSettings.viewportSelection,
+    editorSettings.viewportSubtract,
+  ]);
+
+  useEffect(() => {
+    runtimeRef.current?.setPlayLookOptions?.({
+      sensitivityMul: editorSettings.playLookSensitivity,
+      invertY: editorSettings.cameraInvertY,
+    });
+  }, [
+    runtimeRef,
+    editorSettings.playLookSensitivity,
+    editorSettings.cameraInvertY,
+  ]);
 
   useEffect(() => {
     runtimeRef.current?.sceneView?.setTransformMode?.(transformMode);

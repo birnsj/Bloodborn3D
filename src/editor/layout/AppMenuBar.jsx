@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
+import { EditorSettingsDialog } from '../EditorSettingsDialog.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { KeyboardShortcutsDialog } from '../../ui/hoverHelp/KeyboardShortcutsDialog.jsx';
@@ -142,6 +143,7 @@ export function AppMenuBar() {
   const { openTutorialsPanel, startLesson, lessons } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isPlay = mode === 'play';
   const hasSelection = selectedActorIds.length > 0;
@@ -258,6 +260,8 @@ export function AppMenuBar() {
             <Sep />
             <Item label="Duplicate" shortcut="Ctrl+D" disabled={isPlay || !hasSelection} close={close} onClick={() => duplicateSelected()} />
             <Item label="Delete" shortcut="Del" disabled={isPlay || !hasSelection} close={close} onClick={() => deleteSelected()} />
+            <Sep />
+            <Item label="Settings…" close={close} onClick={() => setSettingsOpen(true)} />
           </>
         )}
       </Menu>
@@ -477,6 +481,10 @@ export function AppMenuBar() {
       <KeyboardShortcutsDialog
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+      />
+      <EditorSettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );

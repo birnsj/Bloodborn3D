@@ -13,6 +13,7 @@ export class PlayerController {
     eyeHeight = 160,
     moveSpeed = 450,
     mouseSensitivity = 0.002,
+    invertY = false,
   }) {
     this.camera = camera;
     this.physics = physics;
@@ -20,6 +21,7 @@ export class PlayerController {
     this.eyeHeight = eyeHeight;
     this.moveSpeed = moveSpeed;
     this.mouseSensitivity = mouseSensitivity;
+    this.invertY = Boolean(invertY);
 
     this.yaw = 0;
     this.pitch = 0;
@@ -77,10 +79,18 @@ export class PlayerController {
 
   _onMouseMove(e) {
     if (!this.enabled) return;
+    const ySign = this.invertY ? -1 : 1;
     this.yaw -= e.movementX * this.mouseSensitivity;
-    this.pitch -= e.movementY * this.mouseSensitivity;
+    this.pitch -= e.movementY * this.mouseSensitivity * ySign;
     const limit = Math.PI / 2 - 0.05;
     this.pitch = Math.max(-limit, Math.min(limit, this.pitch));
+  }
+
+  setLookOptions({ mouseSensitivity, invertY } = {}) {
+    if (mouseSensitivity != null && Number.isFinite(mouseSensitivity)) {
+      this.mouseSensitivity = mouseSensitivity;
+    }
+    if (invertY != null) this.invertY = Boolean(invertY);
   }
 
   _onKeyDown(e) {

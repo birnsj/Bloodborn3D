@@ -21,6 +21,12 @@ export class GameRuntime {
     this.sceneView = new SceneView({ canvas, editMode: true });
     this.physics = new PhysicsWorld();
     this.player = null;
+    /** Play-mode look prefs (applied when entering Play and live while playing). */
+    this.playLook = {
+      sensitivityMul: 1,
+      invertY: false,
+      baseSensitivity: 0.002,
+    };
 
     this._raf = 0;
     this._lastTime = 0;
@@ -96,6 +102,25 @@ export class GameRuntime {
     this.sceneView.setGridSize(gridSize);
   }
 
+  setViewportColors(colors) {
+    this.sceneView.setViewportColors(colors, this.world);
+  }
+
+  setPlayLookOptions({ sensitivityMul, invertY } = {}) {
+    if (sensitivityMul != null && Number.isFinite(sensitivityMul)) {
+      this.playLook.sensitivityMul = sensitivityMul;
+    }
+    if (invertY != null) this.playLook.invertY = Boolean(invertY);
+    this.player?.setLookOptions?.(this._playLookOptions());
+  }
+
+  _playLookOptions() {
+    return {
+      mouseSensitivity: this.playLook.baseSensitivity * this.playLook.sensitivityMul,
+      invertY: this.playLook.invertY,
+    };
+  }
+
   async play() {
     if (this.mode === 'play' || !this.world) return;
 
@@ -127,12 +152,15 @@ export class GameRuntime {
     );
     playCam.rotation.order = 'YXZ';
 
+    const look = this._playLookOptions();
     this.player = new PlayerController({
       camera: playCam,
       physics: this.physics,
       canvas: this.canvas,
       eyeHeight: spawnComp?.eyeHeight ?? 160,
       moveSpeed: spawnComp?.moveSpeed ?? 450,
+      mouseSensitivity: look.mouseSensitivity,
+      invertY: look.invertY,
     });
     this.player.start({ position: spawnPos, yawDegrees: yaw });
 
