@@ -600,3 +600,101 @@ describe('Play/Stop preserves authored state, history and dirtiness (M11)', () =
     expect(editor().mode).toBe('play');
   });
 });
+
+describe('surface selection lifecycle (stale pick defect)', () => {
+  it('clears selectedSurface on deselect, actor change, leave Surface, load and delete', async () => {
+    await mount({ attach: true });
+    await select('a');
+    await act(async () => {
+      editor().setTool('surface');
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'pz' });
+    });
+    expect(editor().selectedSurface).toEqual({ actorId: 'a', surfaceId: 'pz' });
+
+    await select('b');
+    expect(editor().selectedSurface).toBeNull();
+
+    await select('a');
+    await act(async () => {
+      editor().setTool('surface');
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'px' });
+      editor().setTool('select');
+    });
+    await settle(50);
+    expect(editor().tool).toBe('select');
+    expect(editor().selectedSurface).toBeNull();
+
+    await act(async () => {
+      editor().setTool('surface');
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'pz' });
+    });
+    await act(async () => { editor().deselectAllActors(); });
+    expect(editor().selectedSurface).toBeNull();
+
+    await select('a');
+    await act(async () => {
+      editor().setTool('surface');
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'pz' });
+    });
+    await act(async () => {
+      editor().applyLevelData(makeLevel('Reloaded', ['z']), {
+        fileName: 'other.json',
+        session: {
+          kind: 'project',
+          readOnlyDisk: false,
+          lessonId: null,
+          displayName: 'other.json',
+        },
+      });
+    });
+    await settle();
+    expect(editor().selectedSurface).toBeNull();
+    expect(editor().tool).toBe('select');
+
+    // Delete clears surface when the picked actor is removed.
+    await select('z');
+    await act(async () => {
+      editor().setTool('surface');
+      editor().setSelectedSurface({ actorId: 'z', surfaceId: 'ny' });
+    });
+    await act(async () => { editor().deleteSelected(); });
+    await settle();
+    expect(editor().selectedSurface).toBeNull();
+  });
+
+  it('applySelectedMaterialToBrush sets actor materialId when Surface pick is stale', async () => {
+    await mount({ attach: true });
+    await select('a');
+    await act(async () => {
+      editor().setTool('select');
+      // Leftover pick while not in Surface mode (pre-fix redirect path).
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'pz' });
+      editor().applySelectedMaterialToBrush('mat_hall_stone');
+    });
+    await settle();
+    const brush = editor().world.getActor('a').getComponent('Brush');
+    expect(brush.materialId).toBe('mat_hall_stone');
+    expect(brush.faceMaterials?.pz).toBeUndefined();
+  });
+
+  it('applySelectedMaterialToBrush assigns faceMaterials while Surface tool is active', async () => {
+    await mount({ attach: true });
+    await select('a');
+    await act(async () => { editor().setTool('surface'); });
+    await settle(50);
+    await act(async () => {
+      editor().setSelectedSurface({ actorId: 'a', surfaceId: 'pz' });
+    });
+    await settle(50);
+    expect(editor().tool).toBe('surface');
+    expect(editor().selectedSurface).toEqual({ actorId: 'a', surfaceId: 'pz' });
+    await act(async () => {
+      editor().applySelectedMaterialToBrush('mat_hall_wood');
+    });
+    await settle();
+    const brush = editor().world.getActor('a').getComponent('Brush');
+    expect(brush.faceMaterials).toEqual({ pz: 'mat_hall_wood' });
+    // Actor material unchanged by surface assign.
+    expect(brush.materialId == null || brush.materialId !== 'mat_hall_wood').toBe(true);
+  });
+});

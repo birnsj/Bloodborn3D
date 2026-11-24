@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 402 / 402 pass, 52 files |
+| `npm test` | 408 / 408 pass, 53 files |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E.0 | UV density + composition contract; `uvMapping.test.js` |
@@ -46,6 +46,7 @@ Status is what the code does today, not an intent.
 | Align to Neighbor (2E.3) | Implemented | Toolbar **Align**; coplanar Brush faces; target-only `faceUVs`; rejects incompatible pairs; no world projection. |
 | Materials workspace (2E.4) | Implemented | Library + draft editor + preview (sphere/cube/plane); Save/Cancel; leave warning; refresh placed instances on save; separate from level dirty/undo. |
 | Surface/material persistence (2E.5) | Verified | Save/load, resize, prefabs/overrides, undo/redo, Play/Stop, schema 1–2 compatibility; history + editor normalize face maps. |
+| Stale surface selection | Fixed | Actor material apply no longer redirects on leftover `selectedSurface`; cleared on deselect/load/delete/leave Surface; `surfaceSelection.js` + lifecycle tests. |
 
 ## 3. Audit findings addressed in this pass
 
@@ -122,3 +123,4 @@ These need a real browser, GPU, display and pointer-lock; they cannot be run in 
 12. **Phase 2E.4 Materials workspace.** Open **Materials**. Search/select a material; edit PBR/UV fields — Save stays disabled until dirty; Cancel restores; Save writes the asset and refreshes level instances without reload. Leave to Level Editor with unsaved edits: confirm discard. New / Duplicate create assets. Preview Sphere/Cube/Plane.
 13. **Phase 2E.5 persistence.** File → `acceptance-surfaces.json`. Assign a surface material + UV; Undo/Redo; Save and reload — overrides remain. Resize a brush face; surfaces unchanged. Play then Stop — authored surfaces restored. Prefab: create from a brush with `faceMaterials`/`faceUVs`, override one face UV, update source — override kept. Materials workspace: Cancel/leave warnings; Save does not mark the level dirty.
 14. **Gothic mansion acceptance.** File → `acceptance-gothic-mansion.json`. Multi-floor mansion with stairs (straight/curved/spiral), arch, columns, curved wall, subtract, prefab instance, surface Align pair, lights and mesh props. Play/Stop and walk (pointer lock). See [`ACCEPTANCE_GOTHIC_MANSION.md`](./ACCEPTANCE_GOTHIC_MANSION.md).
+15. **Stale surface selection fix.** On the mansion: Select a wall, leave a surface pick while in Select, apply a Content Browser material — actor `materialId` updates, not `faceMaterials`. Switch to Surface, pick a face, apply material — only that face overrides.

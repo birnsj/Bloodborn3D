@@ -100,6 +100,11 @@ import {
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
 import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
 import { patchFaceMaterial, patchFaceUv } from '../runtime/surfaces.js';
+import {
+  nextSelectedSurfaceAfterActorChange,
+  shouldApplyMaterialToSurface,
+  toolKeepsSurfaceSelection,
+} from './surfaceSelection.js';
 import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
@@ -197,17 +202,31 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.setSelection(ids);
   }, []);
 
+  const clearSelectedSurfaceState = useCallback(() => {
+    setSelectedSurfaceState(null);
+    runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
+  }, []);
+
   const afterWorldMutation = useCallback((options = {}) => {
     const { resync = true, selectIds } = options;
     if (resync) {
       runtimeRef.current?.resyncWorld();
     }
+    const nextIds = selectIds !== undefined ? selectIds : selectedRef.current;
     if (selectIds !== undefined) {
       setSelectedActorIds(selectIds);
       syncSelectionVisual(selectIds);
     } else {
       syncSelectionVisual(selectedRef.current);
     }
+    // Drop surface picks whose actor was deselected or deleted.
+    setSelectedSurfaceState((prev) => {
+      const next = nextSelectedSurfaceAfterActorChange(prev, nextIds, worldRef.current);
+      if (next !== prev && !next) {
+        runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
+      }
+      return next;
+    });
     bump();
   }, [bump, syncSelectionVisual]);
 
@@ -280,6 +299,9 @@ export function EditorProvider({ children }) {
     if (fileName != null) setLevelName(fileName);
     setSelectedActorIds([]);
     setTool('select');
+    // Level load must not keep a stale surface/align pick from the prior world.
+    setSelectedSurfaceState(null);
+    setAlignReferenceSurfaceState(null);
     if (session) setLevelSession(session);
     if (runtimeRef.current) {
       if (runtimeRef.current.mode === 'play') {
@@ -287,6 +309,8 @@ export function EditorProvider({ children }) {
       }
       runtimeRef.current.setWorld(resolved);
       runtimeRef.current.setSelection([]);
+      runtimeRef.current.sceneView?.setSurfaceSelection?.(null);
+      runtimeRef.current.sceneView?.setAlignReferenceSurface?.(null);
     }
     if (statusMessage) setStatus(statusMessage);
     bump();
@@ -551,10 +575,11 @@ export function EditorProvider({ children }) {
     syncSelectionVisual(next);
     // Actor selection clears surface pick unless the surface actor stays selected.
     setSelectedSurfaceState((prev) => {
-      if (!prev) return null;
-      if (next.includes(prev.actorId)) return prev;
-      runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
-      return null;
+      const kept = nextSelectedSurfaceAfterActorChange(prev, next, worldRef.current);
+      if (prev && !kept) {
+        runtimeRef.current?.sceneView?.setSurfaceSelection?.(null);
+      }
+      return kept;
     });
   }, [syncSelectionVisual]);
 
@@ -2016,6 +2041,13 @@ export function EditorProvider({ children }) {
     }
   }, [tool, setAlignReferenceSurface]);
 
+  // Leaving Surface / Align drops the surface pick so Select-mode material
+  // assigns never hit a leftover face override.
+  useEffect(() => {
+    if (toolKeepsSurfaceSelection(tool)) return;
+    clearSelectedSurfaceState();
+  }, [tool, clearSelectedSurfaceState]);
+
   /**
    * Align target surface UV to the current Align reference.
    * Only mutates target faceUVs. Returns { ok, reason }.
@@ -2179,7 +2211,14 @@ export function EditorProvider({ children }) {
 
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
-    if (selectedSurface) {
+    // Surface redirect only while Surface tool is active with a live pick.
+    // Stale selectedSurface (e.g. after load / leave Surface) must not steal actor assigns.
+    if (shouldApplyMaterialToSurface({
+      tool,
+      selectedSurface,
+      selectedActorIds: selectedRef.current,
+      world,
+    })) {
       assignSelectedSurfaceMaterial(materialId);
       return;
     }
@@ -2211,6 +2250,7 @@ export function EditorProvider({ children }) {
     updateSelectedBrush({ materialId });
   }, [
     world,
+    tool,
     selectedSurface,
     assignSelectedSurfaceMaterial,
     updateSelectedBrush,

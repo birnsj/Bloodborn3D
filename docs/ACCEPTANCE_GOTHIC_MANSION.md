@@ -32,11 +32,10 @@ Built and exercised through the live editor (create / assign / align / prefab / 
 
 Add-batch wall times: ~463 ms / 20 actors, ~594 ms / 40 actors (includes command + sync). Editor remained interactive; no crash. Resync stays ~340–365 ms in this range (full rebuild — known M6 debt).
 
-## Confirmed defects (no fix applied — needs approval)
+## Confirmed defects
 
-1. **`applySelectedMaterialToBrush` + leftover `selectedSurface`**  
-   When `selectedSurface` is non-null, actor material apply is redirected to surface assignment. Deselect / `applyLevelData` does not always clear `selectedSurface`, so rapid actor material assigns can leave `materialId` unset.  
-   **Workaround used for the mansion:** clear `selectedSurface`, then `updateSelectedBrush` / typed updaters.
+1. **`applySelectedMaterialToBrush` + leftover `selectedSurface`** — **Fixed**  
+   Actor material apply no longer redirects on a stale surface pick. `selectedSurface` is cleared/validated on deselect, actor change, leave Surface/Align, level load, and delete. Surface redirect requires active Surface tool + live selected actor (`src/editor/surfaceSelection.js`). Regression: `surfaceSelection.test.js`, `editorLifecycle.test.js`. Re-verified on `acceptance-gothic-mansion.json` (actor assign in Select with leftover pick; face assign in Surface mode).
 
 ## Existing limitations (not new defects)
 
@@ -47,4 +46,4 @@ Add-batch wall times: ~463 ms / 20 actors, ~594 ms / 40 actors (includes command
 
 ## Phase 3 readiness
 
-**Conditional yes.** Phase 2E materials/surfaces pipeline holds under an integrated mansion load. No blocking crash or persistence failure found. Address or schedule the `selectedSurface` redirect defect before relying on Content-Browser drag-assign in complex flows; treat pointer-lock play QA as a manual checklist item.
+**Conditional yes.** Phase 2E materials/surfaces pipeline holds under an integrated mansion load. The stale surface-selection material redirect is fixed. Treat pointer-lock play QA as a manual checklist item; deferred debt (M6 full rebuild, bundle size, placeholder workspaces) remains unchanged.
