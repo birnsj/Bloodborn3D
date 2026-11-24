@@ -5,13 +5,13 @@
 
 import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
-import { TEXTURE_TILE_EDITOR_UNITS } from './brushGeometry.js';
 import {
   DEFAULT_CURVED_WALL_RADIUS,
   DEFAULT_CURVED_WALL_RESOLUTION,
   DEFAULT_CURVED_WALL_SWEEP,
 } from '../components/CurvedWallComponent.js';
 import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -169,15 +169,11 @@ function pushTri(pos, uv, a, b, c, ua, ub, uc) {
  */
 export function createCurvedWallGeometry(wall) {
   const d = dims(wall);
-  const scaleX = Number(wall.uv?.scale?.x) || 1;
-  const scaleY = Number(wall.uv?.scale?.y) || 1;
-  const offU = Number(wall.uv?.offset?.x) || 0;
-  const offV = Number(wall.uv?.offset?.y) || 0;
   const n = Math.max(4, d.res);
   const closed = isClosedCurvedWall(wall);
 
   const pos = [];
-  const uvs = [];
+  const densityUv = [];
 
   const point = (r, a, y) => ({
     x: Math.cos(a) * r,
@@ -192,10 +188,10 @@ export function createCurvedWallGeometry(wall) {
     const t1 = (i + 1) / n;
     const a0 = d.startRad + d.sign * d.sweepRad * t0;
     const a1 = d.startRad + d.sign * d.sweepRad * t1;
-    const u0 = (t0 * arcLen) / TILE * scaleX + offU;
-    const u1 = (t1 * arcLen) / TILE * scaleX + offU;
-    const vBottom = (d.y0 / TILE) * scaleY + offV;
-    const vTop = (d.y1 / TILE) * scaleY + offV;
+    const u0 = (t0 * arcLen) / TILE;
+    const u1 = (t1 * arcLen) / TILE;
+    const vBottom = d.y0 / TILE;
+    const vTop = d.y1 / TILE;
 
     const oi00 = point(d.outerR, a0, d.y0);
     const oi01 = point(d.outerR, a0, d.y1);
@@ -207,19 +203,17 @@ export function createCurvedWallGeometry(wall) {
     const ii11 = point(d.innerR, a1, d.y1);
 
     // Outer face (outward)
-    pushTri(pos, uvs, oi00, oi10, oi11, [u0, vBottom], [u1, vBottom], [u1, vTop]);
-    pushTri(pos, uvs, oi00, oi11, oi01, [u0, vBottom], [u1, vTop], [u0, vTop]);
+    pushTri(pos, densityUv, oi00, oi10, oi11, [u0, vBottom], [u1, vBottom], [u1, vTop]);
+    pushTri(pos, densityUv, oi00, oi11, oi01, [u0, vBottom], [u1, vTop], [u0, vTop]);
     // Inner face (inward — wind opposite)
-    pushTri(pos, uvs, ii00, ii11, ii10, [u0, vBottom], [u1, vTop], [u1, vBottom]);
-    pushTri(pos, uvs, ii00, ii01, ii11, [u0, vBottom], [u0, vTop], [u1, vTop]);
+    pushTri(pos, densityUv, ii00, ii11, ii10, [u0, vBottom], [u1, vTop], [u1, vBottom]);
+    pushTri(pos, densityUv, ii00, ii01, ii11, [u0, vBottom], [u0, vTop], [u1, vTop]);
     // Top
-    const vTopU = (d.outerR / TILE) * scaleY + offV;
-    pushTri(pos, uvs, oi01, oi11, ii11, [u0, 0], [u1, 0], [u1, (d.thickness / TILE) * scaleY]);
-    pushTri(pos, uvs, oi01, ii11, ii01, [u0, 0], [u1, (d.thickness / TILE) * scaleY], [u0, (d.thickness / TILE) * scaleY]);
+    pushTri(pos, densityUv, oi01, oi11, ii11, [u0, 0], [u1, 0], [u1, d.thickness / TILE]);
+    pushTri(pos, densityUv, oi01, ii11, ii01, [u0, 0], [u1, d.thickness / TILE], [u0, d.thickness / TILE]);
     // Bottom
-    pushTri(pos, uvs, oi00, ii10, oi10, [u0, 0], [u1, (d.thickness / TILE) * scaleY], [u1, 0]);
-    pushTri(pos, uvs, oi00, ii00, ii10, [u0, 0], [u0, (d.thickness / TILE) * scaleY], [u1, (d.thickness / TILE) * scaleY]);
-    void vTopU;
+    pushTri(pos, densityUv, oi00, ii10, oi10, [u0, 0], [u1, d.thickness / TILE], [u1, 0]);
+    pushTri(pos, densityUv, oi00, ii00, ii10, [u0, 0], [u0, d.thickness / TILE], [u1, d.thickness / TILE]);
   }
 
   if (!closed) {
@@ -229,20 +223,21 @@ export function createCurvedWallGeometry(wall) {
     const o1 = point(d.outerR, aS, d.y1);
     const i0 = point(d.innerR, aS, d.y0);
     const i1 = point(d.innerR, aS, d.y1);
-    const uCap = offU;
-    pushTri(pos, uvs, o0, i0, i1, [uCap, (d.y0 / TILE) * scaleY + offV], [uCap + (d.thickness / TILE) * scaleX, (d.y0 / TILE) * scaleY + offV], [uCap + (d.thickness / TILE) * scaleX, (d.y1 / TILE) * scaleY + offV]);
-    pushTri(pos, uvs, o0, i1, o1, [uCap, (d.y0 / TILE) * scaleY + offV], [uCap + (d.thickness / TILE) * scaleX, (d.y1 / TILE) * scaleY + offV], [uCap, (d.y1 / TILE) * scaleY + offV]);
+    const uCap = 0;
+    pushTri(pos, densityUv, o0, i0, i1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE]);
+    pushTri(pos, densityUv, o0, i1, o1, [uCap, d.y0 / TILE], [uCap + d.thickness / TILE, d.y1 / TILE], [uCap, d.y1 / TILE]);
     // End cap
     const aE = d.startRad + d.sign * d.sweepRad;
     const eo0 = point(d.outerR, aE, d.y0);
     const eo1 = point(d.outerR, aE, d.y1);
     const ei0 = point(d.innerR, aE, d.y0);
     const ei1 = point(d.innerR, aE, d.y1);
-    const uE = (arcLen / TILE) * scaleX + offU;
-    pushTri(pos, uvs, eo0, ei1, ei0, [uE, (d.y0 / TILE) * scaleY + offV], [uE + (d.thickness / TILE) * scaleX, (d.y1 / TILE) * scaleY + offV], [uE + (d.thickness / TILE) * scaleX, (d.y0 / TILE) * scaleY + offV]);
-    pushTri(pos, uvs, eo0, eo1, ei1, [uE, (d.y0 / TILE) * scaleY + offV], [uE, (d.y1 / TILE) * scaleY + offV], [uE + (d.thickness / TILE) * scaleX, (d.y1 / TILE) * scaleY + offV]);
+    const uE = arcLen / TILE;
+    pushTri(pos, densityUv, eo0, ei1, ei0, [uE, d.y0 / TILE], [uE + d.thickness / TILE, d.y1 / TILE], [uE + d.thickness / TILE, d.y0 / TILE]);
+    pushTri(pos, densityUv, eo0, eo1, ei1, [uE, d.y0 / TILE], [uE, d.y1 / TILE], [uE + d.thickness / TILE, d.y1 / TILE]);
   }
 
+  const uvs = mapDensityUvArray(densityUv, wall?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));

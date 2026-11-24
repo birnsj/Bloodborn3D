@@ -33,6 +33,8 @@ export function createMaterialDefinition(partial = {}) {
     emissiveMapId: partial.emissiveMapId || null,
     opacity: clamp01(partial.opacity ?? 1),
     transparent: Boolean(partial.transparent) || (partial.opacity != null && partial.opacity < 1),
+    // Asset-level UV (Layer 2). Applied via texture.repeat/offset/rotation in materialFactory.
+    // Does not replace actor/geometry UV (Layer 1). Defaults are identity.
     uvScale: {
       x: Number(partial.uvScale?.x) || 1,
       y: Number(partial.uvScale?.y) || 1,
@@ -59,7 +61,7 @@ function clamp01(n) {
   return Math.max(0, Math.min(1, v));
 }
 
-/** Default UV mapping for structural brushes (world-aligned tiling). */
+/** Actor-level UV (Layer 1) for structural components — see runtime/uvMapping.js. */
 export function createBrushUvState(partial = {}) {
   return {
     scale: {

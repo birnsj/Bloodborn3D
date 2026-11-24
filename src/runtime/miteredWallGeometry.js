@@ -5,9 +5,9 @@
 
 import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
-import { TEXTURE_TILE_EDITOR_UNITS } from './brushGeometry.js';
 import { getWallAxes } from './wallOpenings.js';
 import { getMiteredWallFootprint } from './wallEndpoints.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
 const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
@@ -45,13 +45,9 @@ export function miteredWallPointsToMetersFlat(size, miterStart, miterEnd, scale 
 
 export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEnd = 0) {
   const { bottom, top, axes } = getMiteredWallCorners(size, miterStart, miterEnd);
-  const scaleX = Number(uv.scale?.x) || 1;
-  const scaleY = Number(uv.scale?.y) || 1;
-  const offU = Number(uv.offset?.x) || 0;
-  const offV = Number(uv.offset?.y) || 0;
 
   const pos = [];
-  const uvs = [];
+  const densityUv = [];
 
   const lenOf = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
@@ -63,41 +59,42 @@ export function createMiteredWallGeometry(size, uv = {}, miterStart = 0, miterEn
     const t0 = top[i];
     const t1 = top[j];
     const edgeLen = lenOf(b0, b1);
-    const u0 = offU;
-    const u1 = (edgeLen / TILE) * scaleX + offU;
-    const v0 = (b0.y / TILE) * scaleY + offV;
-    const v1 = (t0.y / TILE) * scaleY + offV;
-    pushTri(pos, uvs, b0, b1, t1, [u0, v0], [u1, v0], [u1, v1]);
-    pushTri(pos, uvs, b0, t1, t0, [u0, v0], [u1, v1], [u0, v1]);
+    const u0 = 0;
+    const u1 = edgeLen / TILE;
+    const v0 = b0.y / TILE;
+    const v1 = t0.y / TILE;
+    pushTri(pos, densityUv, b0, b1, t1, [u0, v0], [u1, v0], [u1, v1]);
+    pushTri(pos, densityUv, b0, t1, t0, [u0, v0], [u1, v1], [u0, v1]);
   }
 
   // Top
   pushTri(
-    pos, uvs, top[0], top[1], top[2],
-    [(top[0][axes.lengthAxis] / TILE) * scaleX + offU, (top[0][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(top[1][axes.lengthAxis] / TILE) * scaleX + offU, (top[1][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(top[2][axes.lengthAxis] / TILE) * scaleX + offU, (top[2][axes.thicknessAxis] / TILE) * scaleY + offV],
+    pos, densityUv, top[0], top[1], top[2],
+    [top[0][axes.lengthAxis] / TILE, top[0][axes.thicknessAxis] / TILE],
+    [top[1][axes.lengthAxis] / TILE, top[1][axes.thicknessAxis] / TILE],
+    [top[2][axes.lengthAxis] / TILE, top[2][axes.thicknessAxis] / TILE],
   );
   pushTri(
-    pos, uvs, top[0], top[2], top[3],
-    [(top[0][axes.lengthAxis] / TILE) * scaleX + offU, (top[0][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(top[2][axes.lengthAxis] / TILE) * scaleX + offU, (top[2][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(top[3][axes.lengthAxis] / TILE) * scaleX + offU, (top[3][axes.thicknessAxis] / TILE) * scaleY + offV],
+    pos, densityUv, top[0], top[2], top[3],
+    [top[0][axes.lengthAxis] / TILE, top[0][axes.thicknessAxis] / TILE],
+    [top[2][axes.lengthAxis] / TILE, top[2][axes.thicknessAxis] / TILE],
+    [top[3][axes.lengthAxis] / TILE, top[3][axes.thicknessAxis] / TILE],
   );
   // Bottom
   pushTri(
-    pos, uvs, bottom[0], bottom[2], bottom[1],
-    [(bottom[0][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[0][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(bottom[2][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[2][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(bottom[1][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[1][axes.thicknessAxis] / TILE) * scaleY + offV],
+    pos, densityUv, bottom[0], bottom[2], bottom[1],
+    [bottom[0][axes.lengthAxis] / TILE, bottom[0][axes.thicknessAxis] / TILE],
+    [bottom[2][axes.lengthAxis] / TILE, bottom[2][axes.thicknessAxis] / TILE],
+    [bottom[1][axes.lengthAxis] / TILE, bottom[1][axes.thicknessAxis] / TILE],
   );
   pushTri(
-    pos, uvs, bottom[0], bottom[3], bottom[2],
-    [(bottom[0][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[0][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(bottom[3][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[3][axes.thicknessAxis] / TILE) * scaleY + offV],
-    [(bottom[2][axes.lengthAxis] / TILE) * scaleX + offU, (bottom[2][axes.thicknessAxis] / TILE) * scaleY + offV],
+    pos, densityUv, bottom[0], bottom[3], bottom[2],
+    [bottom[0][axes.lengthAxis] / TILE, bottom[0][axes.thicknessAxis] / TILE],
+    [bottom[3][axes.lengthAxis] / TILE, bottom[3][axes.thicknessAxis] / TILE],
+    [bottom[2][axes.lengthAxis] / TILE, bottom[2][axes.thicknessAxis] / TILE],
   );
 
+  const uvs = mapDensityUvArray(densityUv, uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));

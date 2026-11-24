@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
 import { DEFAULT_RAMP_THICKNESS } from '../components/RampComponent.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
 /**
  * Horizontal run / vertical rise / width axes for a direction.
@@ -125,6 +126,7 @@ export function getRampSlopeAngleDegrees(ramp) {
 /**
  * Build a Three.js BufferGeometry for the ramp wedge (meters).
  * Vert order: 0,1 low-bottom; 2,3 high-bottom; 4,5 high-top.
+ * UVs: density-tiled at TEXTURE_TILE_EDITOR_UNITS, then actor `ramp.uv` (scale → rot → offset).
  */
 export function createRampWedgeGeometry(ramp) {
   const verts = getRampWedgeVertices(ramp);
@@ -132,7 +134,7 @@ export function createRampWedgeGeometry(ramp) {
   const width = Math.max(1, Number(ramp.width) || 1);
   const rise = Math.max(1, Number(ramp.rise) || 1);
   const hyp = Math.sqrt(length * length + rise * rise);
-  const tile = 100; // 1 m
+  const tile = TEXTURE_TILE_EDITOR_UNITS;
 
   const faces = [
     // bottom
@@ -150,15 +152,16 @@ export function createRampWedgeGeometry(ramp) {
   ];
 
   const posOut = [];
-  const uvFinal = [];
+  const densityUv = [];
   for (const face of faces) {
     for (let t = 0; t < 3; t += 1) {
       const p = verts[face.i[t]];
       posOut.push(toMeters(p.x), toMeters(p.y), toMeters(p.z));
-      uvFinal.push(face.uv[t][0], face.uv[t][1]);
+      densityUv.push(face.uv[t][0], face.uv[t][1]);
     }
   }
 
+  const uvFinal = mapDensityUvArray(densityUv, ramp?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));

@@ -10,8 +10,9 @@ import {
   DEFAULT_COLUMN_HEIGHT,
   DEFAULT_COLUMN_RADIUS,
 } from '../components/ColumnComponent.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
-const TILE = 100; // 1 m
+const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
 function resolveSides(column) {
   const shape = column.shape || 'round';
@@ -168,13 +169,9 @@ export function createColumnGeometry(column) {
   const sides = resolveSides(column);
   const shape = column.shape || 'round';
   const sections = getColumnSections(column);
-  const uvScaleX = Number(column.uv?.scale?.x) || 1;
-  const uvScaleY = Number(column.uv?.scale?.y) || 1;
-  const uvOffU = Number(column.uv?.offset?.x) || 0;
-  const uvOffV = Number(column.uv?.offset?.y) || 0;
 
   const posOut = [];
-  const uvOut = [];
+  const densityUv = [];
 
   for (const sec of sections) {
     const bottom = getColumnPolygonXZ(sec.radius, sides, shape).map((p) => ({
@@ -184,16 +181,15 @@ export function createColumnGeometry(column) {
       x: p.x, y: sec.y1, z: p.z,
     }));
     const circ = Math.PI * 2 * sec.radius;
-    const h = sec.y1 - sec.y0;
 
     for (let i = 0; i < sides; i += 1) {
       const j = (i + 1) % sides;
-      const u0 = ((i / sides) * circ) / TILE * uvScaleX + uvOffU;
-      const u1 = ((j / sides) * circ) / TILE * uvScaleX + uvOffU;
-      const v0 = (sec.y0 / TILE) * uvScaleY + uvOffV;
-      const v1 = (sec.y1 / TILE) * uvScaleY + uvOffV;
-      pushTri(posOut, uvOut, bottom[i], bottom[j], top[j], [u0, v0], [u1, v0], [u1, v1]);
-      pushTri(posOut, uvOut, bottom[i], top[j], top[i], [u0, v0], [u1, v1], [u0, v1]);
+      const u0 = ((i / sides) * circ) / TILE;
+      const u1 = ((j / sides) * circ) / TILE;
+      const v0 = sec.y0 / TILE;
+      const v1 = sec.y1 / TILE;
+      pushTri(posOut, densityUv, bottom[i], bottom[j], top[j], [u0, v0], [u1, v0], [u1, v1]);
+      pushTri(posOut, densityUv, bottom[i], top[j], top[i], [u0, v0], [u1, v1], [u0, v1]);
     }
 
     // Caps
@@ -201,23 +197,22 @@ export function createColumnGeometry(column) {
     const tc = { x: 0, y: sec.y1, z: 0 };
     for (let i = 0; i < sides; i += 1) {
       const j = (i + 1) % sides;
-      const u0 = (bottom[i].x / TILE) * uvScaleX + uvOffU;
-      const v0 = (bottom[i].z / TILE) * uvScaleY + uvOffV;
-      const u1 = (bottom[j].x / TILE) * uvScaleX + uvOffU;
-      const v1 = (bottom[j].z / TILE) * uvScaleY + uvOffV;
-      const uc = uvOffU;
-      const vc = uvOffV;
+      const u0 = bottom[i].x / TILE;
+      const v0 = bottom[i].z / TILE;
+      const u1 = bottom[j].x / TILE;
+      const v1 = bottom[j].z / TILE;
       // Bottom facing down
-      pushTri(posOut, uvOut, bottom[j], bottom[i], bc, [u1, v1], [u0, v0], [uc, vc]);
+      pushTri(posOut, densityUv, bottom[j], bottom[i], bc, [u1, v1], [u0, v0], [0, 0]);
       // Top facing up
-      const ut0 = (top[i].x / TILE) * uvScaleX + uvOffU;
-      const vt0 = (top[i].z / TILE) * uvScaleY + uvOffV;
-      const ut1 = (top[j].x / TILE) * uvScaleX + uvOffU;
-      const vt1 = (top[j].z / TILE) * uvScaleY + uvOffV;
-      pushTri(posOut, uvOut, top[i], top[j], tc, [ut0, vt0], [ut1, vt1], [uc, vc]);
+      const ut0 = top[i].x / TILE;
+      const vt0 = top[i].z / TILE;
+      const ut1 = top[j].x / TILE;
+      const vt1 = top[j].z / TILE;
+      pushTri(posOut, densityUv, top[i], top[j], tc, [ut0, vt0], [ut1, vt1], [0, 0]);
     }
   }
 
+  const uvOut = mapDensityUvArray(densityUv, column?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(posOut, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvOut, 2));

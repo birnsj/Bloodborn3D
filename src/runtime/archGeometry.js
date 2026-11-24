@@ -13,8 +13,9 @@ import {
   DEFAULT_ARCH_RISE,
   DEFAULT_ARCH_THICKNESS,
 } from '../components/ArchComponent.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
-const TILE = 100;
+const TILE = TEXTURE_TILE_EDITOR_UNITS;
 
 function dims(arch) {
   const openingWidth = Math.max(1, Number(arch.openingWidth) || DEFAULT_ARCH_OPENING_WIDTH);
@@ -175,10 +176,6 @@ export function getArchColliderSolids(arch) {
  */
 export function createArchGeometry(arch) {
   const L = getArchLocalLayout(arch);
-  const scaleX = Number(arch.uv?.scale?.x) || 1;
-  const scaleY = Number(arch.uv?.scale?.y) || 1;
-  const offU = Number(arch.uv?.offset?.x) || 0;
-  const offV = Number(arch.uv?.offset?.y) || 0;
 
   // Shape must be in meters (same as ExtrudeGeometry depth) — not editor units.
   const shape = new THREE.Shape();
@@ -213,17 +210,18 @@ export function createArchGeometry(arch) {
   extrude.translate(0, 0, -toMeters(L.depth) * 0.5);
 
   const pos = extrude.attributes.position;
-  const uvs = [];
+  const densityUv = [];
   for (let i = 0; i < pos.count; i += 1) {
     const xEu = pos.getX(i) * 100;
     const yEu = pos.getY(i) * 100;
     const zEu = pos.getZ(i) * 100;
     if (Math.abs(Math.abs(zEu) - L.halfD) < L.depth * 0.35) {
-      uvs.push((xEu / TILE) * scaleX + offU, (yEu / TILE) * scaleY + offV);
+      densityUv.push(xEu / TILE, yEu / TILE);
     } else {
-      uvs.push((xEu / TILE) * scaleX + offU, (zEu / TILE) * scaleY + offV);
+      densityUv.push(xEu / TILE, zEu / TILE);
     }
   }
+  const uvs = mapDensityUvArray(densityUv, arch?.uv);
   extrude.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   extrude.computeVertexNormals();
   return extrude;

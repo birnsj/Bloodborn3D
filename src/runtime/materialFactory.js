@@ -92,6 +92,8 @@ export async function createThreeMaterial(definition, mapResolver = () => null, 
     if (options.maxAnisotropy) {
       clone.anisotropy = options.maxAnisotropy;
     }
+    // Layer 2 — material UV (Phase 2E.0). Composes with geometry/actor UVs already
+    // written into the mesh attribute. Identity defaults leave authored looks unchanged.
     if (def.uvScale) {
       clone.repeat.set(def.uvScale.x || 1, def.uvScale.y || 1);
     }

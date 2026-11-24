@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { toMeters } from '../core/units.js';
 import { getRampAxes } from './rampGeometry.js';
+import { createBrushBoxGeometry } from './brushGeometry.js';
+import { TEXTURE_TILE_EDITOR_UNITS, mapDensityUvArray } from './uvMapping.js';
 
 export function isCurvedStair(stair) {
   const t = stair?.stairType || 'straight';
@@ -128,6 +130,8 @@ function annularSectorVertices(rIn, rOut, a0, a1, y0, y1) {
 
 /**
  * Build Three.js geometry group for a stair actor.
+ * Straight steps use density-tiled brush UVs + actor `stair.uv`.
+ * Curved/spiral wedges density-tile by tread/riser arc lengths, then the same actor UV.
  */
 export function createStairGeometry(stair) {
   const group = new THREE.Group();
@@ -140,11 +144,7 @@ export function createStairGeometry(stair) {
       mesh.userData.stepIndex = step.index;
       group.add(mesh);
     } else {
-      const geom = new THREE.BoxGeometry(
-        toMeters(step.size.x),
-        toMeters(step.size.y),
-        toMeters(step.size.z),
-      );
+      const geom = createBrushBoxGeometry(step.size, stair?.uv);
       const mesh = new THREE.Mesh(geom);
       mesh.position.set(
         toMeters(step.center.x),
@@ -183,10 +183,10 @@ export function createWedgeStepGeometry(step, stair) {
   const arcLen = Math.abs(step.angles.a1 - step.angles.a0)
     * ((step.radii.inner + step.radii.outer) * 0.5);
   const rise = Math.max(1e-3, step.y1 - step.y0);
-  const tile = 100;
+  const tile = TEXTURE_TILE_EDITOR_UNITS;
 
   const pos = [];
-  const uvFinal = [];
+  const densityUv = [];
   for (let f = 0; f < faces.length; f += 1) {
     const tri = faces[f];
     for (const vi of tri) {
@@ -194,18 +194,19 @@ export function createWedgeStepGeometry(step, stair) {
       pos.push(toMeters(p.x), toMeters(p.y), toMeters(p.z));
     }
     if (f < 2) {
-      uvFinal.push(0, 0, width / tile, 0, 0, arcLen / tile);
+      densityUv.push(0, 0, width / tile, 0, 0, arcLen / tile);
     } else if (f === 2) {
-      uvFinal.push(0, 0, width / tile, 0, width / tile, arcLen / tile);
+      densityUv.push(0, 0, width / tile, 0, width / tile, arcLen / tile);
     } else if (f === 3) {
-      uvFinal.push(0, 0, width / tile, arcLen / tile, 0, arcLen / tile);
+      densityUv.push(0, 0, width / tile, arcLen / tile, 0, arcLen / tile);
     } else if (f < 8) {
-      uvFinal.push(0, 0, width / tile, 0, width / tile, rise / tile);
+      densityUv.push(0, 0, width / tile, 0, width / tile, rise / tile);
     } else {
-      uvFinal.push(0, 0, arcLen / tile, 0, arcLen / tile, rise / tile);
+      densityUv.push(0, 0, arcLen / tile, 0, arcLen / tile, rise / tile);
     }
   }
 
+  const uvFinal = mapDensityUvArray(densityUv, stair?.uv);
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvFinal, 2));
