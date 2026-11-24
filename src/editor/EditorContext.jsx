@@ -242,6 +242,11 @@ export function EditorProvider({ children }) {
   useEffect(() => {
     if (!runtimeRef.current) return;
     runtimeRef.current.setAssetResolver(assetResolver);
+    // Refresh placed material instances when asset definitions change (Phase 2E.4).
+    // Does not mark the level dirty — material assets are separate from level undo.
+    if (assetRevision > 0 && worldRef.current) {
+      runtimeRef.current.resyncWorld();
+    }
   }, [assetResolver, assetRevision]);
 
   const setGridSize = useCallback((value) => {

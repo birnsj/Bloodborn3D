@@ -15,6 +15,7 @@ import {
 } from '../../assets/assetCatalog.js';
 import { normalizeRegistry, findAsset } from '../../assets/AssetRegistry.js';
 import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
+import { materialDraftForDuplicate } from '../materials/materialDraft.js';
 import {
   createMaterial,
   createPrefab,
@@ -232,6 +233,17 @@ export function AssetBrowserProvider({ children }) {
     return { asset: result.asset, definition: def };
   }, [notify, setStatus]);
 
+  const duplicateMaterial = useCallback(async (id) => {
+    const source = await (async () => {
+      if (materialCacheRef.current[id]) return materialCacheRef.current[id];
+      return normalizeMaterialDefinition(await fetchMaterialDefinition(id));
+    })();
+    const payload = materialDraftForDuplicate(source);
+    if (!payload) throw new Error('Cannot duplicate material');
+    setStatus(`Duplicating ${source.name}…`);
+    return createNewMaterial(payload);
+  }, [createNewMaterial, setStatus]);
+
   const saveMaterialDefinition = useCallback(async (id, partial) => {
     const result = await updateMaterial(id, partial);
     const def = normalizeMaterialDefinition(result.definition);
@@ -307,6 +319,7 @@ export function AssetBrowserProvider({ children }) {
     folders: ASSET_FOLDERS,
     registry,
     revision,
+    materialDefs,
     selectedAssetId,
     selectedAsset,
     searchQuery,
@@ -320,6 +333,7 @@ export function AssetBrowserProvider({ children }) {
     importTexture,
     importMesh,
     createNewMaterial,
+    duplicateMaterial,
     saveMaterialDefinition,
     getMaterialDefinition,
     getPrefabDefinition,
@@ -333,6 +347,7 @@ export function AssetBrowserProvider({ children }) {
   }), [
     registry,
     revision,
+    materialDefs,
     selectedAssetId,
     selectedAsset,
     searchQuery,
@@ -344,6 +359,7 @@ export function AssetBrowserProvider({ children }) {
     importTexture,
     importMesh,
     createNewMaterial,
+    duplicateMaterial,
     saveMaterialDefinition,
     getMaterialDefinition,
     getPrefabDefinition,

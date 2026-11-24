@@ -15,7 +15,11 @@ export function WorkspaceNav() {
             type="button"
             className={`bb-workspace-tab${active ? ' is-active' : ''}`}
             onClick={() => setWorkspace(ws.id)}
-            title={ws.id === 'level' ? ws.label : `${ws.label} (extension point)`}
+            title={
+              ws.id === 'level' || ws.id === 'materials'
+                ? ws.label
+                : `${ws.label} (extension point)`
+            }
           >
             {Icon ? <Icon /> : null}
             <span>{ws.label}</span>

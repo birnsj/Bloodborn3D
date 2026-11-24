@@ -107,15 +107,18 @@ export function MeshPreviewCanvas({ url }) {
 }
 
 /**
- * Lit PBR material sphere for Asset Viewer — albedo / normal / roughness maps.
+ * Lit PBR material preview for Asset Viewer / Materials workspace.
+ * @param {'sphere'|'cube'|'plane'} [shape]
  */
 export function MaterialPreviewCanvas({
   definition = null,
   color = '#8a9099',
   mapUrl = null,
   getTextureUrl = null,
+  shape = 'sphere',
 }) {
   const canvasRef = useRef(null);
+  const previewShape = shape === 'cube' || shape === 'plane' ? shape : 'sphere';
   const defKey = definition
     ? [
         definition.id,
@@ -124,12 +127,23 @@ export function MaterialPreviewCanvas({
         definition.normalMapId,
         definition.roughnessMapId,
         definition.metalnessMapId,
+        definition.emissiveMapId,
         definition.roughness,
         definition.metalness,
         definition.normalScale,
         definition.envMapIntensity,
+        definition.emissive,
+        definition.emissiveIntensity,
+        definition.opacity,
+        definition.transparent,
+        definition.uvScale?.x,
+        definition.uvScale?.y,
+        definition.uvOffset?.x,
+        definition.uvOffset?.y,
+        definition.uvRotation,
+        previewShape,
       ].join('|')
-    : `${color}|${mapUrl || ''}`;
+    : `${color}|${mapUrl || ''}|${previewShape}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,7 +180,7 @@ export function MaterialPreviewCanvas({
     rim.position.set(0.2, 1.0, -2.5);
     scene.add(rim);
 
-    // Soft ground disc so the sphere reads as grounded.
+    // Soft ground disc so the mesh reads as grounded.
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(1.1, 48),
       new THREE.MeshStandardMaterial({
@@ -184,8 +198,16 @@ export function MaterialPreviewCanvas({
       roughness: 0.55,
       metalness: 0.08,
     });
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.55, 64, 48), mat);
-    scene.add(sphere);
+    const geometry = previewShape === 'cube'
+      ? new THREE.BoxGeometry(0.95, 0.95, 0.95)
+      : previewShape === 'plane'
+        ? new THREE.PlaneGeometry(1.3, 1.3, 1, 1)
+        : new THREE.SphereGeometry(0.55, 64, 48);
+    const mesh = new THREE.Mesh(geometry, mat);
+    if (previewShape === 'plane') {
+      mesh.position.y = -0.05;
+    }
+    scene.add(mesh);
 
     let disposed = false;
     const textures = [];
@@ -217,10 +239,10 @@ export function MaterialPreviewCanvas({
         next.dispose();
         return;
       }
-      for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
-        if (next[key]) textures.push(next[key]);
+      for (const mapKey of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
+        if (next[mapKey]) textures.push(next[mapKey]);
       }
-      sphere.material = next;
+      mesh.material = next;
       mat.dispose();
       mat = next;
     };
@@ -241,7 +263,9 @@ export function MaterialPreviewCanvas({
     let raf = 0;
     const tick = () => {
       if (disposed) return;
-      sphere.rotation.y += 0.006;
+      if (previewShape !== 'plane') {
+        mesh.rotation.y += 0.006;
+      }
       controls.update();
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -253,7 +277,7 @@ export function MaterialPreviewCanvas({
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
-      sphere.geometry.dispose();
+      mesh.geometry.dispose();
       ground.geometry.dispose();
       ground.material.dispose();
       for (const tex of textures) tex.dispose?.();
@@ -262,7 +286,7 @@ export function MaterialPreviewCanvas({
       scene.environment = null;
       renderer.dispose();
     };
-  }, [defKey, color, mapUrl, getTextureUrl]);
+  }, [defKey, color, mapUrl, getTextureUrl, previewShape]);
 
   return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
 }

@@ -7,12 +7,14 @@ import { LevelToolBar } from './LevelToolBar.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { PlaceholderWorkspace } from './PlaceholderWorkspace.jsx';
 import { LevelDockWorkspace } from './LevelDockWorkspace.jsx';
+import { MaterialsWorkspace } from '../materials/MaterialsWorkspace.jsx';
 import { HoverHelpLayer } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { TutorialCoachMark } from '../../tutorials/TutorialCoachMark.jsx';
 
 export function EditorShell() {
   const { layout, setDockApi } = useLayout();
   const isLevel = layout.workspace === 'level';
+  const isMaterials = layout.workspace === 'materials';
   const scale = viewScaleFactor(layout.uiScale);
 
   useEffect(() => {
@@ -63,6 +65,8 @@ export function EditorShell() {
               <LevelDockWorkspace />
             </div>
           </>
+        ) : isMaterials ? (
+          <MaterialsWorkspace />
         ) : (
           <PlaceholderWorkspace workspaceId={layout.workspace} />
         )}

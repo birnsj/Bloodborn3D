@@ -271,6 +271,7 @@ export function AppMenuBar() {
         {(close) => (
           <>
             <Item label="Open Level Editor" close={close} onClick={() => setWorkspace('level')} />
+            <Item label="Open Materials" close={close} onClick={() => setWorkspace('materials')} />
             <Sep />
             <Item label={isPlay ? 'Stop Play' : 'Play In Editor'} close={close} onClick={() => (isPlay ? stop() : play())} />
           </>

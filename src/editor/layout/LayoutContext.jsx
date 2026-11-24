@@ -174,9 +174,22 @@ export function LayoutProvider({ children }) {
     }
   }, []);
 
-  const setWorkspace = useCallback((workspace) => {
-    patch({ workspace });
-  }, [patch]);
+  /** Optional async guard (e.g. Materials unsaved draft). Return false to cancel. */
+  const workspaceLeaveGuardRef = useRef(null);
+  const setWorkspaceLeaveGuard = useCallback((fn) => {
+    workspaceLeaveGuardRef.current = typeof fn === 'function' ? fn : null;
+  }, []);
+
+  const setWorkspace = useCallback(async (workspace) => {
+    const next = String(workspace || '');
+    if (!next || next === layout.workspace) return;
+    const guard = workspaceLeaveGuardRef.current;
+    if (guard) {
+      const ok = await guard(next);
+      if (!ok) return;
+    }
+    patch({ workspace: next });
+  }, [patch, layout.workspace]);
 
   const togglePanel = useCallback((key) => {
     const api = dockApiRef.current;
@@ -305,6 +318,7 @@ export function LayoutProvider({ children }) {
     layout,
     patch,
     setWorkspace,
+    setWorkspaceLeaveGuard,
     togglePanel,
     ensurePanel,
     toggleMaximizeViewport,
@@ -334,6 +348,7 @@ export function LayoutProvider({ children }) {
     layout,
     patch,
     setWorkspace,
+    setWorkspaceLeaveGuard,
     togglePanel,
     ensurePanel,
     toggleMaximizeViewport,

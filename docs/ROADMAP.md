@@ -39,10 +39,10 @@ Identity defaults on every layer (`scale` 1, `offset` 0, `rotation` 0) leave exi
 | **2E.1** | Individual surface selection and material assignment (semantic surface IDs; viewport pick; start with brush faces). | **Done** |
 | **2E.2** | Per-surface UV offset / scale / rotation bound to selection; undoable actor state. | **Done** |
 | **2E.3** | Explicit Align to Neighbor for adjoining architectural surfaces. | **Done** |
-| **2E.4** | Materials workspace (reuse existing editor/registry/preview); Save/Cancel for asset edits. | Planned |
+| **2E.4** | Materials workspace (reuse existing editor/registry/preview); Save/Cancel for asset edits. | **Done** |
 | **2E.5** | Persistence audit: save/load, prefabs, undo/redo for surface + material actor fields. | Planned |
 
-**Do not start 2E.4 until 2E.3 is accepted (2E.4 may also proceed after 2E.0 in parallel).**
+**Do not start 2E.5 until 2E.4 is accepted.**
 
 ### Phase 2E.1 notes
 
@@ -67,6 +67,16 @@ Identity defaults on every layer (`scale` 1, `offset` 0, `rotation` 0) leave exi
 - Preserves local density mapping — no world-space projection or triplanar.
 - Limitations: corners, curved surfaces, and non-coplanar geometry are out of scope for this tool.
 - Acceptance: `Align Wall A` / `Align Wall B` in `acceptance-surfaces.json` show seamless `pz` continuity across different wall sizes.
+
+### Phase 2E.4 notes
+
+- Workspace: **Materials** — searchable library with thumbnails; New / Duplicate; draft editor; 3D preview (sphere / cube / plane).
+- Reuses `MaterialDefinition`, asset registry / Content Browser APIs, `MaterialDefinitionForm`, and `MaterialPreviewCanvas`.
+- Explicit **Save / Cancel**; drafts do not write the persistent asset until Save. Leave / switch warns when dirty.
+- Material asset edits are separate from level undo/redo and level dirty tracking.
+- After Save, placed instances refresh via asset revision + `resyncWorld` (no level reload).
+- Details panel material fields also use Save/Cancel (with a Materials… shortcut).
+- Out of scope: shader graphs, procedural textures, AI integration.
 
 ### Dependencies
 

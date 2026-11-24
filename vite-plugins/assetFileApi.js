@@ -232,10 +232,16 @@ async function createMaterialAsset(body) {
     baseColor: body.baseColor || '#8a9099',
     baseColorMapId: body.baseColorMapId || null,
     normalMapId: body.normalMapId || null,
+    normalScale: Number.isFinite(Number(body.normalScale))
+      ? Math.max(0, Number(body.normalScale))
+      : 1,
     roughness: body.roughness ?? 0.75,
     metalness: body.metalness ?? 0.05,
     roughnessMapId: body.roughnessMapId || null,
     metalnessMapId: body.metalnessMapId || null,
+    envMapIntensity: Number.isFinite(Number(body.envMapIntensity))
+      ? Math.max(0, Number(body.envMapIntensity))
+      : 1,
     emissive: body.emissive || '#000000',
     emissiveIntensity: body.emissiveIntensity ?? 0,
     emissiveMapId: body.emissiveMapId || null,
@@ -244,6 +250,7 @@ async function createMaterialAsset(body) {
     uvScale: body.uvScale || { x: 1, y: 1 },
     uvOffset: body.uvOffset || { x: 0, y: 0 },
     uvRotation: body.uvRotation ?? 0,
+    previewPath: body.previewPath || null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

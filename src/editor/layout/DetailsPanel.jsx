@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
+import { useLayout } from './LayoutContext.jsx';
 import { Collapsible } from '../../ui/Collapsible.jsx';
 import { ScrubAxisLabel, ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
@@ -8,6 +9,12 @@ import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { isWallBrush, normalizeOpenings } from '../../runtime/wallOpenings.js';
+import { MaterialDefinitionForm } from '../materials/MaterialDefinitionForm.jsx';
+import {
+  cloneMaterialDraft,
+  isMaterialDraftDirty,
+  materialDraftToSavePayload,
+} from '../materials/materialDraft.js';
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
@@ -1838,145 +1845,88 @@ function MaterialDefinitionEditor({
   getMaterialDefinition,
   saveMaterialDefinition,
 }) {
-  const { registry } = useAssetBrowser();
-  const textures = useMemo(
-    () => listByKind(registry, ASSET_KINDS.texture),
-    [registry],
-  );
-  const [def, setDef] = useState(null);
+  const { setWorkspace } = useLayout();
+  const [baseline, setBaseline] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setBaseline(null);
+    setDraft(null);
     getMaterialDefinition(materialId).then((d) => {
-      if (!cancelled) setDef(d);
+      if (cancelled || !d) return;
+      const cloned = cloneMaterialDraft(d);
+      setBaseline(cloned);
+      setDraft(cloneMaterialDraft(d));
     });
     return () => { cancelled = true; };
   }, [materialId, getMaterialDefinition]);
 
-  if (!def) {
+  if (!draft) {
     return <p className="bb-muted">Loading material…</p>;
   }
 
-  const patch = async (partial) => {
-    const next = { ...def, ...partial };
-    setDef(next);
-    await saveMaterialDefinition(materialId, next);
+  const dirty = isMaterialDraftDirty(baseline, draft);
+
+  const onCancel = () => {
+    if (!baseline) return;
+    setDraft(cloneMaterialDraft(baseline));
+  };
+
+  const onSave = async () => {
+    if (!dirty || disabled) return;
+    const payload = materialDraftToSavePayload(draft);
+    if (!payload) return;
+    setSaving(true);
+    try {
+      const saved = await saveMaterialDefinition(materialId, payload);
+      const cloned = cloneMaterialDraft(saved);
+      setBaseline(cloned);
+      setDraft(cloneMaterialDraft(saved));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="bb-material-def">
-      <div className="bb-field-caption">Shared material properties</div>
-      <label className="bb-field">
-        <span className="bb-field__label">Name</span>
-        <input
-          className="bb-input"
-          disabled={disabled}
-          value={def.name}
-          onChange={(e) => patch({ name: e.target.value })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Base Color</span>
-        <input
-          className="bb-input"
-          type="color"
-          disabled={disabled}
-          value={normalizeHex(def.baseColor)}
-          onChange={(e) => patch({ baseColor: e.target.value })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Base Color Map</span>
-        <select
-          className="bb-select"
-          disabled={disabled}
-          value={def.baseColorMapId || ''}
-          onChange={(e) => patch({ baseColorMapId: e.target.value || null })}
+      <div className="bb-field-caption">
+        Shared material asset
+        {dirty ? ' • unsaved' : ''}
+      </div>
+      <div className="bb-field-row" style={{ gap: 6, marginBottom: 6 }}>
+        <button
+          type="button"
+          className="bb-btn"
+          disabled={disabled || !dirty || saving}
+          onClick={onCancel}
         >
-          <option value="">(none)</option>
-          {textures.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Normal Map</span>
-        <select
-          className="bb-select"
-          disabled={disabled}
-          value={def.normalMapId || ''}
-          onChange={(e) => patch({ normalMapId: e.target.value || null })}
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="bb-btn bb-btn--primary"
+          disabled={disabled || !dirty || saving}
+          onClick={() => { void onSave(); }}
         >
-          <option value="">(none)</option>
-          {textures.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Roughness</span>
-        <input
-          className="bb-input"
-          type="number"
-          step={0.05}
-          min={0}
-          max={1}
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          type="button"
+          className="bb-btn"
           disabled={disabled}
-          value={def.roughness}
-          onChange={(e) => patch({ roughness: Number(e.target.value) })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Metalness</span>
-        <input
-          className="bb-input"
-          type="number"
-          step={0.05}
-          min={0}
-          max={1}
-          disabled={disabled}
-          value={def.metalness}
-          onChange={(e) => patch({ metalness: Number(e.target.value) })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Emissive</span>
-        <input
-          className="bb-input"
-          type="color"
-          disabled={disabled}
-          value={normalizeHex(def.emissive)}
-          onChange={(e) => patch({ emissive: e.target.value })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Emissive Intensity</span>
-        <input
-          className="bb-input"
-          type="number"
-          step={0.1}
-          min={0}
-          disabled={disabled}
-          value={def.emissiveIntensity}
-          onChange={(e) => patch({ emissiveIntensity: Number(e.target.value) })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Opacity</span>
-        <input
-          className="bb-input"
-          type="number"
-          step={0.05}
-          min={0}
-          max={1}
-          disabled={disabled}
-          value={def.opacity}
-          onChange={(e) => {
-            const opacity = Number(e.target.value);
-            patch({ opacity, transparent: opacity < 1 });
-          }}
-        />
-      </label>
+          onClick={() => { void setWorkspace('materials'); }}
+          title="Open Materials workspace"
+        >
+          Materials…
+        </button>
+      </div>
+      <MaterialDefinitionForm
+        draft={draft}
+        onChange={setDraft}
+        disabled={disabled || saving}
+      />
     </div>
   );
 }

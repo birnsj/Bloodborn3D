@@ -1205,6 +1205,120 @@ select {
   gap: 6px;
 }
 
+/* Phase 2E.4 — Materials workspace */
+.bb-materials-workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(280px, 1fr) minmax(260px, 360px);
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.bb-materials-workspace > .bb-panel-chrome {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: var(--bb-panel);
+}
+
+.bb-materials-workspace__library-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.bb-materials-workspace__list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bb-materials-workspace__tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--bb-radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bb-materials-workspace__tile:hover {
+  background: var(--bb-hover);
+}
+
+.bb-materials-workspace__tile.is-active {
+  border-color: var(--bb-accent);
+  background: var(--bb-hover);
+}
+
+.bb-materials-workspace__tile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-materials-workspace__tile-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-materials-workspace__editor-body,
+.bb-materials-workspace__preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.bb-materials-workspace__preview-stage {
+  height: min(420px, 55vh);
+  min-height: 220px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  overflow: hidden;
+  background: #12161d;
+}
+
+.bb-materials-workspace__preview-stage .bb-mesh-preview-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bb-field--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .bb-materials-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 28vh) minmax(240px, 1fr) minmax(220px, 32vh);
+    overflow: auto;
+  }
+}
+
 /* Asset Viewer */
 .bb-asset-viewer,
 .bb-asset-viewer__body {
