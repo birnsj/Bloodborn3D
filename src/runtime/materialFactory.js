@@ -1,6 +1,7 @@
 import * as THREE from 'three';
+import { createRetryableCache } from './retryableCache.js';
 
-const textureCache = new Map();
+const textureCache = createRetryableCache();
 const loader = new THREE.TextureLoader();
 
 /**
@@ -35,17 +36,15 @@ export function configureNormalTexture(tex) {
 export function loadTexture(url, { normal = false } = {}) {
   if (!url) return Promise.resolve(null);
   const key = `${normal ? 'n:' : 'c:'}${url}`;
-  if (textureCache.has(key)) return textureCache.get(key);
-  const promise = new Promise((resolve) => {
+  // Failed loads resolve null and are evicted, so a later request retries.
+  return textureCache.get(key, () => new Promise((resolve) => {
     loader.load(
       url,
       (tex) => resolve(normal ? configureNormalTexture(tex) : configureTexture(tex)),
       undefined,
       () => resolve(null),
     );
-  });
-  textureCache.set(key, promise);
-  return promise;
+  }));
 }
 
 export function clearTextureCache() {

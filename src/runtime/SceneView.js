@@ -757,12 +757,18 @@ export class SceneView {
 
       if (def) {
         const mat = await createThreeMaterial(def, mapResolver);
+        // The scene may have been rebuilt while textures loaded; this mesh is
+        // already disposed, so release the new material instead of attaching it.
+        if (syncToken !== this._syncToken) {
+          disposeMaterial(mat);
+          return;
+        }
         for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
           if (mat[key]) mat[key].anisotropy = this.maxAnisotropy;
         }
         const old = mesh.material[i];
         mesh.material[i] = mat;
-        old?.dispose?.();
+        disposeMaterial(old);
       }
     }
     mesh.material.needsUpdate = true;

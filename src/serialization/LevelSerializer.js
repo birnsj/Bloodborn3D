@@ -4,6 +4,8 @@
  * v1 levels remain loadable.
  */
 export const LEVEL_SCHEMA_VERSION = 2;
+/** Oldest level schema the deserializer still accepts. */
+export const MIN_SUPPORTED_LEVEL_SCHEMA_VERSION = 1;
 
 export function serializeLevel(world) {
   if (!world) {

@@ -1,0 +1,107 @@
+# BloodBound3D — Technical Status
+
+Records what is implemented, which audit findings were fixed, and what remains. It does **not** define a roadmap: the repository contains no roadmap file, and nothing here is a planning decision.
+
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by one stabilization pass.
+- **Finding IDs** (C1, H1, …) are the audit's own.
+
+## 1. Verification (after the stabilization pass)
+
+| Check | Result |
+| --- | --- |
+| `npm test` | 351 / 351 pass, 47 files (252 / 39 before this pass) |
+| `npm run lint` | exit 0, 88 warnings, 0 errors (85 before; the 3 new ones are the same refs-during-render pattern already used in `EditorContext.jsx`) |
+| `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
+| Regression-test sensitivity | New suites were run against the pre-fix source of the files they cover: they fail there (C1: 7 failures; runtime/commands/physics/cache/schema/SceneView suites: 41 failures) and pass on the fixed code. |
+
+## 2. Implemented systems
+
+Status is what the code does today, not an intent.
+
+| System | State | Notes |
+| --- | --- | --- |
+| Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | No Three.js / React dependency. Transforms are local to `parentId`. |
+| Component types | Implemented | Brush, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
+| Serialization | Implemented | Writes `schemaVersion` 2; reads 1–2; rejects other versions (see M9). No migration code exists, none is needed for 1→2. |
+| Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). |
+| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / ramp / stair / column / arch / curved wall / mitered wall; static meshes use a unit-cube collider (see M10). |
+| Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
+| Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
+| Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |
+| Editor commands / undo | Implemented | `HistoryStack` (limit 100); every edit is a command addressed by actor id. |
+| Play / Stop | Implemented | Snapshot on Play, restore on Stop; see section 3. |
+| Editor shell | Implemented | Dock layout with named layouts, themes, UI scale, Edit → Settings, hover help, shortcut reference. |
+| Tutorials | Implemented | 13 lessons with starter levels under `public/levels/tutorials/`. |
+| Session recorder | Implemented | Record button in the toolbar. |
+| Non-level workspaces | Placeholder only | World Map, Characters, Animation, Materials, Visual Scripting, Dialogue, UI Editor, AI Assets render `PlaceholderWorkspace`. |
+
+## 3. Audit findings addressed in this pass
+
+| ID | Finding | Resolution | Main files | Tests |
+| --- | --- | --- | --- | --- |
+| C1 | Opening a dialog reloaded `test-room.json`, discarding unsaved work. The dialog context value changed with `active`, which re-ran the startup effect. | Dialog context value is stable (`isOpen`, which no one used, removed). The startup load now runs exactly once and reads the latest callbacks through a ref, so no callback identity change can reload the world. | `ui/dialogs/EditorDialogContext.jsx`, `editor/EditorContext.jsx` | `editorLifecycle.test.js` (alert / confirm / prompt / queue / notify / Escape / non-default level) |
+| H1 | Deleting a parent orphaned its children. | `RemoveActorsCommand` removes the full subtree. It records each actor's JSON and original index, so Undo restores IDs, local transforms, `parentId`, visible/locked, prefab metadata and order. `World.addActor` takes an optional index for this. | `editor/history/commands.js`, `core/World.js` | `deleteHierarchy.test.js` |
+| H2 | No unsaved-change tracking. | Content-fingerprint comparison against the last loaded/saved state (`editor/dirtyTracking.js`, key-order independent). Undo/redo to the saved state reads clean; edits during an in-flight save stay dirty; a failed save (level or tutorial) reports the error and leaves the state dirty. Loading/reloading a dirty level asks first; `beforeunload` guards tab close; a `•` marks the file name in the menu bar. Tutorial sessions keep the project's baseline across begin/end. | `editor/dirtyTracking.js`, `editor/EditorContext.jsx`, `editor/layout/AppMenuBar.jsx` | `dirtyTracking.test.js`, `editorLifecycle.test.js` |
+| M1 | `PhysicsWorld.dispose()` never freed the Rapier world; `init()` dropped the previous one. | `dispose()` frees the world (idempotent, tolerant of `free()` throwing); `init()` disposes first. | `runtime/PhysicsWorld.js` | `physicsWorldDisposal.test.js`, `gameRuntimeLifecycle.test.js` (5 cycles → 5 frees) |
+| M2 | `play()` could start overlapping sessions. | A pending/token guard allows one session. `stop()`, a world swap or `dispose()` cancels a Play that is still initializing and frees its physics. A failed start leaves a clean edit session. The editor ignores Play while one is active and reports failures. | `runtime/GameRuntime.js`, `editor/EditorContext.jsx` | `gameRuntimeLifecycle.test.js`, `editorLifecycle.test.js` |
+| M3 | Stop reset the editor camera to a hardcoded pose. | The pose (position, orientation, zoom) is captured on Play and restored on Stop; the old default remains as a fallback only. | `runtime/GameRuntime.js` | `gameRuntimeLifecycle.test.js` |
+| M4 | Failed texture / mesh loads were cached as `null` forever. | `createRetryableCache` shares in-flight requests and caches successes, but evicts nullish or rejected results. | `runtime/retryableCache.js`, `materialFactory.js`, `meshLoader.js` | `retryableAssetLoads.test.js` |
+| M5 | `_applyBrushMaterials` attached or leaked materials after the scene was rebuilt. | Re-checks the sync token after each material load and disposes the late material (textures included). Replaced materials are disposed with their textures. | `runtime/SceneView.js` | `sceneViewStaleMaterials.test.js` |
+| M7 | The render loop ran while the tab was hidden. | The loop is suspended on `visibilitychange` and resumes without a time jump; no duplicate frames after repeated toggles; the listener is removed on dispose. | `runtime/GameRuntime.js` | `gameRuntimeLifecycle.test.js` |
+| M9 | Any `schemaVersion` was accepted. | Versions 1–2 load. Newer, older-than-1, non-integer or non-numeric versions are rejected with an explicit message naming the supported range. All shipped levels still load. No migration framework was added. | `serialization/LevelDeserializer.js`, `LevelSerializer.js` | `levelSchemaVersion.test.js` |
+| M11 | Play/Stop cleared undo history. | History is no longer cleared. Safe because every command addresses actors by id, the world instance persists, and Stop restores identical ids. | `editor/EditorContext.jsx` | `editorLifecycle.test.js`, `gameRuntimeLifecycle.test.js` |
+
+Behavior changes to be aware of:
+
+- `useEditor().loadLevel(name)` is now the guarded, user-facing call. It confirms when dirty and reports errors instead of throwing. The unguarded loader is internal.
+- `RemoveActorsCommand` gained `entries` (id, index, JSON); `actorIds` / `actorsJson` still exist.
+- The Stop button restores the world in place as before; selection is still cleared on Stop.
+
+## 4. Remaining audit findings (not addressed)
+
+These were out of scope for the pass and are unchanged.
+
+| ID | Severity | Finding |
+| --- | --- | --- |
+| M6 | Medium | Every edit triggers a full `SceneView.syncFromWorld` (geometry and up to 6 materials per solid rebuilt). Acceptable for current level sizes; will not scale. Incremental sync was explicitly deferred. |
+| M8 | Medium | `SceneView` (runtime) imports editor modules (`runtime/SceneView.js`, imports near the top). Runtime/editor separation was explicitly deferred. |
+| M10 | Medium | Static mesh colliders are a unit cube (`PhysicsWorld.js`, static mesh branch of `buildFromWorld`), not mesh bounds. Collider redesign was explicitly deferred. |
+| L | Low | `PlayerController.js` stair-assist hack (~lines 129–139). |
+| L | Low | `GameRuntime.stop()` / `restoreAuthoredSnapshot()` clear the world with an O(n²) loop (`World.clear` → `removeActor` filters the array each time). |
+| L | Low | `Component.js` defines `onStart` / `onUpdate` / `onStop`, which nothing calls (only `onAttach` / `onDetach` are invoked, by `Actor`). |
+| L | Low | `EditorContext.jsx` (~2,100 lines) and `SceneView.js` (~1,500 lines) are large. Not recommended to split without a concrete need. |
+| L | Low | 88 lint warnings (hook dependencies, refs during render, unused test imports). |
+| L | Low | Production build is one ~6 MB chunk. |
+| L | Low | The dev file APIs (`vite-plugins/`) have no authentication; path traversal is rejected. Dev-only. |
+
+## 5. Observations made during this pass (not fixed, not yet confirmed as defects)
+
+- **Dead legacy UI files.** `src/editor/Toolbar.jsx`, `Hierarchy.jsx` and `Inspector.jsx` are not imported anywhere (verified by search); they appear superseded by `layout/LevelToolBar.jsx`, `SceneOutliner.jsx` and `DetailsPanel.jsx`.
+- **Tutorial "Save as" drops the stored project snapshot.** `saveTutorialWorkAs` sets `sessionStackRef.current = []` after saving, discarding the project world captured when the tutorial began. Not reproduced.
+- **Orphan parent references are silently nulled on load.** `LevelDeserializer` resets a `parentId` that points at a missing actor to `null`, so a file produced by the old H1 bug loads as unparented actors rather than failing. This was left as is.
+- **Dirty detection cost.** The check serializes the whole world. It is debounced (200 ms) for the indicator and computed synchronously only when guarding a load or closing the tab. Very large levels may need a cheaper scheme.
+- **Late materials in two other paths.** `_applySimpleParamMaterial` and `_applyRampMaterial` already ignore stale results but dispose with `material.dispose()` only (cloned textures are not released). Minor; not changed.
+- **Selection after Stop.** Selection is cleared on Stop. Preserving it was not requested.
+
+## 6. Deferred technical debt
+
+- Incremental scene synchronization (M6).
+- Runtime/editor dependency separation (M8).
+- Static-mesh collider generation (M10).
+- Splitting the single production chunk.
+- Removing the dead legacy UI files listed above.
+- Lint warning cleanup.
+
+## 7. Manual acceptance tests
+
+These need a real browser, GPU, display and pointer-lock; they cannot be run in vitest.
+
+1. **Dialogs vs. unsaved work.** Open a non-default level, make an edit, then trigger a dialog (Window → Layouts → Save Layout As…, an error such as an over-complex subtraction, a "Saved…" notice). The level, file name and undo history must be unchanged after the dialog closes.
+2. **Delete a Cell with children.** Delete it, confirm the outliner and viewport lose the whole subtree, Undo, and confirm identical hierarchy, positions and outliner order. Repeat with a prefab instance, then Save and reload.
+3. **Unsaved-change prompts.** Make an edit, then use File → Reload Level or open another level from the File menu: a confirmation appears; Cancel keeps everything, Discard loads. The `•` appears after an edit and disappears after Undo back to the saved state. Save, edit, close the tab: the browser warns.
+4. **Failed save.** Stop the dev server (or make `public/levels` read-only), press Save: an error appears and the `•` stays. Restore and Save again: the `•` clears.
+5. **Play/Stop.** Orbit/fly the editor camera somewhere distinctive, press Play, then Stop: the camera returns to the same view. Undo/Redo still work after Stop. Click Play rapidly several times: one session only. Repeat Play/Stop 20+ times and watch memory in the browser task manager (Rapier worlds are freed).
+6. **Hidden tab.** Start Play, switch to another tab for ~10 seconds, return: rendering resumes with no physics jump. In Edit mode, confirm GPU/CPU use drops while the tab is hidden.
+7. **Asset retry.** Make a texture or mesh URL fail (rename the file), load the level, restore the file, trigger a resync (any edit): the asset appears without a page reload.
+8. **Future schema.** Edit a copy of a level to `"schemaVersion": 3` and open it: an explicit "Unsupported level schemaVersion 3" message appears, and the current level is untouched.
+9. **Existing visuals (unchanged, still worth a spot check).** Mitered corners, openings, curved walls and stairs; edge snapping for walls/floors, pivot snapping for props and lights; the four color themes and UI scale.

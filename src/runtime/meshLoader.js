@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { validateMeshScale, metersToEditorSize } from '../assets/assetCatalog.js';
+import { createRetryableCache } from './retryableCache.js';
 
 const gltfLoader = new GLTFLoader();
-const meshCache = new Map();
+const meshCache = createRetryableCache();
 
 /**
  * Load a glTF/GLB asset. Geometry stays in meters (Three.js / Rapier space).
@@ -12,9 +13,8 @@ const meshCache = new Map();
  */
 export function loadGltfScene(url) {
   if (!url) return Promise.resolve(null);
-  if (meshCache.has(url)) return meshCache.get(url);
-
-  const promise = new Promise((resolve) => {
+  // Failed loads resolve null and are evicted, so a later request retries.
+  return meshCache.get(url, () => new Promise((resolve) => {
     gltfLoader.load(
       url,
       (gltf) => {
@@ -44,10 +44,7 @@ export function loadGltfScene(url) {
       undefined,
       () => resolve(null),
     );
-  });
-
-  meshCache.set(url, promise);
-  return promise;
+  }));
 }
 
 export async function cloneLoadedMesh(url) {

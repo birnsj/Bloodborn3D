@@ -11,12 +11,13 @@ export class World {
     this._byId = new Map();
   }
 
-  addActor(actor) {
+  /** Append an actor, or insert at `index` to restore a previous order (Undo). */
+  addActor(actor, index = this.actors.length) {
     if (this._byId.has(actor.id)) {
       throw new Error(`Actor id already exists: ${actor.id}`);
     }
     actor.world = this;
-    this.actors.push(actor);
+    this.actors.splice(Math.min(Math.max(index, 0), this.actors.length), 0, actor);
     this._byId.set(actor.id, actor);
     return actor;
   }

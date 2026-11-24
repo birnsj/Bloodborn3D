@@ -5,6 +5,14 @@ import { SceneView } from './SceneView.js';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { PlayerController } from './PlayerController.js';
 
+/** Camera framing used only when no editor camera was captured before Play. */
+const DEFAULT_EDITOR_CAMERA_POSITION = [6, 5, 8];
+const DEFAULT_EDITOR_CAMERA_TARGET = [0, 1.5, 0];
+
+function isDocumentHidden() {
+  return typeof document !== 'undefined' && document.hidden === true;
+}
+
 /**
  * Shared runtime for standalone game and Play-in-Editor.
  * Play snapshots authored state; Stop restores it without retaining runtime mods.
@@ -31,6 +39,21 @@ export class GameRuntime {
     this._raf = 0;
     this._lastTime = 0;
     this._running = false;
+    /** True while the document is hidden: loop is "running" but not rendering. */
+    this._suspended = false;
+    this._disposed = false;
+
+    /** play() is async (Rapier init); these keep overlapping/cancelled calls safe. */
+    this._playPending = false;
+    this._playToken = 0;
+    /** Editor camera pose captured on Play and restored on Stop. */
+    this._editorCamera = null;
+
+    this._frameCb = (now) => this._onFrame(now);
+    this._visibilityCb = () => this._handleVisibilityChange();
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this._visibilityCb);
+    }
   }
 
   get camera() {
@@ -40,6 +63,8 @@ export class GameRuntime {
   }
 
   setWorld(world) {
+    // A Play that is still initializing must not start against the old world.
+    if (this._playPending) this._playToken += 1;
     this.world = world;
     this.sceneView.syncFromWorld(world);
   }
@@ -121,13 +146,39 @@ export class GameRuntime {
     };
   }
 
+  /** True while Play is starting or running (blocks a second session). */
+  get isPlayActive() {
+    return this.mode === 'play' || this._playPending;
+  }
+
   async play() {
-    if (this.mode === 'play' || !this.world) return;
+    if (this.isPlayActive || !this.world || this._disposed) return;
 
-    // Snapshot authored level JSON before any runtime mutation
-    this.authoredSnapshot = serializeLevel(this.world);
+    this._playPending = true;
+    const token = ++this._playToken;
+    try {
+      // Snapshot authored level JSON before any runtime mutation
+      const snapshot = serializeLevel(this.world);
 
-    await this.physics.init();
+      await this.physics.init();
+      // Stop(), dispose() or a world swap may have happened during init.
+      if (token !== this._playToken || this._disposed) {
+        this.physics.dispose();
+        return;
+      }
+      this.authoredSnapshot = snapshot;
+      this._captureEditorCamera();
+
+      this._beginPlaySession();
+    } catch (err) {
+      this._abortPlaySession();
+      throw err;
+    } finally {
+      this._playPending = false;
+    }
+  }
+
+  _beginPlaySession() {
     this.physics.buildFromWorld(this.world);
 
     const spawn = this.world.actors.find((a) => a.getComponent('PlayerSpawn'));
@@ -174,8 +225,25 @@ export class GameRuntime {
     this._startLoop();
   }
 
+  /** Undo a half-started Play so a failed start leaves a clean edit session. */
+  _abortPlaySession() {
+    if (this.player) {
+      this.player.stop();
+      this.player = null;
+    }
+    this.physics.dispose();
+    this.authoredSnapshot = null;
+    this._editorCamera = null;
+    this.mode = 'edit';
+    if (this.world) this.world.mode = 'edit';
+  }
+
   stop() {
-    if (this.mode !== 'play') return;
+    if (this.mode !== 'play') {
+      // Cancel a Play that is still waiting on Rapier.
+      if (this._playPending) this._playToken += 1;
+      return;
+    }
 
     this._stopLoop();
     if (this.player) {
@@ -201,12 +269,35 @@ export class GameRuntime {
     this.sceneView.setEditMode(true);
     this.sceneView.syncFromWorld(this.world);
 
-    // Restore editor camera framing
-    this.sceneView.camera.position.set(6, 5, 8);
-    this.sceneView.camera.lookAt(0, 1.5, 0);
+    this._restoreEditorCamera();
     this.onModeChange(this.mode);
 
     this._startLoop();
+  }
+
+  _captureEditorCamera() {
+    const cam = this.sceneView.camera;
+    this._editorCamera = {
+      position: cam.position.clone(),
+      quaternion: cam.quaternion.clone(),
+      zoom: cam.zoom,
+    };
+  }
+
+  /** Put the editor camera back exactly where the designer left it. */
+  _restoreEditorCamera() {
+    const cam = this.sceneView.camera;
+    const saved = this._editorCamera;
+    this._editorCamera = null;
+    if (saved) {
+      cam.position.copy(saved.position);
+      cam.quaternion.copy(saved.quaternion);
+      cam.zoom = saved.zoom;
+      cam.updateProjectionMatrix?.();
+      return;
+    }
+    cam.position.set(...DEFAULT_EDITOR_CAMERA_POSITION);
+    cam.lookAt(...DEFAULT_EDITOR_CAMERA_TARGET);
   }
 
   /**
@@ -235,23 +326,50 @@ export class GameRuntime {
   _startLoop() {
     if (this._running) return;
     this._running = true;
+    this._suspended = isDocumentHidden();
     this._lastTime = performance.now();
-    const tick = (now) => {
-      if (!this._running) return;
-      const dt = Math.min((now - this._lastTime) / 1000, 0.05);
-      this._lastTime = now;
-      this._update(dt);
-      this._raf = requestAnimationFrame(tick);
-    };
-    this._raf = requestAnimationFrame(tick);
+    this._scheduleFrame();
+  }
+
+  _scheduleFrame() {
+    if (!this._running || this._suspended || this._raf) return;
+    this._raf = requestAnimationFrame(this._frameCb);
+  }
+
+  _onFrame(now) {
+    this._raf = 0;
+    if (!this._running || this._suspended) return;
+    const dt = Math.min((now - this._lastTime) / 1000, 0.05);
+    this._lastTime = now;
+    this._update(dt);
+    this._scheduleFrame();
   }
 
   _stopLoop() {
     this._running = false;
+    this._cancelFrame();
+  }
+
+  _cancelFrame() {
     if (this._raf) {
       cancelAnimationFrame(this._raf);
       this._raf = 0;
     }
+  }
+
+  /** Stop drawing (and simulating) while hidden; resume without a time jump. */
+  _handleVisibilityChange() {
+    const hidden = isDocumentHidden();
+    if (hidden === this._suspended) return;
+    this._suspended = hidden;
+    if (hidden) {
+      this._cancelFrame();
+      return;
+    }
+    if (!this._running) return;
+    // Skip the hidden interval so physics does not see one giant step.
+    this._lastTime = performance.now();
+    this._scheduleFrame();
   }
 
   _update(dt) {
@@ -270,6 +388,10 @@ export class GameRuntime {
   }
 
   dispose() {
+    this._disposed = true;
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this._visibilityCb);
+    }
     this.stop();
     this._stopLoop();
     this.sceneView.dispose();

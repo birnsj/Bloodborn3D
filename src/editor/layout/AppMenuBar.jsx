@@ -106,6 +106,7 @@ export function AppMenuBar() {
     selectedActorIds,
     saveLevel,
     loadLevel,
+    isDirty,
     undo,
     redo,
     duplicateSelected,
@@ -473,9 +474,9 @@ export function AppMenuBar() {
         )}
       </Menu>
 
-      <div className="bb-menubar__scene" title={levelName}>
+      <div className="bb-menubar__scene" title={isDirty ? `${levelName} (unsaved changes)` : levelName}>
         {world?.name || 'Untitled'}
-        <span className="bb-menubar__scene-file">— {levelName}</span>
+        <span className="bb-menubar__scene-file">— {levelName}{isDirty ? ' •' : ''}</span>
       </div>
 
       <KeyboardShortcutsDialog

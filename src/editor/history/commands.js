@@ -1,5 +1,6 @@
 import { Actor } from '../../core/Actor.js';
 import { createComponentFromJSON } from '../../components/componentRegistry.js';
+import { getDescendants } from '../../core/hierarchy.js';
 
 function cloneActorJson(actor) {
   return structuredClone(actor.toJSON());
@@ -34,17 +35,32 @@ export class AddActorsCommand {
 }
 
 /**
- * Remove actors; stores full JSON for restore.
+ * Remove actors together with every descendant, so no child is left pointing at
+ * a missing parent. Stores full JSON plus each actor's original position in
+ * `world.actors`, so Undo restores IDs, transforms, parent links, prefab
+ * metadata and outliner order exactly.
  */
 export class RemoveActorsCommand {
   constructor({ world, actorIds, label = 'Delete actors' }) {
     this.world = world;
-    this.actorIds = [...actorIds];
     this.label = label;
-    this.actorsJson = this.actorIds
-      .map((id) => world.getActor(id))
-      .filter(Boolean)
-      .map(cloneActorJson);
+
+    const doomed = new Set();
+    for (const id of actorIds) {
+      if (!world.getActor(id)) continue;
+      doomed.add(id);
+      for (const d of getDescendants(id, world)) doomed.add(d.id);
+    }
+
+    // Walk the world list (not the input) so entries are in original order.
+    this.entries = [];
+    world.actors.forEach((actor, index) => {
+      if (doomed.has(actor.id)) {
+        this.entries.push({ index, id: actor.id, json: cloneActorJson(actor) });
+      }
+    });
+    this.actorIds = this.entries.map((e) => e.id);
+    this.actorsJson = this.entries.map((e) => e.json);
   }
 
   do() {
@@ -54,9 +70,10 @@ export class RemoveActorsCommand {
   }
 
   undo() {
-    for (const data of this.actorsJson) {
-      if (this.world.getActor(data.id)) continue;
-      this.world.addActor(restoreActorFromJson(data));
+    // Ascending original index: each insert lands where the actor used to be.
+    for (const entry of this.entries) {
+      if (this.world.getActor(entry.id)) continue;
+      this.world.addActor(restoreActorFromJson(entry.json), entry.index);
     }
   }
 }

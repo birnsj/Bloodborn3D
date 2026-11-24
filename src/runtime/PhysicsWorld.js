@@ -39,7 +39,9 @@ export class PhysicsWorld {
 
   async init() {
     await ensureRapier();
-    this.clear();
+    // Release any previous WASM world before replacing it; dropping the
+    // reference alone leaks its native memory on every Play.
+    this.dispose();
     this.world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
     return this;
   }
@@ -420,9 +422,20 @@ export class PhysicsWorld {
     this.world.step();
   }
 
+  /** Free the Rapier world. Safe to call repeatedly or before init(). */
   dispose() {
-    this.clear();
+    const world = this.world;
+    // Null first so a throwing free() can never leave a half-dead world behind.
     this.world = null;
+    this._bodies.clear();
+    this.playerBody = null;
+    this.playerCollider = null;
+    if (!world) return;
+    try {
+      world.free();
+    } catch (err) {
+      console.warn('PhysicsWorld: failed to free Rapier world', err);
+    }
   }
 }
 

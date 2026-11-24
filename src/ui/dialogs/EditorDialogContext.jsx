@@ -96,12 +96,14 @@ export function EditorDialogProvider({ children }) {
     tone: options.tone || 'default',
   }).then((v) => (v == null ? null : String(v))), [enqueue]);
 
+  // Must stay referentially stable while dialogs open and close: consumers list
+  // it (or callbacks built on it) as effect dependencies, and a changing value
+  // re-ran the editor's level-load effect, replacing the authored world.
   const value = useMemo(() => ({
     alert,
     confirm,
     prompt,
-    isOpen: Boolean(active),
-  }), [alert, confirm, prompt, active]);
+  }), [alert, confirm, prompt]);
 
   const dialogTree = active ? (
     <div className="bb-dialog-root" role="presentation">

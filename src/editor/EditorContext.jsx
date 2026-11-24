@@ -10,6 +10,7 @@ import {
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { loadLevelFile, saveLevelFile, listLevels } from '../io/levelFileApi.js';
+import { SavedStateTracker, levelFingerprint } from './dirtyTracking.js';
 import {
   snapToGrid,
   DEFAULT_GRID_EDITOR_UNITS,
@@ -102,6 +103,11 @@ import { reportEditorMessage } from '../ui/dialogs/reportEditorMessage.js';
 
 const EditorContext = createContext(null);
 
+/** Level opened automatically when the editor starts. */
+const STARTUP_LEVEL = 'test-room.json';
+/** How long edits must settle before the dirty indicator is recomputed. */
+const DIRTY_RECHECK_MS = 200;
+
 export function EditorProvider({ children }) {
   const {
     assetResolver,
@@ -139,6 +145,10 @@ export function EditorProvider({ children }) {
     displayName: null,
   });
   const sessionStackRef = useRef([]);
+  /** Last loaded/saved content; see dirtyTracking.js. UI shows `dirty`. */
+  const savedStateRef = useRef(null);
+  if (!savedStateRef.current) savedStateRef.current = new SavedStateTracker();
+  const [dirty, setDirty] = useState(false);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -161,6 +171,8 @@ export function EditorProvider({ children }) {
 
   const worldRef = useRef(null);
   worldRef.current = world;
+  const levelNameRef = useRef(levelName);
+  levelNameRef.current = levelName;
   const selectedRef = useRef(selectedActorIds);
   selectedRef.current = selectedActorIds;
   const gridRef = useRef(gridSize);
@@ -234,16 +246,25 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.setGridSize(size);
   }, []);
 
+  /**
+   * Replace the authored world. `savedFingerprint` overrides the clean baseline
+   * (used when restoring a world that still has unsaved edits).
+   */
   const applyLevelData = useCallback((data, {
     fileName = null,
     session = null,
     statusMessage = null,
+    savedFingerprint,
   } = {}) => {
     const resolved = (data && typeof data.addActor === 'function')
       ? data
       : deserializeLevel(data);
 
     historyRef.current.clear();
+    const currentFingerprint = levelFingerprint(resolved);
+    const baseline = savedFingerprint !== undefined ? savedFingerprint : currentFingerprint;
+    savedStateRef.current.markSaved(baseline);
+    setDirty(baseline !== currentFingerprint);
     setWorld(resolved);
     if (fileName != null) setLevelName(fileName);
     setSelectedActorIds([]);
@@ -270,7 +291,8 @@ export function EditorProvider({ children }) {
     }
   }, [notify]);
 
-  const loadLevel = useCallback(async (name) => {
+  /** Load without any unsaved-changes check. Throws on failure. */
+  const loadLevelUnchecked = useCallback(async (name) => {
     setStatus(`Loading ${name}…`);
     const data = await loadLevelFile(name);
     return applyLevelData(data, {
@@ -285,6 +307,32 @@ export function EditorProvider({ children }) {
     });
   }, [applyLevelData, setStatus]);
 
+  /** True when the current world differs from its last loaded/saved state. */
+  const isDirtyNow = useCallback(
+    () => savedStateRef.current.isDirty(worldRef.current),
+    [],
+  );
+
+  /** Resolves true when it is safe to replace the world (clean, or user agreed). */
+  const confirmDiscardChanges = useCallback(async (actionLabel = 'Continue') => {
+    if (!isDirtyNow()) return true;
+    return dialogs.confirm(
+      `“${levelNameRef.current}” has unsaved changes. ${actionLabel} and discard them?`,
+      { title: 'Unsaved Changes', confirmLabel: 'Discard Changes', tone: 'warning' },
+    );
+  }, [dialogs, isDirtyNow]);
+
+  /** User-facing load (menus): confirms before discarding edits, reports errors. */
+  const loadLevel = useCallback(async (name) => {
+    if (!(await confirmDiscardChanges(`Load ${name}`))) return null;
+    try {
+      return await loadLevelUnchecked(name);
+    } catch (err) {
+      notify(`Load failed: ${err.message}`);
+      return null;
+    }
+  }, [confirmDiscardChanges, loadLevelUnchecked, notify]);
+
   const beginTutorialSession = useCallback(async ({ lessonId, levelData, starterPath }) => {
     if (!lessonId) throw new Error('beginTutorialSession requires lessonId');
     if (runtimeRef.current?.mode === 'play') {
@@ -297,6 +345,8 @@ export function EditorProvider({ children }) {
         snapshot: serializeLevel(currentWorld),
         levelName,
         session: { ...levelSession },
+        // Keep the clean baseline so unsaved edits are still "dirty" after restore.
+        savedFingerprint: savedStateRef.current.savedFingerprint,
       });
     }
     let data = levelData;
@@ -339,6 +389,7 @@ export function EditorProvider({ children }) {
         displayName: prev.levelName,
       },
       statusMessage: `Restored ${prev.levelName}`,
+      savedFingerprint: prev.savedFingerprint,
     });
   }, [applyLevelData]);
 
@@ -378,7 +429,17 @@ export function EditorProvider({ children }) {
     name = name.split(/[/\\]/).pop();
     const data = serializeLevel(world);
     data.name = data.name || name.replace(/\.json$/i, '');
-    await saveLevelFile(name, data);
+    // Fingerprint what is being written, so edits made during the request stay dirty.
+    const writtenFingerprint = levelFingerprint(world);
+    try {
+      await saveLevelFile(name, data);
+    } catch (err) {
+      // A failed write must not clear dirty state or end the tutorial session.
+      notify(`Save failed: ${err.message}`);
+      return null;
+    }
+    savedStateRef.current.markSaved(writtenFingerprint);
+    setDirty(savedStateRef.current.isDirty(worldRef.current));
     // Exit tutorial into a normal project session targeting the new file.
     sessionStackRef.current = [];
     setLevelSession({
@@ -412,15 +473,56 @@ export function EditorProvider({ children }) {
       return;
     }
     const data = serializeLevel(world);
-    await saveLevelFile(levelName, data);
+    const writtenFingerprint = levelFingerprint(world);
+    try {
+      await saveLevelFile(levelName, data);
+    } catch (err) {
+      // Leave dirty state untouched: the disk copy is still out of date.
+      notify(`Save failed: ${err.message}`);
+      return;
+    }
+    savedStateRef.current.markSaved(writtenFingerprint);
+    setDirty(savedStateRef.current.isDirty(worldRef.current));
     notify(`Saved ${levelName}`);
   }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs]);
 
+  // Startup load. Runs exactly once: it reads the latest callbacks through a
+  // ref so a changing callback identity can never reload (and so replace) the
+  // authored world.
+  const startupRef = useRef({ started: false });
+  startupRef.current.refreshLevels = refreshLevels;
+  startupRef.current.loadLevel = loadLevelUnchecked;
+  startupRef.current.notify = notify;
   useEffect(() => {
-    refreshLevels().then(() => loadLevel('test-room.json')).catch((err) => {
-      notify(`Init failed: ${err.message}`);
-    });
-  }, [loadLevel, refreshLevels, notify]);
+    if (startupRef.current.started) return;
+    startupRef.current.started = true;
+    const run = startupRef.current;
+    run.refreshLevels()
+      .then(() => run.loadLevel(STARTUP_LEVEL))
+      .catch((err) => {
+        run.notify(`Init failed: ${err.message}`);
+      });
+  }, []);
+
+  // Recompute the dirty indicator after edits settle (serializing the world
+  // is too heavy to do on every drag frame).
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setDirty(savedStateRef.current.isDirty(worldRef.current));
+    }, DIRTY_RECHECK_MS);
+    return () => window.clearTimeout(id);
+  }, [revision, historyFlags, world]);
+
+  // Browser-level guard against closing the tab with unsaved edits.
+  useEffect(() => {
+    const onBeforeUnload = (event) => {
+      if (!savedStateRef.current.isDirty(worldRef.current)) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   const selectActors = useCallback((ids, { additive = false } = {}) => {
     let next;
@@ -1935,18 +2037,23 @@ export function EditorProvider({ children }) {
   }, [mode, afterWorldMutation]);
 
   const play = useCallback(async () => {
-    if (!runtimeRef.current) return;
+    const runtime = runtimeRef.current;
+    // A second click while Rapier is still initializing must not start another session.
+    if (!runtime || runtime.isPlayActive) return;
     setTool('select');
-    // Play snapshots authored state; drop edit history so Undo cannot fight Stop restore.
-    historyRef.current.clear();
     setStatus('Play mode — click viewport to capture mouse');
-    await runtimeRef.current.play();
-  }, []);
+    try {
+      // History is kept: commands address actors by id and Stop restores the
+      // same ids, so Undo/Redo remain valid across a Play session.
+      await runtime.play();
+    } catch (err) {
+      notify(`Play failed: ${err.message}`);
+    }
+  }, [notify, setStatus]);
 
   const stop = useCallback(() => {
     if (!runtimeRef.current) return;
     runtimeRef.current.stop();
-    historyRef.current.clear();
     setWorld(runtimeRef.current.world);
     setSelectedActorIds([]);
     setStatus('Edit mode restored');
@@ -1987,6 +2094,8 @@ export function EditorProvider({ children }) {
     attachCanvas,
     loadLevel,
     saveLevel,
+    isDirty: dirty,
+    confirmDiscardChanges,
     applyLevelData,
     levelSession,
     beginTutorialSession,
