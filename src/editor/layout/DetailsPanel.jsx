@@ -238,7 +238,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       ? ` · ref ${alignReferenceSurface.surfaceId}`
                       : ''}
                   </p>
-                  <label className="bb-field">
+                  <label className="bb-field" {...helpProps('details.surface.material')}>
                     <span className="bb-field__label">Surface material</span>
                     <select
                       className="bb-select"
@@ -256,7 +256,7 @@ export function DetailsPanel({ docked = false } = {}) {
                     Surface UV overrides actor UV for this face only.
                     {hasSurfaceUv ? '' : ' (inherited defaults)'}
                   </p>
-                  <div className="bb-axis-row">
+                  <div className="bb-axis-row" {...helpProps('details.surface.uv')}>
                     <label className="bb-field">
                       <span className="bb-field__label">Scale U</span>
                       <input
@@ -284,7 +284,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       />
                     </label>
                   </div>
-                  <div className="bb-axis-row">
+                  <div className="bb-axis-row" {...helpProps('details.surface.uv')}>
                     <label className="bb-field">
                       <span className="bb-field__label">Offset U</span>
                       <input
@@ -312,7 +312,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       />
                     </label>
                   </div>
-                  <label className="bb-field">
+                  <label className="bb-field" {...helpProps('details.surface.uv')}>
                     <span className="bb-field__label">Rotation (°)</span>
                     <input
                       type="number"
@@ -331,6 +331,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       className="bb-btn"
                       disabled={disabled || !hasSurfaceUv}
                       onClick={() => resetSelectedSurfaceUv()}
+                      {...helpProps('details.surface.resetUv')}
                     >
                       Reset Surface UV
                     </button>
@@ -581,13 +582,23 @@ export function DetailsPanel({ docked = false } = {}) {
                 {brush.operation !== 'subtract' && (() => {
                   const eligibility = canConvertActorToConvex(selectedActor, world);
                   return (
-                    <div className="bb-details-actions" style={{ marginTop: '0.75rem' }}>
+                    <div
+                      className="bb-details-actions"
+                      style={{ marginTop: '0.75rem' }}
+                      data-bb-tutorial="details.convertConvex"
+                    >
                       <button
                         type="button"
                         className="bb-btn"
                         disabled={disabled || !eligibility.ok}
                         title={eligibility.ok ? 'Convert to editable ConvexBrush' : eligibility.message}
                         onClick={() => convertSelectedToConvexBrush()}
+                        {...helpProps(
+                          'details.convex.convert',
+                          disabled
+                            ? 'Unavailable during Play mode.'
+                            : (!eligibility.ok ? eligibility.message : null),
+                        )}
                       >
                         Convert to Convex Brush
                       </button>
@@ -612,6 +623,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 .filter((c) => c.convexId === selectedActor.id);
               return (
                 <Collapsible title="Convex Brush" storageKey="details.convexBrush" defaultOpen>
+                  <div {...helpProps('details.convexBrush')}>
                   {!info?.valid && (
                     <p className="bb-muted">
                       Invalid geometry
@@ -655,12 +667,14 @@ export function DetailsPanel({ docked = false } = {}) {
                     Use Face / Edge / Vertex tools to edit. Extrude and Clip are below when a face
                     is selected (or start Clip from selected brushes).
                   </p>
+                  </div>
                 </Collapsible>
               );
             })()}
 
             {(brush || convexBrush) && (
               <Collapsible title="Extrude / Clip" storageKey="details.extrudeClip" defaultOpen>
+                <div data-bb-tutorial="details.extrudeClip" {...helpProps('details.extrudeClip')}>
                 <ExtrudeClipControls
                   disabled={mode === 'play'}
                   gridSize={gridSize}
@@ -676,6 +690,7 @@ export function DetailsPanel({ docked = false } = {}) {
                   setClipPlaneFromFace={setClipPlaneFromFace}
                   commitClipSession={commitClipSession}
                 />
+                </div>
               </Collapsible>
             )}
 
@@ -2055,11 +2070,18 @@ function MaterialDefinitionEditor({
 
 function WorldSettings() {
   const { world, gridSize, levelName, mode } = useEditor();
+  const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
   return (
     <div>
       <Collapsible title="Level" storageKey="world.level">
         <p className="bb-muted">Name: {world?.name || '—'}</p>
         <p className="bb-muted">File: {levelName}</p>
+        <p className="bb-muted" {...helpProps('file.newMap')}>
+          Map mode: {mapModeLabel}
+          {world?.mapMode === 'subtractive'
+            ? ' — World Solid is invisible substrate; subtract boxes carve rooms'
+            : ' — place additive brushes to build'}
+        </p>
         <p className="bb-muted">Actors: {world?.actors?.length ?? 0}</p>
         <p className="bb-muted">Schema: {world?.schemaVersion ?? '—'}</p>
       </Collapsible>
@@ -2165,6 +2187,8 @@ function ExtrudeClipControls({
           className="bb-btn"
           disabled={disabled || !clipReady}
           onClick={() => commitClipSession?.()}
+          title="Apply clip (Enter)"
+          {...helpProps('details.extrudeClip', !clipReady ? 'Pick a clip plane first.' : null)}
         >
           Apply Clip
         </button>
@@ -2173,6 +2197,7 @@ function ExtrudeClipControls({
           className="bb-btn"
           disabled={disabled || !clipSession}
           onClick={() => cancelClipSession?.()}
+          title="Cancel clip (Esc)"
         >
           Cancel
         </button>

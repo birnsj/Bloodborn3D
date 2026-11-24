@@ -15,11 +15,18 @@ export { KEYBOARD_SHORTCUTS_TEXT, KEYBOARD_SHORTCUT_SECTIONS } from './keyboardS
 
 /** @type {Record<string, HelpEntry>} */
 export const HELP_CONTENT = {
+  // —— File ——
+  'file.newMap': {
+    title: 'New Map',
+    body: 'Creates a new level file. Additive starts empty (add brushes to build). Subtractive starts with an invisible solid World Solid — place subtract boxes to carve rooms out of that substrate; you see the cut faces, not a giant outer cube.',
+    tips: 'Map mode is set at create time and shown in Details → Level and the status bar. Existing levels without a mode load as Additive. World Solid stays locked in the Outliner as a faint wire outline.',
+  },
+
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
-    body: 'Open Help → Keyboard Shortcuts… for the full formatted list of editor, transform, grid, camera, and play bindings.',
-    tips: 'Hover Help also shows shortcuts on matching toolbar buttons.',
+    body: 'Open Help → Keyboard Shortcuts… for edit, transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, and play bindings.',
+    tips: 'Hover Help shows matching shortcuts on toolbar and viewport controls.',
   },
   'help.hoverHelp': {
     title: 'Show Hover Help',
@@ -46,12 +53,41 @@ export const HELP_CONTENT = {
   },
   'toolbar.select': {
     title: 'Select',
-    body: 'Select actors in the viewport and use the transform gizmo. Switch modes with W (move), E (rotate), or R (scale).',
-    tips: 'W/E/R move·rotate·scale · F focus · Ctrl+LMB multi-select · Del delete. See Help → Keyboard Shortcuts… for the full list.',
+    body: 'Select actors in the viewport and use the transform gizmo. Drag on empty space for a marquee. Switch modes with W (move), E (rotate), or R (scale).',
+    tips: 'W/E/R · F focus · Ctrl/Shift+LMB multi-select · Esc deselect · Del delete. Drag a material onto a face to paint it. Alt while dragging = fine snap / free rotate.',
+  },
+  'toolbar.surface': {
+    title: 'Surface Selection',
+    body: 'Click a structural face to pick it. Assign a per-face material and UV in Details → Selected Surface, or drag a material from the Asset Viewer onto the face.',
+    tips: 'Works on brushes, convex brushes, ramps, stairs, columns, arches, and curved walls. Esc returns to Select and clears the face pick.',
+    shortcut: 'Esc',
+  },
+  'toolbar.align': {
+    title: 'Align to Neighbor',
+    body: 'Click a reference face, then a target face to align the target actor’s surface to the reference (move/rotate to match).',
+    tips: 'Useful for flush walls, floors, and miters. Status bar prompts each step. Esc cancels and returns to Select.',
+    shortcut: 'Esc',
+  },
+  'toolbar.geometryFace': {
+    title: 'Geometry Face',
+    body: 'Edit ConvexBrush faces: click or marquee-select faces, then drag with the Move gizmo. Converts parametric brushes first if needed.',
+    tips: 'Shift/Ctrl+LMB add to selection · Esc leaves Geometry. Extrude / Clip live in Details — Enter commits a ready clip, Esc cancels it.',
+  },
+  'toolbar.geometryEdge': {
+    title: 'Geometry Edge',
+    body: 'Edit ConvexBrush edges: click near an edge or drag a marquee, then Move. Edges stay shared across connected faces.',
+    tips: 'Alt = x-ray pick · Shift/Ctrl+LMB additive · Esc leaves Geometry.',
+    shortcut: 'Alt',
+  },
+  'toolbar.geometryVertex': {
+    title: 'Geometry Vertex',
+    body: 'Edit ConvexBrush vertices: click near a vertex or marquee-select, then Move only (no rotate/scale).',
+    tips: 'Alt = x-ray pick · Shift/Ctrl+LMB additive · Esc leaves Geometry.',
+    shortcut: 'Alt',
   },
   'toolbar.move': {
     title: 'Move',
-    body: 'Shows axis arrows on the selection. Drag an arrow to translate along that axis.',
+    body: 'Shows axis arrows on the selection. Drag an arrow to translate along that axis. Hold Alt for 1-unit snap (or free move when Snap is off).',
     shortcut: 'W',
   },
   'toolbar.rotate': {
@@ -61,7 +97,7 @@ export const HELP_CONTENT = {
   },
   'toolbar.scale': {
     title: 'Scale',
-    body: 'Brushes show face handles that resize geometry. Other actors show axis boxes that scale the transform.',
+    body: 'Brushes show face handles that resize geometry. Other actors show axis boxes that scale the transform. Hold Alt for fine snap while dragging.',
     shortcut: 'R',
   },
   'toolbar.box': {
@@ -163,12 +199,12 @@ export const HELP_CONTENT = {
   },
   'toolbar.subtract': {
     title: 'Subtract Box',
-    body: 'Drag on the construction grid to create a subtractive box. Where it overlaps additive brushes, solid geometry is carved away without destroying the original brush actors.',
+    body: 'Drag a crimson cutter box. On a subtractive map it carves air out of the invisible World Solid — the walls you see are the cut faces of that solid, not the cutter itself.',
     tips: 'Shown as translucent crimson in Edit mode; hidden in Play. Only axis-aligned cuts relative to the target are supported.',
   },
   'details.brush.operation': {
     title: 'Brush Operation',
-    body: 'Add builds solid structural geometry. Subtract removes overlapping solid volume from additive brushes in the same level.',
+    body: 'Add contributes solid geometry. Subtract carves overlapping volume out of additive brushes (including World Solid). Cutters are not walls — they remove substrate.',
     tips: 'Subtractive brushes never generate Rapier colliders and are editor-only visuals.',
   },
   'toolbar.pointLight': {
@@ -210,7 +246,7 @@ export const HELP_CONTENT = {
   },
   'creation.geometry': {
     title: 'Geometry',
-    body: 'Structural brushes: box, wall, floor, ceiling, ramp, stairs, and subtract. Click to enter drag-to-size mode, or drag onto a surface for a default footprint.',
+    body: 'Structural tools: box, wall, curved wall, floor, ceiling, ramp, stairs, column, arches, and subtract. Click to enter drag-to-size mode, or drag onto a surface for a default footprint.',
   },
   'creation.lights': {
     title: 'Lights',
@@ -235,10 +271,6 @@ export const HELP_CONTENT = {
   'creation.pin': {
     title: 'Pin Rollout',
     body: 'Keeps the tool icon strip open while the cursor leaves. Unpin to auto-collapse on mouse-out like Photoshop.',
-  },
-  'toolbar.levelName': {
-    title: 'Level Filename',
-    body: 'Name of the JSON file used when saving or loading this level from public/levels.',
   },
   'toolbar.duplicate': {
     title: 'Duplicate',
@@ -371,11 +403,40 @@ export const HELP_CONTENT = {
   },
   'details.material.id': {
     title: 'Material',
-    body: 'Assigns a project material asset to the whole brush. Face overrides in Face Materials take precedence per side.',
+    body: 'Assigns a project material asset to the whole brush or convex solid. Per-face overrides (Selected Surface / Face Materials) take precedence.',
+    tips: 'You can also drag a material from the Asset Viewer onto a face in the viewport to paint that poly only.',
   },
   'details.material.uv': {
     title: 'UV Transform',
-    body: 'Scales, offsets, and rotates brush UVs for the assigned materials.',
+    body: 'Scales, offsets, and rotates actor-level UVs for the assigned materials. Surface UV overrides this per face when set.',
+  },
+  'details.surface.material': {
+    title: 'Surface Material',
+    body: 'Per-face material override for the picked surface. Empty uses the actor material.',
+    tips: 'Pick a face with the Surface tool, or drag a material onto a poly in the viewport.',
+  },
+  'details.surface.uv': {
+    title: 'Surface UV',
+    body: 'Per-face UV scale, offset, and rotation. Overrides actor UV for this face only.',
+  },
+  'details.surface.resetUv': {
+    title: 'Reset Surface UV',
+    body: 'Removes the face UV override so the face inherits the actor UV again.',
+  },
+  'details.convex.convert': {
+    title: 'Convert to Convex Brush',
+    body: 'Turns a compatible parametric brush into an editable ConvexBrush (hull faces/edges/vertices) for Geometry tools.',
+    tips: 'Parametric size, openings, and miters are baked into solids; further shape edits use Face/Edge/Vertex.',
+  },
+  'details.convexBrush': {
+    title: 'Convex Brush',
+    body: 'Editable convex solid. Use Face / Edge / Vertex tools to move elements; materials and UVs can be set per face.',
+  },
+  'details.extrudeClip': {
+    title: 'Extrude / Clip',
+    body: 'Extrude grows a new prism from the selected ConvexBrush face. Clip cuts with a three-point plane or the selected face plane (keep front, back, or split).',
+    tips: 'Enter applies a ready clip · Esc cancels the clip session.',
+    shortcut: 'Enter',
   },
   'details.collision.collidable': {
     title: 'Collidable',
@@ -417,9 +478,13 @@ export const HELP_CONTENT = {
   },
 
   // —— Content Browser ——
+  'content.folder': {
+    title: 'Content Folder',
+    body: 'Chooses which folder the Asset Viewer lists. The Content Browser is for navigation only.',
+  },
   'content.search': {
     title: 'Search Assets',
-    body: 'Filters project registry assets in the current folder by name, id, type, or tags.',
+    body: 'Filters assets in the current Content Browser folder by name, id, type, or tags.',
   },
   'content.importTexture': {
     title: 'Import Texture',
@@ -428,7 +493,7 @@ export const HELP_CONTENT = {
   'content.importMesh': {
     title: 'Import Mesh',
     body: 'Imports a glTF/GLB mesh. BloodBound assumes meters in the file and 100 editor units per meter—no automatic rescale.',
-    tips: 'Drag a mesh from the browser into the viewport to place a Static Mesh actor.',
+    tips: 'Drag a mesh from the Asset Viewer into the viewport to place a Static Mesh actor.',
   },
   'content.newMaterial': {
     title: 'New Material',
@@ -440,25 +505,81 @@ export const HELP_CONTENT = {
   },
   'content.gridView': {
     title: 'Grid View',
-    body: 'Shows Content Browser assets as a thumbnail grid.',
+    body: 'Shows Asset Viewer assets as a thumbnail grid.',
   },
   'content.listView': {
     title: 'List View',
-    body: 'Shows Content Browser assets in a compact list.',
+    body: 'Shows Asset Viewer assets in a compact list.',
   },
   'content.asset': {
     title: 'Project Asset',
-    body: 'Click to select and preview in the Asset Viewer. Drag meshes into the viewport to place them, materials onto a selected brush to assign, or prefabs into the viewport to instantiate.',
+    body: 'Click to select. Double-click to open a preview. Drag meshes or prefabs into the viewport to place them. Drag a material onto a face (poly) to paint that surface, or onto empty selection space to apply to the selected actor.',
+    tips: 'Material drops do not rearrange dock panels — only paint geometry.',
   },
 
   // —— Asset Viewer ——
   'assetViewer.clear': {
-    title: 'Clear Preview',
-    body: 'Clears the Asset Viewer selection so no asset is previewed.',
+    title: 'Close Preview',
+    body: 'Closes the asset preview window.',
   },
   'assetViewer.preview': {
     title: 'Asset Preview',
-    body: 'Shows a texture, material swatch, or interactive mesh preview for the Content Browser selection. This preview is separate from the level viewport.',
+    body: 'Temporary window with a texture, material, or mesh preview. Open with double-click; close with Esc or Close. Separate from the level viewport.',
+  },
+  'assetViewer.thumbSize': {
+    title: 'Thumbnail Size',
+    body: 'Scales Asset Viewer grid thumbnails. Preference is saved with the workspace layout.',
+  },
+
+  // —— Viewport chrome ——
+  'viewport.camera': {
+    title: 'Camera Mode',
+    body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane.',
+    tips: 'Isometric keeps a fixed elevation and orbits in yaw only. Ortho views use RMB to orbit around the view axis; wheel zooms the frustum.',
+  },
+  'viewport.display': {
+    title: 'Display Mode',
+    body: 'Shading for this pane: Lit, Unlit, Textured, Wireframe, or Solid+Edges. Edit → Settings can set the default for all panes.',
+  },
+  'viewport.layout': {
+    title: 'Viewport Layout',
+    body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own camera and display mode.',
+    tips: 'Also under View → Viewport Layout. Maximize expands the active pane; Restore returns to the split.',
+  },
+  'viewport.reset': {
+    title: 'Reset Camera',
+    body: 'Restores this pane’s resting orientation and default zoom for its camera mode (home pose + frustum / distance).',
+    tips: 'Different from Focus (F), which frames the current selection.',
+  },
+  'viewport.maximize': {
+    title: 'Maximize Pane',
+    body: 'Expands the active viewport pane to fill the viewport area, or restores the previous multi-pane layout.',
+  },
+  'viewport.focus': {
+    title: 'Focus Selection',
+    body: 'Frames the selected actors in the active viewport pane.',
+    shortcut: 'F',
+    tips: 'View → Focus Selection. Use pane Reset for a fixed home view instead.',
+  },
+
+  // —— Panels / settings ——
+  'panel.tutorials': {
+    title: 'Tutorials',
+    body: 'Guided lessons with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
+    tips: 'Toggle the panel from Window → Tutorials. Lessons cover rooms, materials, lights, prefabs, subtractive geo, and more.',
+  },
+  'settings.dialog': {
+    title: 'Editor Settings',
+    body: 'Appearance, viewport colors, grid, camera feel (orbit / pan / free-fly), Play look sensitivity, and Hover Help. Edit → Settings…',
+    tips: 'Save as Default stores your prefs; Reset Defaults restores them (or factory values).',
+  },
+  'settings.camera': {
+    title: 'Camera Feel',
+    body: 'Orbit speed, wheel zoom, middle-mouse pan (default fast), free-fly look/speed/boost, and Invert Y. Orbit stops when you release — no after-drift.',
+  },
+  'settings.appearance': {
+    title: 'Appearance',
+    body: 'Color theme, UI scale (chrome only, not browser zoom), and Asset Viewer grid/list preference.',
   },
 };
 

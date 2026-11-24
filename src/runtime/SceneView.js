@@ -29,9 +29,12 @@ import {
   createBrushBoxGeometry,
   createBrushSolidGeometry,
   getBrushRenderSolids,
-  TEXTURE_TILE_EDITOR_UNITS,
 } from './brushGeometry.js';
-import { isSubtractBrush } from './brushBoolean.js';
+import {
+  isSubtractBrush,
+  isWorldSolidActor,
+  solidFacesOnBrushHull,
+} from './brushBoolean.js';
 import { createRampWedgeGeometry } from './rampGeometry.js';
 import { createStairGeometry } from './stairGeometry.js';
 import { createColumnGeometry } from './columnGeometry.js';
@@ -72,6 +75,7 @@ import {
   gridPlaneForCameraMode,
 } from '../editor/viewport/viewportCameras.js';
 import { normalizeCameraMode } from '../editor/viewport/viewportPrefs.js';
+import { paneScissorFromDomRect } from '../editor/viewport/paneScissor.js';
 
 const DEFAULT_VIEWPORT_COLORS = {
   background: 0x0e1218,
@@ -360,8 +364,9 @@ export class SceneView {
       return;
     }
 
-    const canvasH = this._size.height || this.renderer.domElement.height || 1;
-    const dpr = this.renderer.getPixelRatio();
+    // Three.js setViewport/setScissor take CSS/logical pixels and multiply by
+    // pixelRatio internally — do NOT pre-scale by DPR (double-scale breaks HiDPI).
+    const canvasH = this._size.height || 1;
     this._ensureActorEdgesOverlays();
 
     this.renderer.setScissorTest(true);
@@ -374,18 +379,16 @@ export class SceneView {
       const cam = this.ensurePaneCamera(pane.paneId, pane.cameraMode, pane.paneState);
       this.updatePaneCameraProjection(cam, rect);
 
-      // DOM y is top-origin; WebGL scissor is bottom-origin.
-      const vx = Math.round(rect.x * dpr);
-      const vy = Math.round((canvasH - rect.y - rect.height) * dpr);
-      const vw = Math.max(1, Math.round(rect.width * dpr));
-      const vh = Math.max(1, Math.round(rect.height * dpr));
-
-      this.renderer.setViewport(vx, vy, vw, vh);
-      this.renderer.setScissor(vx, vy, vw, vh);
+      const scissor = paneScissorFromDomRect(rect, canvasH);
+      this.renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
+      this.renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
 
       if (this.editMode && this.gridHelper) {
         this._applyGridPlane(gridPlaneForCameraMode(pane.cameraMode));
       }
+
+      // Axis gizmo screen size follows this pane’s camera; face-resize stays object-sized.
+      this.gizmo?.updateScreenScale?.(cam);
 
       const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
       this.renderer.render(this.scene, cam);
@@ -393,18 +396,18 @@ export class SceneView {
     }
 
     this.renderer.setScissorTest(false);
-    // Reset full-canvas viewport for any follow-up readbacks.
-    const fullW = Math.max(1, Math.round(this._size.width * dpr));
-    const fullH = Math.max(1, Math.round(this._size.height * dpr));
+    // Reset full-canvas viewport for any follow-up readbacks (logical px).
+    const fullW = Math.max(1, Math.round(this._size.width || 1));
+    const fullH = Math.max(1, Math.round(this._size.height || 1));
     this.renderer.setViewport(0, 0, fullW, fullH);
   }
 
   render(camera = this.camera) {
     this.renderer.setScissorTest(false);
-    const dpr = this.renderer.getPixelRatio();
-    const fullW = Math.max(1, Math.round((this._size.width || 1) * dpr));
-    const fullH = Math.max(1, Math.round((this._size.height || 1) * dpr));
+    const fullW = Math.max(1, Math.round(this._size.width || 1));
+    const fullH = Math.max(1, Math.round(this._size.height || 1));
     this.renderer.setViewport(0, 0, fullW, fullH);
+    this.gizmo?.updateScreenScale?.(camera);
     this.renderer.render(this.scene, camera);
   }
 
@@ -685,7 +688,7 @@ export class SceneView {
       const mat = new THREE.MeshBasicMaterial({
         color: subtractColor,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.14,
         depthWrite: false,
         side: THREE.DoubleSide,
       });
@@ -750,7 +753,6 @@ export class SceneView {
     }
 
     const { solids } = getBrushRenderSolids(comp, world ? { world, actor } : null);
-    const tile = TEXTURE_TILE_EDITOR_UNITS;
 
     // Fully carved brush: keep an editor-only ghost so it remains selectable.
     if (!solids.length) {
@@ -773,10 +775,17 @@ export class SceneView {
       return;
     }
 
+    const hideOuterHull = isWorldSolidActor(actor);
+    let anyVisibleFace = false;
+
     for (const solid of solids) {
+      // Brush-local min corner so cut pieces share continuous world-aligned UVs.
       const bias = {
-        u: (solid.center.x / tile) * (Number(comp.uv?.scale?.x) || 1),
-        v: (solid.center.y / tile) * (Number(comp.uv?.scale?.y) || 1),
+        origin: {
+          x: solid.center.x - solid.size.x * 0.5,
+          y: solid.center.y - solid.size.y * 0.5,
+          z: solid.center.z - solid.size.z * 0.5,
+        },
       };
       const geom = solids.length === 1 && solid.role === 'solid'
         ? createBrushBoxGeometry(solid.size, comp.uv, comp.faceUVs)
@@ -803,9 +812,20 @@ export class SceneView {
       mesh.userData.brushSolid = solid.role;
       mesh.userData.surfaceScheme = 'box';
       mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
+
+      // World Solid = invisible substrate. Only faces opened by subtract cuts render.
+      if (hideOuterHull) {
+        const hull = solidFacesOnBrushHull(solid, comp.size);
+        mesh.userData.hideHullFaces = hull;
+        this._applyHiddenHullFaces(mesh);
+        if (FACE_KEYS.some((key) => !hull[key])) anyVisibleFace = true;
+      } else {
+        anyVisibleFace = true;
+      }
+
       group.add(mesh);
 
-      if (this.editMode) {
+      if (this.editMode && !hideOuterHull) {
         const edges = new THREE.LineSegments(
           new THREE.EdgesGeometry(geom),
           new THREE.LineBasicMaterial({ color: 0xc0c8d0 }),
@@ -817,6 +837,46 @@ export class SceneView {
       }
 
       void this._applyBrushMaterials(mesh, comp, syncToken);
+    }
+
+    // Substrate outline so World Solid stays findable when its hull is hidden.
+    if (hideOuterHull && this.editMode) {
+      const ghostGeom = new THREE.BoxGeometry(
+        toMeters(comp.size.x),
+        toMeters(comp.size.y),
+        toMeters(comp.size.z),
+      );
+      const ghost = new THREE.LineSegments(
+        new THREE.EdgesGeometry(ghostGeom),
+        new THREE.LineBasicMaterial({
+          color: anyVisibleFace ? 0x4a5560 : 0x667788,
+          transparent: true,
+          opacity: anyVisibleFace ? 0.35 : 0.55,
+        }),
+      );
+      ghost.userData.actorId = actor.id;
+      ghost.userData.pickable = true;
+      ghost.userData.editorOnly = true;
+      ghost.userData.worldSolidGhost = true;
+      group.add(ghost);
+      ghostGeom.dispose();
+    }
+  }
+
+  /** Hide materials for World Solid faces that still sit on the outer brush hull. */
+  _applyHiddenHullFaces(mesh) {
+    const hull = mesh?.userData?.hideHullFaces;
+    if (!hull || !mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (let i = 0; i < FACE_KEYS.length; i += 1) {
+      const mat = mats[i];
+      if (!mat) continue;
+      const hide = Boolean(hull[FACE_KEYS[i]]);
+      mat.visible = !hide;
+      if (hide) {
+        mat.colorWrite = false;
+        mat.depthWrite = false;
+      }
     }
   }
 
@@ -1088,6 +1148,8 @@ export class SceneView {
         disposeMaterial(old);
       }
     }
+    // Re-apply after async material swap (World Solid outer hull stays invisible).
+    this._applyHiddenHullFaces(mesh);
     mesh.material.needsUpdate = true;
   }
 
@@ -1242,6 +1304,8 @@ export class SceneView {
             opacity: 0.2,
           }),
         );
+        // Dense latitude/longitude sphere — hide in View→Wireframe (see viewportDisplay).
+        guide.userData.denseWireHelper = true;
         guide.userData.pickable = true;
         gizmo.add(guide);
       }
@@ -1280,6 +1344,7 @@ export class SceneView {
           opacity: 0.5,
         }),
       );
+      halo.userData.denseWireHelper = true;
       halo.userData.pickable = true;
       gizmo.add(halo);
     }
@@ -1577,6 +1642,7 @@ export class SceneView {
 
   pickGizmo(normalizedX, normalizedY, camera = this.camera) {
     if (!this.gizmo || !this.editMode) return null;
+    this.gizmo.updateScreenScale?.(camera);
     const raycaster = this.getRaycaster(normalizedX, normalizedY, camera);
     return this.gizmo.pick(raycaster);
   }

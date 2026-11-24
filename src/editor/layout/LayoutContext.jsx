@@ -23,14 +23,38 @@ import {
 import {
   applyDockSnapshot,
   closePanelByKey,
+  DOCK_PANELS,
   getPanelVisibility,
   reopenPanel,
   setViewportMaximized,
 } from './dockLayout.js';
-import { FACTORY_LAYOUT_ID, snapshotFingerprint } from './workspaceLayouts/schema.js';
+import {
+  FACTORY_LAYOUT_ID,
+  snapshotFingerprint,
+} from './workspaceLayouts/schema.js';
 import { getWorkspaceLayoutManager } from './workspaceLayouts/manager.js';
+import {
+  DEFAULT_VIEWPORT_VIEW,
+  normalizeViewportView,
+  viewportViewFromPrefs,
+} from '../viewport/viewportPrefs.js';
 
 const LayoutContext = createContext(null);
+
+/** Debounce for writing the active named layout (or Autosaved) after rearranges. */
+const NAMED_AUTOSAVE_MS = 500;
+
+function readLiveViewportView(fallback) {
+  try {
+    const live = typeof window !== 'undefined'
+      ? window.__bloodboundViewport?.getPrefs?.()
+      : null;
+    if (live) return viewportViewFromPrefs(live);
+  } catch {
+    /* ignore */
+  }
+  return normalizeViewportView(fallback || DEFAULT_VIEWPORT_VIEW);
+}
 
 function readWorkingSnapshot(layout) {
   return {
@@ -40,7 +64,8 @@ function readWorkingSnapshot(layout) {
     contentVisible: layout.contentVisible,
     assetViewerVisible: layout.assetViewerVisible,
     tutorialsVisible: Boolean(layout.tutorialsVisible),
-    viewportMaximized: layout.viewportMaximized,
+    viewportMaximized: false,
+    viewportView: readLiveViewportView(layout.viewportView),
   };
 }
 
@@ -60,16 +85,52 @@ export function LayoutProvider({ children }) {
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [baselineFp, setBaselineFp] = useState(null);
   const saveTimer = useRef(0);
+  const namedSaveTimer = useRef(0);
   const dockApiRef = useRef(null);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
   const applyingRef = useRef(false);
+  const baselineFpRef = useRef(baselineFp);
+  baselineFpRef.current = baselineFp;
 
+  const flushSessionPrefs = useCallback((override) => {
+    const base = override || layoutRef.current;
+    try {
+      saveLayoutPrefs(clampLayout(base));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Session working layout (dock + panels + viewport chrome) — always autosaved.
   useEffect(() => {
     window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => saveLayoutPrefs(layout), 120);
+    saveTimer.current = window.setTimeout(() => {
+      if (applyingRef.current) {
+        flushSessionPrefs(layoutRef.current);
+        return;
+      }
+      const api = dockApiRef.current;
+      if (!api) {
+        flushSessionPrefs(layoutRef.current);
+        return;
+      }
+      let dockLayout = layoutRef.current.dockLayout;
+      try {
+        dockLayout = api.toJSON();
+      } catch {
+        /* keep */
+      }
+      flushSessionPrefs({
+        ...layoutRef.current,
+        dockLayout,
+        ...getPanelVisibility(api),
+        viewportMaximized: false,
+        viewportView: readLiveViewportView(layoutRef.current.viewportView),
+      });
+    }, 120);
     return () => window.clearTimeout(saveTimer.current);
-  }, [layout]);
+  }, [layout, flushSessionPrefs]);
 
   // Color theme on <html> so portaled dialogs inherit CSS tokens.
   useEffect(() => {
@@ -95,6 +156,7 @@ export function LayoutProvider({ children }) {
 
   const captureCurrentSnapshot = useCallback(() => {
     const api = dockApiRef.current;
+    const viewportView = readLiveViewportView(layoutRef.current.viewportView);
     if (api) {
       let dockLayout = null;
       try {
@@ -106,6 +168,8 @@ export function LayoutProvider({ children }) {
       return {
         dockLayout,
         ...visibility,
+        viewportMaximized: false,
+        viewportView,
       };
     }
     return readWorkingSnapshot(layoutRef.current);
@@ -150,7 +214,7 @@ export function LayoutProvider({ children }) {
         contentVisible: snapshot.contentVisible !== false,
         assetViewerVisible: snapshot.assetViewerVisible !== false,
         tutorialsVisible: Boolean(snapshot.tutorialsVisible),
-        viewportMaximized: Boolean(snapshot.viewportMaximized),
+        viewportMaximized: false,
       };
       if (api) {
         try {
@@ -158,15 +222,17 @@ export function LayoutProvider({ children }) {
         } catch {
           /* keep */
         }
-        visibility = getPanelVisibility(api);
+        visibility = { ...getPanelVisibility(api), viewportMaximized: false };
       }
-      const working = { dockLayout, ...visibility };
+      const viewportView = normalizeViewportView(snapshot.viewportView);
+      const working = { dockLayout, ...visibility, viewportView };
       setLayout((prev) => clampLayout({
         ...prev,
         activeLayoutId: layoutEntry.id,
         ...working,
       }));
       setBaselineFp(snapshotFingerprint(working));
+      window.dispatchEvent(new CustomEvent('bb:apply-viewport-view', { detail: viewportView }));
     } finally {
       window.setTimeout(() => {
         applyingRef.current = false;
@@ -220,12 +286,20 @@ export function LayoutProvider({ children }) {
     persistDockLayout();
   }, [persistDockLayout]);
 
+  /**
+   * Toggle in-viewport pane maximize (multi-view only).
+   * Never uses dockview panel.maximize() — that hides Outliner/Details/Content.
+   */
   const toggleMaximizeViewport = useCallback(() => {
     const api = dockApiRef.current;
-    if (!api) return;
-    const next = !getPanelVisibility(api).viewportMaximized;
-    setViewportMaximized(api, next);
-    persistDockLayout();
+    if (api) {
+      const panel = api.getPanel(DOCK_PANELS.viewport.id);
+      if (panel?.api?.isMaximized?.()) {
+        panel.api.exitMaximized();
+        persistDockLayout();
+      }
+    }
+    window.dispatchEvent(new CustomEvent('bb:toggle-pane-maximize'));
   }, [persistDockLayout]);
 
   const namedLayouts = useMemo(
@@ -241,6 +315,83 @@ export function LayoutProvider({ children }) {
     if (baselineFp == null) return false;
     return snapshotFingerprint(readWorkingSnapshot(layout)) !== baselineFp;
   }, [layout, baselineFp]);
+
+  /**
+   * Autosave named layouts when the working arrangement drifts:
+   * - custom active → overwrite that layout
+   * - factory Default → upsert / switch to Autosaved
+   */
+  useEffect(() => {
+    if (!layoutDirty || baselineFp == null) return undefined;
+    window.clearTimeout(namedSaveTimer.current);
+    namedSaveTimer.current = window.setTimeout(() => {
+      if (applyingRef.current) return;
+      if (baselineFpRef.current == null) return;
+      const snapshot = captureCurrentSnapshot();
+      if (snapshotFingerprint(snapshot) === baselineFpRef.current) return;
+
+      const active = manager.getLayout(layoutRef.current.activeLayoutId)
+        || manager.getActiveLayout();
+      const result = (active.protected || active.id === FACTORY_LAYOUT_ID)
+        ? manager.upsertAutosave(snapshot)
+        : manager.saveActive(snapshot);
+      if (!result.ok) return;
+
+      setLayout((prev) => clampLayout({
+        ...prev,
+        activeLayoutId: result.layout.id,
+        ...snapshot,
+      }));
+      setBaselineFp(snapshotFingerprint(snapshot));
+      bumpLayouts();
+      flushSessionPrefs({
+        ...layoutRef.current,
+        activeLayoutId: result.layout.id,
+        ...snapshot,
+      });
+    }, NAMED_AUTOSAVE_MS);
+    return () => window.clearTimeout(namedSaveTimer.current);
+  }, [
+    layoutDirty,
+    layout,
+    baselineFp,
+    manager,
+    captureCurrentSnapshot,
+    bumpLayouts,
+    flushSessionPrefs,
+  ]);
+
+  // Flush session prefs on hide/unload so a quick close still keeps the last dock.
+  useEffect(() => {
+    const flush = () => {
+      window.clearTimeout(saveTimer.current);
+      window.clearTimeout(namedSaveTimer.current);
+      if (applyingRef.current) {
+        flushSessionPrefs(layoutRef.current);
+        return;
+      }
+      const snapshot = captureCurrentSnapshot();
+      flushSessionPrefs({ ...layoutRef.current, ...snapshot });
+      if (baselineFpRef.current == null) return;
+      if (snapshotFingerprint(snapshot) === baselineFpRef.current) return;
+      const active = manager.getLayout(layoutRef.current.activeLayoutId)
+        || manager.getActiveLayout();
+      if (active.protected || active.id === FACTORY_LAYOUT_ID) {
+        manager.upsertAutosave(snapshot);
+      } else {
+        manager.saveActive(snapshot);
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [captureCurrentSnapshot, flushSessionPrefs, manager]);
 
   const saveLayout = useCallback(() => {
     const snapshot = captureCurrentSnapshot();
@@ -307,6 +458,25 @@ export function LayoutProvider({ children }) {
     patch({ colorTheme: normalizeColorTheme(colorTheme) });
   }, [patch]);
 
+  /** Keep named-layout dirty state in sync when viewport chrome mode changes. */
+  const setViewportView = useCallback((view) => {
+    patch({ viewportView: normalizeViewportView(view) });
+  }, [patch]);
+
+  /** Change viewport pane configuration (View menu / named layouts). */
+  const setViewportLayoutMode = useCallback((layoutMode) => {
+    const viewportView = normalizeViewportView({
+      ...readLiveViewportView(layoutRef.current.viewportView),
+      layoutMode,
+      // Layout buttons always re-center pane splits.
+      splitX: 0.5,
+      splitY: 0.5,
+      splitY2: 0.5,
+    });
+    patch({ viewportView });
+    window.dispatchEvent(new CustomEvent('bb:apply-viewport-view', { detail: viewportView }));
+  }, [patch]);
+
   const stepUiScale = useCallback((direction) => {
     setLayout((prev) => clampLayout({
       ...prev,
@@ -325,6 +495,8 @@ export function LayoutProvider({ children }) {
     resetLayout,
     setUiScale,
     setColorTheme,
+    setViewportView,
+    setViewportLayoutMode,
     stepUiScale,
     setDockApi,
     dockApiRef,
@@ -355,6 +527,8 @@ export function LayoutProvider({ children }) {
     resetLayout,
     setUiScale,
     setColorTheme,
+    setViewportView,
+    setViewportLayoutMode,
     stepUiScale,
     setDockApi,
     persistDockLayout,

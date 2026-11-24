@@ -1,7 +1,9 @@
-const STORAGE_KEY = 'bloodbound.editor.viewport.v1';
+const STORAGE_KEY_V1 = 'bloodbound.editor.viewport.v1';
+const STORAGE_KEY = 'bloodbound.editor.viewport.v2';
 
 export const CAMERA_MODES = [
   'perspective',
+  'isometric',
   'top',
   'bottom',
   'front',
@@ -24,6 +26,15 @@ export const LAYOUT_MODES = [
   'dual-v',
   'triple',
   'quad',
+];
+
+/** Human labels for View / pane layout menus. */
+export const LAYOUT_MODE_OPTIONS = [
+  { id: 'single', label: 'One Pane' },
+  { id: 'dual-h', label: 'Two Panes — Side by Side' },
+  { id: 'dual-v', label: 'Two Panes — Stacked' },
+  { id: 'triple', label: 'Three Panes' },
+  { id: 'quad', label: 'Four Panes' },
 ];
 
 /** Default pane cameras for a fresh quad layout. */
@@ -52,12 +63,13 @@ function defaultPane(id, cameraMode) {
 }
 
 export const DEFAULT_VIEWPORT_PREFS = {
-  layoutMode: 'quad',
-  /** Horizontal split (left | right) 0–1 */
+  /** Single perspective by default — multi-pane is opt-in via the layout toolbar. */
+  layoutMode: 'single',
+  /** Vertical divider (left | right) 0–1 */
   splitX: 0.5,
-  /** Vertical split (top | bottom) 0–1 */
+  /** Horizontal divider 0–1: full width in dual-v, left column in quad */
   splitY: 0.5,
-  /** Triple: secondary vertical split on the right column */
+  /** Right-column horizontal divider (quad / triple) — independent of splitY */
   splitY2: 0.5,
   activePaneId: 'pane-0',
   maximizedPaneId: null,
@@ -102,7 +114,7 @@ export function normalizeDisplayMode(mode) {
 }
 
 export function normalizeLayoutMode(mode) {
-  return LAYOUT_MODES.includes(mode) ? mode : 'quad';
+  return LAYOUT_MODES.includes(mode) ? mode : 'single';
 }
 
 export function paneCountForLayout(layoutMode) {
@@ -176,9 +188,25 @@ export function clampViewportPrefs(partial = {}) {
 
 export function loadViewportPrefs() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return clampViewportPrefs();
-    return clampViewportPrefs(JSON.parse(raw));
+    const rawV2 = localStorage.getItem(STORAGE_KEY);
+    if (rawV2) return clampViewportPrefs(JSON.parse(rawV2));
+
+    // v1 → v2: keep camera poses, but force single-view (multi-pane is opt-in).
+    const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (rawV1) {
+      const old = JSON.parse(rawV1);
+      const migrated = clampViewportPrefs({
+        ...old,
+        layoutMode: 'single',
+        maximizedPaneId: null,
+        maximizeRestore: null,
+        activePaneId: 'pane-0',
+      });
+      saveViewportPrefs(migrated);
+      return migrated;
+    }
+
+    return clampViewportPrefs();
   } catch {
     return clampViewportPrefs();
   }
@@ -193,6 +221,58 @@ export function saveViewportPrefs(prefs) {
     return clampViewportPrefs(prefs);
   }
 }
+
+/**
+ * Layout-catalog slice of viewport prefs (mode / splits / camera+display per pane).
+ * Excludes freelook poses — those stay in personal viewport prefs.
+ */
+export function viewportViewFromPrefs(prefs) {
+  const p = clampViewportPrefs(prefs || {});
+  return {
+    layoutMode: p.layoutMode,
+    splitX: p.splitX,
+    splitY: p.splitY,
+    splitY2: p.splitY2,
+    activePaneId: p.activePaneId,
+    panes: p.panes.map((pane) => ({
+      id: pane.id,
+      cameraMode: pane.cameraMode,
+      displayMode: pane.displayMode,
+    })),
+  };
+}
+
+export function normalizeViewportView(raw) {
+  return viewportViewFromPrefs(raw || DEFAULT_VIEWPORT_PREFS);
+}
+
+/** Merge a layout viewportView into full prefs, keeping camera poses. */
+export function mergeViewportViewIntoPrefs(prefs, view) {
+  const current = clampViewportPrefs(prefs || {});
+  const normalized = normalizeViewportView(view);
+  const panes = current.panes.map((pane, i) => {
+    const fromView = normalized.panes[i] || {};
+    return {
+      ...pane,
+      id: fromView.id || pane.id,
+      cameraMode: fromView.cameraMode || pane.cameraMode,
+      displayMode: fromView.displayMode || pane.displayMode,
+    };
+  });
+  return clampViewportPrefs({
+    ...current,
+    layoutMode: normalized.layoutMode,
+    splitX: normalized.splitX,
+    splitY: normalized.splitY,
+    splitY2: normalized.splitY2,
+    activePaneId: normalized.activePaneId,
+    maximizedPaneId: null,
+    maximizeRestore: null,
+    panes,
+  });
+}
+
+export const DEFAULT_VIEWPORT_VIEW = viewportViewFromPrefs(DEFAULT_VIEWPORT_PREFS);
 
 /**
  * Compute CSS pixel rects for each visible pane inside a shell of size (width, height).
@@ -233,11 +313,13 @@ export function computePaneRects(prefs, width, height) {
       ];
     case 'quad':
     default:
+      // splitX = vertical divider; splitY = left-column horizontal;
+      // splitY2 = right-column horizontal — columns resize independently.
       return [
         { paneId: p.panes[0].id, x: 0, y: 0, width: sx, height: sy },
-        { paneId: p.panes[1].id, x: sx, y: 0, width: w - sx, height: sy },
+        { paneId: p.panes[1].id, x: sx, y: 0, width: w - sx, height: sy2 },
         { paneId: p.panes[2].id, x: 0, y: sy, width: sx, height: h - sy },
-        { paneId: p.panes[3].id, x: sx, y: sy, width: w - sx, height: h - sy },
+        { paneId: p.panes[3].id, x: sx, y: sy2, width: w - sx, height: h - sy2 },
       ];
   }
 }
@@ -291,5 +373,6 @@ export function orthoPlaneAxes(cameraMode) {
 }
 
 export function isOrthographicMode(cameraMode) {
-  return normalizeCameraMode(cameraMode) !== 'perspective';
+  const mode = normalizeCameraMode(cameraMode);
+  return mode !== 'perspective';
 }

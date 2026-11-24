@@ -52,19 +52,67 @@ describe('hover help content', () => {
       'outliner.',
       'content.',
       'assetViewer.',
+      'viewport.',
+      'settings.',
+      'panel.',
     ];
     for (const prefix of requiredPrefixes) {
       expect(ids.some((id) => id.startsWith(prefix))).toBe(true);
     }
     expect(getHelpEntry('toolbar.grid')?.title).toBe('Grid Snap');
+    expect(getHelpEntry('toolbar.surface')?.title).toBe('Surface Selection');
+    expect(getHelpEntry('toolbar.geometryFace')?.title).toBe('Geometry Face');
+    expect(getHelpEntry('viewport.camera')?.title).toBe('Camera Mode');
     expect(getHelpEntry('details.prefab.apply')?.title).toBe('Apply Source');
+    expect(getHelpEntry('content.asset')?.body?.toLowerCase()).toContain('face');
     expect(getHelpEntry('missing')).toBeNull();
+  });
+
+  it('wires every helpProps id used in the editor UI', async () => {
+    const { HELP_CONTENT: content } = await import('../ui/hoverHelp/helpContent.js');
+    const required = [
+      'toolbar.surface',
+      'toolbar.align',
+      'toolbar.geometryFace',
+      'toolbar.geometryEdge',
+      'toolbar.geometryVertex',
+      'viewport.camera',
+      'viewport.display',
+      'viewport.layout',
+      'viewport.reset',
+      'viewport.maximize',
+      'viewport.focus',
+      'assetViewer.thumbSize',
+      'details.surface.material',
+      'details.convex.convert',
+      'panel.tutorials',
+      'settings.dialog',
+      'settings.camera',
+    ];
+    for (const id of required) {
+      expect(content[id], id).toBeTruthy();
+    }
   });
 
   it('does not claim stubbed features as working', () => {
     const blob = JSON.stringify(HELP_CONTENT);
     expect(blob.toLowerCase()).not.toContain('visual scripting');
     expect(blob.toLowerCase()).not.toContain('ai generation');
+  });
+});
+
+describe('keyboard shortcuts catalog', () => {
+  it('documents live Viewport hotkeys including clip Enter/Esc', async () => {
+    const {
+      KEYBOARD_SHORTCUT_SECTIONS,
+      KEYBOARD_SHORTCUTS_TEXT,
+    } = await import('../ui/hoverHelp/keyboardShortcuts.js');
+    const flat = KEYBOARD_SHORTCUT_SECTIONS.flatMap((s) => s.rows);
+    expect(flat.some((r) => r.keys.includes('Enter') && /clip/i.test(r.action))).toBe(true);
+    expect(flat.some((r) => r.keys.includes('Tab') && /surface/i.test(r.action))).toBe(true);
+    expect(flat.some((r) => r.keys.includes('F'))).toBe(true);
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Shift+G');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Commit clip');
   });
 });
 

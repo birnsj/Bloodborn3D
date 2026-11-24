@@ -47,5 +47,11 @@ export const testingLesson = {
       verify: { type: 'modeSequence', sequence: ['play', 'edit'] },
       failHint: 'Click Stop after playing.',
     },
+    {
+      id: 'duplicate',
+      title: 'Duplicate & delete',
+      body: 'Select an object, press Ctrl+D to duplicate (or Details → Duplicate). Delete removes the selection — Undo brings it back.',
+      verify: { type: 'manualConfirm', label: 'I understand' },
+    },
   ],
 };

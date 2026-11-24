@@ -14,7 +14,7 @@ describe('color themes', () => {
       'forge',
       'contrast',
     ]);
-    expect(DEFAULT_COLOR_THEME).toBe('bloodbound');
+    expect(DEFAULT_COLOR_THEME).toBe('midnight');
   });
 
   it('normalizes invalid theme ids', () => {
@@ -25,6 +25,6 @@ describe('color themes', () => {
 
   it('persists colorTheme through layout clamp', () => {
     expect(clampLayout({ ...DEFAULT_LAYOUT, colorTheme: 'midnight' }).colorTheme).toBe('midnight');
-    expect(clampLayout({ colorTheme: '???' }).colorTheme).toBe('bloodbound');
+    expect(clampLayout({ colorTheme: '???' }).colorTheme).toBe('midnight');
   });
 });

@@ -1,17 +1,27 @@
-const STORAGE_KEY = 'bloodbound.editor.settings.v1';
+import {
+  DEFAULT_GRID_EDITOR_UNITS,
+  GRID_INCREMENTS,
+} from '../core/units.js';
+import { normalizeDisplayMode } from './viewport/viewportPrefs.js';
 
-/** Defaults match current OrbitControls / SceneView / PlayerController behavior. */
+const STORAGE_KEY = 'bloodbound.editor.settings.v1';
+const USER_DEFAULTS_KEY = 'bloodbound.editor.settings.defaults.v1';
+/** Bump to force one-shot migrations on existing installs. */
+export const EDITOR_SETTINGS_SCHEMA = 4;
+
+/** Factory defaults — snappy cameras (no orbit float). */
 export const DEFAULT_EDITOR_SETTINGS = {
+  settingsSchema: EDITOR_SETTINGS_SCHEMA,
   /** 0 = snappy (no inertia); 100 = very floaty coast after orbit drag. */
-  cameraOrbitFloatiness: 68,
+  cameraOrbitFloatiness: 0,
   /** OrbitControls.rotateSpeed multiplier. */
   cameraOrbitSpeed: 1,
   /** OrbitControls.zoomSpeed multiplier. */
   cameraOrbitZoomSpeed: 1,
-  /** OrbitControls.panSpeed multiplier. */
-  cameraOrbitPanSpeed: 1,
+  /** Middle-mouse pan (OrbitControls.panSpeed). Default is fast. */
+  cameraOrbitPanSpeed: 2,
   /** Multiplier on free-fly RMB look sensitivity. */
-  cameraFlyLookSensitivity: 1,
+  cameraFlyLookSensitivity: 1.5,
   /** Free-fly move speed in editor units/sec (legacy default 450). */
   cameraFlySpeed: 450,
   /** Shift boost multiplier while free-flying. */
@@ -22,6 +32,13 @@ export const DEFAULT_EDITOR_SETTINGS = {
   /** Play-mode mouse look multiplier (base 0.002). */
   playLookSensitivity: 1,
 
+  /** Construction grid size in editor units (toolbar + View menu). */
+  gridSize: DEFAULT_GRID_EDITOR_UNITS,
+  /** When true, placement/gizmo moves snap to the grid. */
+  gridSnap: true,
+  /** Default / applied viewport shading mode (lit, wireframe, …). */
+  defaultDisplayMode: 'lit',
+
   /** Viewport / editor scene colors (CSS #rrggbb). */
   viewportBackground: '#0e1218',
   viewportGridMajor: '#4a5568',
@@ -30,7 +47,7 @@ export const DEFAULT_EDITOR_SETTINGS = {
   viewportSubtract: '#c23b4a',
 };
 
-const SPEED_01_3 = { min: 0.25, max: 3 };
+const SPEED_01_3 = { min: 0.25, max: 4 };
 const FLY_SPEED = { min: 100, max: 1200 };
 const FLY_BOOST = { min: 1, max: 5 };
 
@@ -63,6 +80,11 @@ function clampMul(value, fallback, { min, max }) {
 
 export function clampEditorSettings(partial = {}) {
   const next = { ...DEFAULT_EDITOR_SETTINGS, ...partial };
+
+  const schema = Number(next.settingsSchema);
+  next.settingsSchema = Number.isFinite(schema)
+    ? Math.max(1, Math.floor(schema))
+    : EDITOR_SETTINGS_SCHEMA;
 
   const floatiness = Number(next.cameraOrbitFloatiness);
   next.cameraOrbitFloatiness = Number.isFinite(floatiness)
@@ -107,6 +129,13 @@ export function clampEditorSettings(partial = {}) {
   );
 
   next.cameraInvertY = Boolean(next.cameraInvertY);
+
+  const grid = Number(next.gridSize);
+  next.gridSize = GRID_INCREMENTS.includes(grid)
+    ? grid
+    : DEFAULT_EDITOR_SETTINGS.gridSize;
+  next.gridSnap = next.gridSnap !== false;
+  next.defaultDisplayMode = normalizeDisplayMode(next.defaultDisplayMode);
 
   next.viewportBackground = normalizeHexColor(
     next.viewportBackground,
@@ -158,11 +187,57 @@ export function viewportColorsFromSettings(settings) {
   };
 }
 
+/** User-saved defaults used by Reset / Save as Default (falls back to factory). */
+export function loadUserDefaultSettings() {
+  try {
+    const raw = localStorage.getItem(USER_DEFAULTS_KEY);
+    if (!raw) return { ...DEFAULT_EDITOR_SETTINGS };
+    return clampEditorSettings(JSON.parse(raw));
+  } catch {
+    return { ...DEFAULT_EDITOR_SETTINGS };
+  }
+}
+
+export function saveUserDefaultSettings(prefs) {
+  try {
+    const next = clampEditorSettings({
+      ...prefs,
+      settingsSchema: EDITOR_SETTINGS_SCHEMA,
+    });
+    localStorage.setItem(USER_DEFAULTS_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return clampEditorSettings(prefs);
+  }
+}
+
 export function loadEditorSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_EDITOR_SETTINGS };
-    return clampEditorSettings(JSON.parse(raw));
+    if (!raw) return { ...loadUserDefaultSettings() };
+    const parsed = JSON.parse(raw);
+    const loaded = clampEditorSettings(parsed);
+    if (loaded.settingsSchema < EDITOR_SETTINGS_SCHEMA) {
+      const prevSchema = Number(parsed.settingsSchema) || 1;
+      const migrated = clampEditorSettings({
+        ...loaded,
+        // Schema 2: snappy cameras — clear leftover floatiness.
+        cameraOrbitFloatiness: 0,
+        // Schema 3: faster middle-mouse pan + fly look (only if still at old factory 1).
+        cameraOrbitPanSpeed:
+          prevSchema < 3 && Number(parsed.cameraOrbitPanSpeed) === 1
+            ? DEFAULT_EDITOR_SETTINGS.cameraOrbitPanSpeed
+            : loaded.cameraOrbitPanSpeed,
+        cameraFlyLookSensitivity:
+          prevSchema < 3 && Number(parsed.cameraFlyLookSensitivity) === 1
+            ? DEFAULT_EDITOR_SETTINGS.cameraFlyLookSensitivity
+            : loaded.cameraFlyLookSensitivity,
+        settingsSchema: EDITOR_SETTINGS_SCHEMA,
+      });
+      saveEditorSettings(migrated);
+      return migrated;
+    }
+    return loaded;
   } catch {
     return { ...DEFAULT_EDITOR_SETTINGS };
   }
@@ -177,3 +252,4 @@ export function saveEditorSettings(prefs) {
 }
 
 export const EDITOR_SETTINGS_STORAGE_KEY = STORAGE_KEY;
+export const EDITOR_SETTINGS_DEFAULTS_KEY = USER_DEFAULTS_KEY;

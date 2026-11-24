@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef } from 'react';
 import {
   computePaneRects,
-  paneCountForLayout,
   normalizeLayoutMode,
 } from './viewportPrefs.js';
+import { orientPaneToCameraMode } from './viewportCameras.js';
 import { ViewportPaneChrome } from './ViewportPaneChrome.jsx';
 
-const DIVIDER_HIT = 6;
+const DIVIDER_HIT = 10;
 
 /**
  * Overlay layout chrome + hit targets above the shared WebGL canvas.
@@ -18,7 +18,7 @@ export function ViewportLayout({
   shellHeight,
   onChangePrefs,
   onActivatePane,
-  onFocusSelected,
+  onResetCamera,
   marqueeRect,
   children,
 }) {
@@ -47,25 +47,34 @@ export function ViewportLayout({
     };
     dragRef.current = { axis, startX, startY, start };
 
+    const clampSplit = (v) => Math.min(0.85, Math.max(0.15, v));
+
     const onMove = (e) => {
       const d = dragRef.current;
       if (!d) return;
       const w = Math.max(1, shellWidth);
       const h = Math.max(1, shellHeight);
-      const next = { ...prefs };
-      if (d.axis === 'x' || d.axis === 'x-triple') {
-        next.splitX = Math.min(0.85, Math.max(0.15, d.start.splitX + (e.clientX - d.startX) / w));
+      // Only patch the axis being dragged — leave the other split alone.
+      if (d.axis === 'x') {
+        onChangePrefs({
+          ...prefs,
+          splitX: clampSplit(d.start.splitX + (e.clientX - d.startX) / w),
+        });
+        return;
       }
-      if (d.axis === 'y' || d.axis === 'y-quad') {
-        next.splitY = Math.min(0.85, Math.max(0.15, d.start.splitY + (e.clientY - d.startY) / h));
-      }
-      if (d.axis === 'y2' || d.axis === 'x-triple') {
-        // triple right-column split uses splitY2
+      if (d.axis === 'y') {
+        onChangePrefs({
+          ...prefs,
+          splitY: clampSplit(d.start.splitY + (e.clientY - d.startY) / h),
+        });
+        return;
       }
       if (d.axis === 'y2') {
-        next.splitY2 = Math.min(0.85, Math.max(0.15, d.start.splitY2 + (e.clientY - d.startY) / h));
+        onChangePrefs({
+          ...prefs,
+          splitY2: clampSplit(d.start.splitY2 + (e.clientY - d.startY) / h),
+        });
       }
-      onChangePrefs(next);
     };
     const onUp = () => {
       dragRef.current = null;
@@ -108,9 +117,10 @@ export function ViewportLayout({
                 pane={pane}
                 active={active}
                 maximized={prefs.maximizedPaneId === pane.id}
+                layoutMode={prefs.layoutMode}
                 onCameraMode={(cameraMode) => {
                   const panes = prefs.panes.map((p) => (
-                    p.id === pane.id ? { ...p, cameraMode } : p
+                    p.id === pane.id ? orientPaneToCameraMode(p, cameraMode) : p
                   ));
                   onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
                 }}
@@ -120,7 +130,20 @@ export function ViewportLayout({
                   ));
                   onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
                 }}
-                onFocusSelected={() => onFocusSelected?.(pane.id)}
+                onLayoutMode={(layoutMode) => {
+                  onChangePrefs({
+                    ...prefs,
+                    layoutMode,
+                    // Layout buttons always re-center pane splits.
+                    splitX: 0.5,
+                    splitY: 0.5,
+                    splitY2: 0.5,
+                    maximizedPaneId: null,
+                    maximizeRestore: null,
+                    activePaneId: pane.id,
+                  });
+                }}
+                onResetCamera={() => onResetCamera?.(pane.id)}
                 onToggleMaximize={() => {
                   if (prefs.maximizedPaneId === pane.id) {
                     const restore = prefs.maximizeRestore || {};
@@ -192,11 +215,27 @@ export function ViewportLayout({
             className="bb-viewport-divider bb-viewport-divider--v"
             style={{ left: prefs.splitX * (shellWidth || 0) - DIVIDER_HIT / 2 }}
             onPointerDown={(e) => beginSplitDrag('x', e)}
+            title="Resize columns"
           />
           <div
             className="bb-viewport-divider bb-viewport-divider--h"
-            style={{ top: prefs.splitY * (shellHeight || 0) - DIVIDER_HIT / 2 }}
+            style={{
+              left: 0,
+              width: prefs.splitX * (shellWidth || 0),
+              top: prefs.splitY * (shellHeight || 0) - DIVIDER_HIT / 2,
+            }}
             onPointerDown={(e) => beginSplitDrag('y', e)}
+            title="Resize left row split"
+          />
+          <div
+            className="bb-viewport-divider bb-viewport-divider--h"
+            style={{
+              left: prefs.splitX * (shellWidth || 0),
+              width: (1 - prefs.splitX) * (shellWidth || 0),
+              top: prefs.splitY2 * (shellHeight || 0) - DIVIDER_HIT / 2,
+            }}
+            onPointerDown={(e) => beginSplitDrag('y2', e)}
+            title="Resize right row split"
           />
         </>
       )}
@@ -216,28 +255,3 @@ export function ViewportLayout({
   );
 }
 
-export function LayoutModeToolbar({ layoutMode, maximizedPaneId, onLayoutMode }) {
-  const modes = [
-    { id: 'single', label: '1' },
-    { id: 'dual-h', label: '2H' },
-    { id: 'dual-v', label: '2V' },
-    { id: 'triple', label: '3' },
-    { id: 'quad', label: '4' },
-  ];
-  return (
-    <div className="bb-seg bb-viewport-layout-seg" title="Viewport layout">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          className={`bb-btn${layoutMode === m.id && !maximizedPaneId ? ' bb-btn--active' : ''}`}
-          disabled={Boolean(maximizedPaneId)}
-          onClick={() => onLayoutMode(m.id)}
-          title={`${paneCountForLayout(m.id)} viewport${paneCountForLayout(m.id) > 1 ? 's' : ''}`}
-        >
-          {m.label}
-        </button>
-      ))}
-    </div>
-  );
-}

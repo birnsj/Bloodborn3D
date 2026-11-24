@@ -4,6 +4,8 @@ import { publicAssetUrl } from '../io/assetFileApi.js';
 
 export { ASSET_FOLDERS };
 export const ASSET_DRAG_MIME = 'application/x-bloodbound-asset';
+/** Present in dataTransfer.types during dragover (getData is empty until drop). */
+export const ASSET_DRAG_MIME_MATERIAL = 'application/x-bloodbound-asset-material';
 
 /**
  * Convert a registry entry into Content Browser / Asset Viewer view model.

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { DockviewReact } from 'dockview-react';
+import {
+  ASSET_DRAG_MIME,
+  ASSET_DRAG_MIME_MATERIAL,
+} from '../../assets/assetCatalog.js';
+import { CREATE_DRAG_MIME } from '../creation/creationTools.js';
 import { useLayout } from './LayoutContext.jsx';
 import { dockviewComponents } from './dockPanels.jsx';
 import { bloodboundDockTheme } from './dockTheme.js';
@@ -9,6 +14,16 @@ import {
   ensureViewportPanel,
   isValidDockLayout,
 } from './dockLayout.js';
+
+/** True when the browser drag carries our asset/create payload (not a dock tab). */
+function isBloodboundExternalDrag(event) {
+  const native = event?.nativeEvent;
+  if (!native?.dataTransfer?.types) return false;
+  const types = [...native.dataTransfer.types];
+  return types.includes(ASSET_DRAG_MIME)
+    || types.includes(ASSET_DRAG_MIME_MATERIAL)
+    || types.includes(CREATE_DRAG_MIME);
+}
 
 export function LevelDockWorkspace() {
   const {
@@ -63,6 +78,20 @@ export function LevelDockWorkspace() {
       api.onDidAddPanel(() => {
         syncVisibilityFromDock();
       }),
+      // Asset / create-tool HTML5 drags must not trigger dockview split overlays.
+      // Without this, dropping a material onto the viewport halves the layout
+      // ("screen gets smaller"). Also reject when our MIME is present even if a
+      // stale LocalSelectionTransfer still looks like a panel move.
+      api.onWillShowOverlay((event) => {
+        if (isBloodboundExternalDrag(event) || !event.getData?.()) {
+          event.preventDefault();
+        }
+      }),
+      api.onWillDrop((event) => {
+        if (isBloodboundExternalDrag(event) || !event.getData?.()) {
+          event.preventDefault();
+        }
+      }),
     );
   }, [setDockApi, persistDockLayout, syncVisibilityFromDock]);
 
@@ -91,9 +120,12 @@ export function LevelDockWorkspace() {
       if (!current.detailsVisible) api.getPanel(DOCK_PANELS.details.id)?.api.close();
       if (!current.contentVisible) api.getPanel(DOCK_PANELS.content.id)?.api.close();
       if (!current.assetViewerVisible) api.getPanel(DOCK_PANELS.assetViewer.id)?.api.close();
-      if (current.viewportMaximized) {
-        api.getPanel(DOCK_PANELS.viewport.id)?.api.maximize();
-      }
+    }
+
+    // Never start (or restore) dockview "maximize" — it hides Outliner/Details/etc.
+    const viewportPanel = api.getPanel(DOCK_PANELS.viewport.id);
+    if (viewportPanel?.api.isMaximized?.()) {
+      viewportPanel.api.exitMaximized();
     }
 
     syncVisibilityFromDock();
@@ -119,7 +151,6 @@ export function LevelDockWorkspace() {
         getTabContextMenuItems={() => [
           'float',
           'popout',
-          'maximize',
           'separator',
           'close',
           'closeOthers',

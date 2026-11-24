@@ -27,10 +27,17 @@ export const lightingLesson = {
     {
       id: 'edit-light',
       title: 'Edit the light',
-      body: 'With the light selected, change Intensity or Color in Details.',
+      body: 'With the light selected, change Intensity or Color in Details. The range gizmo in the Viewport shows falloff.',
       highlight: ['panel.details'],
       verify: { type: 'lightEdited', trackAs: 'light1' },
       failHint: 'Select your new light and change Intensity or Color.',
+    },
+    {
+      id: 'spot',
+      title: 'Try a Spot light (optional)',
+      body: 'From the Lights flyout, place a Spot Light. Aim it with Rotate (E). Skip if you are happy with Point lights.',
+      highlight: ['toolbar.spotLight'],
+      verify: { type: 'manualConfirm', label: 'Continue' },
     },
   ],
 };

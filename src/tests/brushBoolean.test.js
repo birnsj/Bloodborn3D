@@ -16,6 +16,8 @@ import {
   cutterHoleInBrushLocal,
   formatSubtractComplexityMessage,
   isAxisAlignedRotationMatrix,
+  isWorldSolidActor,
+  solidFacesOnBrushHull,
   subtractAabbFromSolid,
 } from '../runtime/brushBoolean.js';
 import {
@@ -725,5 +727,44 @@ describe('subtract complexity safety (no truncation)', () => {
     expect(history.canUndo).toBe(true);
     history.undo();
     expect(cutter.transform.position.x).toBe(200);
+  });
+});
+
+describe('world-solid hull faces', () => {
+  it('marks every face of an uncut solid as on the brush hull', () => {
+    const solid = {
+      center: { x: 0, y: 0, z: 0 },
+      size: { x: 200, y: 100, z: 300 },
+    };
+    expect(solidFacesOnBrushHull(solid, solid.size)).toEqual({
+      px: true,
+      nx: true,
+      py: true,
+      ny: true,
+      pz: true,
+      nz: true,
+    });
+  });
+
+  it('keeps interior cut faces visible and hull faces hidden', () => {
+    // Floor slab left under a room carve: top (+Y) is interior, bottom is hull.
+    const floor = {
+      center: { x: 0, y: -40, z: 0 },
+      size: { x: 200, y: 20, z: 200 },
+    };
+    const brushSize = { x: 200, y: 100, z: 200 };
+    expect(solidFacesOnBrushHull(floor, brushSize)).toEqual({
+      px: true,
+      nx: true,
+      py: false,
+      ny: true,
+      pz: true,
+      nz: true,
+    });
+  });
+
+  it('detects world-solid actors by tag', () => {
+    expect(isWorldSolidActor({ tags: ['world-solid'] })).toBe(true);
+    expect(isWorldSolidActor({ tags: ['brush'] })).toBe(false);
   });
 });

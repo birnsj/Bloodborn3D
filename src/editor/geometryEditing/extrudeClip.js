@@ -5,6 +5,8 @@
 
 import { Actor } from '../../core/Actor.js';
 import { createId } from '../../core/ids.js';
+import { getWorldMatrix } from '../../core/hierarchy.js';
+import { mat4Invert, mat4TransformPoint } from '../../core/math3d.js';
 import { Transform } from '../../core/Transform.js';
 import { ConvexBrushComponent } from '../../components/ConvexBrushComponent.js';
 import { convertBrushToConvexGeometry } from '../../geometry/convert.js';
@@ -392,73 +394,65 @@ export function localPlaneFromSelectedFace(world, actorId, faceId) {
 
 /**
  * Convert three world-space points to an actor-local plane.
+ * Uses full parent hierarchy via getWorldMatrix (same as face-move).
  */
-export function worldPointsToLocalPlane(actor, worldPoints) {
+export function worldPointsToLocalPlane(actor, worldPoints, world = null) {
   if (!actor || !worldPoints || worldPoints.length < 3) {
     return { ok: false, code: 'DEGENERATE_PLANE', message: 'Need three world points.' };
   }
-  const localPts = worldPoints.map((wp) => worldPointToLocal(actor, wp));
+  const localPts = worldPoints.map((wp) => worldPointToLocal(actor, wp, world));
   return planeFromPoints(localPts[0], localPts[1], localPts[2]);
 }
 
-/** Actor-local point → approximate world (local TRS, no parent chain). */
-export function localPointToWorld(actor, lp) {
-  const t = actor.transform;
-  const p = t?.position || { x: 0, y: 0, z: 0 };
-  const r = t?.rotation || { x: 0, y: 0, z: 0 };
-  const s = t?.scale || { x: 1, y: 1, z: 1 };
-  let x = (lp[0] || 0) * (Number(s.x) || 1);
-  let y = (lp[1] || 0) * (Number(s.y) || 1);
-  let z = (lp[2] || 0) * (Number(s.z) || 1);
-  const cx = Math.cos(r.x || 0);
-  const sx = Math.sin(r.x || 0);
-  const cy = Math.cos(r.y || 0);
-  const sy = Math.sin(r.y || 0);
-  const cz = Math.cos(r.z || 0);
-  const sz = Math.sin(r.z || 0);
-  // Rx
-  let y1 = y * cx - z * sx;
-  let z1 = y * sx + z * cx;
-  let x1 = x;
-  // Ry
-  let x2 = x1 * cy + z1 * sy;
-  let z2 = -x1 * sy + z1 * cy;
-  let y2 = y1;
-  // Rz
-  const x3 = x2 * cz - y2 * sz;
-  const y3 = x2 * sz + y2 * cz;
-  const z3 = z2;
-  return [x3 + (p.x || 0), y3 + (p.y || 0), z3 + (p.z || 0)];
+/**
+ * Build a per-actor local plane map from shared world-space points.
+ * Never reuse one actor's local plane on another — re-project each time.
+ */
+export function planesByActorIdFromWorldPoints(world, actorIds, worldPoints) {
+  const ids = [...new Set(actorIds || [])].filter(Boolean);
+  if (!ids.length) {
+    return { ok: false, code: 'NO_SELECTION', message: 'No brushes selected for clip.' };
+  }
+  if (!worldPoints || worldPoints.length < 3) {
+    return {
+      ok: false,
+      code: 'DEGENERATE_PLANE',
+      message: 'Clip needs three world-space plane points.',
+    };
+  }
+  const planesByActorId = {};
+  for (const actorId of ids) {
+    const actor = world?.getActor?.(actorId);
+    if (!actor) {
+      return { ok: false, code: 'NO_ACTOR', message: `Actor ${actorId} not found.` };
+    }
+    const local = worldPointsToLocalPlane(actor, worldPoints, world);
+    if (!local.ok) return local;
+    planesByActorId[actorId] = local.plane;
+  }
+  return { ok: true, planesByActorId };
 }
 
-function worldPointToLocal(actor, wp) {
-  const t = actor.transform;
-  const p = t?.position || { x: 0, y: 0, z: 0 };
-  const r = t?.rotation || { x: 0, y: 0, z: 0 };
-  const s = t?.scale || { x: 1, y: 1, z: 1 };
-  let x = wp[0] - (p.x || 0);
-  let y = wp[1] - (p.y || 0);
-  let z = wp[2] - (p.z || 0);
-  const cx = Math.cos(-(r.x || 0));
-  const sx = Math.sin(-(r.x || 0));
-  const cy = Math.cos(-(r.y || 0));
-  const sy = Math.sin(-(r.y || 0));
-  const cz = Math.cos(-(r.z || 0));
-  const sz = Math.sin(-(r.z || 0));
-  let x1 = x * cz + y * sz;
-  let y1 = -x * sz + y * cz;
-  let z1 = z;
-  let x2 = x1 * cy - z1 * sy;
-  let y2 = y1;
-  let z2 = x1 * sy + z1 * cy;
-  const x3 = x2;
-  const y3 = y2 * cx + z2 * sx;
-  const z3 = -y2 * sx + z2 * cx;
-  return [
-    x3 / (Number(s.x) || 1),
-    y3 / (Number(s.y) || 1),
-    z3 / (Number(s.z) || 1),
-  ];
+/** Actor-local point → world (full parent chain). */
+export function localPointToWorld(actor, lp, world = null) {
+  const m = getWorldMatrix(actor, world);
+  const wp = mat4TransformPoint(m, {
+    x: Number(lp?.[0]) || 0,
+    y: Number(lp?.[1]) || 0,
+    z: Number(lp?.[2]) || 0,
+  });
+  return [wp.x, wp.y, wp.z];
+}
+
+/** World point → actor-local (full parent chain). */
+export function worldPointToLocal(actor, wp, world = null) {
+  const inv = mat4Invert(getWorldMatrix(actor, world));
+  const lp = mat4TransformPoint(inv, {
+    x: Number(wp?.[0]) || 0,
+    y: Number(wp?.[1]) || 0,
+    z: Number(wp?.[2]) || 0,
+  });
+  return [lp.x, lp.y, lp.z];
 }
 
 export {

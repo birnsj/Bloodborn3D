@@ -26,9 +26,11 @@ export function serializeLevel(world) {
   if (!world) {
     throw new Error('Cannot serialize null world');
   }
+  const mapMode = world.mapMode === 'subtractive' ? 'subtractive' : 'additive';
   return {
     schemaVersion: schemaVersionForWorld(world),
     name: world.name ?? 'Untitled Level',
+    mapMode,
     actors: world.actors.map((actor) => actor.toJSON()),
   };
 }

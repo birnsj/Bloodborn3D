@@ -1,7 +1,7 @@
 export const firstRoomLesson = {
   id: 'first-room',
   title: 'Build Your First Room',
-  summary: 'Create floors and walls, move them, snap to the grid, and resize faces.',
+  summary: 'Create floors and walls, move/rotate/scale, snap to the grid, and resize faces.',
   order: 2,
   starterPath: 'tutorials/first-room.json',
   steps: [
@@ -48,9 +48,18 @@ export const firstRoomLesson = {
       explain: 'Hold Alt while dragging the gizmo to move in fine 1-unit steps instead of the grid.',
     },
     {
+      id: 'transform-modes',
+      title: 'Move, Rotate, Scale',
+      body: 'Press W for Move, E for Rotate, R for Scale (or use the transform controls). Switch to Rotate once so the gizmo changes.',
+      highlight: ['toolbar.select'],
+      verify: { type: 'transformModeIs', mode: 'rotate' },
+      failHint: 'Press E to enter Rotate mode.',
+      explain: 'Press W again when you are done — most building work stays in Move.',
+    },
+    {
       id: 'resize-wall',
       title: 'Resize a face',
-      body: 'With the wall selected, drag a face handle on the gizmo (or edit Size in Details). The opposite face should stay put when using the face gizmo.',
+      body: 'Press W for Move, keep the wall selected, then drag a face handle on the gizmo (or edit Size in Details). The opposite face stays put when using the face gizmo.',
       verify: { type: 'brushResized', trackAs: 'wall1' },
       failHint: 'Change the wall’s size with the gizmo or Details.',
     },

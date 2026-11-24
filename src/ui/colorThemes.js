@@ -7,7 +7,7 @@ export const COLOR_THEMES = [
   { id: 'contrast', label: 'Contrast' },
 ];
 
-export const DEFAULT_COLOR_THEME = 'bloodbound';
+export const DEFAULT_COLOR_THEME = 'midnight';
 
 export function normalizeColorTheme(id) {
   if (COLOR_THEMES.some((t) => t.id === id)) return id;

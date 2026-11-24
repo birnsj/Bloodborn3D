@@ -45,8 +45,10 @@ export const PANEL_VISIBILITY_KEYS = {
 
 /**
  * Build the BloodBound default arrangement:
- * left Outliner | center Viewport | right Details
- * bottom Content Browser | Asset Viewer
+ * left: Content Browser (folder navigation)
+ * center: Viewport
+ * right: Outliner over Details (World settings live in Details)
+ * bottom: Asset Viewer (assets from the selected Content folder)
  */
 export function applyDefaultDockLayout(api) {
   if (!api) return;
@@ -60,38 +62,39 @@ export function applyDefaultDockLayout(api) {
     renderer: 'always',
   });
 
-  // Split viewport / content first so Content spans the bottom edge.
-  api.addPanel({
-    id: DOCK_PANELS.content.id,
-    component: DOCK_PANELS.content.component,
-    title: DOCK_PANELS.content.title,
-    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'below' },
-    initialHeight: 180,
-  });
-
-  // Asset Viewer beside Content Browser (independent panel).
+  // Asset Viewer spans the bottom under the viewport.
   api.addPanel({
     id: DOCK_PANELS.assetViewer.id,
     component: DOCK_PANELS.assetViewer.component,
     title: DOCK_PANELS.assetViewer.title,
-    position: { referencePanel: DOCK_PANELS.content.id, direction: 'right' },
-    initialWidth: 280,
+    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'below' },
+    initialHeight: 220,
   });
 
+  // Content Browser — left navigation column.
+  api.addPanel({
+    id: DOCK_PANELS.content.id,
+    component: DOCK_PANELS.content.component,
+    title: DOCK_PANELS.content.title,
+    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'left' },
+    initialWidth: 220,
+  });
+
+  // Right column: Outliner, with Details (incl. World) under it.
   api.addPanel({
     id: DOCK_PANELS.outliner.id,
     component: DOCK_PANELS.outliner.component,
     title: DOCK_PANELS.outliner.title,
-    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'left' },
-    initialWidth: 240,
+    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'right' },
+    initialWidth: 260,
   });
 
   api.addPanel({
     id: DOCK_PANELS.details.id,
     component: DOCK_PANELS.details.component,
     title: DOCK_PANELS.details.title,
-    position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'right' },
-    initialWidth: 300,
+    position: { referencePanel: DOCK_PANELS.outliner.id, direction: 'below' },
+    initialHeight: 280,
   });
 }
 
@@ -124,9 +127,8 @@ export function applyDockSnapshot(api, snapshot = {}) {
       api.clear();
       api.fromJSON(dockLayout);
       ensureViewportPanel(api);
-      if (snapshot.viewportMaximized) {
-        setViewportMaximized(api, true);
-      }
+      // Never restore dockview maximize — it hides Outliner/Details/Content.
+      setViewportMaximized(api, false);
       return true;
     } catch {
       /* fall through to factory */
@@ -139,7 +141,7 @@ export function applyDockSnapshot(api, snapshot = {}) {
   if (snapshot.contentVisible === false) closePanelByKey(api, 'content');
   if (snapshot.assetViewerVisible === false) closePanelByKey(api, 'assetViewer');
   if (snapshot.tutorialsVisible === true) reopenPanel(api, 'tutorials');
-  if (snapshot.viewportMaximized) setViewportMaximized(api, true);
+  setViewportMaximized(api, false);
   return true;
 }
 
@@ -180,26 +182,26 @@ export function reopenPanel(api, panelKey) {
 
   const positionByKey = {
     outliner: {
-      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'left' },
-      initialWidth: 240,
+      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'right' },
+      initialWidth: 260,
     },
     details: {
-      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'right' },
-      initialWidth: 300,
+      position: {
+        referencePanel: api.getPanel(DOCK_PANELS.outliner.id)
+          ? DOCK_PANELS.outliner.id
+          : DOCK_PANELS.viewport.id,
+        direction: api.getPanel(DOCK_PANELS.outliner.id) ? 'below' : 'right',
+      },
+      initialWidth: 260,
+      initialHeight: 280,
     },
     content: {
-      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'below' },
-      initialHeight: 180,
+      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'left' },
+      initialWidth: 220,
     },
     assetViewer: {
-      position: {
-        referencePanel: api.getPanel(DOCK_PANELS.content.id)
-          ? DOCK_PANELS.content.id
-          : DOCK_PANELS.viewport.id,
-        direction: api.getPanel(DOCK_PANELS.content.id) ? 'right' : 'below',
-      },
-      initialWidth: 280,
-      initialHeight: 180,
+      position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'below' },
+      initialHeight: 220,
     },
     tutorials: {
       position: {

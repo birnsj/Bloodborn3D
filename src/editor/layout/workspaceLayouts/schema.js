@@ -1,12 +1,21 @@
 import { isValidDockLayout, DOCK_PANEL_IDS, DOCK_PANELS } from '../dockLayout.js';
+import {
+  DEFAULT_VIEWPORT_VIEW,
+  normalizeViewportView,
+} from '../../viewport/viewportPrefs.js';
 
 export const WORKSPACE_LAYOUT_SCHEMA_VERSION = 1;
 export const FACTORY_LAYOUT_ID = 'factory-default';
 export const FACTORY_LAYOUT_NAME = 'Default';
+/** Working copy written when the active layout is the protected factory default. */
+export const AUTOSAVE_LAYOUT_ID = 'autosaved';
+export const AUTOSAVE_LAYOUT_NAME = 'Autosaved';
 
 /**
- * Snapshot of dock arrangement only — never level/game data.
- * dockLayout null means “build factory dock arrangement”.
+ * Snapshot of dock arrangement + viewport chrome layout — never level/game data.
+ * dockLayout null means “build factory dock arrangement”:
+ * left Content Browser, right Outliner over Details, bottom Asset Viewer, center Viewport.
+ * viewportView controls single/multi pane mode (default: single).
  */
 export function createEmptySnapshot() {
   return {
@@ -17,6 +26,7 @@ export function createEmptySnapshot() {
     assetViewerVisible: true,
     tutorialsVisible: false,
     viewportMaximized: false,
+    viewportView: { ...DEFAULT_VIEWPORT_VIEW },
   };
 }
 
@@ -54,7 +64,9 @@ export function normalizeSnapshot(raw) {
     contentVisible: raw.contentVisible !== false,
     assetViewerVisible: raw.assetViewerVisible !== false,
     tutorialsVisible: Boolean(raw.tutorialsVisible),
-    viewportMaximized: Boolean(raw.viewportMaximized),
+    // Dock maximize is deprecated — layouts never restore it.
+    viewportMaximized: false,
+    viewportView: normalizeViewportView(raw.viewportView || base.viewportView),
   };
 }
 
@@ -163,6 +175,17 @@ export function normalizeCatalog(raw) {
 /** Stable fingerprint for dirty detection (ignores volatile pixel noise where possible). */
 export function snapshotFingerprint(snapshot) {
   const snap = normalizeSnapshot(snapshot);
+  const viewportKey = {
+    layoutMode: snap.viewportView?.layoutMode,
+    splitX: snap.viewportView?.splitX,
+    splitY: snap.viewportView?.splitY,
+    splitY2: snap.viewportView?.splitY2,
+    panes: (snap.viewportView?.panes || []).map((p) => ({
+      id: p.id,
+      cameraMode: p.cameraMode,
+      displayMode: p.displayMode,
+    })),
+  };
   if (!snap.dockLayout) {
     return JSON.stringify({
       factory: true,
@@ -170,7 +193,7 @@ export function snapshotFingerprint(snapshot) {
       detailsVisible: snap.detailsVisible,
       contentVisible: snap.contentVisible,
       assetViewerVisible: snap.assetViewerVisible,
-      viewportMaximized: snap.viewportMaximized,
+      viewportView: viewportKey,
     });
   }
   const dock = snap.dockLayout;
@@ -187,7 +210,7 @@ export function snapshotFingerprint(snapshot) {
     detailsVisible: snap.detailsVisible,
     contentVisible: snap.contentVisible,
     assetViewerVisible: snap.assetViewerVisible,
-    viewportMaximized: snap.viewportMaximized,
+    viewportView: viewportKey,
   });
 }
 

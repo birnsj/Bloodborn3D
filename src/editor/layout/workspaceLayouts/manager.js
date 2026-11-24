@@ -3,6 +3,8 @@ import {
   WORKSPACE_LAYOUTS_STORAGE_KEY,
 } from './storage.js';
 import {
+  AUTOSAVE_LAYOUT_ID,
+  AUTOSAVE_LAYOUT_NAME,
   FACTORY_LAYOUT_ID,
   createCatalog,
   createFactoryLayout,
@@ -75,6 +77,30 @@ export function createWorkspaceLayoutManager(adapter = createLocalStorageSyncAda
     };
     persist();
     return { ok: true, layout: next };
+  }
+
+  /**
+   * Create or update the dedicated Autosaved layout and make it active.
+   * Used when the user rearranges while on the protected factory default.
+   */
+  function upsertAutosave(currentSnapshot) {
+    const existing = catalog.layouts[AUTOSAVE_LAYOUT_ID];
+    const now = Date.now();
+    const entry = {
+      id: AUTOSAVE_LAYOUT_ID,
+      name: existing?.name || AUTOSAVE_LAYOUT_NAME,
+      protected: false,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+      snapshot: captureSnapshot(currentSnapshot),
+    };
+    catalog = {
+      ...catalog,
+      activeLayoutId: AUTOSAVE_LAYOUT_ID,
+      layouts: { ...catalog.layouts, [AUTOSAVE_LAYOUT_ID]: entry },
+    };
+    persist();
+    return { ok: true, layout: entry };
   }
 
   /**
@@ -189,6 +215,7 @@ export function createWorkspaceLayoutManager(adapter = createLocalStorageSyncAda
     captureSnapshot,
     isDirty,
     saveActive,
+    upsertAutosave,
     saveAs,
     loadLayout,
     renameLayout,

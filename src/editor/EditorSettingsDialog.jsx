@@ -1,11 +1,22 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useEditor } from './EditorContext.jsx';
 import { useEditorSettings } from './EditorSettingsContext.jsx';
-import { DEFAULT_EDITOR_SETTINGS } from './editorSettingsPrefs.js';
 import { useLayout } from './layout/LayoutContext.jsx';
 import { DEFAULT_COLOR_THEME } from '../ui/colorThemes.js';
+import { DEFAULT_VIEW_SCALE } from './layout/viewScale.js';
 import { useHoverHelp } from '../ui/hoverHelp/HoverHelpContext.jsx';
 import { DEFAULT_HOVER_HELP_PREFS } from '../ui/hoverHelp/hoverHelpPrefs.js';
+import { helpProps } from '../ui/hoverHelp/helpProps.js';
+import { DISPLAY_MODES } from './viewport/viewportPrefs.js';
+
+const DISPLAY_MODE_LABELS = {
+  lit: 'Lit',
+  unlit: 'Unlit',
+  textured: 'Textured',
+  wireframe: 'Wireframe',
+  'solid-edges': 'Solid + Edges',
+};
 
 function RangeRow({ label, hint, value, min, max, step, display, onChange }) {
   return (
@@ -69,14 +80,60 @@ function CheckRow({ label, hint, checked, onChange }) {
   );
 }
 
+function SelectRow({ label, hint, value, options, onChange }) {
+  return (
+    <label className="bb-settings__row">
+      <span className="bb-settings__label">
+        {label}
+        {hint ? <span className="bb-settings__hint">{hint}</span> : null}
+      </span>
+      <span className="bb-settings__control bb-settings__control--select">
+        <select
+          className="bb-input bb-settings__select"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </span>
+    </label>
+  );
+}
+
 /**
  * Editor preferences (Edit → Settings…).
  * Portaled to document.body so UI-scale / dock chrome stay behind it.
  */
 export function EditorSettingsDialog({ open, onClose }) {
-  const { settings, patchSettings, resetSettings } = useEditorSettings();
-  const { layout, setColorTheme, colorThemes } = useLayout();
-  const { delayMs, setDelayMs } = useHoverHelp();
+  const {
+    settings,
+    patchSettings,
+    resetSettings,
+    saveSettingsAsDefault,
+  } = useEditorSettings();
+  const {
+    gridSize,
+    setGridSize,
+    gridSnap,
+    setGridSnap,
+    gridIncrements,
+  } = useEditor();
+  const {
+    layout,
+    patch,
+    setColorTheme,
+    setUiScale,
+    colorThemes,
+    viewScales,
+  } = useLayout();
+  const {
+    showHoverHelp,
+    setShowHoverHelp,
+    delayMs,
+    setDelayMs,
+  } = useHoverHelp();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -91,9 +148,24 @@ export function EditorSettingsDialog({ open, onClose }) {
   }, [open, onClose]);
 
   const onResetAll = () => {
-    resetSettings();
+    const next = resetSettings();
     setColorTheme(DEFAULT_COLOR_THEME);
+    setUiScale(DEFAULT_VIEW_SCALE);
+    patch({ contentViewMode: 'grid' });
+    setShowHoverHelp(DEFAULT_HOVER_HELP_PREFS.showHoverHelp);
     setDelayMs(DEFAULT_HOVER_HELP_PREFS.delayMs);
+    if (next) {
+      setGridSize(next.gridSize);
+      setGridSnap(next.gridSnap);
+      window.dispatchEvent(new CustomEvent('bb:set-all-display-modes', {
+        detail: next.defaultDisplayMode,
+      }));
+    }
+  };
+
+  const onDisplayMode = (mode) => {
+    patchSettings({ defaultDisplayMode: mode });
+    window.dispatchEvent(new CustomEvent('bb:set-all-display-modes', { detail: mode }));
   };
 
   if (!open || typeof document === 'undefined') return null;
@@ -112,33 +184,56 @@ export function EditorSettingsDialog({ open, onClose }) {
         aria-modal="true"
         aria-labelledby="bb-settings-title"
       >
-        <div className="bb-dialog__header">
+        <div className="bb-dialog__header" {...helpProps('settings.dialog')}>
           <h2 id="bb-settings-title" className="bb-dialog__title">Editor Settings</h2>
         </div>
         <div className="bb-dialog__body bb-settings">
-          <section className="bb-settings__section">
+          <section className="bb-settings__section" {...helpProps('settings.appearance')}>
             <h3 className="bb-settings__heading">Appearance</h3>
-            <label className="bb-settings__row">
-              <span className="bb-settings__label">
-                Theme
-                <span className="bb-settings__hint">Same as View → Theme. Applies to editor chrome.</span>
-              </span>
-              <span className="bb-settings__control bb-settings__control--select">
-                <select
-                  className="bb-input bb-settings__select"
-                  value={layout.colorTheme}
-                  onChange={(e) => setColorTheme(e.target.value)}
-                >
-                  {colorThemes.map((theme) => (
-                    <option key={theme.id} value={theme.id}>{theme.label}</option>
-                  ))}
-                </select>
-              </span>
-            </label>
+            <SelectRow
+              label="Theme"
+              hint="Same as View → Theme. Applies to editor chrome."
+              value={layout.colorTheme}
+              options={colorThemes.map((theme) => ({
+                value: theme.id,
+                label: theme.label,
+              }))}
+              onChange={(v) => setColorTheme(v)}
+            />
+            <SelectRow
+              label="UI scale"
+              hint="Same as View → UI Scale. Scales editor chrome (not browser zoom)."
+              value={String(layout.uiScale)}
+              options={viewScales.map((entry) => ({
+                value: String(entry.id),
+                label: entry.label,
+              }))}
+              onChange={(v) => setUiScale(Number(v))}
+            />
+            <SelectRow
+              label="Asset browser view"
+              hint="Grid or list layout in the Asset Viewer."
+              value={layout.contentViewMode || 'grid'}
+              options={[
+                { value: 'grid', label: 'Grid' },
+                { value: 'list', label: 'List' },
+              ]}
+              onChange={(v) => patch({ contentViewMode: v })}
+            />
           </section>
 
           <section className="bb-settings__section">
-            <h3 className="bb-settings__heading">Viewport Colors</h3>
+            <h3 className="bb-settings__heading">Viewport</h3>
+            <SelectRow
+              label="Display mode"
+              hint="Shading for all viewport panes (also on each pane’s chrome)."
+              value={settings.defaultDisplayMode}
+              options={DISPLAY_MODES.map((id) => ({
+                value: id,
+                label: DISPLAY_MODE_LABELS[id] || id,
+              }))}
+              onChange={onDisplayMode}
+            />
             <ColorRow
               label="Background"
               hint="3D viewport clear color."
@@ -172,21 +267,32 @@ export function EditorSettingsDialog({ open, onClose }) {
           </section>
 
           <section className="bb-settings__section">
+            <h3 className="bb-settings__heading">Grid</h3>
+            <SelectRow
+              label="Grid size"
+              hint="Construction grid step in editor units. Same as the Level toolbar."
+              value={String(gridSize)}
+              options={gridIncrements.map((n) => ({
+                value: String(n),
+                label: String(n),
+              }))}
+              onChange={(v) => setGridSize(Number(v))}
+            />
+            <CheckRow
+              label="Grid snap"
+              hint="Snap placement and gizmo moves to the grid. Same as the Level toolbar."
+              checked={gridSnap}
+              onChange={(v) => setGridSnap(v)}
+            />
+          </section>
+
+          <section className="bb-settings__section" {...helpProps('settings.camera')}>
             <h3 className="bb-settings__heading">Camera</h3>
             <RangeRow
-              label="Orbit floatiness"
-              hint="How much the camera coasts after rotating with RMB. 0 is snappy; higher is floatier."
-              min={0}
-              max={100}
-              step={1}
-              value={settings.cameraOrbitFloatiness}
-              onChange={(v) => patchSettings({ cameraOrbitFloatiness: v })}
-            />
-            <RangeRow
               label="Orbit speed"
-              hint="How fast RMB orbit turns."
+              hint="How fast RMB orbit turns. Orbit stops when you release — no after-drift."
               min={0.25}
-              max={3}
+              max={4}
               step={0.05}
               value={settings.cameraOrbitSpeed}
               display={settings.cameraOrbitSpeed.toFixed(2)}
@@ -196,17 +302,17 @@ export function EditorSettingsDialog({ open, onClose }) {
               label="Zoom speed"
               hint="Mouse-wheel zoom rate."
               min={0.25}
-              max={3}
+              max={4}
               step={0.05}
               value={settings.cameraOrbitZoomSpeed}
               display={settings.cameraOrbitZoomSpeed.toFixed(2)}
               onChange={(v) => patchSettings({ cameraOrbitZoomSpeed: v })}
             />
             <RangeRow
-              label="Pan speed"
-              hint="Middle-mouse pan rate."
+              label="Middle-mouse pan"
+              hint="How fast middle-mouse pans the view. Default is fast (2.0)."
               min={0.25}
-              max={3}
+              max={4}
               step={0.05}
               value={settings.cameraOrbitPanSpeed}
               display={settings.cameraOrbitPanSpeed.toFixed(2)}
@@ -216,7 +322,7 @@ export function EditorSettingsDialog({ open, onClose }) {
               label="Free-fly look sensitivity"
               hint="RMB look while flying with WASD / QE."
               min={0.25}
-              max={3}
+              max={4}
               step={0.05}
               value={settings.cameraFlyLookSensitivity}
               display={settings.cameraFlyLookSensitivity.toFixed(2)}
@@ -255,7 +361,7 @@ export function EditorSettingsDialog({ open, onClose }) {
               label="Look sensitivity"
               hint="Mouse-look speed in Play mode (pointer lock)."
               min={0.25}
-              max={3}
+              max={4}
               step={0.05}
               value={settings.playLookSensitivity}
               display={settings.playLookSensitivity.toFixed(2)}
@@ -265,9 +371,15 @@ export function EditorSettingsDialog({ open, onClose }) {
 
           <section className="bb-settings__section">
             <h3 className="bb-settings__heading">General</h3>
+            <CheckRow
+              label="Show Hover Help"
+              hint="Same as Help → Show Hover Help."
+              checked={showHoverHelp}
+              onChange={(v) => setShowHoverHelp(v)}
+            />
             <RangeRow
               label="Hover Help delay"
-              hint="Milliseconds before a hover tip appears. Toggle tips under Help → Show Hover Help."
+              hint="Milliseconds before a hover tip appears."
               min={100}
               max={2000}
               step={50}
@@ -281,8 +393,16 @@ export function EditorSettingsDialog({ open, onClose }) {
           <button
             type="button"
             className="bb-btn"
+            onClick={() => saveSettingsAsDefault({ gridSize, gridSnap })}
+            title="Store the current settings as your personal defaults for Reset"
+          >
+            Save as Default
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
             onClick={onResetAll}
-            title={`Restore defaults (floatiness ${DEFAULT_EDITOR_SETTINGS.cameraOrbitFloatiness})`}
+            title="Restore your saved defaults (or factory defaults if none saved)"
           >
             Reset Defaults
           </button>

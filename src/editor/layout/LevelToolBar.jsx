@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useEditor } from '../EditorContext.jsx';
-import { useEditorSettings } from '../EditorSettingsContext.jsx';
 import {
   IconAlign,
   IconPlay,
@@ -18,7 +17,6 @@ import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 
 export function LevelToolBar() {
   const { alert } = useEditorDialogs();
-  const { settings, patchSettings } = useEditorSettings();
   const {
     mode,
     tool,
@@ -34,8 +32,6 @@ export function LevelToolBar() {
     gridSnap,
     setGridSnap,
     gridIncrements,
-    levelName,
-    setLevelName,
     canUndo,
     canRedo,
     saveLevel,
@@ -237,27 +233,6 @@ export function LevelToolBar() {
         />
         <span>Snap</span>
       </label>
-      <label
-        className="bb-toolbar-field"
-        {...helpProps('toolbar.orbitMode', playReason)}
-      >
-        <input
-          type="checkbox"
-          checked={settings.cameraOrbitMode}
-          disabled={isPlay}
-          onChange={(e) => patchSettings({ cameraOrbitMode: e.target.checked })}
-        />
-        <span>Orbit</span>
-      </label>
-
-      <input
-        className="bb-input bb-level-name-input"
-        value={levelName}
-        disabled={isPlay}
-        onChange={(e) => setLevelName(e.target.value)}
-        title="Level filename"
-        {...helpProps('toolbar.levelName', playReason)}
-      />
 
       <div className="bb-level-toolbar__end">
         <span className="bb-toolbar-status" title={status}>{status}</span>

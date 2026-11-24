@@ -1,16 +1,17 @@
 export const materialsLesson = {
   id: 'materials',
   title: 'Materials and Textures',
-  summary: 'Assign materials to brushes, override a face, and adjust UVs.',
+  summary: 'Assign materials to brushes, paint a single face (poly), adjust UVs, and open the Materials workspace.',
   order: 4,
   starterPath: 'tutorials/openings.json',
   steps: [
     {
       id: 'intro',
       title: 'What is a material?',
-      body: 'A material controls how a surface looks (color and texture). Brushes can use a shared material from the Content Browser.',
+      body: 'A material controls how a surface looks (color and texture). Assign one to a whole brush, or paint individual faces (polys) from the Asset Viewer.',
       terms: [
         { term: 'Material', def: 'A look definition (color/texture) you assign to surfaces.' },
+        { term: 'Face / poly', def: 'One side of a brush. You can override its material without changing the whole actor.' },
         { term: 'UV', def: 'Controls how a texture is scaled, shifted, and rotated on a surface.' },
       ],
       verify: { type: 'manualConfirm', label: 'Continue' },
@@ -24,7 +25,7 @@ export const materialsLesson = {
     {
       id: 'assign-material',
       title: 'Assign Verify Wall',
-      body: 'In Details → Material, choose “Verify Wall” (or drag it from Content Browser onto the selected wall).',
+      body: 'In Details → Material, choose “Verify Wall”. You can also drag it from the Asset Viewer onto the selected wall (whole-actor assign).',
       highlight: ['details.material.id', 'panel.content'],
       verify: { type: 'materialAssigned', materialId: 'mat_verify_wall', trackAs: 'wall' },
       failHint: 'Assign the Verify Wall material to the selected brush.',
@@ -37,12 +38,29 @@ export const materialsLesson = {
       verify: { type: 'uvChanged', trackAs: 'wall' },
     },
     {
-      id: 'face-override',
-      title: 'Override one face (optional)',
-      body: 'Under Face Materials, assign a material to a single face (for example +Z). If you prefer to skip face overrides, use Skip.',
-      highlight: ['details.material.id'],
+      id: 'paint-face',
+      title: 'Paint one face (poly)',
+      body: 'From the Asset Viewer, drag a material onto a single face of the wall in the Viewport. That face gets its own override — you do not need the Surface tool for this.',
+      terms: [
+        { term: 'Asset Viewer', def: 'Bottom panel listing meshes, materials, and prefabs for the selected Content folder.' },
+      ],
+      highlight: ['content.asset', 'panel.assetViewer'],
       verify: { type: 'faceMaterialAssigned', trackAs: 'wall' },
-      failHint: 'Set any face override in Details, or press Skip.',
+      failHint: 'Drag a material from Asset Viewer onto a wall face, or use Surface + Details → Selected Surface.',
+      explain: 'Dropping a material on a face also selects that surface in Details. Dock panels will not split while you drag materials.',
+    },
+    {
+      id: 'selected-surface',
+      title: 'Selected Surface in Details',
+      body: 'With a face picked, open Details → Selected Surface to change that face’s material or UV. Esc (or Clear) drops the face pick.',
+      highlight: ['details.surface.material'],
+      verify: { type: 'manualConfirm', label: 'I found Selected Surface' },
+    },
+    {
+      id: 'materials-workspace',
+      title: 'Materials workspace',
+      body: 'Level → Open Materials (or the Materials workspace tab) to edit material definitions, then switch back to Level Editor.',
+      verify: { type: 'manualConfirm', label: 'Got it' },
     },
   ],
 };

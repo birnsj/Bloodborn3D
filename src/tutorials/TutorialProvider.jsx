@@ -38,28 +38,57 @@ export function TutorialProvider({ children }) {
   const [activeLessonId, setActiveLessonId] = useState(null);
   const [runtime, setRuntime] = useState(null);
   const [panelFocusToken, setPanelFocusToken] = useState(0);
+  /** Bumps when Cam / layout changes so viewportCameraIs / viewportLayoutIs re-check. */
+  const [viewportTick, setViewportTick] = useState(0);
   const prevCanUndo = useRef(editor.canUndo);
   const prevMode = useRef(editor.mode);
   const autoAdvanceLock = useRef(false);
 
+  useEffect(() => {
+    const onVp = () => setViewportTick((n) => n + 1);
+    window.addEventListener('bb:viewport-prefs', onVp);
+    return () => window.removeEventListener('bb:viewport-prefs', onVp);
+  }, []);
+
   const lesson = activeLessonId ? getLessonById(activeLessonId) : null;
   const step = lesson && runtime ? getStep(lesson, runtime.stepIndex) : null;
 
-  const editorSnapshot = useMemo(() => ({
-    world: editor.world,
-    mode: editor.mode,
-    selectedActorIds: editor.selectedActorIds,
-    gridSize: editor.gridSize,
-    canUndo: editor.canUndo,
-    canRedo: editor.canRedo,
-  }), [
+  const editorSnapshot = useMemo(() => {
+    const vp = typeof window !== 'undefined'
+      ? window.__bloodboundViewport?.getPrefs?.()
+      : null;
+    const activePane = vp?.panes?.find((p) => p.id === vp.activePaneId) || vp?.panes?.[0];
+    return {
+      world: editor.world,
+      mode: editor.mode,
+      tool: editor.tool,
+      geometryMode: editor.geometryMode,
+      geometrySelection: editor.geometrySelection,
+      transformMode: editor.transformMode,
+      clipSession: editor.clipSession,
+      selectedActorIds: editor.selectedActorIds,
+      selectedSurface: editor.selectedSurface,
+      gridSize: editor.gridSize,
+      canUndo: editor.canUndo,
+      canRedo: editor.canRedo,
+      viewportLayoutMode: vp?.layoutMode ?? null,
+      viewportCameraMode: activePane?.cameraMode ?? null,
+    };
+  }, [
     editor.world,
     editor.mode,
+    editor.tool,
+    editor.geometryMode,
+    editor.geometrySelection,
+    editor.transformMode,
+    editor.clipSession,
     editor.selectedActorIds,
+    editor.selectedSurface,
     editor.gridSize,
     editor.canUndo,
     editor.canRedo,
     editor.revision,
+    viewportTick,
   ]);
 
   const showTutorialsPanel = useCallback(() => {

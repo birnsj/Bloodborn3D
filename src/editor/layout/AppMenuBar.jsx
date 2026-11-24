@@ -4,8 +4,10 @@ import { EditorSettingsDialog } from '../EditorSettingsDialog.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { KeyboardShortcutsDialog } from '../../ui/hoverHelp/KeyboardShortcutsDialog.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useTutorials } from '../../tutorials/TutorialProvider.jsx';
+import { LAYOUT_MODE_OPTIONS } from '../viewport/viewportPrefs.js';
 
 function Menu({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -71,7 +73,7 @@ function SubMenu({ label, children }) {
   );
 }
 
-function Item({ label, shortcut, disabled, onClick, close, checked }) {
+function Item({ label, shortcut, disabled, onClick, close, checked, helpId = null, disabledReason = null }) {
   return (
     <li>
       <button
@@ -83,6 +85,7 @@ function Item({ label, shortcut, disabled, onClick, close, checked }) {
           onClick?.();
           close?.();
         }}
+        {...(helpId ? helpProps(helpId, disabled ? (disabledReason || 'Unavailable.') : null) : {})}
       >
         <span>{checked ? `✓ ${label}` : label}</span>
         {shortcut ? <span className="bb-menu-shortcut">{shortcut}</span> : null}
@@ -105,6 +108,8 @@ export function AppMenuBar() {
     canRedo,
     selectedActorIds,
     saveLevel,
+    saveLevelAs,
+    createNewMap,
     loadLevel,
     isDirty,
     undo,
@@ -128,6 +133,7 @@ export function AppMenuBar() {
     setWorkspace,
     setUiScale,
     setColorTheme,
+    setViewportLayoutMode,
     viewScales,
     colorThemes,
     namedLayouts,
@@ -141,7 +147,7 @@ export function AppMenuBar() {
     factoryLayoutId,
   } = useLayout();
   const { showHoverHelp, setShowHoverHelp } = useHoverHelp();
-  const { openTutorialsPanel, startLesson, lessons } = useTutorials();
+  const { openTutorialsPanel } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -156,7 +162,7 @@ export function AppMenuBar() {
     const result = saveLayout();
     if (!result.ok && result.error === 'protected') {
       await alert(
-        'The Default layout is protected. Use Save Layout As to create a custom layout.',
+        'The Default layout is protected. Rearranging autosaves to Autosaved, or use Save Layout As for a custom name.',
         { title: 'Protected Layout' },
       );
     }
@@ -222,18 +228,53 @@ export function AppMenuBar() {
       <Menu label="File">
         {(close) => (
           <>
+            <Item
+              label="New Map…"
+              disabled={isPlay}
+              close={close}
+              helpId="file.newMap"
+              disabledReason="Unavailable during Play mode."
+              onClick={async () => {
+                const rawName = await prompt('New map filename:', {
+                  title: 'New Map',
+                  initialValue: 'untitled.json',
+                });
+                if (!rawName?.trim()) return;
+                const subtractive = await confirm(
+                  'Choose map mode.\n\nSubtractive starts as a solid world — structural brushes carve rooms.\nAdditive starts empty — you add brushes to build.',
+                  {
+                    title: 'Map Mode',
+                    confirmLabel: 'Subtractive',
+                    cancelLabel: 'Additive',
+                  },
+                );
+                await createNewMap({
+                  fileName: rawName,
+                  mapMode: subtractive ? 'subtractive' : 'additive',
+                });
+              }}
+            />
+            <Sep />
             <Item label="Save Level" shortcut="Ctrl+S" disabled={isPlay} close={close} onClick={() => saveLevel()} />
+            <Item label="Save Level As…" disabled={isPlay} close={close} onClick={() => saveLevelAs()} />
             <Item label="Reload Level" disabled={isPlay} close={close} onClick={() => loadLevel(levelName)} />
             <Sep />
-            {levels.map((name) => (
-              <Item
-                key={name}
-                label={name}
-                disabled={isPlay}
-                close={close}
-                onClick={() => loadLevel(name)}
-              />
-            ))}
+            {levels.map((name) => {
+              const active = name === levelName;
+              const modeSuffix = active && world?.mapMode === 'subtractive'
+                ? ' · subtractive'
+                : (active && world?.mapMode === 'additive' ? ' · additive' : '');
+              return (
+                <Item
+                  key={name}
+                  label={`${name}${modeSuffix}`}
+                  disabled={isPlay}
+                  close={close}
+                  checked={active}
+                  onClick={() => loadLevel(name)}
+                />
+              );
+            })}
           </>
         )}
       </Menu>
@@ -262,7 +303,12 @@ export function AppMenuBar() {
             <Item label="Duplicate" shortcut="Ctrl+D" disabled={isPlay || !hasSelection} close={close} onClick={() => duplicateSelected()} />
             <Item label="Delete" shortcut="Del" disabled={isPlay || !hasSelection} close={close} onClick={() => deleteSelected()} />
             <Sep />
-            <Item label="Settings…" close={close} onClick={() => setSettingsOpen(true)} />
+            <Item
+              label="Settings…"
+              close={close}
+              onClick={() => setSettingsOpen(true)}
+              helpId="settings.dialog"
+            />
           </>
         )}
       </Menu>
@@ -286,6 +332,8 @@ export function AppMenuBar() {
               shortcut="F"
               disabled={isPlay || !hasSelection}
               close={close}
+              helpId="viewport.focus"
+              disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Select actors first.'}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('bb:focus-selection'));
               }}
@@ -314,6 +362,28 @@ export function AppMenuBar() {
               onClick={() => toggleGridSnap()}
             />
             <Sep />
+            <SubMenu label="Viewport Layout">
+              {(subClose) => {
+                const done = () => {
+                  subClose();
+                  close();
+                };
+                const currentMode = layout.viewportView?.layoutMode || 'single';
+                return (
+                  <>
+                    {LAYOUT_MODE_OPTIONS.map((mode) => (
+                      <Item
+                        key={mode.id}
+                        label={mode.label}
+                        checked={currentMode === mode.id}
+                        close={done}
+                        onClick={() => setViewportLayoutMode(mode.id)}
+                      />
+                    ))}
+                  </>
+                );
+              }}
+            </SubMenu>
             <SubMenu label="Theme">
               {(subClose) => {
                 const done = () => {
@@ -379,7 +449,7 @@ export function AppMenuBar() {
             />
             <Sep />
             <Item
-              label={layout.viewportMaximized ? 'Restore Viewport' : 'Maximize Viewport'}
+              label="Maximize Active View"
               close={close}
               onClick={() => toggleMaximizeViewport()}
             />
@@ -439,38 +509,21 @@ export function AppMenuBar() {
               checked={showHoverHelp}
               close={close}
               onClick={() => setShowHoverHelp(!showHoverHelp)}
+              helpId="help.hoverHelp"
             />
             <Item
               label="Keyboard Shortcuts…"
               close={close}
               onClick={() => setShortcutsOpen(true)}
+              helpId="help.shortcuts"
             />
             <Sep />
             <Item
               label="Tutorials…"
               close={close}
               onClick={() => openTutorialsPanel()}
+              helpId="panel.tutorials"
             />
-            <SubMenu label="Start Lesson">
-              {(subClose) => {
-                const done = () => {
-                  subClose();
-                  close();
-                };
-                return (
-                  <>
-                    {lessons.map((lesson) => (
-                      <Item
-                        key={lesson.id}
-                        label={`${lesson.order}. ${lesson.title}`}
-                        close={done}
-                        onClick={() => { void startLesson(lesson.id); }}
-                      />
-                    ))}
-                  </>
-                );
-              }}
-            </SubMenu>
           </>
         )}
       </Menu>

@@ -21,6 +21,7 @@ export function StatusBar() {
   const brushLabel = tool === 'select' ? 'Select' : `Brush: ${tool}`;
   const themeLabel = colorThemes.find((t) => t.id === layout.colorTheme)?.label
     || layout.colorTheme;
+  const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
 
   return (
     <footer className="bb-statusbar">
@@ -32,6 +33,7 @@ export function StatusBar() {
         <span>Grid: {gridSize}</span>
         <span>{brushLabel}</span>
         <span>Mode: {mode}</span>
+        <span title="File → New Map… sets map mode">Map: {mapModeLabel}</span>
         <span>World: {world?.name || '—'}</span>
       </div>
     </footer>

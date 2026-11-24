@@ -71,19 +71,37 @@ describe('marqueeSelection', () => {
 });
 
 describe('viewportDisplay', () => {
-  it('applies and restores wireframe mode', () => {
+  it('applies and restores wireframe mode via silhouette edges', () => {
     const scene = new THREE.Scene();
     const mat = new THREE.MeshStandardMaterial({ color: 0xff0000, wireframe: false });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
     scene.add(mesh);
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry),
+      new THREE.LineBasicMaterial({ color: 0xffffff }),
+    );
+    edges.userData.viewportEdgesOverlay = true;
+    edges.visible = false;
+    scene.add(edges);
+    const rangeGuide = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 16, 12),
+      new THREE.MeshBasicMaterial({ wireframe: true }),
+    );
+    rangeGuide.userData.denseWireHelper = true;
+    scene.add(rangeGuide);
     const light = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(light);
 
     const state = applyDisplayMode(scene, [light], 'wireframe');
-    expect(mat.wireframe).toBe(true);
+    expect(mat.wireframe).toBe(false);
+    expect(mesh.visible).toBe(false);
+    expect(edges.visible).toBe(true);
+    expect(rangeGuide.visible).toBe(false);
     expect(light.intensity).toBe(0);
     restoreDisplayMode(state);
-    expect(mat.wireframe).toBe(false);
+    expect(mesh.visible).toBe(true);
+    expect(edges.visible).toBe(false);
+    expect(rangeGuide.visible).toBe(true);
     expect(light.intensity).toBe(0.5);
   });
 });

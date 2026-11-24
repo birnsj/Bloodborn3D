@@ -1,6 +1,39 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTutorials } from './TutorialProvider.jsx';
 import { helpProps } from '../ui/hoverHelp/helpProps.js';
+
+const SECTIONS = [
+  {
+    id: 'start',
+    title: 'Start here',
+    ids: ['getting-started', 'first-room', 'doors-windows'],
+  },
+  {
+    id: 'build',
+    title: 'Build & dress the space',
+    ids: [
+      'subtractive-geometry',
+      'materials',
+      'lighting',
+      'furnishing',
+      'organizing',
+      'prefabs',
+      'ceilings-multilevel',
+      'ramps-stairs',
+      'columns-arches-curves',
+    ],
+  },
+  {
+    id: 'sculpt',
+    title: 'Edit geometry',
+    ids: ['geometry-editing', 'surface-align'],
+  },
+  {
+    id: 'editor',
+    title: 'Editor & play',
+    ids: ['testing', 'workspace'],
+  },
+];
 
 /**
  * Lesson catalog only. Active steps render as floating coach marks near controls.
@@ -19,6 +52,19 @@ export function TutorialsPanel({ docked = false }) {
   } = useTutorials();
   const rootRef = useRef(null);
 
+  const byId = useMemo(() => {
+    const map = new Map();
+    for (const item of lessons) map.set(item.id, item);
+    return map;
+  }, [lessons]);
+
+  const sections = useMemo(() => (
+    SECTIONS.map((section) => ({
+      ...section,
+      items: section.ids.map((id) => byId.get(id)).filter(Boolean),
+    })).filter((section) => section.items.length > 0)
+  ), [byId]);
+
   useEffect(() => {
     if (panelFocusToken > 0) {
       rootRef.current?.querySelector?.('.bb-tutorials-catalog')?.focus?.();
@@ -35,49 +81,53 @@ export function TutorialsPanel({ docked = false }) {
       <header className="bb-tutorials__header">
         <h2 className="bb-tutorials__title">Tutorials</h2>
         <p className="bb-tutorials__lead">
-          Pick a lesson. Guidance appears in a floating window next to each control — finish the
-          step (or Next / Skip) and the next tip moves to the next feature.
+          Choose a lesson. A tip appears next to each control — finish the task and it moves on.
         </p>
       </header>
 
-      {activeLessonId && (
+      {activeLessonId ? (
         <div className="bb-tutorials-running">
-          <p>
-            Running: <strong>{lesson?.title}</strong>
-            {' '}
-            (step {stepIndex + 1}/{stepCount}). Follow the floating tip on the screen.
-          </p>
+          <div className="bb-tutorials-running__copy">
+            <p className="bb-tutorials-running__label">In progress</p>
+            <p className="bb-tutorials-running__title">{lesson?.title}</p>
+            <p className="bb-tutorials-running__meta">
+              Step {stepIndex + 1} of {stepCount} — follow the floating tip.
+            </p>
+          </div>
           <button type="button" className="bb-btn" onClick={() => { void exitLesson(); }}>
             Exit lesson
           </button>
         </div>
-      )}
-
-      {!activeLessonId && (
+      ) : (
         <div className="bb-tutorials-catalog" tabIndex={-1}>
-          <ul className="bb-tutorials-list">
-            {lessons.map((item) => {
-              const done = prefs.completedLessonIds?.includes(item.id);
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className="bb-tutorials-list__item"
-                    onClick={() => { void startLesson(item.id); }}
-                  >
-                    <span className="bb-tutorials-list__order">{item.order}</span>
-                    <span className="bb-tutorials-list__body">
-                      <span className="bb-tutorials-list__name">
-                        {item.title}
-                        {done ? <span className="bb-tutorials-badge">Done</span> : null}
-                      </span>
-                      <span className="bb-tutorials-list__summary">{item.summary}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {sections.map((section) => (
+            <section key={section.id} className="bb-tutorials-section">
+              <h3 className="bb-tutorials-section__title">{section.title}</h3>
+              <ul className="bb-tutorials-list">
+                {section.items.map((item) => {
+                  const done = prefs.completedLessonIds?.includes(item.id);
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className="bb-tutorials-list__item"
+                        onClick={() => { void startLesson(item.id); }}
+                      >
+                        <span className="bb-tutorials-list__order">{item.order}</span>
+                        <span className="bb-tutorials-list__body">
+                          <span className="bb-tutorials-list__name">
+                            {item.title}
+                            {done ? <span className="bb-tutorials-badge">Done</span> : null}
+                          </span>
+                          <span className="bb-tutorials-list__summary">{item.summary}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
     </div>

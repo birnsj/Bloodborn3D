@@ -80,15 +80,15 @@ describe('dock layout defaults', () => {
     ]);
   });
 
-  it('applies default arrangement: content + asset viewer below, outliner/details beside viewport', () => {
+  it('applies default arrangement: content left, outliner+details right, asset viewer bottom', () => {
     const api = createMockApi();
     applyDefaultDockLayout(api);
 
     expect(api.clear).toHaveBeenCalled();
     expect(api.addPanel.mock.calls.map((c) => c[0].id)).toEqual([
       'viewport',
-      'content',
       'assetViewer',
+      'content',
       'outliner',
       'details',
     ]);
@@ -97,11 +97,17 @@ describe('dock layout defaults', () => {
       direction: 'below',
     });
     expect(api.addPanel.mock.calls[2][0].position).toEqual({
-      referencePanel: 'content',
+      referencePanel: 'viewport',
+      direction: 'left',
+    });
+    expect(api.addPanel.mock.calls[3][0].position).toEqual({
+      referencePanel: 'viewport',
       direction: 'right',
     });
-    expect(api.addPanel.mock.calls[3][0].position.direction).toBe('left');
-    expect(api.addPanel.mock.calls[4][0].position.direction).toBe('right');
+    expect(api.addPanel.mock.calls[4][0].position).toEqual({
+      referencePanel: 'outliner',
+      direction: 'below',
+    });
     expect(api.addPanel.mock.calls[0][0].renderer).toBe('always');
   });
 
@@ -140,13 +146,13 @@ describe('dock layout defaults', () => {
 });
 
 describe('dock panel open/close helpers', () => {
-  it('reopens a missing outliner to the left of the viewport', () => {
+  it('reopens a missing outliner to the right of the viewport', () => {
     const api = createMockApi(['viewport']);
     reopenPanel(api, 'outliner');
     expect(api.addPanel).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'outliner',
-        position: { referencePanel: 'viewport', direction: 'left' },
+        position: { referencePanel: 'viewport', direction: 'right' },
       }),
     );
   });

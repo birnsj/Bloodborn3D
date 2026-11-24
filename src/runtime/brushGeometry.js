@@ -44,8 +44,9 @@ export function createBrushBoxGeometry(sizeEditor, uv = {}, faceUVs = null) {
 
 /**
  * Same UV rules as createBrushBoxGeometry, for an arbitrary solid piece.
- * Optional uvBias shifts tiling so pieces of a cut wall stay continuous in wall space.
- * Bias is applied in scaled-density space (before rotation), matching historical cut-wall continuity.
+ * Optional uvBias:
+ *   - { origin:{x,y,z} } brush-local min corner → per-face world-aligned tiling (cut pieces)
+ *   - { u, v } legacy uniform bias in scaled-density space
  */
 export function createBrushSolidGeometry(sizeEditor, uv = {}, uvBias = null, faceUVs = null) {
   const sx = Math.max(1e-4, sizeEditor.x);
@@ -60,27 +61,34 @@ export function createBrushSolidGeometry(sizeEditor, uv = {}, uvBias = null, fac
 function applyBrushUvs(geom, sx, sy, sz, uv = {}, uvBias = null) {
   const scaleX = Number(uv.scale?.x) || 1;
   const scaleY = Number(uv.scale?.y) || 1;
-  const biasU = Number(uvBias?.u) || 0;
-  const biasV = Number(uvBias?.v) || 0;
-
   const tile = TEXTURE_TILE_EDITOR_UNITS;
-  // Bake actor scale into face extents; bias stays in that scaled space (cut-wall continuity).
-  const faceUvSizes = [
-    [(sz / tile) * scaleX, (sy / tile) * scaleY],
-    [(sz / tile) * scaleX, (sy / tile) * scaleY],
-    [(sx / tile) * scaleX, (sz / tile) * scaleY],
-    [(sx / tile) * scaleX, (sz / tile) * scaleY],
-    [(sx / tile) * scaleX, (sy / tile) * scaleY],
-    [(sx / tile) * scaleX, (sy / tile) * scaleY],
+  const ox = Number(uvBias?.origin?.x);
+  const oy = Number(uvBias?.origin?.y);
+  const oz = Number(uvBias?.origin?.z);
+  const hasOrigin = Number.isFinite(ox) && Number.isFinite(oy) && Number.isFinite(oz);
+  const legacyU = Number(uvBias?.u) || 0;
+  const legacyV = Number(uvBias?.v) || 0;
+
+  // Face order: +x -x +y -y +z -z. Sizes match Three.js BoxGeometry UV axes.
+  // +Y/−Y use V along ±Z with V flipped in BoxGeometry — bias accounts for that when origin is set.
+  const faceUv = [
+    { fu: (sz / tile) * scaleX, fv: (sy / tile) * scaleY, bu: hasOrigin ? (oz / tile) * scaleX : legacyU, bv: hasOrigin ? (oy / tile) * scaleY : legacyV, flipV: false },
+    { fu: (sz / tile) * scaleX, fv: (sy / tile) * scaleY, bu: hasOrigin ? (oz / tile) * scaleX : legacyU, bv: hasOrigin ? (oy / tile) * scaleY : legacyV, flipV: false },
+    { fu: (sx / tile) * scaleX, fv: (sz / tile) * scaleY, bu: hasOrigin ? (ox / tile) * scaleX : legacyU, bv: hasOrigin ? (oz / tile) * scaleY : legacyV, flipV: true },
+    { fu: (sx / tile) * scaleX, fv: (sz / tile) * scaleY, bu: hasOrigin ? (ox / tile) * scaleX : legacyU, bv: hasOrigin ? (oz / tile) * scaleY : legacyV, flipV: true },
+    { fu: (sx / tile) * scaleX, fv: (sy / tile) * scaleY, bu: hasOrigin ? (ox / tile) * scaleX : legacyU, bv: hasOrigin ? (oy / tile) * scaleY : legacyV, flipV: false },
+    { fu: (sx / tile) * scaleX, fv: (sy / tile) * scaleY, bu: hasOrigin ? (ox / tile) * scaleX : legacyU, bv: hasOrigin ? (oy / tile) * scaleY : legacyV, flipV: false },
   ];
 
   const uvAttr = geom.attributes.uv;
   for (let face = 0; face < 6; face += 1) {
-    const [fu, fv] = faceUvSizes[face];
+    const { fu, fv, bu, bv, flipV } = faceUv[face];
     for (let i = 0; i < 4; i += 1) {
       const idx = face * 4 + i;
-      const u = uvAttr.getX(idx) * fu + biasU;
-      const v = uvAttr.getY(idx) * fv + biasV;
+      const nu = uvAttr.getX(idx);
+      const nv = flipV && hasOrigin ? 1 - uvAttr.getY(idx) : uvAttr.getY(idx);
+      const u = nu * fu + bu;
+      const v = nv * fv + bv;
       // Rotation + offset only (scale already in fu/fv); matches composeActorUv order.
       const [ru, rv] = composeActorUv(u, v, {
         scale: { x: 1, y: 1 },

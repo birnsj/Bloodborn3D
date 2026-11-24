@@ -4,18 +4,16 @@ import * as THREE from 'three';
 import { useEditor } from './EditorContext.jsx';
 import { useEditorSettings } from './EditorSettingsContext.jsx';
 import {
-  orbitDampingFromFloatiness,
   viewportColorsFromSettings,
 } from './editorSettingsPrefs.js';
-import { useLayout } from './layout/LayoutContext.jsx';
 import {
   snapToGrid,
   WALL_MODULE_SIZE,
 } from '../core/units.js';
 import { getBrushSnapSize, snapMovedAxis } from './gridSnap.js';
 import { resizeBrushFace } from './brushFactory.js';
-import { IconMaximize, IconRestore } from '../ui/icons.jsx';
 import { findAsset } from '../assets/AssetRegistry.js';
+import { ASSET_DRAG_MIME_MATERIAL } from '../assets/assetCatalog.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
 import { CreationToolbar } from './creation/CreationToolbar.jsx';
 import {
@@ -35,18 +33,23 @@ import { toggleGeometryItem } from './geometryEditing/geometrySelection.js';
 import {
   clampViewportPrefs,
   loadViewportPrefs,
+  mergeViewportViewIntoPrefs,
   saveViewportPrefs,
   isOrthographicMode,
+  viewportViewFromPrefs,
 } from './viewport/viewportPrefs.js';
-import { LayoutModeToolbar, ViewportLayout } from './viewport/ViewportLayout.jsx';
+import { useLayout } from './layout/LayoutContext.jsx';
+import { ViewportLayout } from './viewport/ViewportLayout.jsx';
 import {
   buildViewportPanes,
   capturePanePoses,
+  configureOrbitForPane,
   filterGizmoAxisForOrtho,
   focusPaneOnSelection,
   resolvePointerInPanes,
   syncActivePaneCamera,
 } from './viewport/viewportRuntimeBridge.js';
+import { applyPanePose, resetPaneCameraView } from './viewport/viewportCameras.js';
 import {
   normalizeMarqueeNdc,
   marqueeSelectActors,
@@ -132,25 +135,78 @@ export function Viewport() {
     placeLight,
     placePlayerSpawn,
     createCell,
-    updateSelectedBrush,
+    assignSelectedSurfaceMaterial,
+    applySelectedMaterialToBrush,
   } = useEditor();
   const { settings: editorSettings } = useEditorSettings();
-  const { layout, toggleMaximizeViewport } = useLayout();
+  const { layout, setViewportView } = useLayout();
   const { dragMime, registry } = useAssetBrowser();
 
   editorSettingsRef.current = editorSettings;
 
   const setViewportPrefs = useCallback((next) => {
+    const prev = viewportPrefsRef.current;
     const clamped = clampViewportPrefs(
-      typeof next === 'function' ? next(viewportPrefsRef.current) : next,
+      typeof next === 'function' ? next(prev) : next,
     );
     viewportPrefsRef.current = clamped;
     setViewportPrefsState(clamped);
+    // Only push layout chrome (single/multi) — ignore freelook pose churn.
+    const prevView = viewportViewFromPrefs(prev);
+    const nextView = viewportViewFromPrefs(clamped);
+    if (JSON.stringify(prevView) !== JSON.stringify(nextView)) {
+      setViewportView(nextView);
+    }
+    // Tutorials verify Cam / layout — notify when those change (poses alone do not).
+    const prevCam = prev.panes?.find((p) => p.id === prev.activePaneId)?.cameraMode;
+    const nextCam = clamped.panes?.find((p) => p.id === clamped.activePaneId)?.cameraMode;
+    if (
+      prev.layoutMode !== clamped.layoutMode
+      || prevCam !== nextCam
+      || prev.activePaneId !== clamped.activePaneId
+    ) {
+      window.dispatchEvent(new CustomEvent('bb:viewport-prefs', {
+        detail: {
+          layoutMode: clamped.layoutMode,
+          cameraMode: nextCam,
+          activePaneId: clamped.activePaneId,
+        },
+      }));
+    }
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
     persistTimerRef.current = setTimeout(() => {
       saveViewportPrefs(viewportPrefsRef.current);
     }, 200);
+  }, [setViewportView]);
+
+  // Session / named-layout viewport chrome → live prefs (poses preserved).
+  useEffect(() => {
+    const applyView = (view) => {
+      const merged = mergeViewportViewIntoPrefs(viewportPrefsRef.current, view);
+      viewportPrefsRef.current = merged;
+      setViewportPrefsState(merged);
+      saveViewportPrefs(merged);
+    };
+    applyView(layout.viewportView);
+    const onApplyView = (e) => applyView(e.detail);
+    window.addEventListener('bb:apply-viewport-view', onApplyView);
+    return () => window.removeEventListener('bb:apply-viewport-view', onApplyView);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + named-layout events only
   }, []);
+
+  // Editor Settings → apply display mode to every pane.
+  useEffect(() => {
+    const onDisplay = (e) => {
+      const mode = e?.detail;
+      if (typeof mode !== 'string') return;
+      setViewportPrefs((prev) => ({
+        ...prev,
+        panes: prev.panes.map((pane) => ({ ...pane, displayMode: mode })),
+      }));
+    };
+    window.addEventListener('bb:set-all-display-modes', onDisplay);
+    return () => window.removeEventListener('bb:set-all-display-modes', onDisplay);
+  }, [setViewportPrefs]);
 
   const clearPlacementSession = useCallback(() => {
     placeSessionRef.current = null;
@@ -228,12 +284,6 @@ export function Viewport() {
     const controls = new OrbitControls(camera, canvas);
     {
       const prefs = editorSettingsRef.current;
-      const damping = orbitDampingFromFloatiness(prefs?.cameraOrbitFloatiness);
-      controls.enableDamping = damping.enableDamping;
-      controls.dampingFactor = damping.dampingFactor;
-      controls.rotateSpeed = prefs?.cameraOrbitSpeed ?? 1;
-      controls.zoomSpeed = prefs?.cameraOrbitZoomSpeed ?? 1;
-      controls.panSpeed = prefs?.cameraOrbitPanSpeed ?? 1;
       // Invert vertical orbit by flipping phi deltas when the setting is on.
       const baseRotateUp = controls._rotateUp.bind(controls);
       controls._rotateUp = (angle) => {
@@ -252,7 +302,9 @@ export function Viewport() {
       );
       if (active?.target) controls.target.set(...active.target);
       else controls.target.set(0, 1.5, 0);
-      syncActivePaneCamera(runtime.sceneView, viewportPrefsRef.current, controls);
+      syncActivePaneCamera(runtime.sceneView, viewportPrefsRef.current, controls, {
+        settings: editorSettingsRef.current,
+      });
     }
     controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.update();
@@ -295,11 +347,20 @@ export function Viewport() {
       syncLookTarget();
     };
 
+    /** Stop OrbitControls mid-drag so RMB look can't keep orbiting after WASD starts. */
+    const suspendOrbitForFly = () => {
+      controls.enabled = false;
+      controls.state = -1; // OrbitControls STATE.NONE
+      controls.mouseButtons.RIGHT = -1;
+      if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+      if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+      if (Array.isArray(controls._pointers)) controls._pointers.length = 0;
+    };
+
     const enterFlyMode = () => {
       if (flyModeRef.current) return;
       flyModeRef.current = true;
-      // Hand RMB to freelook so orbit rotate doesn't fight WASD.
-      controls.mouseButtons.RIGHT = -1;
+      suspendOrbitForFly();
       const cam = activeCam();
       lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
       lookRef.current.yaw = lookEuler.y;
@@ -314,7 +375,9 @@ export function Viewport() {
       lookRef.current.active = false;
       lookRef.current.pointerId = null;
       // Resume orbit around the point currently in front of the camera.
+      syncLookTarget();
       controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+      controls.enabled = runtime.mode === 'edit' && !dragRef.current;
       controls.update();
     };
 
@@ -325,6 +388,10 @@ export function Viewport() {
         runtime.setSize(width, height);
         shellSizeRef.current = { width, height };
         setShellSize({ width, height });
+        if (runtime.mode === 'play') {
+          runtime.setViewportPanes(null);
+          return;
+        }
         const panes = buildViewportPanes(
           viewportPrefsRef.current,
           width,
@@ -344,7 +411,7 @@ export function Viewport() {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.target?.isContentEditable) return;
-      // Free-fly is perspective-only; orthographic panes use pan/zoom.
+      // Free-fly is perspective-only; orthographic panes keep RMB orbit + pan/zoom.
       const activePane = viewportPrefsRef.current.panes.find(
         (p) => p.id === viewportPrefsRef.current.activePaneId,
       );
@@ -366,21 +433,26 @@ export function Viewport() {
       exitFlyMode();
     };
 
-    const LOOK_SENS_BASE = 0.005;
+    const LOOK_SENS_BASE = 0.009;
     const PITCH_LIMIT = Math.PI / 2 - 0.05;
+
+    const beginFlyLook = (e) => {
+      const look = lookRef.current;
+      look.active = true;
+      look.pointerId = e.pointerId;
+      look.lastX = e.clientX;
+      look.lastY = e.clientY;
+      const cam = activeCam();
+      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
+      look.yaw = lookEuler.y;
+      look.pitch = lookEuler.x;
+      look.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
+    };
 
     const onLookPointerDown = (e) => {
       // Freelook only while flying (WASD/QE). Otherwise OrbitControls owns RMB.
       if (e.button !== 2 || runtime.mode !== 'edit' || !flyModeRef.current) return;
-      lookRef.current.active = true;
-      lookRef.current.pointerId = e.pointerId;
-      lookRef.current.lastX = e.clientX;
-      lookRef.current.lastY = e.clientY;
-      const cam = activeCam();
-      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
-      lookRef.current.yaw = lookEuler.y;
-      lookRef.current.pitch = lookEuler.x;
-      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
+      beginFlyLook(e);
       try {
         canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -388,12 +460,18 @@ export function Viewport() {
       }
     };
     const onLookPointerMove = (e) => {
+      if (runtime.mode !== 'edit' || !flyModeRef.current) return;
       const look = lookRef.current;
-      if (!look.active || e.pointerId !== look.pointerId || !flyModeRef.current) return;
+      // RMB-then-WASD: orbit drag was cancelled; adopt the still-held RMB as freelook.
+      if (!look.active && (e.buttons & 2) === 2) {
+        beginFlyLook(e);
+      }
+      if (!look.active || (look.pointerId != null && e.pointerId !== look.pointerId)) return;
       const dx = e.clientX - look.lastX;
       const dy = e.clientY - look.lastY;
       look.lastX = e.clientX;
       look.lastY = e.clientY;
+      if (dx === 0 && dy === 0) return;
       const prefs = editorSettingsRef.current;
       const lookSens = LOOK_SENS_BASE * (prefs?.cameraFlyLookSensitivity ?? 1);
       const ySign = prefs?.cameraInvertY ? -1 : 1;
@@ -404,7 +482,9 @@ export function Viewport() {
     };
     const onLookPointerUp = (e) => {
       const look = lookRef.current;
-      if (e.pointerId !== look.pointerId) return;
+      if (look.pointerId != null && e.pointerId !== look.pointerId) return;
+      // Only end look when RMB is released (ignore other buttons).
+      if (e.button != null && e.button !== 2 && (e.buttons & 2) === 2) return;
       look.active = false;
       look.pointerId = null;
       try {
@@ -463,19 +543,23 @@ export function Viewport() {
             syncLookTarget();
           }
         } else if (!flyModeRef.current) {
-          // Idle orbit / pan / zoom — damping needs per-frame update.
+          // Keep OrbitControls in sync (damping is off — no post-drag coast).
           controls.update();
         }
 
-        // Keep scissor panes + persisted poses in sync with live cameras.
-        const { width, height } = shellSizeRef.current;
-        const panes = buildViewportPanes(
-          viewportPrefsRef.current,
-          width,
-          height,
-          runtime.sceneView,
-        );
-        runtime.setViewportPanes(panes);
+        // Keep scissor panes + persisted poses in sync with live cameras (edit only).
+        if (runtime.mode !== 'play') {
+          const { width, height } = shellSizeRef.current;
+          const panes = buildViewportPanes(
+            viewportPrefsRef.current,
+            width,
+            height,
+            runtime.sceneView,
+          );
+          runtime.setViewportPanes(panes);
+        } else {
+          runtime.setViewportPanes(null);
+        }
       }
       raf = requestAnimationFrame(tick);
     };
@@ -510,24 +594,24 @@ export function Viewport() {
 
   useEffect(() => {
     if (orbitRef.current) {
-      orbitRef.current.enabled = mode === 'edit' && !dragRef.current;
+      // Keep orbit suspended while free-flying (WASD owns the camera).
+      orbitRef.current.enabled = mode === 'edit' && !dragRef.current && !flyModeRef.current;
     }
   }, [mode]);
 
   useEffect(() => {
     const controls = orbitRef.current;
     if (!controls) return;
-    const damping = orbitDampingFromFloatiness(editorSettings.cameraOrbitFloatiness);
-    controls.enableDamping = damping.enableDamping;
-    controls.dampingFactor = damping.dampingFactor;
-    controls.rotateSpeed = editorSettings.cameraOrbitSpeed;
-    controls.zoomSpeed = editorSettings.cameraOrbitZoomSpeed;
-    controls.panSpeed = editorSettings.cameraOrbitPanSpeed;
+    const pane = viewportPrefsRef.current.panes.find(
+      (p) => p.id === viewportPrefsRef.current.activePaneId,
+    ) || viewportPrefsRef.current.panes[0];
+    configureOrbitForPane(controls, pane, editorSettings);
   }, [
-    editorSettings.cameraOrbitFloatiness,
     editorSettings.cameraOrbitSpeed,
     editorSettings.cameraOrbitZoomSpeed,
     editorSettings.cameraOrbitPanSpeed,
+    viewportPrefs.activePaneId,
+    viewportPrefs.panes,
   ]);
 
   useEffect(() => {
@@ -576,7 +660,9 @@ export function Viewport() {
       controls,
     );
     setViewportPrefs(next);
-    syncActivePaneCamera(sceneView, next, controls);
+    syncActivePaneCamera(sceneView, next, controls, {
+      settings: editorSettingsRef.current,
+    });
 
     const cam = sceneView.camera;
     lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls?.target || new THREE.Vector3()));
@@ -585,6 +671,45 @@ export function Viewport() {
     lookRef.current.yaw = lookEuler.y;
     lookRef.current.pitch = lookEuler.x;
   }, [runtimeRef, selectedActorIds, setViewportPrefs]);
+
+  /** Snap pane camera back to its mode’s resting orientation + default zoom. */
+  const resetCameraView = useCallback((paneId = null) => {
+    const sceneView = runtimeRef.current?.sceneView;
+    const controls = orbitRef.current;
+    const prefs = viewportPrefsRef.current;
+    const targetPaneId = paneId || prefs.activePaneId;
+    const panes = prefs.panes.map((pane) => (
+      pane.id === targetPaneId ? resetPaneCameraView(pane) : pane
+    ));
+    const next = { ...prefs, panes, activePaneId: targetPaneId };
+
+    flyModeRef.current = false;
+    lookRef.current.active = false;
+    lookRef.current.pointerId = null;
+
+    setViewportPrefs(next);
+    if (sceneView) {
+      const pane = panes.find((p) => p.id === targetPaneId);
+      if (pane) {
+        const cam = sceneView.ensurePaneCamera(targetPaneId, pane.cameraMode, pane);
+        // applyPanePose resets ortho frustum + camera.zoom; perspective uses home distance.
+        applyPanePose(cam, pane);
+      }
+      syncActivePaneCamera(sceneView, next, controls, {
+        settings: editorSettingsRef.current,
+      });
+      controls?.update?.();
+    }
+
+    const cam = sceneView?.camera;
+    if (cam && controls) {
+      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
+      const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
+      lookRef.current.yaw = lookEuler.y;
+      lookRef.current.pitch = lookEuler.x;
+    }
+  }, [runtimeRef, setViewportPrefs]);
 
   useEffect(() => {
     const onFocusEvent = () => focusSelected();
@@ -740,7 +865,10 @@ export function Viewport() {
     if (activate && hit.paneId && hit.paneId !== viewportPrefsRef.current.activePaneId) {
       const next = { ...viewportPrefsRef.current, activePaneId: hit.paneId };
       setViewportPrefs(next);
-      syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current);
+      syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current, {
+        flying: flyModeRef.current,
+        settings: editorSettingsRef.current,
+      });
     }
     const sceneView = runtimeRef.current?.sceneView;
     const camera = sceneView?.getPaneCamera?.(hit.paneId) || sceneView?.camera;
@@ -762,6 +890,12 @@ export function Viewport() {
   };
 
   const onPointerDown = (e) => {
+    // LMB / MMB / RMB all activate the pane under the cursor (overlays are
+    // pointer-events:none, so this canvas handler owns multi-view focus).
+    if (e.button === 0 || e.button === 1 || e.button === 2) {
+      pointerNorm(e, { activate: true });
+    }
+
     if (mode !== 'edit' || !runtimeRef.current || !world) return;
     if (e.button !== 0) return;
 
@@ -771,7 +905,7 @@ export function Viewport() {
       return;
     }
 
-    const { nx, ny, camera, localX, localY } = pointerNorm(e);
+    const { nx, ny, camera, localX, localY } = pointerNorm(e, { activate: false });
     const sceneView = runtimeRef.current.sceneView;
     const cam = camera || sceneView.camera;
 
@@ -1419,38 +1553,13 @@ export function Viewport() {
     }
   };
 
-  const toolHint = () => {
-    if (mode !== 'edit') {
-      return 'Click to lock mouse · WASD move · Mouse look · Space jump · Esc release';
-    }
-    if (tool === 'box') return 'Drag on grid to create a box · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'wall') return 'Drag on grid to create a wall · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'floor') return 'Drag on grid to create a floor · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'ceiling') return 'Drag on grid to create a ceiling · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'ramp') return 'Drag on grid to create a ramp · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'stair') return 'Drag on grid to create stairs · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'column') return 'Drag on grid to create a column · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'curvedWall') return 'Drag on grid to create a curved wall · near-square → circle · RMB orbit · WASD free-fly · Q/E · Shift boost';
-    if (tool === 'archRoman' || tool === 'archGothic' || tool === 'arch') return 'Drag on grid to create an arch · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'subtract') return 'Drag on grid to create a subtractive cutter · RMB orbit · WASD free-fly (RMB freelook while flying) · Q/E up/down · Shift boost · MMB pan · wheel zoom';
-    if (tool === 'geometry') {
-      if (geometryMode === 'edge') {
-        return 'Edge mode — click near edges (Shift multi · Alt x-ray) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
-      }
-      if (geometryMode === 'vertex') {
-        return 'Vertex mode — click near vertices (Shift multi · Alt x-ray) · Move only · Esc cancel · RMB orbit · WASD free-fly';
-      }
-      return 'Face mode — click faces (Shift multi) · gizmo move · Esc cancel · RMB orbit · WASD free-fly';
-    }
-    return `LMB select · Ctrl+LMB multi · W move · E rotate · R scale (${transformMode}) · F focus · Del delete · Ctrl+D duplicate · Ctrl+Z/Y undo/redo · RMB orbit · WASD free-fly · Q/E up/down · Shift boost · MMB pan · wheel zoom`;
-  };
-
   const onCanvasDragOver = (e) => {
     if (mode !== 'edit') return;
     const types = [...e.dataTransfer.types];
     const isCreate = types.includes(CREATE_DRAG_MIME);
+    const isMaterial = types.includes(ASSET_DRAG_MIME_MATERIAL);
     const isAsset = types.includes(dragMime) || types.includes('text/plain');
-    if (!isCreate && !isAsset) return;
+    if (!isCreate && !isAsset && !isMaterial) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
 
@@ -1460,7 +1569,24 @@ export function Viewport() {
       // Browser may not expose data until drop; use a generic upright preview.
       payload = { placement: 'upright', placeKind: 'prop' };
     }
-    if (isAsset && !isCreate) {
+    if ((isAsset || isMaterial) && !isCreate) {
+      // Materials paint onto a picked face — no mesh placement ghost.
+      // Kind MIME is readable during dragover; getData(payload) is often empty.
+      if (isMaterial) {
+        clearPlacementSession();
+        return;
+      }
+      let kind = null;
+      try {
+        const raw = e.dataTransfer.getData(dragMime) || '';
+        if (raw) kind = JSON.parse(raw)?.kind || JSON.parse(raw)?.type;
+      } catch {
+        kind = null;
+      }
+      if (kind === 'material') {
+        clearPlacementSession();
+        return;
+      }
       payload = { placement: 'upright', action: 'asset' };
     }
     const pose = resolveSurfacePose(
@@ -1544,9 +1670,21 @@ export function Viewport() {
     }
     const entry = findAsset(registry, id);
     const kind = payload?.kind || payload?.type || entry?.kind;
-    if (kind === 'material' && selectedActorIds.length > 0) {
+    if (kind === 'material') {
       clearPlacementSession();
-      updateSelectedBrush({ materialId: id });
+      const sceneView = runtimeRef.current?.sceneView;
+      const hit = sceneView?.pickSurface?.(nx, ny, camera);
+      if (hit?.actorId && hit?.surfaceId) {
+        selectActor(hit.actorId);
+        setSelectedSurface({ actorId: hit.actorId, surfaceId: hit.surfaceId });
+        assignSelectedSurfaceMaterial(id, hit);
+        setStatus(`Applied material to ${hit.surfaceId}`);
+        return;
+      }
+      if (selectedActorIds.length > 0) {
+        applySelectedMaterialToBrush(id);
+        setStatus('Applied material to selection');
+      }
       return;
     }
 
@@ -1579,15 +1717,59 @@ export function Viewport() {
   };
 
   // Rebind OrbitControls + scissor panes when layout / active pane / camera mode changes.
+  // Play uses a single full-bleed FPS camera — clear multi-pane scissors.
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime?.sceneView) return;
-    syncActivePaneCamera(runtime.sceneView, viewportPrefs, orbitRef.current);
+    if (mode === 'play') {
+      runtime.setViewportPanes(null);
+      return;
+    }
+    syncActivePaneCamera(runtime.sceneView, viewportPrefs, orbitRef.current, {
+      flying: flyModeRef.current,
+      settings: editorSettingsRef.current,
+    });
     const { width, height } = shellSizeRef.current;
     runtime.setViewportPanes(
       buildViewportPanes(viewportPrefs, width, height, runtime.sceneView),
     );
-  }, [runtimeRef, viewportPrefs]);
+  }, [runtimeRef, viewportPrefs, mode]);
+
+  const togglePaneMaximize = useCallback(() => {
+    const prefs = viewportPrefsRef.current;
+    if (prefs.maximizedPaneId) {
+      const restore = prefs.maximizeRestore || {};
+      setViewportPrefs({
+        ...prefs,
+        maximizedPaneId: null,
+        maximizeRestore: null,
+        layoutMode: restore.layoutMode || prefs.layoutMode,
+        splitX: restore.splitX ?? prefs.splitX,
+        splitY: restore.splitY ?? prefs.splitY,
+        splitY2: restore.splitY2 ?? prefs.splitY2,
+      });
+      return;
+    }
+    if (prefs.layoutMode === 'single') return;
+    const paneId = prefs.activePaneId || prefs.panes[0]?.id;
+    if (!paneId) return;
+    setViewportPrefs({
+      ...prefs,
+      maximizedPaneId: paneId,
+      maximizeRestore: {
+        layoutMode: prefs.layoutMode,
+        splitX: prefs.splitX,
+        splitY: prefs.splitY,
+        splitY2: prefs.splitY2,
+      },
+    });
+  }, [setViewportPrefs]);
+
+  useEffect(() => {
+    const onToggle = () => togglePaneMaximize();
+    window.addEventListener('bb:toggle-pane-maximize', onToggle);
+    return () => window.removeEventListener('bb:toggle-pane-maximize', onToggle);
+  }, [togglePaneMaximize]);
 
   // Harness / debug bridge for Phase 2F.6 acceptance.
   useEffect(() => {
@@ -1626,51 +1808,31 @@ export function Viewport() {
 
   return (
     <div className="bb-viewport" ref={shellRef}>
-      <div className="bb-viewport-chrome">
-        <LayoutModeToolbar
-          layoutMode={viewportPrefs.layoutMode}
-          maximizedPaneId={viewportPrefs.maximizedPaneId}
-          onLayoutMode={(layoutMode) => {
-            setViewportPrefs({
-              ...viewportPrefsRef.current,
-              layoutMode,
-              maximizedPaneId: null,
-              maximizeRestore: null,
-            });
+      {mode === 'edit' ? (
+        <CreationToolbar
+          viewportRef={shellRef}
+          disabled={false}
+          onActivateTool={onActivateCreationTool}
+          onToolDragStart={(payload) => {
+            placeSessionRef.current = {
+              payload,
+              dragging: true,
+              candidateIndex: 0,
+            };
+            // Keep the active create tool in sync so a failed HTML5 drop
+            // still footprint-drags the intended kind (not a prior Subtract).
+            if (payload?.action === 'mode' && payload.tool) {
+              setTool(payload.tool);
+            }
+          }}
+          onToolDragEnd={() => {
+            // Drop handler clears; if cancelled, clear preview.
+            if (placeSessionRef.current?.dragging) {
+              clearPlacementSession();
+            }
           }}
         />
-        <button
-          type="button"
-          className="bb-btn bb-btn--icon"
-          title={layout.viewportMaximized ? 'Restore dock viewport' : 'Maximize dock viewport'}
-          onClick={() => toggleMaximizeViewport()}
-        >
-          {layout.viewportMaximized ? <IconRestore /> : <IconMaximize />}
-        </button>
-      </div>
-      <CreationToolbar
-        viewportRef={shellRef}
-        disabled={mode !== 'edit'}
-        onActivateTool={onActivateCreationTool}
-        onToolDragStart={(payload) => {
-          placeSessionRef.current = {
-            payload,
-            dragging: true,
-            candidateIndex: 0,
-          };
-          // Keep the active create tool in sync so a failed HTML5 drop
-          // still footprint-drags the intended kind (not a prior Subtract).
-          if (payload?.action === 'mode' && payload.tool) {
-            setTool(payload.tool);
-          }
-        }}
-        onToolDragEnd={() => {
-          // Drop handler clears; if cancelled, clear preview.
-          if (placeSessionRef.current?.dragging) {
-            clearPlacementSession();
-          }
-        }}
-      />
+      ) : null}
       <canvas
         ref={canvasRef}
         className="bb-viewport-canvas"
@@ -1682,26 +1844,29 @@ export function Viewport() {
         onDragLeave={onCanvasDragLeave}
         onDrop={onCanvasDrop}
       />
-      <ViewportLayout
-        prefs={viewportPrefs}
-        shellWidth={shellSize.width}
-        shellHeight={shellSize.height}
-        marqueeRect={marqueeScreen}
-        onChangePrefs={setViewportPrefs}
-        onActivatePane={(paneId) => {
-          const next = { ...viewportPrefsRef.current, activePaneId: paneId };
-          setViewportPrefs(next);
-          syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current);
-        }}
-        onFocusSelected={(paneId) => focusSelected(paneId)}
-      />
-      <div className="bb-viewport-hint">
-        {toolHint()}
-        {placeSessionRef.current?.armed ? ' · Click surface to place · Esc cancel · Tab cycle' : ''}
-        {selectedActorIds.length > 0 && mode === 'edit'
-          ? ` · ${selectedActorIds.length} selected`
-          : ''}
-      </div>
+      {mode === 'edit' ? (
+        <ViewportLayout
+          prefs={viewportPrefs}
+          shellWidth={shellSize.width}
+          shellHeight={shellSize.height}
+          marqueeRect={marqueeScreen}
+          onChangePrefs={setViewportPrefs}
+          onActivatePane={(paneId) => {
+            const next = { ...viewportPrefsRef.current, activePaneId: paneId };
+            setViewportPrefs(next);
+            syncActivePaneCamera(runtimeRef.current?.sceneView, next, orbitRef.current, {
+              flying: flyModeRef.current,
+              settings: editorSettingsRef.current,
+            });
+          }}
+          onResetCamera={(paneId) => resetCameraView(paneId)}
+        />
+      ) : (
+        <div className="bb-viewport-play-chrome" aria-hidden="true">
+          <span className="bb-viewport-play-chrome__badge">Play</span>
+          <span className="bb-viewport-play-chrome__hint">Esc releases mouse · Stop ends Play</span>
+        </div>
+      )}
     </div>
   );
 }

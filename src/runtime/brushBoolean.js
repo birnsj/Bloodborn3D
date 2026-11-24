@@ -57,6 +57,30 @@ export function aabbToSolid(aabb, role = 'solid') {
   };
 }
 
+/**
+ * Which faces of a carved solid piece lie on the parent additive brush’s outer hull
+ * (local brush space, center at origin). Used so World Solid reads as invisible
+ * substrate — only faces exposed by subtract cuts stay visible.
+ */
+export function solidFacesOnBrushHull(solid, brushSize, eps = 0.51) {
+  const hx = (Number(brushSize?.x) || 0) * 0.5;
+  const hy = (Number(brushSize?.y) || 0) * 0.5;
+  const hz = (Number(brushSize?.z) || 0) * 0.5;
+  const box = solidToAabb(solid);
+  return {
+    px: Math.abs(box.max.x - hx) <= eps,
+    nx: Math.abs(box.min.x + hx) <= eps,
+    py: Math.abs(box.max.y - hy) <= eps,
+    ny: Math.abs(box.min.y + hy) <= eps,
+    pz: Math.abs(box.max.z - hz) <= eps,
+    nz: Math.abs(box.min.z + hz) <= eps,
+  };
+}
+
+export function isWorldSolidActor(actor) {
+  return Boolean(actor?.tags?.includes?.('world-solid'));
+}
+
 export function aabbsOverlap(a, b, eps = 1e-6) {
   return a.min.x < b.max.x - eps
     && a.max.x > b.min.x + eps

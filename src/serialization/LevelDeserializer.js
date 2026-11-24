@@ -1,4 +1,4 @@
-import { World } from '../core/World.js';
+import { World, normalizeMapMode } from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { createComponentFromJSON } from '../components/componentRegistry.js';
 import {
@@ -24,6 +24,7 @@ export function deserializeLevel(data) {
   const world = new World({
     name: data.name || 'Untitled Level',
     schemaVersion: data.schemaVersion,
+    mapMode: normalizeMapMode(data.mapMode),
   });
 
   for (const actorData of data.actors) {

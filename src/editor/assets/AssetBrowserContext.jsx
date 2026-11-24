@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   ASSET_DRAG_MIME,
+  ASSET_DRAG_MIME_MATERIAL,
   ASSET_FOLDERS,
   getCatalogAsset,
   listCatalogAssets,
@@ -149,15 +150,20 @@ export function AssetBrowserProvider({ children }) {
 
   const beginAssetDrag = useCallback((event, asset) => {
     if (!asset) return;
+    const kind = asset.kind || asset.type;
     const payload = JSON.stringify({
       id: asset.id,
       name: asset.name,
       type: asset.type,
-      kind: asset.kind || asset.type,
+      kind,
       folder: asset.folder,
     });
     event.dataTransfer.setData(ASSET_DRAG_MIME, payload);
     event.dataTransfer.setData('text/plain', asset.id);
+    // Kind marker so dragover can detect materials (getData is empty until drop).
+    if (kind === 'material') {
+      event.dataTransfer.setData(ASSET_DRAG_MIME_MATERIAL, asset.id);
+    }
     event.dataTransfer.effectAllowed = 'copy';
   }, []);
 

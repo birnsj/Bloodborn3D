@@ -114,6 +114,11 @@ export function evaluateVerify(verify, ctx) {
   const {
     world,
     mode,
+    tool,
+    geometryMode,
+    geometrySelection,
+    transformMode,
+    clipSession,
     selectedActorIds = [],
     baseline,
     tracked = {},
@@ -121,6 +126,9 @@ export function evaluateVerify(verify, ctx) {
     gridSize,
     canUndo,
     canRedo,
+    viewportLayoutMode,
+    viewportCameraMode,
+    selectedSurface,
   } = ctx;
 
   switch (verify.type) {
@@ -338,14 +346,51 @@ export function evaluateVerify(verify, ctx) {
       const actor = resolveTrackedActor(world, tracked, verify.trackAs)
         || world?.getActor?.(selectedActorIds[selectedActorIds.length - 1]);
       if (!actor) return { ok: false };
-      const brush = brushOf(actor);
-      const faces = brush?.faceMaterials || {};
+      const structural = brushOf(actor)
+        || actor.getComponent?.('ConvexBrush')
+        || actor.getComponent?.('Ramp')
+        || actor.getComponent?.('Stair')
+        || actor.getComponent?.('Column')
+        || actor.getComponent?.('Arch')
+        || actor.getComponent?.('CurvedWall');
+      const faces = structural?.faceMaterials || {};
       const before = baseline?.actors?.[actor.id]?.brush?.faceMaterials || {};
-      const changed = JSON.stringify(faces) !== JSON.stringify(before)
-        && Object.keys(faces).some((k) => faces[k]);
-      return changed
-        ? { ok: true }
-        : { ok: false, hint: 'Set a per-face material override in Details.' };
+      const hasAny = Object.keys(faces).some((k) => faces[k]);
+      const changed = JSON.stringify(faces) !== JSON.stringify(before) && hasAny;
+      const wantMat = verify.materialId;
+      const hasWant = wantMat
+        ? Object.values(faces).includes(wantMat)
+        : hasAny;
+      if (!hasWant || (!changed && !verify.allowUnchanged)) {
+        return {
+          ok: false,
+          hint: verify.failHint
+            || (wantMat
+              ? `Paint “${wantMat}” onto a face (drag from Asset Viewer or Details → Selected Surface).`
+              : 'Paint a material onto a face — drag from Asset Viewer onto a poly, or use Surface + Details.'),
+        };
+      }
+      return { ok: true };
+    }
+
+    case 'surfaceSelected': {
+      if (!selectedSurface?.actorId || !selectedSurface?.surfaceId) {
+        return {
+          ok: false,
+          hint: verify.failHint
+            || 'Click a face in the Viewport (Surface tool), or drag a material onto a poly.',
+        };
+      }
+      if (verify.trackAs) {
+        const trackedId = tracked?.[verify.trackAs];
+        if (trackedId && selectedSurface.actorId !== trackedId) {
+          return { ok: false, hint: 'Pick a face on the object from the earlier step.' };
+        }
+      }
+      return {
+        ok: true,
+        track: verify.trackAs ? { [verify.trackAs]: selectedSurface.actorId } : undefined,
+      };
     }
 
     case 'lightPlaced': {
@@ -560,6 +605,111 @@ export function evaluateVerify(verify, ctx) {
       const min = verify.min ?? verify.count ?? 1;
       if (n >= min) return { ok: true };
       return { ok: false, hint: `Select at least ${min} objects (Ctrl+click to add).` };
+    }
+
+    case 'toolIs': {
+      const want = verify.tool;
+      if (tool === want) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || `Activate the ${want} tool from the toolbar.`,
+      };
+    }
+
+    case 'geometryModeIs': {
+      const want = verify.mode || 'face';
+      if (tool !== 'geometry') {
+        return { ok: false, hint: 'Click Face, Edge, or Vertex on the toolbar first.' };
+      }
+      if (geometryMode === want) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || `Switch to ${want} mode on the toolbar.`,
+      };
+    }
+
+    case 'geometrySelected': {
+      if (tool !== 'geometry') {
+        return { ok: false, hint: 'Enter Face / Edge / Vertex mode first.' };
+      }
+      if (verify.mode && geometrySelection?.mode !== verify.mode) {
+        return { ok: false, hint: `Select something in ${verify.mode} mode.` };
+      }
+      const count = (geometrySelection?.items || []).reduce(
+        (n, it) => n + (it.ids?.length || 0),
+        0,
+      );
+      const min = verify.min ?? 1;
+      if (count >= min) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || 'Click a face, edge, or vertex on the brush in the Viewport.',
+      };
+    }
+
+    case 'transformModeIs': {
+      const want = verify.mode || 'move';
+      if (transformMode === want) return { ok: true };
+      const key = want === 'rotate' ? 'E' : want === 'scale' ? 'R' : 'W';
+      return {
+        ok: false,
+        hint: verify.failHint || `Press ${key} (or use the transform buttons) for ${want}.`,
+      };
+    }
+
+    case 'componentCreated': {
+      const type = verify.component;
+      if (!type) return { ok: false, hint: 'Tutorial misconfigured (missing component).' };
+      const created = newActors(world, baseline).filter((a) => a.getComponent?.(type));
+      if (!created.length) {
+        return {
+          ok: false,
+          hint: verify.failHint || `Create a new ${type} with the creation toolbar.`,
+        };
+      }
+      const actor = created[created.length - 1];
+      return {
+        ok: true,
+        track: verify.trackAs ? { [verify.trackAs]: actor.id } : undefined,
+      };
+    }
+
+    case 'hasComponent': {
+      const actor = resolveTrackedActor(world, tracked, verify.trackAs)
+        || world?.getActor?.(selectedActorIds[selectedActorIds.length - 1]);
+      if (!actor) return { ok: false, hint: 'Select the object from the earlier step.' };
+      if (actor.getComponent?.(verify.component)) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || `Convert or create so this object has ${verify.component}.`,
+      };
+    }
+
+    case 'clipSessionActive': {
+      if (clipSession) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || 'Start Clip from Details → Extrude / Clip.',
+      };
+    }
+
+    case 'viewportLayoutIs': {
+      const want = verify.layoutMode || 'quad';
+      if (viewportLayoutMode === want) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint || `Click the ${want} layout box on the Viewport chrome.`,
+      };
+    }
+
+    case 'viewportCameraIs': {
+      const want = verify.cameraMode || 'isometric';
+      if (viewportCameraMode === want) return { ok: true };
+      return {
+        ok: false,
+        hint: verify.failHint
+          || `On the Viewport chrome, set Cam to ${want === 'isometric' ? 'Isometric' : want}.`,
+      };
     }
 
     default:

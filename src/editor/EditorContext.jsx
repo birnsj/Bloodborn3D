@@ -12,6 +12,12 @@ import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { loadLevelFile, saveLevelFile, listLevels } from '../io/levelFileApi.js';
 import { SavedStateTracker, levelFingerprint } from './dirtyTracking.js';
 import {
+  createNewMapLevelData,
+  normalizeLevelFileName as normalizeNewMapFileName,
+  STRUCTURAL_BRUSH_KINDS,
+  structuralBrushesAreSubtractive,
+} from './newMapFactory.js';
+import {
   snapToGrid,
   DEFAULT_GRID_EDITOR_UNITS,
   GRID_INCREMENTS,
@@ -21,6 +27,7 @@ import {
   getBrushSnapSize,
   snapCenterByEdges,
 } from './gridSnap.js';
+import { loadEditorSettings } from './editorSettingsPrefs.js';
 import { GameRuntime } from '../runtime/GameRuntime.js';
 import { HistoryStack } from './history/HistoryStack.js';
 import {
@@ -67,6 +74,7 @@ import {
   localPointToWorld,
   planClip,
   planFaceExtrusion,
+  planesByActorIdFromWorldPoints,
   previewClip,
   snapExtrudeDistance,
   worldPointsToLocalPlane,
@@ -190,9 +198,12 @@ export function EditorProvider({ children }) {
   const [levelName, setLevelName] = useState('test-room.json');
   const [levels, setLevels] = useState([]);
   const [status, setStatusState] = useState('Ready');
-  const [gridSize, setGridSizeState] = useState(DEFAULT_GRID_EDITOR_UNITS);
+  const [gridSize, setGridSizeState] = useState(() => {
+    const s = loadEditorSettings();
+    return GRID_INCREMENTS.includes(s.gridSize) ? s.gridSize : DEFAULT_GRID_EDITOR_UNITS;
+  });
   /** When false, placement/gizmo snaps are freeform (surface contact preserved). */
-  const [gridSnap, setGridSnap] = useState(true);
+  const [gridSnap, setGridSnapState] = useState(() => loadEditorSettings().gridSnap !== false);
   const [revision, setRevision] = useState(0);
   const [historyFlags, setHistoryFlags] = useState({ canUndo: false, canRedo: false });
   /** @type {[{ kind: 'project'|'tutorial', readOnlyDisk: boolean, lessonId: string|null, displayName: string }]} */
@@ -364,12 +375,24 @@ export function EditorProvider({ children }) {
     }
   }, [assetResolver, assetRevision]);
 
+  const persistGridPrefs = useCallback((partial) => {
+    // Keep Editor Settings in sync when grid is changed from the toolbar / View menu.
+    window.dispatchEvent(new CustomEvent('bb:editor-settings-patch', { detail: partial }));
+  }, []);
+
   const setGridSize = useCallback((value) => {
     const next = Number(value);
     const size = GRID_INCREMENTS.includes(next) ? next : (next || DEFAULT_GRID_EDITOR_UNITS);
     setGridSizeState(size);
     runtimeRef.current?.setGridSize(size);
-  }, []);
+    persistGridPrefs({ gridSize: size });
+  }, [persistGridPrefs]);
+
+  const setGridSnap = useCallback((value) => {
+    const next = typeof value === 'function' ? value(gridSnapRef.current) : Boolean(value);
+    setGridSnapState(next);
+    persistGridPrefs({ gridSnap: next });
+  }, [persistGridPrefs]);
 
   /**
    * Replace the authored world. `savedFingerprint` overrides the clean baseline
@@ -591,6 +614,35 @@ export function EditorProvider({ children }) {
     return name;
   }, [world, notify, refreshLevels]);
 
+  const normalizeLevelFileName = useCallback((fileName) => {
+    let name = String(fileName || '').trim();
+    if (!name) return null;
+    if (!name.endsWith('.json')) name = `${name}.json`;
+    // Basename only — matches level file API safety rules.
+    return name.split(/[/\\]/).pop() || null;
+  }, []);
+
+  const writeLevelFile = useCallback(async (fileName) => {
+    if (!world) return null;
+    const name = normalizeLevelFileName(fileName);
+    if (!name) return null;
+    const data = serializeLevel(world);
+    data.name = data.name || name.replace(/\.json$/i, '');
+    const writtenFingerprint = levelFingerprint(world);
+    try {
+      await saveLevelFile(name, data);
+    } catch (err) {
+      notify(`Save failed: ${err.message}`);
+      return null;
+    }
+    savedStateRef.current.markSaved(writtenFingerprint);
+    setDirty(savedStateRef.current.isDirty(worldRef.current));
+    setLevelName(name);
+    notify(`Saved ${name}`);
+    await refreshLevels();
+    return name;
+  }, [world, normalizeLevelFileName, notify, refreshLevels]);
+
   const saveLevel = useCallback(async () => {
     if (!world) return;
     if (runtimeRef.current?.mode === 'play') {
@@ -609,19 +661,88 @@ export function EditorProvider({ children }) {
       await saveTutorialWorkAs(name);
       return;
     }
-    const data = serializeLevel(world);
-    const writtenFingerprint = levelFingerprint(world);
-    try {
-      await saveLevelFile(levelName, data);
-    } catch (err) {
-      // Leave dirty state untouched: the disk copy is still out of date.
-      notify(`Save failed: ${err.message}`);
+    await writeLevelFile(levelName);
+  }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs, writeLevelFile]);
+
+  const saveLevelAs = useCallback(async () => {
+    if (!world) return;
+    if (runtimeRef.current?.mode === 'play') {
+      notify('Stop Play before saving');
       return;
     }
-    savedStateRef.current.markSaved(writtenFingerprint);
-    setDirty(savedStateRef.current.isDirty(worldRef.current));
-    notify(`Saved ${levelName}`);
-  }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs]);
+    if (levelSession.readOnlyDisk || levelSession.kind === 'tutorial') {
+      const name = await dialogs.prompt(
+        'Tutorial levels are not saved over your project. Enter a new level filename to keep this work:',
+        {
+          title: 'Save tutorial work as…',
+          initialValue: 'my-tutorial-room.json',
+        },
+      );
+      if (!name) return;
+      await saveTutorialWorkAs(name);
+      return;
+    }
+    const name = await dialogs.prompt('Save level as:', {
+      title: 'Save Level As',
+      initialValue: levelName || 'untitled.json',
+    });
+    if (!name?.trim()) return;
+    await writeLevelFile(name);
+  }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs, writeLevelFile]);
+
+  /**
+   * File → New Map… — create additive (empty) or subtractive (World Solid) level,
+   * write to disk, and load it into the editor.
+   */
+  const createNewMap = useCallback(async ({ fileName, mapMode = 'additive' } = {}) => {
+    if (runtimeRef.current?.mode === 'play') {
+      notify('Stop Play before creating a new map');
+      return null;
+    }
+    if (!(await confirmDiscardChanges('Create a new map'))) return null;
+
+    const name = normalizeNewMapFileName(fileName)
+      || normalizeLevelFileName(fileName);
+    if (!name) {
+      notify('Enter a level filename.');
+      return null;
+    }
+
+    const displayName = name.replace(/\.json$/i, '') || 'Untitled Level';
+    const data = createNewMapLevelData({
+      name: displayName,
+      mapMode,
+      gridSize: gridRef.current,
+    });
+
+    try {
+      await saveLevelFile(name, data);
+    } catch (err) {
+      notify(`Create map failed: ${err.message}`);
+      return null;
+    }
+
+    sessionStackRef.current = [];
+    applyLevelData(data, {
+      fileName: name,
+      session: {
+        kind: 'project',
+        readOnlyDisk: false,
+        lessonId: null,
+        displayName: name,
+      },
+      statusMessage: `Created ${name} (${mapMode === 'subtractive' ? 'subtractive' : 'additive'})`,
+    });
+    await refreshLevels();
+    notify(`New ${mapMode === 'subtractive' ? 'subtractive' : 'additive'} map: ${name}`);
+    return name;
+  }, [
+    confirmDiscardChanges,
+    normalizeLevelFileName,
+    applyLevelData,
+    refreshLevels,
+    notify,
+  ]);
 
   // Startup load. Runs exactly once: it reads the latest callbacks through a
   // ref so a changing callback identity can never reload (and so replace) the
@@ -828,9 +949,12 @@ export function EditorProvider({ children }) {
       return actor;
     }
 
-    const isSubtract = kind === 'subtract';
+    // Subtractive maps: structural solids carve the World Solid by default.
+    const forceSubtract = kind === 'subtract'
+      || (structuralBrushesAreSubtractive(world) && STRUCTURAL_BRUSH_KINDS.has(kind));
+    const isSubtract = forceSubtract;
     const actor = createBrushFromBounds({
-      kind: isSubtract ? 'box' : kind,
+      kind: isSubtract && kind === 'subtract' ? 'box' : kind,
       min,
       max,
       gridSize: gridRef.current,
@@ -2594,27 +2718,26 @@ export function EditorProvider({ children }) {
     if (!world || !session?.actorIds?.length) {
       return { ok: false, code: 'NO_PLANE' };
     }
-    if (!session.plane && !(session.worldPoints?.length >= 3)) {
-      return { ok: false, code: 'NO_PLANE' };
+    // Always re-project the shared world plane into each actor's local space.
+    // Never reuse one actor's local plane on siblings (wrong under parents / offsets).
+    if (!(session.worldPoints?.length >= 3)) {
+      return {
+        ok: false,
+        code: 'NO_PLANE',
+        message: 'Clip needs three world-space plane points.',
+      };
     }
-    const planesByActorId = {};
-    for (const actorId of session.actorIds) {
-      const actor = world.getActor(actorId);
-      if (!actor) continue;
-      if (session.worldPoints?.length >= 3) {
-        const local = worldPointsToLocalPlane(actor, session.worldPoints);
-        if (!local.ok) return local;
-        planesByActorId[actorId] = local.plane;
-      } else if (session.plane) {
-        planesByActorId[actorId] = session.plane;
-      }
-    }
-    const preview = previewClip(world, {
+    const built = planesByActorIdFromWorldPoints(
+      world,
+      session.actorIds,
+      session.worldPoints,
+    );
+    if (!built.ok) return built;
+    return previewClip(world, {
       actorIds: session.actorIds,
       mode: session.mode,
-      planesByActorId,
+      planesByActorId: built.planesByActorId,
     });
-    return preview;
   }, [world]);
 
   const setClipSessionMode = useCallback((clipMode) => {
@@ -2655,9 +2778,9 @@ export function EditorProvider({ children }) {
       preview: null,
     };
     if (points.length === 3) {
-      // Build per first actor for status; full preview uses worldPoints.
+      // Validate plane against the primary actor; preview re-projects for all.
       const actor = world.getActor(cur.actorIds[0]);
-      const local = actor ? worldPointsToLocalPlane(actor, points) : { ok: false };
+      const local = actor ? worldPointsToLocalPlane(actor, points, world) : { ok: false };
       if (!local.ok) {
         notify(local.message || 'Degenerate clip plane.', { title: 'Clip' });
         setStatus(local.message || 'Degenerate clip plane.');
@@ -2699,23 +2822,29 @@ export function EditorProvider({ children }) {
       })();
     const face = geom?.faces?.find((f) => f.id === faceId);
     const vmap = geom ? vertexMap(geom) : null;
-    let worldPoints = null;
-    if (face && vmap && face.loop.length >= 3) {
-      worldPoints = [0, 1, 2].map((i) => {
-        const lp = vmap.get(face.loop[i]);
-        return localPointToWorld(actor, lp);
-      });
+    if (!face || !vmap || face.loop.length < 3) {
+      const err = {
+        ok: false,
+        code: 'DEGENERATE_PLANE',
+        message: 'Could not build world-space clip plane from face.',
+      };
+      notify(err.message, { title: 'Clip' });
+      return err;
     }
+    const worldPoints = [0, 1, 2].map((i) => {
+      const lp = vmap.get(face.loop[i]);
+      return localPointToWorld(actor, lp, world);
+    });
     const actorIds = selectedRef.current.length
       ? [...new Set(selectedRef.current)]
       : [actorId];
     const session = {
       mode: clipMode === 'back' || clipMode === 'split' ? clipMode : (clipSessionRef.current?.mode || 'front'),
       actorIds,
-      points: worldPoints || [],
+      points: worldPoints,
       worldPoints,
       plane: planeResult.plane,
-      source: worldPoints ? 'points' : 'face',
+      source: 'face',
       faceActorId: actorId,
       faceId,
       preview: null,
@@ -2736,34 +2865,22 @@ export function EditorProvider({ children }) {
   const commitClipSession = useCallback((label) => {
     if (!world || mode === 'play') return { ok: false };
     const cur = clipSessionRef.current;
-    if (!cur?.plane || !cur.actorIds?.length) {
-      return { ok: false, code: 'NO_PLANE', message: 'Clip plane not defined.' };
+    if (!cur?.actorIds?.length || !(cur.worldPoints?.length >= 3)) {
+      return {
+        ok: false,
+        code: 'NO_PLANE',
+        message: 'Clip plane not defined (need three world points).',
+      };
     }
-    const planesByActorId = {};
-    for (const actorId of cur.actorIds) {
-      const actor = world.getActor(actorId);
-      if (!actor) continue;
-      if (cur.source === 'face' && cur.faceActorId === actorId) {
-        planesByActorId[actorId] = cur.plane;
-      } else if (cur.worldPoints?.length >= 3) {
-        const local = worldPointsToLocalPlane(actor, cur.worldPoints);
-        if (!local.ok) {
-          notify(local.message, { title: 'Clip' });
-          return local;
-        }
-        planesByActorId[actorId] = local.plane;
-      } else if (cur.source === 'face') {
-        // Same local plane only valid for the face's actor; others need worldPoints.
-        // Re-express face plane via three points on the plane in world space for others.
-        planesByActorId[actorId] = cur.plane;
-      } else {
-        planesByActorId[actorId] = cur.plane;
-      }
+    const built = planesByActorIdFromWorldPoints(world, cur.actorIds, cur.worldPoints);
+    if (!built.ok) {
+      notify(built.message, { title: 'Clip' });
+      return built;
     }
     const planned = planClip(world, {
       actorIds: cur.actorIds,
       mode: cur.mode,
-      planesByActorId,
+      planesByActorId: built.planesByActorId,
     });
     if (!planned.ok) {
       notify(planned.message, { title: 'Clip' });
@@ -2783,9 +2900,20 @@ export function EditorProvider({ children }) {
     return { ok: true, newActorIds: planned.newActorIds || [] };
   }, [world, mode, executeCommand, notify, setStatus, autoCapturePrefabOverrides]);
 
-  const assignSelectedSurfaceMaterial = useCallback((materialId) => {
-    if (!world || mode === 'play' || !selectedSurface) return;
-    const actor = world.getActor(selectedSurface.actorId);
+  /**
+   * Assign a material to a surface face. Pass `surface` to target a pick directly
+   * (e.g. material drag-drop onto a poly) without waiting on React state.
+   */
+  const assignSelectedSurfaceMaterial = useCallback((materialId, surface = null) => {
+    const target = surface?.actorId && surface?.surfaceId ? surface : selectedSurface;
+    if (!world || mode === 'play' || !target) return;
+    // updateSelected* reads selectedRef — keep it aligned with the target actor.
+    if (!selectedRef.current.includes(target.actorId)) {
+      selectedRef.current = [target.actorId];
+      setSelectedActorIds([target.actorId]);
+      syncSelectionVisual([target.actorId]);
+    }
+    const actor = world.getActor(target.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
     const convex = actor.getComponent('ConvexBrush');
@@ -2801,7 +2929,7 @@ export function EditorProvider({ children }) {
         geometry: comp.geometry,
         faceMaterials: comp.faceMaterials ? { ...comp.faceMaterials } : null,
       };
-      const result = patchFaceMaterial(scratch, selectedSurface.surfaceId, materialId || null);
+      const result = patchFaceMaterial(scratch, target.surfaceId, materialId || null);
       if (!result) return;
       updateFn({ faceMaterials: result.after });
     };
@@ -2816,6 +2944,7 @@ export function EditorProvider({ children }) {
     world,
     mode,
     selectedSurface,
+    syncSelectionVisual,
     updateSelectedBrush,
     updateSelectedConvexBrush,
     updateSelectedRamp,
@@ -3089,6 +3218,8 @@ export function EditorProvider({ children }) {
     attachCanvas,
     loadLevel,
     saveLevel,
+    saveLevelAs,
+    createNewMap,
     isDirty: dirty,
     confirmDiscardChanges,
     applyLevelData,

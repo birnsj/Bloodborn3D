@@ -4,6 +4,9 @@ import { normalizeDisplayMode } from './viewportPrefs.js';
 /**
  * Temporarily override materials/lights for one display-mode render pass.
  * Call restoreDisplayMode after renderer.render.
+ *
+ * Wireframe uses silhouette EdgesGeometry overlays — not material.wireframe —
+ * so brushes don't show triangulation diagonals / moiré soup.
  */
 export function applyDisplayMode(scene, lights, mode) {
   const display = normalizeDisplayMode(mode);
@@ -12,6 +15,7 @@ export function applyDisplayMode(scene, lights, mode) {
     materials: [],
     lights: [],
     edgesVisible: [],
+    objectVisibility: [],
   };
 
   if (lights) {
@@ -28,13 +32,26 @@ export function applyDisplayMode(scene, lights, mode) {
   scene.traverse((obj) => {
     if (obj.userData?.viewportEdgesOverlay) {
       state.edgesVisible.push({ obj, visible: obj.visible });
-      obj.visible = display === 'solid-edges';
+      obj.visible = display === 'solid-edges' || display === 'wireframe';
       return;
     }
-    if (!obj.isMesh && !obj.isLineSegments && !obj.isLine) return;
-    if (obj.userData?.editorOnly && !obj.userData?.viewportEdgesOverlay) {
-      // Keep existing editor helpers; wireframe mode still shows them.
+
+    // Light range spheres etc. become unreadable noise in wireframe.
+    if (obj.userData?.denseWireHelper) {
+      state.objectVisibility.push({ obj, visible: obj.visible });
+      if (display === 'wireframe') obj.visible = false;
+      return;
     }
+
+    if (!obj.isMesh && !obj.isLineSegments && !obj.isLine) return;
+    if (obj.userData?.editorOnly) return;
+
+    if (display === 'wireframe' && obj.isMesh) {
+      state.objectVisibility.push({ obj, visible: obj.visible });
+      obj.visible = false;
+      return;
+    }
+
     const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
     for (const mat of mats) {
       if (!mat) continue;
@@ -49,9 +66,7 @@ export function applyDisplayMode(scene, lights, mode) {
         flatShading: mat.flatShading,
       });
 
-      if (display === 'wireframe') {
-        mat.wireframe = true;
-      } else if (display === 'unlit') {
+      if (display === 'unlit') {
         mat.wireframe = false;
         if (mat.emissive) {
           if (mat.color) mat.emissive.copy(mat.color);
@@ -60,7 +75,6 @@ export function applyDisplayMode(scene, lights, mode) {
         if (mat.map && 'emissiveMap' in mat) mat.emissiveMap = mat.map;
       } else if (display === 'textured') {
         mat.wireframe = false;
-        // Keep maps; flatten lighting via higher emissive from albedo if present.
         if (mat.emissive && mat.color) {
           mat.emissive.copy(mat.color).multiplyScalar(0.35);
         }
@@ -99,16 +113,19 @@ export function restoreDisplayMode(state) {
   for (const entry of state.edgesVisible) {
     entry.obj.visible = entry.visible;
   }
+  for (const entry of state.objectVisibility || []) {
+    entry.obj.visible = entry.visible;
+  }
 }
 
-/** Ensure a mesh has a sibling EdgesGeometry overlay tagged for solid-edges mode. */
+/** Ensure a mesh has a sibling EdgesGeometry overlay tagged for solid-edges / wireframe. */
 export function ensureEdgesOverlay(mesh, parentGroup) {
   if (!mesh?.isMesh || !mesh.geometry) return null;
   if (mesh.userData.viewportEdgesOverlayChild) return mesh.userData.viewportEdgesOverlayChild;
   const edges = new THREE.EdgesGeometry(mesh.geometry, 30);
   const line = new THREE.LineSegments(
     edges,
-    new THREE.LineBasicMaterial({ color: 0x111111, depth: 0.85 }),
+    new THREE.LineBasicMaterial({ color: 0xc8d0d8, transparent: true, opacity: 0.9 }),
   );
   line.userData.viewportEdgesOverlay = true;
   line.userData.editorOnly = true;

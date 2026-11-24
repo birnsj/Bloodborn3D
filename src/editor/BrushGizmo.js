@@ -9,6 +9,34 @@ const AXIS_COLORS = {
 
 export const TRANSFORM_MODES = ['move', 'rotate', 'scale'];
 
+/** Perspective distance (m) where axis-gizmo scale is 1. */
+const GIZMO_REF_DISTANCE = 10;
+/** Ortho frustum height (m) where axis-gizmo scale is 1. */
+const GIZMO_REF_FRUSTUM = 12;
+const GIZMO_SCALE_MIN = 0.12;
+const GIZMO_SCALE_MAX = 12;
+
+const _gizmoWorldPos = new THREE.Vector3();
+
+/**
+ * Screen-constant factor for move/rotate/scale handles.
+ * Face-resize handles stay object-sized and must not use this.
+ */
+export function computeGizmoScreenScale(camera, worldPosition) {
+  if (!camera) return 1;
+  let scale = 1;
+  if (camera.isOrthographicCamera) {
+    const frustumH = Math.abs(camera.top - camera.bottom)
+      || Number(camera.userData?.frustumSize)
+      || GIZMO_REF_FRUSTUM;
+    scale = frustumH / GIZMO_REF_FRUSTUM;
+  } else if (camera.isPerspectiveCamera && worldPosition) {
+    const dist = camera.position.distanceTo(worldPosition);
+    scale = Math.max(0.01, dist) / GIZMO_REF_DISTANCE;
+  }
+  return Math.min(GIZMO_SCALE_MAX, Math.max(GIZMO_SCALE_MIN, scale));
+}
+
 /**
  * Edit-mode transform gizmo: Move (W) / Rotate (E) / Scale (R).
  * Operates in meters visually; reports editor-unit deltas to the editor.
@@ -40,12 +68,33 @@ export class BrushGizmo {
     this._geometryElementMode = false;
     this._faceNormalWorld = null; // THREE.Vector3 unit or null
     this._normalHandle = null;
+    /** Last screen-constant scale applied to axis handles (not face resize). */
+    this._screenScale = 1;
 
     this._buildMoveHandles();
     this._buildRotateHandles();
     this._buildScaleAxisHandles();
     this._buildNormalHandle();
     this._applyModeVisibility();
+  }
+
+  /**
+   * Keep move/rotate/scale (and face-normal) handles roughly constant on screen.
+   * Brush face-resize handles stay world/object sized.
+   */
+  updateScreenScale(camera) {
+    if (!camera || !this.root.visible) return this._screenScale;
+    this.root.getWorldPosition(_gizmoWorldPos);
+    const scale = computeGizmoScreenScale(camera, _gizmoWorldPos);
+    if (Math.abs(scale - this._screenScale) < 1e-4) return this._screenScale;
+    this._screenScale = scale;
+    this.moveGroup.scale.setScalar(scale);
+    this.rotateGroup.scale.setScalar(scale);
+    this.scaleGroup.scale.setScalar(scale);
+    if (this._normalHandle) this._normalHandle.scale.setScalar(scale);
+    // resizeGroup intentionally left at identity — handles sit on brush faces.
+    this.root.updateMatrixWorld(true);
+    return scale;
   }
 
   setMode(mode) {

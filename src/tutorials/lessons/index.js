@@ -11,6 +11,9 @@ import { testingLesson } from './09-testing.js';
 import { workspaceLesson } from './10-workspace.js';
 import { ceilingsMultilevelLesson } from './12-ceilings-multilevel.js';
 import { rampsStairsLesson } from './13-ramps-stairs.js';
+import { geometryEditingLesson } from './14-geometry-editing.js';
+import { surfaceAlignLesson } from './15-surface-align.js';
+import { columnsArchesCurvesLesson } from './16-columns-arches-curves.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -26,6 +29,9 @@ export const LESSONS = [
   workspaceLesson,
   ceilingsMultilevelLesson,
   rampsStairsLesson,
+  geometryEditingLesson,
+  surfaceAlignLesson,
+  columnsArchesCurvesLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

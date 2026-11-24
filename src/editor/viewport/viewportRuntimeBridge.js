@@ -2,12 +2,65 @@ import {
   clampViewportPrefs,
   computePaneRects,
   isOrthographicMode,
+  normalizeCameraMode,
   orthoPlaneAxes,
   paneIdAtPoint,
   pointerToPaneNdc,
 } from './viewportPrefs.js';
-import { readPanePose, focusCameraOnBox } from './viewportCameras.js';
+import {
+  focusCameraOnBox,
+  ISOMETRIC_POLAR_ANGLE,
+  readPanePose,
+  snapOffsetToIsometric,
+} from './viewportCameras.js';
 import * as THREE from 'three';
+
+/**
+ * Bind OrbitControls to the active pane camera.
+ * Damping stays off so orbit/pan stop when the mouse stops (no after-drift).
+ * Do not touch controls.state / internal deltas here — this runs on pane/settings
+ * sync and must not abort an in-progress drag.
+ */
+export function configureOrbitForPane(controls, pane, settings = null) {
+  if (!controls || !pane) return;
+  const mode = normalizeCameraMode(pane.cameraMode);
+
+  // Perspective and ortho both orbit with RMB; middle-mouse pans; wheel zooms.
+  // Ortho stays orthographic while orbiting (no perspective foreshortening).
+  controls.enableRotate = true;
+  controls.enablePan = true;
+  controls.enableZoom = true;
+  controls.screenSpacePanning = true;
+  controls.enableDamping = false;
+  controls.mouseButtons = {
+    LEFT: -1,
+    MIDDLE: THREE.MOUSE.PAN,
+    RIGHT: THREE.MOUSE.ROTATE,
+  };
+
+  if (mode === 'isometric') {
+    // Yaw-only orbit — elevation locked to true isometric.
+    controls.minPolarAngle = ISOMETRIC_POLAR_ANGLE;
+    controls.maxPolarAngle = ISOMETRIC_POLAR_ANGLE;
+    const cam = controls.object;
+    if (cam?.isOrthographicCamera) {
+      cam.up.set(0, 1, 0);
+      const offset = snapOffsetToIsometric(cam.position.clone().sub(controls.target));
+      cam.position.copy(controls.target).add(offset);
+      cam.lookAt(controls.target);
+      cam.updateMatrixWorld(true);
+    }
+  } else {
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI;
+  }
+
+  if (settings) {
+    if (settings.cameraOrbitSpeed != null) controls.rotateSpeed = settings.cameraOrbitSpeed;
+    if (settings.cameraOrbitZoomSpeed != null) controls.zoomSpeed = settings.cameraOrbitZoomSpeed;
+    if (settings.cameraOrbitPanSpeed != null) controls.panSpeed = settings.cameraOrbitPanSpeed;
+  }
+}
 
 /**
  * Build GameRuntime viewport pane descriptors from prefs + shell size.
@@ -54,24 +107,30 @@ export function resolvePointerInPanes(prefs, width, height, clientX, clientY, sh
   };
 }
 
-export function syncActivePaneCamera(sceneView, prefs, orbitControls = null) {
+export function syncActivePaneCamera(sceneView, prefs, orbitControls = null, options = {}) {
   const p = clampViewportPrefs(prefs);
   const pane = p.panes.find((x) => x.id === p.activePaneId) || p.panes[0];
   if (!pane || !sceneView) return null;
   const cam = sceneView.setActivePaneCamera(pane.id, pane.cameraMode, pane);
   if (orbitControls) {
     orbitControls.object = cam;
+    // While free-flying, leave live target/mouse bindings alone — orbit update
+    // would snap the camera around a stale pivot and fight freelook.
+    if (options.flying) {
+      return cam;
+    }
     if (pane.target) {
       orbitControls.target.set(pane.target[0], pane.target[1], pane.target[2]);
+    } else if (Array.isArray(pane.position) && cam) {
+      // Fall back: keep looking along the camera's current forward.
+      const dir = new THREE.Vector3();
+      cam.getWorldDirection(dir);
+      const dist = cam.isOrthographicCamera
+        ? (cam.userData.frustumSize || 12)
+        : Math.max(1, cam.position.length() * 0.35);
+      orbitControls.target.copy(cam.position).addScaledVector(dir, dist);
     }
-    const ortho = isOrthographicMode(pane.cameraMode);
-    orbitControls.enableRotate = !ortho;
-    // Ortho: pan + zoom only. Perspective: existing RMB rotate / MMB pan.
-    orbitControls.mouseButtons = {
-      LEFT: -1,
-      MIDDLE: THREE.MOUSE.PAN,
-      RIGHT: ortho ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
-    };
+    configureOrbitForPane(orbitControls, pane, options.settings || null);
     orbitControls.update();
   }
   return cam;

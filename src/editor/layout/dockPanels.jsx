@@ -54,7 +54,9 @@ function ContentDockPanel() {
 function AssetViewerDockPanel() {
   return (
     <DockPanelShell>
-      <AssetViewer docked />
+      <div data-bb-tutorial="panel.assetViewer" className="bb-dock-panel__fill">
+        <AssetViewer docked />
+      </div>
     </DockPanelShell>
   );
 }

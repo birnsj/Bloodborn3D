@@ -44,5 +44,12 @@ export const organizingLesson = {
       verify: { type: 'actorFlag', trackAs: 'wall', flag: 'locked' },
       failHint: 'Enable Locked on the wall in Details.',
     },
+    {
+      id: 'spawn',
+      title: 'Player Spawn',
+      body: 'From the Actors flyout, place a Player Spawn where Play mode should start. One spawn is enough for most rooms.',
+      highlight: ['toolbar.playerSpawn'],
+      verify: { type: 'manualConfirm', label: 'I understand spawn' },
+    },
   ],
 };

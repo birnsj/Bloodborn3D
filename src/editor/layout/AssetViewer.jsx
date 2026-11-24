@@ -1,33 +1,109 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { IconFolder, IconGrid, IconList, IconSearch } from '../../ui/icons.jsx';
 import { AssetThumbnail } from '../assets/AssetThumbnail.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
+import { useLayout } from './LayoutContext.jsx';
+import { useEditor } from '../EditorContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 
 /**
- * Dedicated asset preview panel.
- * Uses a separate Three preview scene — not GameRuntime.
+ * Bottom Asset Viewer — lists assets from the Content Browser folder.
+ * Double-click opens a temporary preview window (not embedded in the panel).
  */
 export function AssetViewer({ docked = false } = {}) {
-  const { selectedAsset, clearSelection, dragMime } = useAssetBrowser();
+  const { layout, patch } = useLayout();
+  const {
+    selectedAssetId,
+    selectedAsset,
+    selectAsset,
+    searchQuery,
+    setSearchQuery,
+    queryAssets,
+    beginAssetDrag,
+    importTexture,
+    importMesh,
+    createNewMaterial,
+    dragMime,
+    notify,
+  } = useAssetBrowser();
+  const {
+    createPrefabFromSelection,
+    selectedActorIds,
+    mode,
+    notify: notifyEditor,
+  } = useEditor();
+  const { prompt } = useEditorDialogs();
 
-  const onDragOver = (e) => {
-    if ([...e.dataTransfer.types].includes(dragMime) || e.dataTransfer.types.includes('text/plain')) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
+  const folder = layout.contentFolder || 'Materials';
+  const viewMode = layout.contentViewMode || 'grid';
+  const thumbSize = layout.contentThumbSize || 56;
+  const listThumbSize = Math.max(24, Math.round(thumbSize * 0.55));
+  const [dropHover, setDropHover] = useState(false);
+  const [previewAsset, setPreviewAsset] = useState(null);
+  const textureInputRef = useRef(null);
+  const meshInputRef = useRef(null);
+
+  const assets = useMemo(
+    () => queryAssets(folder),
+    [queryAssets, folder, searchQuery],
+  );
+
+  useEffect(() => {
+    setPreviewAsset(null);
+  }, [folder]);
+
+  const onFilesDropped = async (fileList) => {
+    const files = [...fileList];
+    for (const file of files) {
+      const lower = file.name.toLowerCase();
+      try {
+        if (/\.(png|jpe?g|webp|gif)$/i.test(lower)) {
+          await importTexture(file);
+          patch({ contentFolder: 'Textures' });
+        } else if (/\.(glb|gltf)$/i.test(lower)) {
+          await importMesh(file);
+          patch({ contentFolder: 'Meshes' });
+        } else {
+          notify(`Unsupported file: ${file.name}`);
+        }
+      } catch (err) {
+        notify(err.message);
+      }
     }
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
+  const onDragOver = (e) => {
+    const types = [...e.dataTransfer.types];
+    if (types.includes('Files') || types.includes(dragMime) || types.includes('text/plain')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setDropHover(true);
+    }
+  };
+
+  const openPreview = (asset) => {
+    selectAsset(asset.id);
+    setPreviewAsset(asset);
   };
 
   return (
     <section
       className={`bb-panel-chrome bb-asset-viewer${docked ? ' bb-panel-chrome--docked' : ''}`}
+      data-selected-asset={selectedAssetId || ''}
+      data-folder={folder}
       onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragLeave={() => setDropHover(false)}
+      onDrop={async (e) => {
+        e.preventDefault();
+        setDropHover(false);
+        if (e.dataTransfer.files?.length) {
+          await onFilesDropped(e.dataTransfer.files);
+        }
+      }}
     >
       {!docked && (
         <div className="bb-panel-chrome__head">
@@ -35,21 +111,222 @@ export function AssetViewer({ docked = false } = {}) {
         </div>
       )}
 
-      <div className="bb-panel-chrome__body bb-asset-viewer__body">
-        {!selectedAsset ? (
-          <div className="bb-asset-viewer__empty">
-            <p className="bb-muted">Select an asset in the Content Browser to preview.</p>
-            <p className="bb-muted">Supports meshes, materials, and textures from the project registry.</p>
+      <div className="bb-asset-viewer__chrome">
+        <div className="bb-asset-viewer__actions">
+          <button
+            type="button"
+            className="bb-btn"
+            onClick={() => textureInputRef.current?.click()}
+            {...helpProps('content.importTexture')}
+          >
+            Import Texture
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            onClick={() => meshInputRef.current?.click()}
+            {...helpProps('content.importMesh')}
+          >
+            Import Mesh
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            onClick={async () => {
+              try {
+                const fromTex = selectedAsset?.type === 'texture' ? selectedAsset : null;
+                await createNewMaterial({
+                  name: fromTex ? `${fromTex.name} Material` : 'New Material',
+                  baseColorMapId: fromTex?.id || null,
+                  baseColor: '#ffffff',
+                });
+                patch({ contentFolder: 'Materials' });
+              } catch (err) {
+                notify(err.message);
+              }
+            }}
+            {...helpProps('content.newMaterial')}
+          >
+            New Material
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={mode === 'play' || selectedActorIds.length === 0}
+            title="Create prefab from selected actors / cell"
+            onClick={async () => {
+              try {
+                const name = await prompt('Prefab name', {
+                  title: 'Create Prefab',
+                  initialValue: 'Cell Prefab',
+                });
+                if (!name?.trim()) return;
+                const result = await createPrefabFromSelection(name.trim());
+                if (result) patch({ contentFolder: 'Prefabs' });
+              } catch (err) {
+                notifyEditor(err.message);
+              }
+            }}
+            {...helpProps(
+              'content.createPrefab',
+              mode === 'play'
+                ? 'Unavailable during Play mode.'
+                : (selectedActorIds.length === 0 ? 'Select actors or a cell first.' : null),
+            )}
+          >
+            Create Prefab
+          </button>
+        </div>
+        <div className="bb-asset-viewer__folder">
+          <IconFolder />
+          <strong>{folder}</strong>
+          <span className="bb-muted">{assets.length}</span>
+        </div>
+        <div className="bb-search bb-asset-viewer__search">
+          <span className="bb-search__icon"><IconSearch /></span>
+          <input
+            className="bb-input bb-input--search"
+            placeholder={`Search ${folder}`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            title="Filter assets in this folder"
+            {...helpProps('content.search')}
+          />
+        </div>
+        <div className="bb-seg">
+          <button
+            type="button"
+            className={`bb-btn bb-btn--icon${viewMode === 'grid' ? ' bb-btn--active' : ''}`}
+            title="Grid view"
+            onClick={() => patch({ contentViewMode: 'grid' })}
+            {...helpProps('content.gridView')}
+          >
+            <IconGrid />
+          </button>
+          <button
+            type="button"
+            className={`bb-btn bb-btn--icon${viewMode === 'list' ? ' bb-btn--active' : ''}`}
+            title="List view"
+            onClick={() => patch({ contentViewMode: 'list' })}
+            {...helpProps('content.listView')}
+          >
+            <IconList />
+          </button>
+        </div>
+        <label
+          className="bb-asset-viewer__thumb-size"
+          title="Thumbnail size"
+          onPointerDown={(e) => e.stopPropagation()}
+          {...helpProps('assetViewer.thumbSize')}
+        >
+          <span className="bb-muted">Size</span>
+          <input
+            type="range"
+            className="bb-asset-viewer__thumb-slider"
+            min={32}
+            max={128}
+            step={4}
+            value={thumbSize}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onWheel={(e) => e.preventDefault()}
+            onChange={(e) => patch({ contentThumbSize: Number(e.target.value) })}
+            aria-label="Thumbnail size"
+          />
+          <span className="bb-asset-viewer__thumb-value">{thumbSize}</span>
+        </label>
+        <input
+          ref={textureInputRef}
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,.gif"
+          hidden
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            try {
+              await importTexture(file);
+              patch({ contentFolder: 'Textures' });
+            } catch (err) {
+              notify(err.message);
+            }
+          }}
+        />
+        <input
+          ref={meshInputRef}
+          type="file"
+          accept=".glb,.gltf"
+          hidden
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            try {
+              await importMesh(file);
+              patch({ contentFolder: 'Meshes' });
+            } catch (err) {
+              notify(err.message);
+            }
+          }}
+        />
+      </div>
+
+      <div
+        className={`bb-asset-viewer__body bb-asset-viewer__body--list-only${dropHover ? ' is-drop-target' : ''}`}
+        style={{
+          ['--bb-asset-thumb-size']: `${thumbSize}px`,
+          ['--bb-asset-tile-size']: `${thumbSize + 40}px`,
+          ['--bb-asset-list-thumb-size']: `${listThumbSize}px`,
+        }}
+      >
+        {assets.length === 0 ? (
+          <div className="bb-content-empty">
+            <IconFolder />
+            <span>
+              {searchQuery.trim()
+                ? 'No assets match this search.'
+                : `${folder} is empty. Import textures/meshes or create a material.`}
+            </span>
           </div>
         ) : (
-          <AssetPreview asset={selectedAsset} onClear={clearSelection} />
+          <ul className={`bb-asset-list bb-asset-list--${viewMode}`}>
+            {assets.map((asset) => {
+              const selected = asset.id === selectedAssetId;
+              const size = viewMode === 'grid' ? thumbSize : listThumbSize;
+              return (
+                <li key={asset.id}>
+                  <button
+                    type="button"
+                    className={`bb-asset-tile${selected ? ' is-selected' : ''}`}
+                    draggable
+                    onDragStart={(e) => beginAssetDrag(e, asset)}
+                    onClick={() => selectAsset(asset.id)}
+                    onDoubleClick={() => openPreview(asset)}
+                    title={`${asset.name} (${asset.type}) — double-click to preview`}
+                    {...helpProps('content.asset')}
+                  >
+                    <AssetThumbnail asset={asset} size={size} />
+                    <span className="bb-asset-tile__name">{asset.name}</span>
+                    <span className="bb-asset-tile__type">{asset.type}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
+
+      {previewAsset ? (
+        <AssetPreviewDialog
+          asset={previewAsset}
+          onClose={() => setPreviewAsset(null)}
+        />
+      ) : null}
     </section>
   );
 }
 
-function AssetPreview({ asset, onClear }) {
+function AssetPreviewDialog({ asset, onClose }) {
   const [meshMeta, setMeshMeta] = useState(null);
 
   useEffect(() => {
@@ -63,61 +340,98 @@ function AssetPreview({ asset, onClear }) {
     return () => { cancelled = true; };
   }, [asset.id, asset.url, asset.type]);
 
-  return (
-    <div className="bb-asset-preview">
-      <div className="bb-asset-preview__stage" {...helpProps('assetViewer.preview')}>
-        <PreviewSurface asset={asset} />
-      </div>
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
-      <div className="bb-asset-preview__meta">
-        <div className="bb-asset-preview__title-row">
-          <AssetThumbnail asset={asset} size={28} />
-          <div>
-            <div className="bb-asset-preview__name">{asset.name}</div>
-            <div className="bb-muted">{asset.type} · {asset.folder}</div>
-          </div>
-          <button type="button" className="bb-btn" onClick={onClear} {...helpProps('assetViewer.clear')}>
-            Clear
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="bb-dialog-root" role="presentation">
+      <button
+        type="button"
+        className="bb-dialog-backdrop"
+        aria-label="Close asset preview"
+        onClick={() => onClose?.()}
+      />
+      <div
+        className="bb-dialog bb-dialog--asset-preview"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bb-asset-preview-title"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="bb-dialog__header">
+          <h2 id="bb-asset-preview-title" className="bb-dialog__title">
+            {asset.name}
+          </h2>
+          <button
+            type="button"
+            className="bb-btn"
+            onClick={() => onClose?.()}
+            {...helpProps('assetViewer.clear')}
+          >
+            Close
           </button>
         </div>
-
-        <dl className="bb-asset-preview__fields">
-          <div><dt>ID</dt><dd>{asset.id}</dd></div>
-          {asset.path && <div><dt>Path</dt><dd>{asset.path}</dd></div>}
-          {(asset.tags || []).length > 0 && (
-            <div><dt>Tags</dt><dd>{asset.tags.join(', ')}</dd></div>
-          )}
-          {meshMeta?.boundingBoxMeters && (
-            <>
+        <div className="bb-dialog__body bb-asset-preview-dialog">
+          <div className="bb-asset-preview__stage" {...helpProps('assetViewer.preview')}>
+            <PreviewSurface asset={asset} />
+          </div>
+          <div className="bb-asset-preview__meta">
+            <div className="bb-asset-preview__title-row">
+              <AssetThumbnail asset={asset} size={28} />
               <div>
-                <dt>Size (m)</dt>
-                <dd>
-                  {fmt(meshMeta.boundingBoxMeters.x)} × {fmt(meshMeta.boundingBoxMeters.y)} × {fmt(meshMeta.boundingBoxMeters.z)}
-                </dd>
+                <div className="bb-asset-preview__name">{asset.name}</div>
+                <div className="bb-muted">{asset.type} · {asset.folder}</div>
               </div>
-              <div>
-                <dt>Size (eu)</dt>
-                <dd>
-                  {fmt(meshMeta.boundingBoxEditor.x, 0)} × {fmt(meshMeta.boundingBoxEditor.y, 0)} × {fmt(meshMeta.boundingBoxEditor.z, 0)}
-                </dd>
-              </div>
-              <div><dt>Triangles</dt><dd>{meshMeta.triangles}</dd></div>
-            </>
-          )}
-          {Object.entries(asset.meta || {}).map(([key, value]) => {
-            if (typeof value === 'object') return null;
-            return (
-              <div key={key}>
-                <dt>{key}</dt>
-                <dd>{String(value)}</dd>
-              </div>
-            );
-          })}
-        </dl>
-
-        <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
+            </div>
+            <dl className="bb-asset-preview__fields">
+              <div><dt>ID</dt><dd>{asset.id}</dd></div>
+              {asset.path && <div><dt>Path</dt><dd>{asset.path}</dd></div>}
+              {(asset.tags || []).length > 0 && (
+                <div><dt>Tags</dt><dd>{asset.tags.join(', ')}</dd></div>
+              )}
+              {meshMeta?.boundingBoxMeters && (
+                <>
+                  <div>
+                    <dt>Size (m)</dt>
+                    <dd>
+                      {fmt(meshMeta.boundingBoxMeters.x)} × {fmt(meshMeta.boundingBoxMeters.y)} × {fmt(meshMeta.boundingBoxMeters.z)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Size (eu)</dt>
+                    <dd>
+                      {fmt(meshMeta.boundingBoxEditor.x, 0)} × {fmt(meshMeta.boundingBoxEditor.y, 0)} × {fmt(meshMeta.boundingBoxEditor.z, 0)}
+                    </dd>
+                  </div>
+                  <div><dt>Triangles</dt><dd>{meshMeta.triangles}</dd></div>
+                </>
+              )}
+              {Object.entries(asset.meta || {}).map(([key, value]) => {
+                if (typeof value === 'object') return null;
+                return (
+                  <div key={key}>
+                    <dt>{key}</dt>
+                    <dd>{String(value)}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+            <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -178,7 +492,7 @@ function previewHint(asset) {
     case 'material':
       return 'PBR material preview. Assign to brushes from the Details panel.';
     case 'texture':
-      return 'Imported texture preview. Use Create Material to build a reusable material.';
+      return 'Imported texture preview. Use New Material to build a reusable material.';
     default:
       return 'Project asset preview.';
   }

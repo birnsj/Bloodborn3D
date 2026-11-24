@@ -2,14 +2,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
 import {
   clampEditorSettings,
-  DEFAULT_EDITOR_SETTINGS,
   loadEditorSettings,
+  loadUserDefaultSettings,
   saveEditorSettings,
+  saveUserDefaultSettings,
 } from './editorSettingsPrefs.js';
 
 const EditorSettingsContext = createContext(null);
@@ -25,10 +27,33 @@ export function EditorSettingsProvider({ children }) {
     });
   }, []);
 
+  // Toolbar / View menu grid changes arrive here so Settings stays current.
+  useEffect(() => {
+    const onPatch = (e) => {
+      const partial = e?.detail;
+      if (!partial || typeof partial !== 'object') return;
+      patchSettings(partial);
+    };
+    window.addEventListener('bb:editor-settings-patch', onPatch);
+    return () => window.removeEventListener('bb:editor-settings-patch', onPatch);
+  }, [patchSettings]);
+
   const resetSettings = useCallback(() => {
-    const next = { ...DEFAULT_EDITOR_SETTINGS };
+    const next = loadUserDefaultSettings();
     saveEditorSettings(next);
     setSettings(next);
+    return next;
+  }, []);
+
+  const saveSettingsAsDefault = useCallback((override = null) => {
+    setSettings((prev) => {
+      const base = override
+        ? clampEditorSettings({ ...prev, ...override })
+        : prev;
+      const next = saveUserDefaultSettings(base);
+      saveEditorSettings(next);
+      return next;
+    });
   }, []);
 
   const value = useMemo(
@@ -36,8 +61,9 @@ export function EditorSettingsProvider({ children }) {
       settings,
       patchSettings,
       resetSettings,
+      saveSettingsAsDefault,
     }),
-    [settings, patchSettings, resetSettings],
+    [settings, patchSettings, resetSettings, saveSettingsAsDefault],
   );
 
   return (

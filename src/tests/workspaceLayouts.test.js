@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  AUTOSAVE_LAYOUT_ID,
+  AUTOSAVE_LAYOUT_NAME,
   FACTORY_LAYOUT_ID,
   WORKSPACE_LAYOUT_SCHEMA_VERSION,
   createCatalog,
@@ -70,6 +72,20 @@ describe('workspace layout schema', () => {
     const c = normalizeSnapshot({ dockLayout: fakeDock(['viewport', 'details']), outlinerVisible: true });
     expect(snapshotsEqual(a, b)).toBe(true);
     expect(snapshotFingerprint(a)).not.toBe(snapshotFingerprint(c));
+  });
+
+  it('includes viewport layout mode in snapshot fingerprint', () => {
+    const single = normalizeSnapshot({
+      dockLayout: fakeDock(),
+      viewportView: { layoutMode: 'single' },
+    });
+    const quad = normalizeSnapshot({
+      dockLayout: fakeDock(),
+      viewportView: { layoutMode: 'quad' },
+    });
+    expect(single.viewportView.layoutMode).toBe('single');
+    expect(quad.viewportView.layoutMode).toBe('quad');
+    expect(snapshotFingerprint(single)).not.toBe(snapshotFingerprint(quad));
   });
 });
 
@@ -155,5 +171,29 @@ describe('workspace layout manager', () => {
     const reset = manager.resetToFactory();
     expect(reset.ok).toBe(true);
     expect(manager.getActiveLayout().id).toBe(FACTORY_LAYOUT_ID);
+  });
+
+  it('upsertAutosave creates and updates the Autosaved layout from factory', () => {
+    manager.loadLayout(FACTORY_LAYOUT_ID);
+    const first = normalizeSnapshot({
+      dockLayout: fakeDock(['viewport', 'outliner', 'details', 'content']),
+      outlinerVisible: true,
+    });
+    const created = manager.upsertAutosave(first);
+    expect(created.ok).toBe(true);
+    expect(created.layout.id).toBe(AUTOSAVE_LAYOUT_ID);
+    expect(created.layout.name).toBe(AUTOSAVE_LAYOUT_NAME);
+    expect(manager.getActiveLayout().id).toBe(AUTOSAVE_LAYOUT_ID);
+    expect(manager.getActiveLayout().snapshot.outlinerVisible).toBe(true);
+
+    const second = normalizeSnapshot({
+      dockLayout: fakeDock(['viewport', 'details', 'content']),
+      outlinerVisible: false,
+    });
+    const updated = manager.upsertAutosave(second);
+    expect(updated.ok).toBe(true);
+    expect(updated.layout.id).toBe(AUTOSAVE_LAYOUT_ID);
+    expect(manager.getLayout(AUTOSAVE_LAYOUT_ID).snapshot.outlinerVisible).toBe(false);
+    expect(manager.listLayouts().filter((l) => l.id === AUTOSAVE_LAYOUT_ID)).toHaveLength(1);
   });
 });

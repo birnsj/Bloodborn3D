@@ -1,0 +1,46 @@
+export const columnsArchesCurvesLesson = {
+  id: 'columns-arches-curves',
+  title: 'Columns, Arches & Curves',
+  summary: 'Place parametric columns, Roman/Gothic arches, and curved walls from the creation toolbar.',
+  order: 16,
+  starterPath: 'tutorials/first-room.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Parametric shapes',
+      body: 'Besides boxes and walls, the Geometry flyout includes Column, Roman Arch, Gothic Arch, and Curved Wall — each regenerates when you edit Details.',
+      verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'column',
+      title: 'Place a column',
+      body: 'Open the Geometry tools (floating toolbar), choose Column, then drag a footprint on the grid.',
+      highlight: ['toolbar.column'],
+      verify: { type: 'componentCreated', component: 'Column', trackAs: 'column1' },
+      failHint: 'Use the Column creation tool and drag in the Viewport.',
+    },
+    {
+      id: 'arch',
+      title: 'Place a Roman arch',
+      body: 'Choose Roman Arch and drag a footprint. Details → Arch tunes thickness, rise, and segments.',
+      highlight: ['toolbar.archRoman'],
+      verify: { type: 'componentCreated', component: 'Arch', trackAs: 'arch1' },
+      failHint: 'Use Roman Arch (or Gothic Arch) and drag in the Viewport.',
+    },
+    {
+      id: 'curved-wall',
+      title: 'Place a curved wall',
+      body: 'Choose Curved Wall and drag. A near-square drag becomes a fuller arc; Details controls radius and sweep.',
+      highlight: ['toolbar.curvedWall'],
+      verify: { type: 'componentCreated', component: 'CurvedWall', trackAs: 'curve1' },
+      failHint: 'Use Curved Wall and drag in the Viewport.',
+    },
+    {
+      id: 'details',
+      title: 'Tune in Details',
+      body: 'Select any of the shapes you placed and open Details to change parameters — geometry updates immediately.',
+      highlight: ['panel.details'],
+      verify: { type: 'manualConfirm', label: 'I checked Details' },
+    },
+  ],
+};

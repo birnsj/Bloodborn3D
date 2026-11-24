@@ -1,31 +1,44 @@
 export const subtractiveGeometryLesson = {
   id: 'subtractive-geometry',
   title: 'Subtractive Geometry',
-  summary: 'Carve openings through walls with editable subtractive brushes — without destroying the original solids.',
+  summary:
+    'World Solid is invisible substrate; subtract boxes carve rooms (the room is the inside of the cutter). Also cut openings through additive walls.',
   order: 3.5,
   starterPath: 'tutorials/subtract.json',
   steps: [
     {
       id: 'intro',
-      title: 'Add vs Subtract',
+      title: 'Solid substrate + cutters',
       body:
-        'Additive brushes build solid structure (floors, walls, boxes). Subtractive brushes are cutters: where they overlap additive brushes, that volume is removed. The original brush actors stay editable — this is non-destructive carving.',
+        'Think Unreal subtractive: space starts solid. A Subtract box removes volume — the inside of that box is the room (air). Walls, floor, and ceiling are the cut faces of the solid around it. Textures live on the solid, not on the crimson cutter.',
       terms: [
         {
-          term: 'Additive brush',
-          def: 'A solid structural brush (operation Add). It contributes geometry and collision.',
+          term: 'World Solid',
+          def: 'On a Subtractive map (File → New Map…), a locked invisible additive brush fills the level. Outer hull stays hidden; you see faces opened by cuts.',
         },
         {
-          term: 'Subtractive brush',
-          def: 'A cutter brush (operation Subtract). It removes overlapping additive volume and never creates its own colliders.',
+          term: 'Subtract box',
+          def: 'A crimson cutter (Edit only). Its interior is empty space. It is not a wall mesh and has no collision of its own.',
+        },
+        {
+          term: 'Additive brush',
+          def: 'Solid structural geometry (operation Add). World Solid is one; walls and boxes you place are others.',
         },
       ],
+      verify: { type: 'manualConfirm', label: 'Got it' },
+    },
+    {
+      id: 'map-modes',
+      title: 'Additive vs Subtractive maps',
+      body:
+        'File → New Map… chooses map mode. Additive starts empty — you add brushes to build. Subtractive seeds World Solid so structural tools carve rooms. Mode shows in Details → Level and the status bar.',
       verify: { type: 'manualConfirm', label: 'Continue' },
     },
     {
       id: 'select-wall',
       title: 'Find the wall',
-      body: 'Select “Wall To Carve” in the Viewport or Outliner. This is an additive brush you will cut through.',
+      body:
+        'This practice level uses an additive wall (same carve rules as World Solid). Select “Wall To Carve” in the Viewport or Outliner — you will cut a hole through it.',
       verify: {
         type: 'actorSelected',
         nameIncludes: 'Wall',
@@ -37,7 +50,7 @@ export const subtractiveGeometryLesson = {
       id: 'place-cutter',
       title: 'Place a Subtract Box',
       body:
-        'Click Subtract on the toolbar, then drag on the grid so the crimson box crosses the wall. After placing, you can move or resize it with the gizmo — the opening updates live.',
+        'Click Subtract on the toolbar, then drag so the crimson box crosses the wall. The cutter’s volume is the opening (air). Move or resize with the gizmo — the hole updates live.',
       highlight: ['toolbar.subtract'],
       verify: {
         type: 'brushCreated',
@@ -50,7 +63,7 @@ export const subtractiveGeometryLesson = {
       id: 'verify-carve',
       title: 'Confirm the opening',
       body:
-        'Make sure the subtractive brush intersects the wall. You should see a hole in the wall mesh. Adjust the cutter with Move/Resize if needed until the opening is visible.',
+        'Overlap the wall with the cutter until you see a hole in the wall mesh. The crimson box is the void; the textured mesh around it is leftover solid.',
       verify: {
         type: 'brushCarved',
         trackAs: 'wall',

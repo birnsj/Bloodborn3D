@@ -56,16 +56,13 @@ export function clipByPlane(geometry, plane, mode = 'front', options = {}) {
     const v1 = Math.abs(geometryVolume(front.geometry));
     const v2 = Math.abs(geometryVolume(back.geometry));
     const rel = v0 > 1e-9 ? Math.abs((v1 + v2) - v0) / v0 : Math.abs((v1 + v2) - v0);
+    // Hard reject when split halves do not conserve volume (relative error > 0.1%).
     if (rel > 1e-3) {
-      // Soft check — still return if both halves validated; warn via relative.
-      // Hard reject only when clearly broken (>1%).
-      if (rel > 0.01) {
-        return {
-          ok: false,
-          code: 'VOLUME',
-          message: `Split volumes do not conserve (${v1.toFixed(2)}+${v2.toFixed(2)}≠${v0.toFixed(2)}).`,
-        };
-      }
+      return {
+        ok: false,
+        code: 'VOLUME',
+        message: `Split volumes do not conserve (${v1.toFixed(2)}+${v2.toFixed(2)}≠${v0.toFixed(2)}).`,
+      };
     }
     return {
       ok: true,

@@ -338,7 +338,7 @@ body.bb-is-scrubbing * {
 
 .bb-resize-v,
 .bb-resize-h {
-  flex: 0 0 4px;
+  flex: 0 0 8px;
   background: transparent;
   position: relative;
   z-index: 5;
@@ -350,6 +350,13 @@ body.bb-is-scrubbing * {
 
 .bb-resize-h {
   cursor: row-resize;
+}
+
+.bb-resize-v::before,
+.bb-resize-h::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .bb-resize-v:hover,

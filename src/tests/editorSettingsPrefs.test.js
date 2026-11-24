@@ -20,10 +20,10 @@ describe('editorSettingsPrefs', () => {
     });
     expect(next.cameraOrbitFloatiness).toBe(100);
     expect(next.cameraOrbitSpeed).toBe(0.25);
-    expect(next.cameraFlyLookSensitivity).toBe(3);
+    expect(next.cameraFlyLookSensitivity).toBe(4);
     expect(next.cameraOrbitZoomSpeed).toBe(0.25);
     expect(next.cameraFlySpeed).toBe(100);
-    expect(next.playLookSensitivity).toBe(3);
+    expect(next.playLookSensitivity).toBe(4);
   });
 
   it('normalizes hex colors', () => {
@@ -36,10 +36,28 @@ describe('editorSettingsPrefs', () => {
     expect(orbitDampingFromFloatiness(0).enableDamping).toBe(false);
   });
 
-  it('maps default floatiness near legacy dampingFactor 0.08', () => {
-    const { enableDamping, dampingFactor } = orbitDampingFromFloatiness(
-      DEFAULT_EDITOR_SETTINGS.cameraOrbitFloatiness,
-    );
+  it('uses snappy cameras by default (no orbit float)', () => {
+    expect(DEFAULT_EDITOR_SETTINGS.cameraOrbitFloatiness).toBe(0);
+    expect(orbitDampingFromFloatiness(DEFAULT_EDITOR_SETTINGS.cameraOrbitFloatiness).enableDamping)
+      .toBe(false);
+  });
+
+  it('defaults middle-mouse pan to fast and fly look above 1', () => {
+    expect(DEFAULT_EDITOR_SETTINGS.cameraOrbitPanSpeed).toBe(2);
+    expect(DEFAULT_EDITOR_SETTINGS.cameraFlyLookSensitivity).toBeGreaterThan(1);
+  });
+
+  it('includes grid and display-mode defaults', () => {
+    expect(DEFAULT_EDITOR_SETTINGS.gridSize).toBe(25);
+    expect(DEFAULT_EDITOR_SETTINGS.gridSnap).toBe(true);
+    expect(DEFAULT_EDITOR_SETTINGS.defaultDisplayMode).toBe('lit');
+    const next = clampEditorSettings({ gridSize: 7, defaultDisplayMode: 'nope' });
+    expect(next.gridSize).toBe(25);
+    expect(next.defaultDisplayMode).toBe('lit');
+  });
+
+  it('maps mid floatiness near legacy dampingFactor 0.08', () => {
+    const { enableDamping, dampingFactor } = orbitDampingFromFloatiness(68);
     expect(enableDamping).toBe(true);
     expect(dampingFactor).toBeGreaterThan(0.07);
     expect(dampingFactor).toBeLessThan(0.09);

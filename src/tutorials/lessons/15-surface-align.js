@@ -1,0 +1,57 @@
+export const surfaceAlignLesson = {
+  id: 'surface-align',
+  title: 'Surface & Align Tools',
+  summary: 'Pick faces, paint materials on polys, edit Selected Surface, and align UVs between faces.',
+  order: 15,
+  starterPath: 'tutorials/openings.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Surface tools',
+      body: 'Surface mode picks faces for materials and UVs. You can also paint by dragging a material onto a poly anytime. Align matches one face’s UV layout to a reference face.',
+      terms: [
+        { term: 'Surface', def: 'Toolbar mode for picking brush faces in the Viewport.' },
+        { term: 'Align', def: 'Match a target face’s UVs to a reference face you set first.' },
+      ],
+      verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'surface-tool',
+      title: 'Enter Surface mode',
+      body: 'Click Surface on the Level toolbar.',
+      highlight: ['toolbar.surface'],
+      verify: { type: 'toolIs', tool: 'surface' },
+    },
+    {
+      id: 'pick-surface',
+      title: 'Pick a face',
+      body: 'Click a wall face in the Viewport. Details → Selected Surface shows that face so you can assign materials or tweak UVs.',
+      highlight: ['toolbar.surface', 'details.surface.material'],
+      verify: { type: 'surfaceSelected' },
+      failHint: 'Click a face on a wall while Surface is active.',
+    },
+    {
+      id: 'paint-or-assign',
+      title: 'Assign a face material',
+      body: 'Either choose a material in Details → Selected Surface, or drag one from the Asset Viewer onto the face. Either way paints that poly only.',
+      highlight: ['details.surface.material', 'content.asset'],
+      verify: { type: 'faceMaterialAssigned' },
+      failHint: 'Set Surface material in Details, or drag a material onto the face.',
+    },
+    {
+      id: 'align-tool',
+      title: 'Enter Align mode',
+      body: 'Click Align on the toolbar. First click sets the reference face; second click aligns the target face’s UVs to it. Esc cancels.',
+      highlight: ['toolbar.align'],
+      verify: { type: 'toolIs', tool: 'align' },
+      explain: 'Use Align when two walls meet and you want the texture to continue cleanly across the join.',
+    },
+    {
+      id: 'align-try',
+      title: 'Align two faces (optional)',
+      body: 'Click a reference face, then a target face. If the UVs look aligned — or you want to skip — continue.',
+      highlight: ['toolbar.align'],
+      verify: { type: 'manualConfirm', label: 'Done with Align' },
+    },
+  ],
+};

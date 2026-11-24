@@ -2,10 +2,23 @@
  * Engine-neutral world: collection of actors and play/edit mode flag.
  * No Three.js or React dependencies.
  */
+
+/** @typedef {'additive' | 'subtractive'} MapMode */
+
+export function normalizeMapMode(value) {
+  return value === 'subtractive' ? 'subtractive' : 'additive';
+}
+
 export class World {
-  constructor({ name = 'Untitled Level', schemaVersion = 1 } = {}) {
+  constructor({
+    name = 'Untitled Level',
+    schemaVersion = 1,
+    mapMode = 'additive',
+  } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
+    /** Additive = empty space + add brushes; subtractive = solid world + carve. */
+    this.mapMode = normalizeMapMode(mapMode);
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -50,6 +63,7 @@ export class World {
     return {
       schemaVersion: this.schemaVersion,
       name: this.name,
+      mapMode: normalizeMapMode(this.mapMode),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

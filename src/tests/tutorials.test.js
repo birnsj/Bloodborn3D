@@ -16,6 +16,7 @@ import {
   confirmManual,
   createLessonRuntimeState,
   enterStep,
+  evaluateCurrentStep,
   goBack,
   goNext,
   isLastStep,
@@ -78,13 +79,33 @@ describe('tutorial prefs', () => {
 });
 
 describe('lesson registry', () => {
-  it('registers ten beginner lessons', () => {
-    expect(LESSONS).toHaveLength(13);
+  it('registers beginner lessons including geometry and parametric shapes', () => {
+    expect(LESSONS).toHaveLength(16);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
     expect(listLessons().map((l) => l.id)).toContain('ramps-stairs');
+    expect(listLessons().map((l) => l.id)).toContain('geometry-editing');
+    expect(listLessons().map((l) => l.id)).toContain('surface-align');
+    expect(listLessons().map((l) => l.id)).toContain('columns-arches-curves');
     expect(getLessonById('missing')).toBeNull();
+  });
+
+  it('teaches latest camera and material-on-face features', () => {
+    const start = getLessonById('getting-started');
+    expect(start.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    const materials = getLessonById('materials');
+    expect(materials.summary.toLowerCase()).toContain('face');
+    expect(materials.steps.some((s) => s.verify?.type === 'faceMaterialAssigned')).toBe(true);
+    const surface = getLessonById('surface-align');
+    expect(surface.steps.some((s) => s.verify?.type === 'surfaceSelected')).toBe(true);
+    const workspace = getLessonById('workspace');
+    expect(workspace.steps.some((s) => s.id === 'asset-viewer')).toBe(true);
+    expect(workspace.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    const subtract = getLessonById('subtractive-geometry');
+    expect(subtract.summary.toLowerCase()).toContain('world solid');
+    expect(subtract.steps.some((s) => s.id === 'map-modes')).toBe(true);
+    expect(subtract.steps[0].terms?.some((t) => t.term === 'World Solid')).toBe(true);
   });
 
   it('every lesson has starter path and verify types', () => {
@@ -234,6 +255,44 @@ describe('verifiers', () => {
       { modeHistory: ['edit', 'play', 'edit'], mode: 'edit' },
     );
     expect(result.ok).toBe(true);
+  });
+
+  it('detects surface pick and viewport camera mode', () => {
+    expect(evaluateVerify(
+      { type: 'surfaceSelected' },
+      { selectedSurface: { actorId: 'w1', surfaceId: '+z' } },
+    ).ok).toBe(true);
+    expect(evaluateVerify(
+      { type: 'surfaceSelected' },
+      { selectedSurface: null },
+    ).ok).toBe(false);
+    expect(evaluateVerify(
+      { type: 'viewportCameraIs', cameraMode: 'isometric' },
+      { viewportCameraMode: 'isometric' },
+    ).ok).toBe(true);
+    expect(evaluateVerify(
+      { type: 'viewportCameraIs', cameraMode: 'isometric' },
+      { viewportCameraMode: 'perspective' },
+    ).ok).toBe(false);
+  });
+
+  it('passes tool and viewport fields through evaluateCurrentStep', () => {
+    const lesson = {
+      id: 't',
+      steps: [{ id: 'a', verify: { type: 'toolIs', tool: 'surface' } }],
+    };
+    const state = enterStep(createLessonRuntimeState(lesson), lesson, {
+      world: makeWorld([]),
+      selectedActorIds: [],
+      mode: 'edit',
+      tool: 'surface',
+    });
+    expect(evaluateCurrentStep(state, lesson, {
+      world: makeWorld([]),
+      selectedActorIds: [],
+      mode: 'edit',
+      tool: 'surface',
+    }).ok).toBe(true);
   });
 });
 

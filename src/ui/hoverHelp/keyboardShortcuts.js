@@ -1,5 +1,6 @@
 /**
  * Structured keyboard shortcut catalog for Help → Keyboard Shortcuts.
+ * Keep in sync with Viewport.jsx keydown / fly / play handlers.
  */
 
 /** @typedef {{ keys: string[], action: string, note?: string }} ShortcutRow */
@@ -15,20 +16,36 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['Ctrl', 'Z'], action: 'Undo' },
       { keys: ['Ctrl', 'Y'], action: 'Redo', note: 'or Ctrl+Shift+Z' },
       { keys: ['Ctrl', 'A'], action: 'Select all' },
-      { keys: ['Esc'], action: 'Deselect', note: 'cancels placement if active' },
       { keys: ['Ctrl', 'D'], action: 'Duplicate' },
       { keys: ['Delete'], action: 'Delete', note: 'or Backspace' },
-      { keys: ['Ctrl', 'LMB'], action: 'Multi-select toggle' },
+      {
+        keys: ['Esc'],
+        action: 'Cancel / deselect',
+        note: 'clip → place → face-move → leave Align/Surface/Geometry → clear selection',
+      },
+      { keys: ['Ctrl', 'LMB'], action: 'Multi-select toggle', note: 'also Shift+LMB' },
+      { keys: ['LMB drag'], action: 'Marquee select', note: 'empty viewport space' },
     ],
   },
   {
     id: 'transform',
     title: 'Transform',
     rows: [
-      { keys: ['W'], action: 'Move' },
-      { keys: ['E'], action: 'Rotate' },
+      { keys: ['W'], action: 'Move', note: 'also starts free-fly when held with A/S/D' },
+      { keys: ['E'], action: 'Rotate', note: 'also fly-up while free-flying' },
       { keys: ['R'], action: 'Scale', note: 'brush faces · or actor scale' },
-      { keys: ['F'], action: 'Focus selection' },
+      { keys: ['F'], action: 'Focus selection', note: 'frames selection · pane Reset = home zoom' },
+      { keys: ['Alt'], action: 'While dragging', note: '1-unit snap · free rotate (no 5° snap)' },
+    ],
+  },
+  {
+    id: 'geometry',
+    title: 'Geometry / Clip',
+    rows: [
+      { keys: ['Alt'], action: 'X-ray pick', note: 'Edge / Vertex through occluders' },
+      { keys: ['Shift', 'LMB'], action: 'Add to geo selection', note: 'or Ctrl+LMB' },
+      { keys: ['Enter'], action: 'Commit clip', note: 'when a clip plane is ready' },
+      { keys: ['Esc'], action: 'Cancel clip / leave Geometry' },
     ],
   },
   {
@@ -38,27 +55,27 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['['], action: 'Smaller grid' },
       { keys: [']'], action: 'Larger grid' },
       { keys: ['Shift', 'G'], action: 'Toggle snap' },
-      { keys: ['Alt'], action: 'Fine snap while dragging' },
+      { keys: ['Alt'], action: 'Fine snap while dragging', note: '1 editor unit on gizmo' },
     ],
   },
   {
     id: 'placement',
     title: 'Placement',
     rows: [
-      { keys: ['Esc'], action: 'Cancel place / close tools' },
-      { keys: ['Tab'], action: 'Cycle target surface' },
+      { keys: ['Esc'], action: 'Cancel place / close tool rollout' },
+      { keys: ['Tab'], action: 'Cycle target surface', note: 'while dragging a place preview' },
     ],
   },
   {
     id: 'camera',
     title: 'Camera',
     rows: [
-      { keys: ['WASD'], action: 'Fly', note: 'W also selects Move' },
-      { keys: ['Q', 'E'], action: 'Down / up', note: 'E also selects Rotate' },
+      { keys: ['WASD'], action: 'Free-fly', note: 'hold a move key; W also selects Move' },
+      { keys: ['Q', 'E'], action: 'Fly down / up', note: 'E also selects Rotate when not flying' },
       { keys: ['Shift'], action: 'Fly boost' },
-      { keys: ['RMB'], action: 'Orbit / freelook' },
-      { keys: ['MMB'], action: 'Pan' },
-      { keys: ['Wheel'], action: 'Zoom' },
+      { keys: ['RMB'], action: 'Orbit', note: 'freelook while flying · works in ortho too' },
+      { keys: ['MMB'], action: 'Pan', note: 'speed in Edit → Settings' },
+      { keys: ['Wheel'], action: 'Zoom', note: 'ortho zooms frustum' },
     ],
   },
   {
