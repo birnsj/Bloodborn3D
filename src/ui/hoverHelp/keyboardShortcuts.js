@@ -70,10 +70,11 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     id: 'camera',
     title: 'Camera',
     rows: [
-      { keys: ['WASD'], action: 'Free-fly', note: 'hold a move key; W also selects Move' },
+      { keys: ['WASD'], action: 'Free-fly', note: 'perspective · mouse looks while held · W also selects Move' },
       { keys: ['Q', 'E'], action: 'Fly down / up', note: 'E also selects Rotate when not flying' },
       { keys: ['Shift'], action: 'Fly boost' },
-      { keys: ['RMB'], action: 'Orbit', note: 'freelook while flying · works in ortho too' },
+      { keys: ['RMB'], action: 'Look (perspective)', note: 'drag while held' },
+      { keys: ['Alt'], action: 'Orbit (perspective)', note: 'hold + move mouse · no button · ortho: RMB' },
       { keys: ['MMB'], action: 'Pan', note: 'speed in Edit → Settings' },
       { keys: ['Wheel'], action: 'Zoom', note: 'ortho zooms frustum' },
     ],

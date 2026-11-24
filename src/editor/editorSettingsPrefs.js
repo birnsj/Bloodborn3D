@@ -20,7 +20,7 @@ export const DEFAULT_EDITOR_SETTINGS = {
   cameraOrbitZoomSpeed: 1,
   /** Middle-mouse pan (OrbitControls.panSpeed). Default is fast. */
   cameraOrbitPanSpeed: 2,
-  /** Multiplier on free-fly RMB look sensitivity. */
+  /** Multiplier on free-fly mouse look sensitivity. */
   cameraFlyLookSensitivity: 1.5,
   /** Free-fly move speed in editor units/sec (legacy default 450). */
   cameraFlySpeed: 450,

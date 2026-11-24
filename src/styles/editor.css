@@ -431,45 +431,76 @@ select {
   font-size: var(--bb-font-size);
 }
 
-/* Wide hit targets for panel resize sashes (dockview default is 4px). */
+/*
+ * Dock panel resize sashes:
+ * - Layout gap stays small (4px).
+ * - Visible seam is a 1px hairline (::after).
+ * - Grab hit target is ~20px via ::before (does not paint).
+ */
 .dockview-theme-bloodbound .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash {
-  width: 8px;
-  margin-left: -2px;
+  width: 4px;
+  margin-left: -1.5px;
 }
 
 .dockview-theme-bloodbound .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash {
-  height: 8px;
-  margin-top: -2px;
+  height: 4px;
+  margin-top: -1.5px;
 }
 
 .dockview-theme-bloodbound .dv-sash {
-  background: transparent;
+  background: transparent !important;
+  position: relative;
 }
 
-.dockview-theme-bloodbound .dv-sash:hover,
-.dockview-theme-bloodbound .dv-sash.dv-enabled {
-  background: var(--bb-border-strong, var(--bb-border));
+.dockview-theme-bloodbound .dv-split-view-container .dv-sash-container > .dv-sash:not(.dv-disabled)::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* Expand grab area beyond the visible sash for mouse + touch. */
+.dockview-theme-bloodbound .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash:not(.dv-disabled)::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  margin-left: -0.5px;
+}
+
+.dockview-theme-bloodbound .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:not(.dv-disabled)::after {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+}
+
+.dockview-theme-bloodbound .dv-sash:hover::after,
+.dockview-theme-bloodbound .dv-sash.dv-enabled::after {
+  background: rgba(255, 204, 51, 0.7);
+}
+
+/* Large invisible grab area. */
 .dockview-theme-bloodbound .dv-split-view-container .dv-sash-container > .dv-sash:not(.dv-disabled)::before {
   content: "";
   position: absolute;
   background: transparent;
+  z-index: 2;
 }
 
 .dockview-theme-bloodbound .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash:not(.dv-disabled)::before {
   top: 0;
   bottom: 0;
-  left: -6px;
-  right: -6px;
+  left: -8px;
+  right: -8px;
 }
 
 .dockview-theme-bloodbound .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:not(.dv-disabled)::before {
   left: 0;
   right: 0;
-  top: -6px;
-  bottom: -6px;
+  top: -8px;
+  bottom: -8px;
 }
 
 .dockview-theme-bloodbound .dv-default-tab {

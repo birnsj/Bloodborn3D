@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 
-const DRAG_THRESHOLD_PX = 3;
+const DRAG_THRESHOLD_PX = 5;
 const PX_PER_STEP = 8;
 
-function useHorizontalScrub({ value, step, disabled, onChange }) {
+function clampScrubValue(n, min, max) {
+  let next = n;
+  if (min != null && min !== '' && Number.isFinite(Number(min))) {
+    next = Math.max(Number(min), next);
+  }
+  if (max != null && max !== '' && Number.isFinite(Number(max))) {
+    next = Math.min(Number(max), next);
+  }
+  return next;
+}
+
+/** Axis / label scrub — always drag-to-nudge (no text caret). */
+function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
   const scrubRef = useRef(null);
   const didScrubRef = useRef(false);
 
@@ -27,10 +39,13 @@ function useHorizontalScrub({ value, step, disabled, onChange }) {
       scrub.moved = true;
       didScrubRef.current = true;
       document.body.classList.add('bb-is-scrubbing');
-      if (typeof e.currentTarget.blur === 'function') e.currentTarget.blur();
     }
     const steps = Math.round(dx / PX_PER_STEP);
-    onChange(scrub.startValue + steps * (Number(step) || 1));
+    onChange(clampScrubValue(
+      scrub.startValue + steps * (Number(step) || 1),
+      min,
+      max,
+    ));
   };
 
   const endScrub = (e) => {
@@ -69,56 +84,116 @@ export function ScrubAxisLabel({ axis, value, onChange, disabled, step }) {
   );
 }
 
-/** Number field: type to edit, or drag horizontally to scrub (no spinner arrows). */
+/**
+ * Number field: drag horizontally to scrub when unfocused;
+ * click (no drag) focuses for typing. While focused, behaves as a normal input.
+ */
 export function ScrubNumberInput({
   value,
   onChange,
   disabled = false,
   step = 1,
   className = 'bb-input',
+  min,
+  max,
   ...rest
 }) {
+  const inputRef = useRef(null);
+  const scrubRef = useRef(null);
   const [draft, setDraft] = useState(null);
-  const { scrubHandlers, didScrubRef } = useHorizontalScrub({
-    value,
-    step,
-    disabled,
-    onChange,
-  });
+  const [focused, setFocused] = useState(false);
 
+  const emitChange = (n) => {
+    if (!Number.isFinite(n)) return;
+    onChange(clampScrubValue(n, min, max));
+  };
+
+  // Only clear the typing draft when the field is not focused (external value sync).
   useEffect(() => {
-    setDraft(null);
-  }, [value]);
+    if (!focused) setDraft(null);
+  }, [value, focused]);
+
+  const finishPointer = (e) => {
+    const scrub = scrubRef.current;
+    if (!scrub || scrub.pointerId !== e.pointerId) return;
+    const didScrub = scrub.moved;
+    scrubRef.current = null;
+    document.body.classList.remove('bb-is-scrubbing');
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+    // Clean click (no drag): enter text-edit mode and select for quick retype.
+    if (!didScrub && !disabled) {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    }
+  };
 
   const display = draft !== null ? draft : (Number.isFinite(value) ? value : 0);
 
   return (
     <input
       {...rest}
+      ref={inputRef}
       className={`${className} bb-input--scrub`.trim()}
       type="number"
       inputMode="decimal"
       step={step}
+      min={min}
+      max={max}
       value={display}
       disabled={disabled}
       onChange={(e) => {
         const raw = e.target.value;
         setDraft(raw);
         const n = Number(raw);
-        if (Number.isFinite(n)) onChange(n);
+        if (Number.isFinite(n)) emitChange(n);
       }}
-      onBlur={() => setDraft(null)}
-      onPointerDown={scrubHandlers.onPointerDown}
-      onPointerMove={scrubHandlers.onPointerMove}
-      onPointerUp={scrubHandlers.onPointerUp}
-      onPointerCancel={scrubHandlers.onPointerCancel}
-      onClick={(e) => {
-        // After a scrub gesture, suppress the click that would re-focus the field.
-        if (didScrubRef.current) {
-          didScrubRef.current = false;
-          e.preventDefault();
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        setDraft(null);
+      }}
+      onPointerDown={(e) => {
+        if (disabled || e.button !== 0) return;
+        // Already editing — allow normal caret / text selection, no scrub.
+        if (document.activeElement === e.currentTarget) {
+          scrubRef.current = null;
+          return;
         }
+        scrubRef.current = {
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startValue: Number.isFinite(value) ? value : 0,
+          moved: false,
+        };
+        // Defer focus until pointerup so a drag never flashes a caret.
+        e.preventDefault();
       }}
+      onPointerMove={(e) => {
+        const scrub = scrubRef.current;
+        if (!scrub || scrub.pointerId !== e.pointerId) return;
+        const dx = e.clientX - scrub.startX;
+        if (!scrub.moved) {
+          if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+          scrub.moved = true;
+          document.body.classList.add('bb-is-scrubbing');
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            /* ignore */
+          }
+        }
+        const steps = Math.round(dx / PX_PER_STEP);
+        emitChange(scrub.startValue + steps * (Number(step) || 1));
+      }}
+      onPointerUp={finishPointer}
+      onPointerCancel={finishPointer}
     />
   );
 }

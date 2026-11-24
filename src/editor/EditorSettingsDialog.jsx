@@ -320,7 +320,7 @@ export function EditorSettingsDialog({ open, onClose }) {
             />
             <RangeRow
               label="Free-fly look sensitivity"
-              hint="RMB look while flying with WASD / QE."
+              hint="Mouse look while RMB is held, or while flying with WASD / QE."
               min={0.25}
               max={4}
               step={0.05}

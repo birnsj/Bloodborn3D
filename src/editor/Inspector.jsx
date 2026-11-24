@@ -1,15 +1,15 @@
+import { ScrubNumberInput } from '../ui/ScrubNumberInput.jsx';
 import { useEditor } from './EditorContext.jsx';
 
 function NumField({ label, value, onChange, disabled, step = 1 }) {
   return (
     <label className="bb-field">
       <span>{label}</span>
-      <input
-        type="number"
+      <ScrubNumberInput
         step={step}
         value={Number.isFinite(value) ? value : 0}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={onChange}
       />
     </label>
   );

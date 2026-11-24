@@ -535,7 +535,7 @@ export const HELP_CONTENT = {
   'viewport.camera': {
     title: 'Camera Mode',
     body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane.',
-    tips: 'Isometric keeps a fixed elevation and orbits in yaw only. Ortho views use RMB to orbit around the view axis; wheel zooms the frustum.',
+    tips: 'Perspective: hold Alt + move to orbit · RMB drag looks · WASD free-fly. Ortho/isometric: RMB orbits · wheel zooms. MMB pans.',
   },
   'viewport.display': {
     title: 'Display Mode',

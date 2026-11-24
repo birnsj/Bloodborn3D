@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { ASSET_KINDS, listByKind } from '../../assets/AssetRegistry.js';
+import { ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 
 /**
@@ -70,56 +71,52 @@ export function MaterialDefinitionForm({
       {textureSelect('Normal Map', 'normalMapId')}
       <label className="bb-field">
         <span className="bb-field__label">Normal Scale</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.05}
           min={0}
           disabled={disabled}
           value={draft.normalScale ?? 1}
-          onChange={(e) => patch({ normalScale: Number(e.target.value) })}
+          onChange={(v) => patch({ normalScale: v })}
         />
       </label>
 
       <div className="bb-field-caption">Surface response</div>
       <label className="bb-field">
         <span className="bb-field__label">Roughness</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.05}
           min={0}
           max={1}
           disabled={disabled}
           value={draft.roughness}
-          onChange={(e) => patch({ roughness: Number(e.target.value) })}
+          onChange={(v) => patch({ roughness: v })}
         />
       </label>
       {textureSelect('Roughness Map', 'roughnessMapId')}
       <label className="bb-field">
         <span className="bb-field__label">Metalness</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.05}
           min={0}
           max={1}
           disabled={disabled}
           value={draft.metalness}
-          onChange={(e) => patch({ metalness: Number(e.target.value) })}
+          onChange={(v) => patch({ metalness: v })}
         />
       </label>
       {textureSelect('Metalness Map', 'metalnessMapId')}
       <label className="bb-field">
         <span className="bb-field__label">Env Map Intensity</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.05}
           min={0}
           disabled={disabled}
           value={draft.envMapIntensity ?? 1}
-          onChange={(e) => patch({ envMapIntensity: Number(e.target.value) })}
+          onChange={(v) => patch({ envMapIntensity: v })}
         />
       </label>
 
@@ -136,14 +133,13 @@ export function MaterialDefinitionForm({
       </label>
       <label className="bb-field">
         <span className="bb-field__label">Emissive Intensity</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.1}
           min={0}
           disabled={disabled}
           value={draft.emissiveIntensity}
-          onChange={(e) => patch({ emissiveIntensity: Number(e.target.value) })}
+          onChange={(v) => patch({ emissiveIntensity: v })}
         />
       </label>
       {textureSelect('Emissive Map', 'emissiveMapId')}
@@ -151,16 +147,15 @@ export function MaterialDefinitionForm({
       <div className="bb-field-caption">Opacity</div>
       <label className="bb-field">
         <span className="bb-field__label">Opacity</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={0.05}
           min={0}
           max={1}
           disabled={disabled}
           value={draft.opacity}
-          onChange={(e) => {
-            const opacity = Number(e.target.value);
+          onChange={(v) => {
+            const opacity = v;
             patch({ opacity, transparent: opacity < 1 });
           }}
         />
@@ -179,27 +174,25 @@ export function MaterialDefinitionForm({
       <div className="bb-field-row">
         <label className="bb-field">
           <span className="bb-field__label">Scale U</span>
-          <input
+          <ScrubNumberInput
             className="bb-input"
-            type="number"
             step={0.05}
             disabled={disabled}
             value={draft.uvScale?.x ?? 1}
-            onChange={(e) => patch({
-              uvScale: { x: Number(e.target.value), y: draft.uvScale?.y ?? 1 },
+            onChange={(v) => patch({
+              uvScale: { x: v, y: draft.uvScale?.y ?? 1 },
             })}
           />
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Scale V</span>
-          <input
+          <ScrubNumberInput
             className="bb-input"
-            type="number"
             step={0.05}
             disabled={disabled}
             value={draft.uvScale?.y ?? 1}
-            onChange={(e) => patch({
-              uvScale: { x: draft.uvScale?.x ?? 1, y: Number(e.target.value) },
+            onChange={(v) => patch({
+              uvScale: { x: draft.uvScale?.x ?? 1, y: v },
             })}
           />
         </label>
@@ -207,40 +200,37 @@ export function MaterialDefinitionForm({
       <div className="bb-field-row">
         <label className="bb-field">
           <span className="bb-field__label">Offset U</span>
-          <input
+          <ScrubNumberInput
             className="bb-input"
-            type="number"
             step={0.05}
             disabled={disabled}
             value={draft.uvOffset?.x ?? 0}
-            onChange={(e) => patch({
-              uvOffset: { x: Number(e.target.value), y: draft.uvOffset?.y ?? 0 },
+            onChange={(v) => patch({
+              uvOffset: { x: v, y: draft.uvOffset?.y ?? 0 },
             })}
           />
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Offset V</span>
-          <input
+          <ScrubNumberInput
             className="bb-input"
-            type="number"
             step={0.05}
             disabled={disabled}
             value={draft.uvOffset?.y ?? 0}
-            onChange={(e) => patch({
-              uvOffset: { x: draft.uvOffset?.x ?? 0, y: Number(e.target.value) },
+            onChange={(v) => patch({
+              uvOffset: { x: draft.uvOffset?.x ?? 0, y: v },
             })}
           />
         </label>
       </div>
       <label className="bb-field">
         <span className="bb-field__label">UV Rotation°</span>
-        <input
+        <ScrubNumberInput
           className="bb-input"
-          type="number"
           step={1}
           disabled={disabled}
           value={draft.uvRotation ?? 0}
-          onChange={(e) => patch({ uvRotation: Number(e.target.value) })}
+          onChange={(v) => patch({ uvRotation: v })}
         />
       </label>
     </div>

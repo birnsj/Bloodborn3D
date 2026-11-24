@@ -69,10 +69,14 @@ export function Viewport() {
   const [marqueeScreen, setMarqueeScreen] = useState(null);
   /** Active toolbar/asset surface placement (preview only until commit). */
   const placeSessionRef = useRef(null);
-  /** Edit-mode: idle = RMB orbit; WASD/QE = free-fly + RMB freelook. */
+  /** Edit-mode perspective: Alt+move orbits; RMB drag = look; WASD/QE free-fly. */
   const flyKeysRef = useRef(new Set());
   const flyClockRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
   const flyModeRef = useRef(false);
+  /** Perspective: hold Alt and move the mouse to orbit (no mouse button). */
+  const altOrbitHeldRef = useRef(false);
+  /** Plain RMB drag freelook (perspective only; not while Alt orbits). */
+  const rmbLookHeldRef = useRef(false);
   const lookRef = useRef({
     active: false,
     pointerId: null,
@@ -137,6 +141,7 @@ export function Viewport() {
     createCell,
     assignSelectedSurfaceMaterial,
     applySelectedMaterialToBrush,
+    convertActorToConvexBrush,
   } = useEditor();
   const { settings: editorSettings } = useEditorSettings();
   const { layout, setViewportView } = useLayout();
@@ -347,7 +352,26 @@ export function Viewport() {
       syncLookTarget();
     };
 
-    /** Stop OrbitControls mid-drag so RMB look can't keep orbiting after WASD starts. */
+    const activeCameraMode = () => {
+      const activePane = viewportPrefsRef.current.panes.find(
+        (p) => p.id === viewportPrefsRef.current.activePaneId,
+      );
+      return activePane?.cameraMode || 'perspective';
+    };
+
+    /** Perspective: RMB is freelook (never OrbitControls rotate). Ortho: plain RMB orbits. */
+    const syncOrbitRightButton = () => {
+      if (flyModeRef.current || runtime.mode !== 'edit') {
+        controls.mouseButtons.RIGHT = -1;
+        return;
+      }
+      controls.mouseButtons.RIGHT = isOrthographicMode(activeCameraMode())
+        ? THREE.MOUSE.ROTATE
+        : -1;
+    };
+    syncOrbitRightButton();
+
+    /** Stop OrbitControls mid-drag so it can't fight WASD free-fly. */
     const suspendOrbitForFly = () => {
       controls.enabled = false;
       controls.state = -1; // OrbitControls STATE.NONE
@@ -355,6 +379,19 @@ export function Viewport() {
       if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
       if (controls._panOffset) controls._panOffset.set(0, 0, 0);
       if (Array.isArray(controls._pointers)) controls._pointers.length = 0;
+    };
+
+    /** Alt + mouse move orbit (no button). Matches OrbitControls pixel→angle scale. */
+    const altOrbitTrack = { primed: false, lastX: 0, lastY: 0 };
+    const applyAltOrbit = (dx, dy) => {
+      if (runtime.mode !== 'edit' || flyModeRef.current) return;
+      if (isOrthographicMode(activeCameraMode())) return;
+      const h = Math.max(1, canvas.clientHeight || shell.clientHeight || 1);
+      const rotateSpeed = controls.rotateSpeed ?? 1;
+      const scale = ((2 * Math.PI) / h) * rotateSpeed;
+      if (typeof controls._rotateLeft === 'function') controls._rotateLeft(dx * scale);
+      if (typeof controls._rotateUp === 'function') controls._rotateUp(dy * scale);
+      controls.update();
     };
 
     const enterFlyMode = () => {
@@ -372,11 +409,14 @@ export function Viewport() {
     const exitFlyMode = () => {
       if (!flyModeRef.current) return;
       flyModeRef.current = false;
-      lookRef.current.active = false;
-      lookRef.current.pointerId = null;
-      // Resume orbit around the point currently in front of the camera.
+      // RMB drag look can continue after WASD keys are released.
+      if (!rmbLookHeldRef.current) {
+        lookRef.current.active = false;
+        lookRef.current.pointerId = null;
+      }
+      // Resume camera around the point currently in front of the camera.
       syncLookTarget();
-      controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+      syncOrbitRightButton();
       controls.enabled = runtime.mode === 'edit' && !dragRef.current;
       controls.update();
     };
@@ -407,15 +447,25 @@ export function Viewport() {
     const sizeRaf = requestAnimationFrame(applySize);
 
     const onFlyKeyDown = (e) => {
+      if (e.code === 'AltLeft' || e.code === 'AltRight') {
+        altOrbitHeldRef.current = true;
+        altOrbitTrack.primed = false;
+        // Alt+move owns orbit — drop RMB freelook if it was active.
+        if (rmbLookHeldRef.current) {
+          rmbLookHeldRef.current = false;
+          if (!flyModeRef.current) {
+            lookRef.current.active = false;
+            lookRef.current.pointerId = null;
+          }
+        }
+        e.preventDefault();
+      }
       if (e.repeat) return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.target?.isContentEditable) return;
       // Free-fly is perspective-only; orthographic panes keep RMB orbit + pan/zoom.
-      const activePane = viewportPrefsRef.current.panes.find(
-        (p) => p.id === viewportPrefsRef.current.activePaneId,
-      );
-      if (activePane && isOrthographicMode(activePane.cameraMode)) return;
+      if (isOrthographicMode(activeCameraMode())) return;
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
         flyKeysRef.current.add(e.code);
         if (FLY_MOVE_KEYS.has(e.code)) {
@@ -425,12 +475,22 @@ export function Viewport() {
       }
     };
     const onFlyKeyUp = (e) => {
+      if (e.code === 'AltLeft' || e.code === 'AltRight') {
+        altOrbitHeldRef.current = false;
+        altOrbitTrack.primed = false;
+      }
       flyKeysRef.current.delete(e.code);
       if (!isFlyMoving(flyKeysRef.current)) exitFlyMode();
     };
     const onFlyBlur = () => {
       flyKeysRef.current.clear();
+      altOrbitHeldRef.current = false;
+      altOrbitTrack.primed = false;
+      rmbLookHeldRef.current = false;
       exitFlyMode();
+      lookRef.current.active = false;
+      lookRef.current.pointerId = null;
+      syncOrbitRightButton();
     };
 
     const LOOK_SENS_BASE = 0.009;
@@ -450,8 +510,12 @@ export function Viewport() {
     };
 
     const onLookPointerDown = (e) => {
-      // Freelook only while flying (WASD/QE). Otherwise OrbitControls owns RMB.
-      if (e.button !== 2 || runtime.mode !== 'edit' || !flyModeRef.current) return;
+      if (e.button !== 2 || runtime.mode !== 'edit') return;
+      // Perspective only — ortho/isometric keep plain RMB orbit.
+      if (isOrthographicMode(activeCameraMode())) return;
+      // Alt+move is orbit; plain RMB is freelook.
+      if (altOrbitHeldRef.current || e.altKey) return;
+      rmbLookHeldRef.current = true;
       beginFlyLook(e);
       try {
         canvas.setPointerCapture(e.pointerId);
@@ -460,13 +524,34 @@ export function Viewport() {
       }
     };
     const onLookPointerMove = (e) => {
-      if (runtime.mode !== 'edit' || !flyModeRef.current) return;
-      const look = lookRef.current;
-      // RMB-then-WASD: orbit drag was cancelled; adopt the still-held RMB as freelook.
-      if (!look.active && (e.buttons & 2) === 2) {
-        beginFlyLook(e);
+      if (runtime.mode !== 'edit') return;
+
+      // Perspective: hold Alt and move the mouse to orbit — no button required.
+      if (
+        altOrbitHeldRef.current
+        && !flyModeRef.current
+        && !isOrthographicMode(activeCameraMode())
+      ) {
+        if (!altOrbitTrack.primed) {
+          altOrbitTrack.lastX = e.clientX;
+          altOrbitTrack.lastY = e.clientY;
+          altOrbitTrack.primed = true;
+          return;
+        }
+        const odx = e.clientX - altOrbitTrack.lastX;
+        const ody = e.clientY - altOrbitTrack.lastY;
+        altOrbitTrack.lastX = e.clientX;
+        altOrbitTrack.lastY = e.clientY;
+        if (odx !== 0 || ody !== 0) applyAltOrbit(odx, ody);
+        return;
       }
-      if (!look.active || (look.pointerId != null && e.pointerId !== look.pointerId)) return;
+
+      const looking = flyModeRef.current || rmbLookHeldRef.current;
+      if (!looking) return;
+      const look = lookRef.current;
+      // WASD free-fly: mouse looks without a button. RMB drag: look while held.
+      if (!look.active) beginFlyLook(e);
+      if (look.pointerId != null && e.pointerId !== look.pointerId) return;
       const dx = e.clientX - look.lastX;
       const dy = e.clientY - look.lastY;
       look.lastX = e.clientX;
@@ -481,16 +566,18 @@ export function Viewport() {
       applyLookRotation();
     };
     const onLookPointerUp = (e) => {
-      const look = lookRef.current;
-      if (look.pointerId != null && e.pointerId !== look.pointerId) return;
-      // Only end look when RMB is released (ignore other buttons).
-      if (e.button != null && e.button !== 2 && (e.buttons & 2) === 2) return;
-      look.active = false;
-      look.pointerId = null;
-      try {
-        canvas.releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
+      if (e.button != null && e.button !== 2) return;
+      if (!rmbLookHeldRef.current) return;
+      rmbLookHeldRef.current = false;
+      // Keep mouse look if still WASD flying; otherwise end the RMB look session.
+      if (!flyModeRef.current) {
+        lookRef.current.active = false;
+        lookRef.current.pointerId = null;
+        try {
+          canvas.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
       }
     };
     const onContextMenu = (e) => {
@@ -542,8 +629,14 @@ export function Viewport() {
             cam.position.add(meters);
             syncLookTarget();
           }
-        } else if (!flyModeRef.current) {
+        } else if (
+          !flyModeRef.current
+          && !rmbLookHeldRef.current
+          && !lookRef.current.active
+          && !altOrbitHeldRef.current
+        ) {
           // Keep OrbitControls in sync (damping is off — no post-drag coast).
+          // Skip while Alt orbit / RMB / WASD freelook owns the camera.
           controls.update();
         }
 
@@ -949,6 +1042,29 @@ export function Viewport() {
       tool === 'geometry'
       && (geometryMode === 'face' || geometryMode === 'edge' || geometryMode === 'vertex')
     ) {
+      /**
+       * If the click hit a parametric Brush, convert it then re-pick.
+       * Select alone does not convert — only an edit-mode pick does.
+       * @returns {'converted'|'blocked'|'none'}
+       */
+      const tryConvertBrushUnderCursor = () => {
+        const surfaceHit = sceneView.pickSurface?.(nx, ny, cam);
+        if (!surfaceHit || surfaceHit.componentType === 'ConvexBrush') return 'none';
+        if (surfaceHit.componentType !== 'Brush') {
+          setStatus(
+            `Cannot edit ${surfaceHit.componentType} with Face/Edge/Vertex — only Brush → ConvexBrush.`,
+          );
+          return 'blocked';
+        }
+        const result = convertActorToConvexBrush?.(surfaceHit.actorId, { notifyOnFail: true });
+        if (!result?.ok) {
+          setStatus(result?.message || 'Could not convert brush for geometry edit.');
+          return 'blocked';
+        }
+        selectActor(surfaceHit.actorId, { additive: false });
+        return 'converted';
+      };
+
       const gizmoHit = sceneView.pickGizmo(nx, ny, cam);
       if (gizmoHit && geometrySelection?.items?.length && gizmoHit.kind === 'move') {
         const axisOk = filterGizmoAxisForOrtho(activePaneCameraMode(), gizmoHit.axis);
@@ -970,9 +1086,16 @@ export function Viewport() {
         return;
       }
       if (geometryMode === 'edge') {
-        const edgeHit = sceneView.pickGeometryEdge?.(nx, ny, cam, {
+        let edgeHit = sceneView.pickGeometryEdge?.(nx, ny, cam, {
           xray: e.altKey,
         });
+        if (!edgeHit) {
+          const prep = tryConvertBrushUnderCursor();
+          if (prep === 'blocked') return;
+          if (prep === 'converted') {
+            edgeHit = sceneView.pickGeometryEdge?.(nx, ny, cam, { xray: e.altKey });
+          }
+        }
         if (edgeHit) {
           const next = toggleGeometryItem(geometrySelection, {
             actorId: edgeHit.actorId,
@@ -1003,9 +1126,16 @@ export function Viewport() {
         return;
       }
       if (geometryMode === 'vertex') {
-        const vertHit = sceneView.pickGeometryVertex?.(nx, ny, cam, {
+        let vertHit = sceneView.pickGeometryVertex?.(nx, ny, cam, {
           xray: e.altKey,
         });
+        if (!vertHit) {
+          const prep = tryConvertBrushUnderCursor();
+          if (prep === 'blocked') return;
+          if (prep === 'converted') {
+            vertHit = sceneView.pickGeometryVertex?.(nx, ny, cam, { xray: e.altKey });
+          }
+        }
         if (vertHit) {
           const next = toggleGeometryItem(geometrySelection, {
             actorId: vertHit.actorId,
@@ -1034,7 +1164,16 @@ export function Viewport() {
         }
         return;
       }
-      const faceHit = sceneView.pickGeometryFace?.(nx, ny, cam);
+      let faceHit = sceneView.pickGeometryFace?.(nx, ny, cam);
+      let didConvert = false;
+      if (!faceHit) {
+        const prep = tryConvertBrushUnderCursor();
+        if (prep === 'blocked') return;
+        if (prep === 'converted') {
+          didConvert = true;
+          faceHit = sceneView.pickGeometryFace?.(nx, ny, cam);
+        }
+      }
       if (faceHit) {
         const next = toggleGeometryItem(geometrySelection, {
           actorId: faceHit.actorId,
@@ -1043,9 +1182,10 @@ export function Viewport() {
           additive: e.shiftKey || e.ctrlKey || e.metaKey,
         });
         setGeometrySelection(next);
+        const count = next.items.reduce((n, it) => n + it.ids.length, 0);
         setStatus(
           next.items.length
-            ? `Face ${faceHit.faceId} (${next.items.reduce((n, it) => n + it.ids.length, 0)} selected)`
+            ? `${didConvert ? 'Converted · ' : ''}Face ${faceHit.faceId} (${count} selected)`
             : 'Face selection cleared',
         );
       } else if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
@@ -1729,6 +1869,14 @@ export function Viewport() {
       flying: flyModeRef.current,
       settings: editorSettingsRef.current,
     });
+    // configureOrbitForPane resets RMB — keep perspective RIGHT disabled (Alt+move orbits).
+    if (orbitRef.current && !flyModeRef.current && mode === 'edit') {
+      const pane = viewportPrefs.panes.find((p) => p.id === viewportPrefs.activePaneId);
+      const camMode = pane?.cameraMode || 'perspective';
+      if (camMode === 'perspective') {
+        orbitRef.current.mouseButtons.RIGHT = -1;
+      }
+    }
     const { width, height } = shellSizeRef.current;
     runtime.setViewportPanes(
       buildViewportPanes(viewportPrefs, width, height, runtime.sceneView),

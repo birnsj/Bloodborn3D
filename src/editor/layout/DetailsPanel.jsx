@@ -259,27 +259,25 @@ export function DetailsPanel({ docked = false } = {}) {
                   <div className="bb-axis-row" {...helpProps('details.surface.uv')}>
                     <label className="bb-field">
                       <span className="bb-field__label">Scale U</span>
-                      <input
-                        type="number"
+                      <ScrubNumberInput
                         className="bb-input"
                         step="0.1"
                         disabled={disabled}
                         value={surfaceUv.scale.x}
-                        onChange={(e) => assignSelectedSurfaceUv({
-                          scale: { x: Number(e.target.value), y: surfaceUv.scale.y },
+                        onChange={(v) => assignSelectedSurfaceUv({
+                          scale: { x: v, y: surfaceUv.scale.y },
                         })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Scale V</span>
-                      <input
-                        type="number"
+                      <ScrubNumberInput
                         className="bb-input"
                         step="0.1"
                         disabled={disabled}
                         value={surfaceUv.scale.y}
-                        onChange={(e) => assignSelectedSurfaceUv({
-                          scale: { x: surfaceUv.scale.x, y: Number(e.target.value) },
+                        onChange={(v) => assignSelectedSurfaceUv({
+                          scale: { x: surfaceUv.scale.x, y: v },
                         })}
                       />
                     </label>
@@ -287,41 +285,38 @@ export function DetailsPanel({ docked = false } = {}) {
                   <div className="bb-axis-row" {...helpProps('details.surface.uv')}>
                     <label className="bb-field">
                       <span className="bb-field__label">Offset U</span>
-                      <input
-                        type="number"
+                      <ScrubNumberInput
                         className="bb-input"
                         step="0.05"
                         disabled={disabled}
                         value={surfaceUv.offset.x}
-                        onChange={(e) => assignSelectedSurfaceUv({
-                          offset: { x: Number(e.target.value), y: surfaceUv.offset.y },
+                        onChange={(v) => assignSelectedSurfaceUv({
+                          offset: { x: v, y: surfaceUv.offset.y },
                         })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Offset V</span>
-                      <input
-                        type="number"
+                      <ScrubNumberInput
                         className="bb-input"
                         step="0.05"
                         disabled={disabled}
                         value={surfaceUv.offset.y}
-                        onChange={(e) => assignSelectedSurfaceUv({
-                          offset: { x: surfaceUv.offset.x, y: Number(e.target.value) },
+                        onChange={(v) => assignSelectedSurfaceUv({
+                          offset: { x: surfaceUv.offset.x, y: v },
                         })}
                       />
                     </label>
                   </div>
                   <label className="bb-field" {...helpProps('details.surface.uv')}>
                     <span className="bb-field__label">Rotation (°)</span>
-                    <input
-                      type="number"
+                    <ScrubNumberInput
                       className="bb-input"
                       step="1"
                       disabled={disabled}
                       value={surfaceUv.rotation}
-                      onChange={(e) => assignSelectedSurfaceUv({
-                        rotation: Number(e.target.value),
+                      onChange={(v) => assignSelectedSurfaceUv({
+                        rotation: v,
                       })}
                     />
                   </label>
@@ -730,30 +725,28 @@ export function DetailsPanel({ docked = false } = {}) {
                 <div className="bb-field-caption">UV Scale</div>
                 <div className="bb-axis-row" {...helpProps('details.material.uv')}>
                   <span className="bb-axis">U</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={0.1}
                     disabled={disabled}
                     value={matComp.uv?.scale?.x ?? 1}
-                    onChange={(e) => updateMat({
+                    onChange={(v) => updateMat({
                       uv: {
                         ...matComp.uv,
-                        scale: { ...matComp.uv.scale, x: Number(e.target.value) },
+                        scale: { ...matComp.uv.scale, x: v },
                       },
                     })}
                   />
                   <span className="bb-axis">V</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={0.1}
                     disabled={disabled}
                     value={matComp.uv?.scale?.y ?? 1}
-                    onChange={(e) => updateMat({
+                    onChange={(v) => updateMat({
                       uv: {
                         ...matComp.uv,
-                        scale: { ...matComp.uv.scale, y: Number(e.target.value) },
+                        scale: { ...matComp.uv.scale, y: v },
                       },
                     })}
                   />
@@ -761,44 +754,41 @@ export function DetailsPanel({ docked = false } = {}) {
                 <div className="bb-field-caption">UV Offset</div>
                 <div className="bb-axis-row" {...helpProps('details.material.uv')}>
                   <span className="bb-axis">U</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={0.05}
                     disabled={disabled}
                     value={matComp.uv?.offset?.x ?? 0}
-                    onChange={(e) => updateMat({
+                    onChange={(v) => updateMat({
                       uv: {
                         ...matComp.uv,
-                        offset: { ...matComp.uv.offset, x: Number(e.target.value) },
+                        offset: { ...matComp.uv.offset, x: v },
                       },
                     })}
                   />
                   <span className="bb-axis">V</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={0.05}
                     disabled={disabled}
                     value={matComp.uv?.offset?.y ?? 0}
-                    onChange={(e) => updateMat({
+                    onChange={(v) => updateMat({
                       uv: {
                         ...matComp.uv,
-                        offset: { ...matComp.uv.offset, y: Number(e.target.value) },
+                        offset: { ...matComp.uv.offset, y: v },
                       },
                     })}
                   />
                 </div>
                 <label className="bb-field" {...helpProps('details.material.uv')}>
                   <span className="bb-field__label">UV Rotation°</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={1}
                     disabled={disabled}
                     value={matComp.uv?.rotation ?? 0}
-                    onChange={(e) => updateMat({
-                      uv: { ...matComp.uv, rotation: Number(e.target.value) },
+                    onChange={(v) => updateMat({
+                      uv: { ...matComp.uv, rotation: v },
                     })}
                   />
                 </label>
@@ -876,24 +866,22 @@ export function DetailsPanel({ docked = false } = {}) {
                     <>
                       <label className="bb-field">
                         <span className="bb-field__label">Miter Start (°)</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={1}
                           disabled={disabled}
                           value={brush.miterStart || 0}
-                          onChange={(e) => updateSelectedBrush({ miterStart: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedBrush({ miterStart: v })}
                         />
                       </label>
                       <label className="bb-field">
                         <span className="bb-field__label">Miter End (°)</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={1}
                           disabled={disabled}
                           value={brush.miterEnd || 0}
-                          onChange={(e) => updateSelectedBrush({ miterEnd: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedBrush({ miterEnd: v })}
                         />
                       </label>
                       {brush.openings?.length > 0 && (Math.abs(brush.miterStart) > 0.01 || Math.abs(brush.miterEnd) > 0.01) && (
@@ -998,53 +986,49 @@ export function DetailsPanel({ docked = false } = {}) {
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Offset</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={gridSize}
                         disabled={disabled}
                         value={opening.offset}
-                        onChange={(e) => updateBrushOpening(opening.id, {
-                          offset: Number(e.target.value),
+                        onChange={(v) => updateBrushOpening(opening.id, {
+                          offset: v,
                         })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Bottom</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={gridSize}
                         disabled={disabled}
                         value={opening.bottom}
-                        onChange={(e) => updateBrushOpening(opening.id, {
-                          bottom: Number(e.target.value),
+                        onChange={(v) => updateBrushOpening(opening.id, {
+                          bottom: v,
                         })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Width</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={gridSize}
                         disabled={disabled}
                         value={opening.width}
-                        onChange={(e) => updateBrushOpening(opening.id, {
-                          width: Number(e.target.value),
+                        onChange={(v) => updateBrushOpening(opening.id, {
+                          width: v,
                         })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Height</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={gridSize}
                         disabled={disabled}
                         value={opening.height}
-                        onChange={(e) => updateBrushOpening(opening.id, {
-                          height: Number(e.target.value),
+                        onChange={(v) => updateBrushOpening(opening.id, {
+                          height: v,
                         })}
                       />
                     </label>
@@ -1052,29 +1036,27 @@ export function DetailsPanel({ docked = false } = {}) {
                       <>
                         <label className="bb-field">
                           <span className="bb-field__label">Arch Rise</span>
-                          <input
+                          <ScrubNumberInput
                             className="bb-input"
-                            type="number"
                             step={gridSize}
                             disabled={disabled}
                             value={opening.rise}
-                            onChange={(e) => updateBrushOpening(opening.id, {
-                              rise: Number(e.target.value),
+                            onChange={(v) => updateBrushOpening(opening.id, {
+                              rise: v,
                             })}
                           />
                         </label>
                         <label className="bb-field">
                           <span className="bb-field__label">Curve Segments</span>
-                          <input
+                          <ScrubNumberInput
                             className="bb-input"
-                            type="number"
                             min={4}
                             max={48}
                             step={1}
                             disabled={disabled}
                             value={opening.curveResolution}
-                            onChange={(e) => updateBrushOpening(opening.id, {
-                              curveResolution: Number(e.target.value),
+                            onChange={(v) => updateBrushOpening(opening.id, {
+                              curveResolution: v,
                             })}
                           />
                         </label>
@@ -1108,35 +1090,32 @@ export function DetailsPanel({ docked = false } = {}) {
                 <div {...helpProps('details.ramp')}>
                   <label className="bb-field">
                     <span className="bb-field__label">Width</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={ramp.width}
-                      onChange={(e) => updateSelectedRamp({ width: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedRamp({ width: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Length (run)</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={ramp.length}
-                      onChange={(e) => updateSelectedRamp({ length: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedRamp({ length: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Rise</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={ramp.rise}
-                      onChange={(e) => updateSelectedRamp({ rise: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedRamp({ rise: v })}
                     />
                   </label>
                   <label className="bb-field">
@@ -1155,13 +1134,12 @@ export function DetailsPanel({ docked = false } = {}) {
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Thickness</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={ramp.thickness}
-                      onChange={(e) => updateSelectedRamp({ thickness: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedRamp({ thickness: v })}
                     />
                   </label>
                   <label className="bb-field">
@@ -1225,60 +1203,55 @@ export function DetailsPanel({ docked = false } = {}) {
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Width</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={stair.width}
-                      onChange={(e) => updateSelectedStair({ width: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedStair({ width: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Step Count</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       min={1}
                       step={1}
                       disabled={disabled}
                       value={stair.stepCount}
-                      onChange={(e) => updateSelectedStair({ stepCount: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedStair({ stepCount: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Step Height</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={stair.stepHeight}
-                      onChange={(e) => updateSelectedStair({ stepHeight: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedStair({ stepHeight: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Total Rise</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={stair.totalRise}
-                      onChange={(e) => updateSelectedStair({ totalRise: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedStair({ totalRise: v })}
                     />
                   </label>
                   {(stair.stairType || 'straight') === 'straight' && (
                     <>
                       <label className="bb-field">
                         <span className="bb-field__label">Tread Depth</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={stair.treadDepth}
-                          onChange={(e) => updateSelectedStair({ treadDepth: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedStair({ treadDepth: v })}
                         />
                       </label>
                       <label className="bb-field">
@@ -1301,26 +1274,24 @@ export function DetailsPanel({ docked = false } = {}) {
                     <>
                       <label className="bb-field" {...helpProps('details.stair.innerRadius')}>
                         <span className="bb-field__label">Inner Radius</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={stair.innerRadius}
-                          onChange={(e) => updateSelectedStair({ innerRadius: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedStair({ innerRadius: v })}
                         />
                       </label>
                       <label className="bb-field" {...helpProps('details.stair.sweep')}>
                         <span className="bb-field__label">Sweep Angle (°)</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           min={1}
                           max={720}
                           step={15}
                           disabled={disabled}
                           value={stair.sweepAngle}
-                          onChange={(e) => updateSelectedStair({ sweepAngle: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedStair({ sweepAngle: v })}
                         />
                       </label>
                       <div className="bb-seg" style={{ marginBottom: 8 }}>
@@ -1352,13 +1323,12 @@ export function DetailsPanel({ docked = false } = {}) {
                       </label>
                       <label className="bb-field">
                         <span className="bb-field__label">Start Angle (°)</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={15}
                           disabled={disabled}
                           value={stair.startAngle}
-                          onChange={(e) => updateSelectedStair({ startAngle: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedStair({ startAngle: v })}
                         />
                       </label>
                     </>
@@ -1424,37 +1394,34 @@ export function DetailsPanel({ docked = false } = {}) {
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Height</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={column.height}
-                      onChange={(e) => updateSelectedColumn({ height: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedColumn({ height: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Radius / Width</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={column.radius}
-                      onChange={(e) => updateSelectedColumn({ radius: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedColumn({ radius: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Sides</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       min={3}
                       max={64}
                       step={1}
                       disabled={disabled}
                       value={column.sides}
-                      onChange={(e) => updateSelectedColumn({ sides: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedColumn({ sides: v })}
                     />
                   </label>
                   <label className="bb-field">
@@ -1470,24 +1437,22 @@ export function DetailsPanel({ docked = false } = {}) {
                     <>
                       <label className="bb-field">
                         <span className="bb-field__label">Base Height</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={column.baseHeight}
-                          onChange={(e) => updateSelectedColumn({ baseHeight: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedColumn({ baseHeight: v })}
                         />
                       </label>
                       <label className="bb-field">
                         <span className="bb-field__label">Base Radius</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={column.baseRadius ?? Math.round(column.radius * 1.25)}
-                          onChange={(e) => updateSelectedColumn({ baseRadius: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedColumn({ baseRadius: v })}
                         />
                       </label>
                     </>
@@ -1505,24 +1470,22 @@ export function DetailsPanel({ docked = false } = {}) {
                     <>
                       <label className="bb-field">
                         <span className="bb-field__label">Capital Height</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={column.capitalHeight}
-                          onChange={(e) => updateSelectedColumn({ capitalHeight: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedColumn({ capitalHeight: v })}
                         />
                       </label>
                       <label className="bb-field">
                         <span className="bb-field__label">Capital Radius</span>
-                        <input
+                        <ScrubNumberInput
                           className="bb-input"
-                          type="number"
                           step={gridSize}
                           disabled={disabled}
                           value={column.capitalRadius ?? Math.round(column.radius * 1.2)}
-                          onChange={(e) => updateSelectedColumn({ capitalRadius: Number(e.target.value) })}
+                          onChange={(v) => updateSelectedColumn({ capitalRadius: v })}
                         />
                       </label>
                     </>
@@ -1569,26 +1532,24 @@ export function DetailsPanel({ docked = false } = {}) {
                 <div {...helpProps('details.curvedWall')}>
                   <label className="bb-field">
                     <span className="bb-field__label">Radius</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={curvedWall.radius}
-                      onChange={(e) => updateSelectedCurvedWall({ radius: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ radius: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Sweep Angle (°)</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       min={1}
                       max={360}
                       step={5}
                       disabled={disabled}
                       value={curvedWall.sweepAngle}
-                      onChange={(e) => updateSelectedCurvedWall({ sweepAngle: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ sweepAngle: v })}
                     />
                   </label>
                   <div className="bb-seg" style={{ marginBottom: 8 }}>
@@ -1606,48 +1567,44 @@ export function DetailsPanel({ docked = false } = {}) {
                   </div>
                   <label className="bb-field">
                     <span className="bb-field__label">Start Angle (°)</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={5}
                       disabled={disabled}
                       value={curvedWall.startAngle}
-                      onChange={(e) => updateSelectedCurvedWall({ startAngle: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ startAngle: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Height</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={curvedWall.height}
-                      onChange={(e) => updateSelectedCurvedWall({ height: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ height: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Thickness</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={curvedWall.thickness}
-                      onChange={(e) => updateSelectedCurvedWall({ thickness: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ thickness: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Curve Resolution</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       min={4}
                       max={128}
                       step={1}
                       disabled={disabled}
                       value={curvedWall.curveResolution}
-                      onChange={(e) => updateSelectedCurvedWall({ curveResolution: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedCurvedWall({ curveResolution: v })}
                     />
                   </label>
                   <label className="bb-field">
@@ -1716,70 +1673,64 @@ export function DetailsPanel({ docked = false } = {}) {
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Opening Width</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={arch.openingWidth}
-                      onChange={(e) => updateSelectedArch({ openingWidth: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ openingWidth: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Opening Height</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={arch.openingHeight}
-                      onChange={(e) => updateSelectedArch({ openingHeight: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ openingHeight: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Arch Rise</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={arch.archRise}
-                      onChange={(e) => updateSelectedArch({ archRise: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ archRise: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Thickness</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={arch.thickness}
-                      onChange={(e) => updateSelectedArch({ thickness: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ thickness: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Depth</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={gridSize}
                       disabled={disabled}
                       value={arch.depth}
-                      onChange={(e) => updateSelectedArch({ depth: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ depth: v })}
                     />
                   </label>
                   <label className="bb-field">
                     <span className="bb-field__label">Curve Resolution</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       min={4}
                       max={64}
                       step={1}
                       disabled={disabled}
                       value={arch.curveResolution}
-                      onChange={(e) => updateSelectedArch({ curveResolution: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedArch({ curveResolution: v })}
                     />
                   </label>
                   <label className="bb-field">
@@ -1851,27 +1802,25 @@ export function DetailsPanel({ docked = false } = {}) {
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Intensity</span>
-                  <input
+                  <ScrubNumberInput
                     className="bb-input"
-                    type="number"
                     step={0.1}
                     min={0}
                     disabled={disabled}
                     value={light.intensity}
-                    onChange={(e) => updateSelectedLight({ intensity: Number(e.target.value) })}
+                    onChange={(v) => updateSelectedLight({ intensity: v })}
                   />
                 </label>
                 {(light.lightType === 'point' || light.lightType === 'spot') && (
                   <label className="bb-field">
                     <span className="bb-field__label">Range (eu)</span>
-                    <input
+                    <ScrubNumberInput
                       className="bb-input"
-                      type="number"
                       step={25}
                       min={0}
                       disabled={disabled}
                       value={light.range}
-                      onChange={(e) => updateSelectedLight({ range: Number(e.target.value) })}
+                      onChange={(v) => updateSelectedLight({ range: v })}
                     />
                   </label>
                 )}
@@ -1879,26 +1828,24 @@ export function DetailsPanel({ docked = false } = {}) {
                   <>
                     <label className="bb-field">
                       <span className="bb-field__label">Spot Angle°</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={1}
                         disabled={disabled}
                         value={light.spotAngle}
-                        onChange={(e) => updateSelectedLight({ spotAngle: Number(e.target.value) })}
+                        onChange={(v) => updateSelectedLight({ spotAngle: v })}
                       />
                     </label>
                     <label className="bb-field">
                       <span className="bb-field__label">Penumbra</span>
-                      <input
+                      <ScrubNumberInput
                         className="bb-input"
-                        type="number"
                         step={0.05}
                         min={0}
                         max={1}
                         disabled={disabled}
                         value={light.spotPenumbra}
-                        onChange={(e) => updateSelectedLight({ spotPenumbra: Number(e.target.value) })}
+                        onChange={(v) => updateSelectedLight({ spotPenumbra: v })}
                       />
                     </label>
                   </>

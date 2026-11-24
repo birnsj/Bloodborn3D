@@ -2560,20 +2560,29 @@ export function EditorProvider({ children }) {
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
 
-  const convertSelectedToConvexBrush = useCallback(() => {
-    if (!world || mode === 'play' || selectedRef.current.length === 0) return false;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
+  /**
+   * Convert a specific Brush actor to ConvexBrush (undoable).
+   * Used by Details and by Geometry Face/Edge/Vertex auto-convert-on-edit.
+   */
+  const convertActorToConvexBrush = useCallback((actorId, {
+    notifyOnFail = true,
+  } = {}) => {
+    if (!world || mode === 'play' || !actorId) return { ok: false, code: 'NO_ACTOR' };
     const actor = world.getActor(actorId);
     const eligibility = canConvertActorToConvex(actor, world);
     if (!eligibility.ok) {
-      notify(eligibility.message, { title: 'Convert to Convex Brush' });
-      return false;
+      if (notifyOnFail) {
+        notify(eligibility.message, { title: 'Convert to Convex Brush' });
+      }
+      return { ok: false, code: eligibility.code, message: eligibility.message };
     }
     const brush = actor.getComponent('Brush');
     const converted = convertBrushToConvexGeometry(actor, brush, world);
     if (!converted.ok) {
-      notify(converted.message, { title: 'Convert to Convex Brush' });
-      return false;
+      if (notifyOnFail) {
+        notify(converted.message, { title: 'Convert to Convex Brush' });
+      }
+      return { ok: false, code: converted.code, message: converted.message };
     }
     const convex = new ConvexBrushComponent({
       id: brush.id,
@@ -2587,10 +2596,11 @@ export function EditorProvider({ children }) {
       provenance: converted.provenance,
     });
     if (!convex.isValid) {
-      notify(convex.geometryError?.message || 'Converted geometry is invalid.', {
-        title: 'Convert to Convex Brush',
-      });
-      return false;
+      const message = convex.geometryError?.message || 'Converted geometry is invalid.';
+      if (notifyOnFail) {
+        notify(message, { title: 'Convert to Convex Brush' });
+      }
+      return { ok: false, code: 'INVALID', message };
     }
     executeCommand(
       new ConvertBrushToConvexCommand({
@@ -2601,8 +2611,14 @@ export function EditorProvider({ children }) {
       }),
     );
     autoCapturePrefabOverrides([actorId]);
-    return true;
+    return { ok: true, actorId };
   }, [world, mode, executeCommand, notify, autoCapturePrefabOverrides]);
+
+  const convertSelectedToConvexBrush = useCallback(() => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return false;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    return Boolean(convertActorToConvexBrush(actorId).ok);
+  }, [world, mode, convertActorToConvexBrush]);
 
   const clearExtrudePreview = useCallback(() => {
     setExtrudePreviewState(null);
@@ -3247,6 +3263,7 @@ export function EditorProvider({ children }) {
     updateSelectedBrush,
     updateSelectedConvexBrush,
     convertSelectedToConvexBrush,
+    convertActorToConvexBrush,
     reportCutterConvexConflicts,
     clipSession,
     extrudePreview,
