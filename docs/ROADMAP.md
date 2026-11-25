@@ -279,7 +279,17 @@ finite transform validation; world-space parented player spawn.
 - Units: `phase2f7hAuditCorrections.test.js`
 - Report: `docs/ACCEPTANCE_AUDIT_CORRECTIONS.md`
 
-**Phase 2F.7 complete** (including 2F.7H). Do not begin Phase 2G until the designer directs it.
+**Phase 2F.7 complete** (including 2F.7H).
+
+### Phase 2G prerequisite corrections
+
+**Done** (2026-11-25). Audit defects D1 (additive carve invalidation), D2 (subtractive
+complexity validation on load / save / Play) and D3 (geometry payload validation) only.
+**Map generation has not started**; other audit items (carve broadphase, draw calls, floor
+seams, player damping, the 64-solid representation question) remain open.
+
+- Units: `phase2gPrerequisites.test.js`
+- Report: `docs/ACCEPTANCE_PREREQUISITES.md`
 
 ### Dependencies
 

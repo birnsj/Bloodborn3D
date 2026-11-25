@@ -48,6 +48,46 @@ export function actorParentFingerprint(actor) {
   return actor?.parentId || '';
 }
 
+/**
+ * Ids of actors whose WORLD pose differs from the pose their visual was last
+ * built/updated with: own transform changed, re-parented, or any ancestor did
+ * (Phase 2G D1). A brush's carve depends on its world pose relative to cutters,
+ * so these are exactly the actors whose carve may be stale.
+ *
+ * `entries` is SceneView's actorId → { transformFingerprint, parentFingerprint }.
+ * Actors without a visual yet are skipped (they build fresh from current data).
+ */
+export function collectWorldPoseChangedIds(world, entries) {
+  const changed = new Set();
+  if (!world?.actors) return changed;
+  const memo = new Map();
+
+  const poseChanged = (actor, trail) => {
+    if (!actor) return false;
+    if (memo.has(actor.id)) return memo.get(actor.id);
+    if (trail.has(actor.id)) return false; // cycle guard; hierarchy is validated elsewhere
+    trail.add(actor.id);
+
+    const entry = entries.get(actor.id);
+    let result = false;
+    if (entry) {
+      result = entry.transformFingerprint !== actorTransformFingerprint(actor)
+        || (entry.parentFingerprint != null
+          && entry.parentFingerprint !== actorParentFingerprint(actor));
+    }
+    if (!result && actor.parentId) {
+      result = poseChanged(world.getActor(actor.parentId), trail);
+    }
+    memo.set(actor.id, result);
+    return result;
+  };
+
+  for (const actor of world.actors) {
+    if (poseChanged(actor, new Set())) changed.add(actor.id);
+  }
+  return changed;
+}
+
 export function isSubtractBrushActor(actor) {
   const brush = actor?.getComponent?.('Brush');
   return Boolean(brush && brush.operation === 'subtract');

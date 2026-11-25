@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **640 / 640 pass** (2F.7H audit corrections; see `ACCEPTANCE_AUDIT_CORRECTIONS.md`) |
+| `npm test` | **701 / 701 pass** (Phase 2G prerequisites D1–D3; see `ACCEPTANCE_PREREQUISITES.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -30,6 +30,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.7G | Final regression / profiling / stress; CI; see `ACCEPTANCE_STABILIZATION.md` |
 | Phase 2F.7H | Independent audit corrections (carve invalidation, GLB textures, epochs, dispose, validate, spawn); see `ACCEPTANCE_AUDIT_CORRECTIONS.md` |
 | **Phase 2F.7** | **Complete** (incl. 2F.7H corrections) |
+| Phase 2G prerequisites | Audit defects D1 (additive carve invalidation), D2 (subtractive complexity validated on load / save / Play), D3 (geometry payload validation); see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
 
 ## 2. Implemented systems
 
@@ -55,6 +56,7 @@ Status is what the code does today, not an intent.
 | Physics stabilization (2F.7F) | Verified | Grounded jump edge; stair-assist probe; off-center mesh colliders; FPS-stable fixed step; see `ACCEPTANCE_PHYSICS.md`. |
 | Final stabilization (2F.7G) | Verified | Full regression, profiling, lifecycle stress, CI; see `ACCEPTANCE_STABILIZATION.md`. |
 | Audit corrections (2F.7H) | Verified | Carve delete/flip/parent; shared GLB maps; epoch high-water; dispose-once; finite transforms; world-space spawn; see `ACCEPTANCE_AUDIT_CORRECTIONS.md`. |
+| Geometry validation (2G prereq) | Verified | Payload rules before construction; 64-solid cap enforced on load / save (HTTP 422) / Play with structured diagnostics; additive carve re-built on pose / parent / ancestor / undo; generator API `validateLevelGeometry` / `validateWorldGeometry`; see `ACCEPTANCE_PREREQUISITES.md`. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |

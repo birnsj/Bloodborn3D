@@ -7,13 +7,28 @@ import {
   MIN_SUPPORTED_LEVEL_SCHEMA_VERSION,
 } from './LevelSerializer.js';
 import { getRegisteredComponentTypes } from '../components/componentRegistry.js';
+import {
+  LevelGeometryValidationError,
+  validateLevelPayloads,
+  validateWorldSubtractLimits,
+} from './levelGeometryValidation.js';
 
 /**
  * Shared scene loading used by editor and game runtime.
  * Rejects malformed levels rather than silently rewriting authored data.
+ *
+ * Geometry validation (Phase 2G D2/D3) runs by default: component payloads are
+ * checked before any component is constructed, and the carved solid count is
+ * checked once the world exists. Pass `{ validateGeometry: false }` only for
+ * trusted data that was validated when it was produced (Play/Stop snapshots).
  */
-export function deserializeLevel(data) {
+export function deserializeLevel(data, { validateGeometry = true } = {}) {
   validateLevelData(data);
+
+  if (validateGeometry) {
+    const payload = validateLevelPayloads(data);
+    if (payload.length) throw new LevelGeometryValidationError(payload);
+  }
 
   const world = new World({
     name: data.name || 'Untitled Level',
@@ -32,7 +47,53 @@ export function deserializeLevel(data) {
   }
 
   assertHierarchyIntegrity(world);
+
+  if (validateGeometry) {
+    const limits = validateWorldSubtractLimits(world);
+    if (limits.length) throw new LevelGeometryValidationError(limits);
+  }
   return world;
+}
+
+/**
+ * Non-throwing geometry validation of level JSON — the same checks load and save
+ * apply, exposed for tooling and future map generation.
+ * @returns {{ ok: boolean, diagnostics: Array }}
+ */
+export function validateLevelGeometry(data) {
+  try {
+    validateLevelData(data);
+  } catch (err) {
+    return {
+      ok: false,
+      diagnostics: [{ code: 'LEVEL_STRUCTURE_INVALID', message: err.message }],
+    };
+  }
+  const payload = validateLevelPayloads(data);
+  if (payload.length) return { ok: false, diagnostics: payload };
+
+  let world;
+  try {
+    world = deserializeLevel(data, { validateGeometry: false });
+  } catch (err) {
+    return {
+      ok: false,
+      diagnostics: [{ code: 'LEVEL_STRUCTURE_INVALID', message: err.message }],
+    };
+  }
+  const limits = validateWorldSubtractLimits(world);
+  return { ok: limits.length === 0, diagnostics: limits };
+}
+
+/** Throws LevelGeometryValidationError (with `.diagnostics`) when geometry is invalid. */
+export function assertLevelGeometry(data) {
+  const result = validateLevelGeometry(data);
+  if (!result.ok) {
+    throw result.diagnostics[0]?.code === 'LEVEL_STRUCTURE_INVALID'
+      ? new Error(result.diagnostics[0].message)
+      : new LevelGeometryValidationError(result.diagnostics);
+  }
+  return result;
 }
 
 /**

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
+import { assertWorldGeometry } from '../serialization/levelGeometryValidation.js';
 import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
 import { SceneView } from './SceneView.js';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { PlayerController } from './PlayerController.js';
-import { getWorldTransform } from '../core/hierarchy.js';
+import { getDescendants, getWorldTransform } from '../core/hierarchy.js';
 
 /** Camera framing used only when no editor camera was captured before Play. */
 const DEFAULT_EDITOR_CAMERA_POSITION = [6, 5, 8];
@@ -120,6 +121,31 @@ export class GameRuntime {
 
   refreshActor(actor) {
     this.sceneView.updateActorTransform(actor);
+    // A moved parent changes the world pose of every descendant brush, and a
+    // brush's carve depends on its world pose relative to the cutters.
+    this._refreshCarvedDescendants(actor);
+  }
+
+  /**
+   * Re-carve brushes under `actor` after its pose changed (Phase 2G D1).
+   * No-op unless the world has a cutter and the actor has brush descendants.
+   */
+  _refreshCarvedDescendants(actor) {
+    const world = this.world;
+    if (!world || !actor) return;
+    const descendants = getDescendants(actor.id, world);
+    if (!descendants.length) return;
+
+    const brushes = descendants.filter((d) => d.getComponent?.('Brush'));
+    if (!brushes.length) return;
+    const movedCutter = brushes.find((d) => d.getComponent('Brush').operation === 'subtract');
+    if (movedCutter) {
+      // A cutter changed pose: World Solid refit + every additive re-carves.
+      this.refreshBrushCarveDependents(movedCutter);
+      return;
+    }
+    if (!world.actors.some((a) => a.getComponent?.('Brush')?.operation === 'subtract')) return;
+    for (const brush of brushes) this.refreshBrush(brush);
   }
 
   refreshBrush(actor) {
@@ -141,7 +167,12 @@ export class GameRuntime {
     this.refreshBrush(actor);
     if (!this.world) return;
     const isSubtract = brush.operation === 'subtract';
-    if (!isSubtract && !forceCarve) return;
+    if (!isSubtract && !forceCarve) {
+      // Additive brush moved: its own carve was rebuilt above; brushes parented
+      // under it moved with it and need the same.
+      this._refreshCarvedDescendants(actor);
+      return;
+    }
     if (this.world.mapMode === 'subtractive') {
       ensureWorldSolidContainsSubtracts(this.world, {
         gridSize: this.sceneView?.gridSize || 25,
@@ -214,6 +245,10 @@ export class GameRuntime {
     this._playPending = true;
     const token = ++this._playToken;
     try {
+      // Refuse to build colliders from malformed or over-cap geometry (Phase 2G D2/D3);
+      // otherwise carving would silently omit cutters and sizes could be NaN.
+      assertWorldGeometry(this.world, { context: 'Play' });
+
       // Snapshot authored level JSON before any runtime mutation
       const snapshot = serializeLevel(this.world);
 
@@ -373,7 +408,8 @@ export class GameRuntime {
    * Restores mapMode and ambient as well as actors (Phase 2F.7E).
    */
   _applyAuthoredSnapshot(snapshot) {
-    const restored = deserializeLevel(snapshot);
+    // Snapshot came from a world already validated at Play start.
+    const restored = deserializeLevel(snapshot, { validateGeometry: false });
     this.world.clear();
     this.world.name = restored.name;
     this.world.schemaVersion = restored.schemaVersion;

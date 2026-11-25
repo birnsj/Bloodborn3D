@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateLevelData } from '../src/serialization/LevelDeserializer.js';
+import { assertLevelGeometry, validateLevelData } from '../src/serialization/LevelDeserializer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -31,9 +31,13 @@ export function levelFileApiPlugin() {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ error: 'Method not allowed' }));
         } catch (err) {
-          res.statusCode = 500;
+          const invalid = err?.name === 'LevelGeometryValidationError';
+          res.statusCode = invalid ? 422 : 500;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: String(err.message || err) }));
+          res.end(JSON.stringify({
+            error: String(err.message || err),
+            ...(invalid ? { diagnostics: err.diagnostics } : {}),
+          }));
         }
       });
     },
@@ -87,6 +91,9 @@ async function handleWrite(req, res) {
   const parsed = JSON.parse(body);
   // Reject malformed levels before touching disk (same rules as editor load).
   validateLevelData(parsed);
+  // Geometry payloads + solid limit (Phase 2G D2/D3): refuse to persist a level
+  // that would load back rejected or with cutters silently omitted.
+  assertLevelGeometry(parsed);
 
   await fs.mkdir(LEVELS_DIR, { recursive: true });
   const payload = `${JSON.stringify(parsed, null, 2)}\n`;

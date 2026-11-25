@@ -68,6 +68,7 @@ import {
   actorContentFingerprint,
   actorParentFingerprint,
   actorTransformFingerprint,
+  collectWorldPoseChangedIds,
   isAdditiveBrushActor,
   isSubtractBrushActor,
 } from './actorVisualFingerprint.js';
@@ -633,26 +634,16 @@ export class SceneView {
       }
     }
 
-    // Parent (or ancestor) transform of a subtract brush changes world carve pose.
-    if (!carveDirty) {
-      for (const actor of world.actors) {
-        if (!isSubtractBrushActor(actor)) continue;
-        let ancestorId = actor.parentId;
-        while (ancestorId) {
-          const ancestor = world.getActor(ancestorId);
-          if (!ancestor) break;
-          const aEntry = this._actorMeshes.get(ancestorId);
-          if (
-            aEntry
-            && aEntry.transformFingerprint !== actorTransformFingerprint(ancestor)
-          ) {
-            carveDirty = true;
-            break;
-          }
-          ancestorId = ancestor.parentId;
-        }
-        if (carveDirty) break;
-      }
+    // A brush's carve depends on its WORLD pose relative to every cutter, so a
+    // changed own transform, re-parenting, or any ancestor transform matters
+    // (Phase 2G D1). Computed before syncOne refreshes the stored fingerprints.
+    const poseChanged = collectWorldPoseChangedIds(world, this._actorMeshes);
+    let hasCutters = false;
+    for (const actor of world.actors) {
+      if (!isSubtractBrushActor(actor)) continue;
+      hasCutters = true;
+      // Cutter moved relative to everything: all additive brushes re-carve.
+      if (poseChanged.has(actor.id)) carveDirty = true;
     }
 
     if (carveDirty && world.mapMode === 'subtractive') {
@@ -679,7 +670,11 @@ export class SceneView {
 
       const needRebuild = forceRebuild
         || entry.contentFingerprint !== contentFp
-        || (carveDirty && (isAdditiveBrushActor(actor) || isWorldSolidActor(actor)));
+        || (carveDirty && (isAdditiveBrushActor(actor) || isWorldSolidActor(actor)))
+        // Carved brush moved (directly, via ancestor, or re-parented) while cutters exist.
+        || (hasCutters
+          && (isAdditiveBrushActor(actor) || isWorldSolidActor(actor))
+          && poseChanged.has(actor.id));
 
       if (needRebuild) {
         this.rebuildActorVisual(actor, world);
