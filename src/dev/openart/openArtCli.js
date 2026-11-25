@@ -305,8 +305,9 @@ export function buildGenerateImageArgv({
   }
 
   // Prompt is a single argv element — never interpolated into a shell string.
-  // CLI 0.1.1 image generate accepts --model / --image / --async / -o;
-  // aspect/resolution are quoted via `model cost` and applied as model defaults.
+  // CLI 0.1.1 `generate image` accepts --model / --image / --async / -o only.
+  // aspect-ratio / resolution / free-form formValues are NOT CLI generate flags —
+  // they are used for `model cost` quotes and UI display; do not invent argv for them.
   const argv = ['generate', 'image', prompt, '--model', modelId];
   const images = Array.isArray(imagePaths) ? imagePaths : (imagePaths ? [imagePaths] : []);
   for (const img of images) {
@@ -317,6 +318,20 @@ export function buildGenerateImageArgv({
   if (asyncMode) argv.push('--async');
   return argv;
 }
+
+/** Params actually forwarded to `openart generate image` (CLI 0.1.x). */
+export const CLI_GENERATE_IMAGE_PARAMS = Object.freeze(['prompt', 'modelId', 'imagePaths', 'async', 'dryRun']);
+
+/**
+ * Estimate/UI fields that are NOT accepted by `generate image` argv.
+ * Quoted via `model cost` only — never invent CLI flags for these.
+ */
+export const UNSUPPORTED_GENERATE_CLI_PARAMS = Object.freeze([
+  'aspectRatio',
+  'resolution',
+  'formValues',
+  'mode',
+]);
 
 /** Reference images must be absolute local paths (no URLs in argv for safety). */
 export function assertLocalImagePath(filePath) {

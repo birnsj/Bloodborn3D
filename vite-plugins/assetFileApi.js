@@ -2,11 +2,25 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import {
+  DEFAULT_JSON_BODY_LIMIT,
+  DEFAULT_MESH_UPLOAD_LIMIT,
+  DEFAULT_UPLOAD_LIMIT,
+  atomicWriteJson,
+  createAsyncMutex,
+  detectImageMagic,
+  extensionForImageMagic,
+  readBodyBufferLimited,
+  readBodyLimited,
+  resolveContainedPath,
+} from './fsSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ASSETS_DIR = path.join(PROJECT_ROOT, 'public', 'assets');
-const REGISTRY_PATH = path.join(ASSETS_DIR, 'registry.json');
+
+let ASSETS_DIR = path.join(PROJECT_ROOT, 'public', 'assets');
+let REGISTRY_PATH = path.join(ASSETS_DIR, 'registry.json');
+const withRegistryLock = createAsyncMutex();
 
 const KIND_DIRS = {
   texture: 'textures',
@@ -17,6 +31,22 @@ const KIND_DIRS = {
 
 const TEXTURE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ktx2']);
 const MESH_EXTS = new Set(['.glb', '.gltf']);
+
+/** Test-only: redirect asset roots to a temp directory. */
+export function __testSetAssetRoots(assetsDir) {
+  const next = path.resolve(assetsDir);
+  const production = path.join(PROJECT_ROOT, 'public', 'assets');
+  if (next === path.resolve(production)) {
+    throw new Error('Refusing to redirect asset roots onto production public/assets');
+  }
+  ASSETS_DIR = next;
+  REGISTRY_PATH = path.join(ASSETS_DIR, 'registry.json');
+}
+
+export function __testResetAssetRoots() {
+  ASSETS_DIR = path.join(PROJECT_ROOT, 'public', 'assets');
+  REGISTRY_PATH = path.join(ASSETS_DIR, 'registry.json');
+}
 
 /**
  * Development-only Vite middleware for project assets under public/assets.
@@ -76,7 +106,7 @@ export function assetFileApiPlugin() {
           if (req.method === 'POST' && action === 'import-texture') {
             const url = new URL(req.url || '/', 'http://localhost');
             const originalName = url.searchParams.get('name') || 'import.png';
-            const buffer = await readBodyBuffer(req);
+            const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
             const result = await importTextureBuffer(buffer, originalName);
             sendJson(res, 200, result);
             return;
@@ -120,7 +150,10 @@ export function assetFileApiPlugin() {
 
           sendJson(res, 405, { error: 'Method or action not allowed' });
         } catch (err) {
-          sendJson(res, 500, { error: String(err.message || err) });
+          const status = err?.code === 'BODY_TOO_LARGE' ? 413
+            : err?.code === 'INVALID_IMAGE' || err?.code === 'PATH_TRAVERSAL' ? 400
+              : 500;
+          sendJson(res, status, { error: String(err.message || err), code: err.code || null });
         }
       });
     },
@@ -135,7 +168,8 @@ async function ensureAssetDirs() {
   try {
     await fs.access(REGISTRY_PATH);
   } catch {
-    await writeRegistry({ schemaVersion: 1, assets: [] });
+    // Seed empty registry directly — do not call writeRegistry (would re-enter ensure).
+    await atomicWriteJson(REGISTRY_PATH, { schemaVersion: 1, assets: [] });
   }
 }
 
@@ -150,22 +184,26 @@ async function readRegistry() {
 }
 
 async function writeRegistry(registry) {
-  await ensureAssetDirs();
+  await fs.mkdir(ASSETS_DIR, { recursive: true });
   const normalized = {
     schemaVersion: 1,
     assets: Array.isArray(registry?.assets) ? registry.assets : [],
   };
-  await fs.writeFile(REGISTRY_PATH, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
+  await atomicWriteJson(REGISTRY_PATH, normalized);
   return normalized;
 }
 
 function resolveSafeAssetPath(relPath) {
-  if (!relPath || typeof relPath !== 'string') throw new Error('Missing asset path');
-  const cleaned = relPath.replace(/^[/\\]+/, '').replace(/\\/g, '/');
-  if (cleaned.includes('..')) throw new Error('Path traversal rejected');
-  const full = path.resolve(ASSETS_DIR, cleaned);
-  if (!full.startsWith(ASSETS_DIR)) throw new Error('Path traversal rejected');
-  return full;
+  return resolveContainedPath(ASSETS_DIR, relPath);
+}
+
+async function mutateRegistry(mutator) {
+  return withRegistryLock(async () => {
+    const registry = await readRegistry();
+    const result = await mutator(registry);
+    await writeRegistry(registry);
+    return result;
+  });
 }
 
 /**
@@ -181,45 +219,74 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
   }
   const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
   if (!bytes.length) throw new Error('Empty upload');
+  if (bytes.length > DEFAULT_UPLOAD_LIMIT) {
+    const err = new Error(`Texture exceeds ${DEFAULT_UPLOAD_LIMIT} bytes`);
+    err.code = 'BODY_TOO_LARGE';
+    throw err;
+  }
 
+  const magic = detectImageMagic(bytes);
+  // ktx2 is extension-only (no simple magic here); other textures require signatures.
   const base = path.basename(originalName || 'import.png');
-  const ext = path.extname(base).toLowerCase() || '.png';
-  if (!TEXTURE_EXTS.has(ext)) {
-    throw new Error(`Unsupported texture extension: ${ext}`);
+  let ext = path.extname(base).toLowerCase() || '.png';
+  if (ext === '.ktx2') {
+    if (!TEXTURE_EXTS.has(ext)) throw Object.assign(new Error('Unsupported texture extension: .ktx2'), { code: 'INVALID_IMAGE' });
+  } else {
+    if (!magic) {
+      throw Object.assign(new Error('Texture rejected: unrecognized image signature'), { code: 'INVALID_IMAGE' });
+    }
+    const magicExt = extensionForImageMagic(magic);
+    if (!TEXTURE_EXTS.has(ext) && magicExt) ext = magicExt;
+    if (!TEXTURE_EXTS.has(ext)) {
+      throw Object.assign(new Error(`Unsupported texture extension: ${ext}`), { code: 'INVALID_IMAGE' });
+    }
+    // Prefer container implied by magic when extension disagrees (e.g. .png that is jpeg).
+    if (magicExt && ext !== magicExt && !(ext === '.jpeg' && magicExt === '.jpg') && !(ext === '.jpg' && magic === 'jpeg')) {
+      ext = magicExt;
+    }
   }
 
   const id = `tex_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const storedName = `${id}${ext}`;
   const relPath = `${KIND_DIRS.texture}/${storedName}`;
   const full = resolveSafeAssetPath(relPath);
-  await fs.writeFile(full, bytes);
-
   const originalRel = `${KIND_DIRS.texture}/originals/${storedName}`;
   const originalFull = resolveSafeAssetPath(originalRel);
-  await fs.mkdir(path.dirname(originalFull), { recursive: true });
-  await fs.copyFile(full, originalFull);
 
-  const entry = {
-    id,
-    kind: 'texture',
-    name: name || stripExt(base),
-    folder: 'Textures',
-    path: relPath,
-    originalName: base,
-    tags: Array.isArray(tags) ? tags : [],
-    meta: {
-      format: ext.replace('.', ''),
-      bytes: bytes.length,
-    },
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+  await fs.mkdir(path.dirname(full), { recursive: true });
+  await fs.writeFile(full, bytes);
+  try {
+    await fs.mkdir(path.dirname(originalFull), { recursive: true });
+    await fs.copyFile(full, originalFull);
 
-  const registry = await readRegistry();
-  registry.assets.push(entry);
-  await writeRegistry(registry);
+    const entry = {
+      id,
+      kind: 'texture',
+      name: name || stripExt(base),
+      folder: 'Textures',
+      path: relPath,
+      originalName: base,
+      tags: Array.isArray(tags) ? tags : [],
+      meta: {
+        format: ext.replace('.', ''),
+        bytes: bytes.length,
+        magic: magic || null,
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
 
-  return { ok: true, asset: entry, registry };
+    const registry = await mutateRegistry(async (reg) => {
+      reg.assets.push(entry);
+      return { ok: true, asset: entry, registry: reg };
+    });
+    return registry;
+  } catch (err) {
+    // Roll back orphan files so a failed registry write cannot leave broken refs.
+    try { await fs.unlink(full); } catch { /* ignore */ }
+    try { await fs.unlink(originalFull); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 async function importBinaryAsset(req, kind, allowedExts) {
@@ -231,7 +298,7 @@ async function importBinaryAsset(req, kind, allowedExts) {
     throw new Error(`Unsupported ${kind} extension: ${ext}`);
   }
 
-  const buffer = await readBodyBuffer(req);
+  const buffer = await readBodyBuffer(req, DEFAULT_MESH_UPLOAD_LIMIT);
   if (!buffer.length) throw new Error('Empty upload');
 
   if (kind === 'texture') {
@@ -242,38 +309,43 @@ async function importBinaryAsset(req, kind, allowedExts) {
   const storedName = `${id}${ext}`;
   const relPath = `${KIND_DIRS[kind]}/${storedName}`;
   const full = resolveSafeAssetPath(relPath);
-  await fs.writeFile(full, buffer);
-
-  // Preserve original beside managed file
   const originalRel = `${KIND_DIRS[kind]}/originals/${storedName}`;
   const originalFull = resolveSafeAssetPath(originalRel);
-  await fs.mkdir(path.dirname(originalFull), { recursive: true });
-  await fs.copyFile(full, originalFull);
 
-  const entry = {
-    id,
-    kind,
-    name: stripExt(base),
-    folder: 'Meshes',
-    path: relPath,
-    originalName: base,
-    tags: [],
-    meta: {
-      format: ext === '.gltf' ? 'gltf' : 'glb',
-      bytes: buffer.length,
-      unitAssumption: 'meters',
-      editorUnitsPerMeter: 100,
-      scaleWarning: null,
-    },
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+  await fs.mkdir(path.dirname(full), { recursive: true });
+  await fs.writeFile(full, buffer);
+  try {
+    await fs.mkdir(path.dirname(originalFull), { recursive: true });
+    await fs.copyFile(full, originalFull);
 
-  const registry = await readRegistry();
-  registry.assets.push(entry);
-  await writeRegistry(registry);
+    const entry = {
+      id,
+      kind,
+      name: stripExt(base),
+      folder: 'Meshes',
+      path: relPath,
+      originalName: base,
+      tags: [],
+      meta: {
+        format: ext === '.gltf' ? 'gltf' : 'glb',
+        bytes: buffer.length,
+        unitAssumption: 'meters',
+        editorUnitsPerMeter: 100,
+        scaleWarning: null,
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
 
-  return { ok: true, asset: entry, registry };
+    return await mutateRegistry(async (registry) => {
+      registry.assets.push(entry);
+      return { ok: true, asset: entry, registry };
+    });
+  } catch (err) {
+    try { await fs.unlink(full); } catch { /* ignore */ }
+    try { await fs.unlink(originalFull); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 /** Public helper for OpenArt (and other) server-side material creation. */
@@ -316,7 +388,7 @@ async function createMaterialAsset(body) {
 
   const relPath = `${KIND_DIRS.material}/${id}.json`;
   const full = resolveSafeAssetPath(relPath);
-  await fs.writeFile(full, `${JSON.stringify(definition, null, 2)}\n`, 'utf8');
+  await atomicWriteJson(full, definition);
 
   const entry = {
     id,
@@ -336,44 +408,47 @@ async function createMaterialAsset(body) {
     updatedAt: definition.updatedAt,
   };
 
-  const registry = await readRegistry();
-  const existingIdx = registry.assets.findIndex((a) => a.id === id);
-  if (existingIdx >= 0) registry.assets[existingIdx] = entry;
-  else registry.assets.push(entry);
-  await writeRegistry(registry);
-
-  return { ok: true, asset: entry, definition, registry };
+  try {
+    return await mutateRegistry(async (registry) => {
+      const existingIdx = registry.assets.findIndex((a) => a.id === id);
+      if (existingIdx >= 0) registry.assets[existingIdx] = entry;
+      else registry.assets.push(entry);
+      return { ok: true, asset: entry, definition, registry };
+    });
+  } catch (err) {
+    try { await fs.unlink(full); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 async function updateMaterialAsset(id, body) {
   if (!id) throw new Error('Missing material id');
-  const registry = await readRegistry();
-  const entry = registry.assets.find((a) => a.id === id && a.kind === 'material');
-  if (!entry) throw new Error('Material not found');
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'material');
+    if (!entry) throw new Error('Material not found');
 
-  const full = resolveSafeAssetPath(entry.path);
-  const current = JSON.parse(await fs.readFile(full, 'utf8'));
-  const definition = {
-    ...current,
-    ...body,
-    id,
-    type: 'material',
-    schemaVersion: 1,
-    updatedAt: Date.now(),
-  };
-  await fs.writeFile(full, `${JSON.stringify(definition, null, 2)}\n`, 'utf8');
+    const full = resolveSafeAssetPath(entry.path);
+    const current = JSON.parse(await fs.readFile(full, 'utf8'));
+    const definition = {
+      ...current,
+      ...body,
+      id,
+      type: 'material',
+      schemaVersion: 1,
+      updatedAt: Date.now(),
+    };
+    await atomicWriteJson(full, definition);
 
-  entry.name = definition.name || entry.name;
-  entry.updatedAt = definition.updatedAt;
-  entry.meta = {
-    baseColor: definition.baseColor,
-    roughness: definition.roughness,
-    metalness: definition.metalness,
-    hasBaseMap: Boolean(definition.baseColorMapId),
-  };
-  await writeRegistry(registry);
-
-  return { ok: true, asset: entry, definition, registry };
+    entry.name = definition.name || entry.name;
+    entry.updatedAt = definition.updatedAt;
+    entry.meta = {
+      baseColor: definition.baseColor,
+      roughness: definition.roughness,
+      metalness: definition.metalness,
+      hasBaseMap: Boolean(definition.baseColorMapId),
+    };
+    return { ok: true, asset: entry, definition, registry };
+  });
 }
 
 async function createPrefabAsset(body) {
@@ -393,7 +468,6 @@ async function createPrefabAsset(body) {
   const relPath = `${KIND_DIRS.prefab}/${id}.json`;
   const full = resolveSafeAssetPath(relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
-  await fs.writeFile(full, `${JSON.stringify(definition, null, 2)}\n`, 'utf8');
 
   const entry = {
     id,
@@ -412,47 +486,52 @@ async function createPrefabAsset(body) {
     updatedAt: definition.updatedAt,
   };
 
-  const registry = await readRegistry();
-  const existingIdx = registry.assets.findIndex((a) => a.id === id);
-  if (existingIdx >= 0) registry.assets[existingIdx] = entry;
-  else registry.assets.push(entry);
-  await writeRegistry(registry);
+  await atomicWriteJson(full, definition);
 
-  return { ok: true, asset: entry, definition, registry };
+  try {
+    return await mutateRegistry(async (registry) => {
+      const existingIdx = registry.assets.findIndex((a) => a.id === id);
+      if (existingIdx >= 0) registry.assets[existingIdx] = entry;
+      else registry.assets.push(entry);
+      return { ok: true, asset: entry, definition, registry };
+    });
+  } catch (err) {
+    try { await fs.unlink(full); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 async function updatePrefabAsset(id, body) {
   if (!id) throw new Error('Missing prefab id');
-  const registry = await readRegistry();
-  const entry = registry.assets.find((a) => a.id === id && a.kind === 'prefab');
-  if (!entry) throw new Error('Prefab not found');
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'prefab');
+    if (!entry) throw new Error('Prefab not found');
 
-  const full = resolveSafeAssetPath(entry.path);
-  const current = JSON.parse(await fs.readFile(full, 'utf8'));
-  const definition = {
-    ...current,
-    ...body,
-    id,
-    type: 'prefab',
-    schemaVersion: 1,
-    updatedAt: Date.now(),
-  };
-  await fs.writeFile(full, `${JSON.stringify(definition, null, 2)}\n`, 'utf8');
+    const full = resolveSafeAssetPath(entry.path);
+    const current = JSON.parse(await fs.readFile(full, 'utf8'));
+    const definition = {
+      ...current,
+      ...body,
+      id,
+      type: 'prefab',
+      schemaVersion: 1,
+      updatedAt: Date.now(),
+    };
+    await atomicWriteJson(full, definition);
 
-  entry.name = definition.name || entry.name;
-  entry.updatedAt = definition.updatedAt;
-  entry.meta = {
-    actorCount: Array.isArray(definition.actors) ? definition.actors.length : 0,
-    nestedCount: Array.isArray(definition.nestedPrefabIds)
-      ? definition.nestedPrefabIds.length
-      : 0,
-    rootCount: Array.isArray(definition.rootTemplateIds)
-      ? definition.rootTemplateIds.length
-      : 0,
-  };
-  await writeRegistry(registry);
-
-  return { ok: true, asset: entry, definition, registry };
+    entry.name = definition.name || entry.name;
+    entry.updatedAt = definition.updatedAt;
+    entry.meta = {
+      actorCount: Array.isArray(definition.actors) ? definition.actors.length : 0,
+      nestedCount: Array.isArray(definition.nestedPrefabIds)
+        ? definition.nestedPrefabIds.length
+        : 0,
+      rootCount: Array.isArray(definition.rootTemplateIds)
+        ? definition.rootTemplateIds.length
+        : 0,
+    };
+    return { ok: true, asset: entry, definition, registry };
+  });
 }
 
 function stripExt(name) {
@@ -467,14 +546,9 @@ function sendJson(res, code, data) {
 }
 
 function readBody(req) {
-  return readBodyBuffer(req).then((buf) => buf.toString('utf8'));
+  return readBodyLimited(req, DEFAULT_JSON_BODY_LIMIT);
 }
 
-function readBodyBuffer(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
+function readBodyBuffer(req, limit = DEFAULT_UPLOAD_LIMIT) {
+  return readBodyBufferLimited(req, limit);
 }

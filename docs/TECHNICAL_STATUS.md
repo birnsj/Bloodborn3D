@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **761 / 761 pass** (see `ACCEPTANCE_CONCEPT_LIBRARY.md` for Phase 2H.1D) |
+| `npm test` | **783 / 783 pass** (incl. `pipelineHardening.test.js`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -38,6 +38,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2H.1B OpenArt Editor | Generation panel in Asset Viewer + optional dock; dynamic CLI models/params; explicit spend confirm; import texture / create material; mocked tests + browser harness. See `ACCEPTANCE_OPENART_EDITOR.md`. |
 | Phase 2H.1C AI Assets Workspace | AI Assets three-column workspace; OpenArt live; ComfyUI/Meshy Coming Soon; standalone OpenArt folder/dock removed. See `ACCEPTANCE_AI_ASSETS_WORKSPACE.md`. |
 | Phase 2H.1D Concept Library | Areas/concepts/prompts JSON DB under `concept-library/`; import + OpenArt save; Generate Asset seed; vision unsupported extension point. See `ACCEPTANCE_CONCEPT_LIBRARY.md`. |
+| Pipeline hardening (post-`08e15fd`) | OpenArt spend reservation / ambiguous failure / job recovery; atomic asset registry + mutex; concept-library request serialization; upload limits + magic bytes; localhost-only OpenArt API; transform coerceFiniteNumber. See `ACCEPTANCE_PIPELINE_HARDENING.md`. |
 
 ## 2. Implemented systems
 

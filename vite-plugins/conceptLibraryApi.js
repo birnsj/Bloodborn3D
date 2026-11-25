@@ -21,6 +21,15 @@ import {
 import { analyzeConceptImage, getVisionCapability } from '../src/editor/conceptLibrary/visionProvider.js';
 import { defaultStagingRoot } from '../src/dev/openart/openArtCli.js';
 import { readStagingFile } from '../src/dev/openart/openArtSession.js';
+import {
+  DEFAULT_JSON_BODY_LIMIT,
+  DEFAULT_UPLOAD_LIMIT,
+  createAsyncMutex,
+  detectImageMagic,
+  extensionForImageMagic,
+  readBodyBufferLimited,
+  readBodyLimited,
+} from './fsSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -28,6 +37,7 @@ const LIBRARY_ROOT = path.join(PROJECT_ROOT, 'concept-library');
 const LIBRARY_JSON = path.join(LIBRARY_ROOT, 'library.json');
 const IMAGES_ROOT = path.join(LIBRARY_ROOT, 'images');
 const STAGING_ROOT = defaultStagingRoot(PROJECT_ROOT);
+const withLibraryLock = createAsyncMutex();
 
 export function conceptLibraryApiPlugin() {
   return {
@@ -35,6 +45,8 @@ export function conceptLibraryApiPlugin() {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use('/api/concept-library', async (req, res) => {
+        // Serialize all concept-library RMW through one mutex (GET included for simplicity).
+        await withLibraryLock(async () => {
         try {
           const url = new URL(req.url || '/', 'http://localhost');
           const action = url.searchParams.get('action') || '';
@@ -147,15 +159,17 @@ export function conceptLibraryApiPlugin() {
           sendJson(res, 405, { ok: false, error: 'Method or action not allowed', action });
         } catch (err) {
           const code = err.code === 'CONCEPT_LIMIT' ? 409
-            : err.code === 'NOT_FOUND' || err.code === 'MISSING_IMAGE' ? 404
-              : err.code === 'INVALID' ? 400
-                : 500;
+            : err.code === 'BODY_TOO_LARGE' ? 413
+              : err.code === 'NOT_FOUND' || err.code === 'MISSING_IMAGE' ? 404
+                : err.code === 'INVALID' ? 400
+                  : 500;
           sendJson(res, code, {
             ok: false,
             error: String(err.message || err),
             code: err.code || 'CONCEPT_LIBRARY_ERROR',
           });
         }
+        });
       });
     },
   };
@@ -170,22 +184,27 @@ async function loadLibrary() {
   } catch (err) {
     if (err.code === 'ENOENT') {
       const empty = createEmptyLibrary();
-      await saveLibrary(empty);
+      await saveLibraryUnlocked(empty);
       return empty;
     }
     throw err;
   }
 }
 
-async function saveLibrary(library) {
+async function saveLibraryUnlocked(library) {
   const normalized = normalizeLibrary(library);
   normalized.schemaVersion = CONCEPT_LIBRARY_SCHEMA_VERSION;
   normalized.updatedAt = new Date().toISOString();
   await fs.mkdir(LIBRARY_ROOT, { recursive: true });
-  const tmp = `${LIBRARY_JSON}.${process.pid}.tmp`;
+  const tmp = `${LIBRARY_JSON}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(tmp, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
   await fs.rename(tmp, LIBRARY_JSON);
   return normalized;
+}
+
+async function saveLibrary(library) {
+  // Middleware already holds withLibraryLock for request handling.
+  return saveLibraryUnlocked(library);
 }
 
 function newId(prefix) {
@@ -302,6 +321,12 @@ async function importConceptAction(req, res, url) {
     sendJson(res, 400, { ok: false, error: 'Empty upload', code: 'INVALID' });
     return;
   }
+  const magic = detectImageMagic(buffer);
+  if (!magic) {
+    sendJson(res, 400, { ok: false, error: 'Unrecognized image signature', code: 'INVALID' });
+    return;
+  }
+  const magicExt = extensionForImageMagic(magic) || ext;
   const library = await loadLibrary();
   const area = library.areas.find((a) => a.id === areaId);
   if (!area) fail('NOT_FOUND', `Unknown area: ${areaId}`);
@@ -309,7 +334,7 @@ async function importConceptAction(req, res, url) {
     fail('CONCEPT_LIMIT', `Area already has ${MAX_CONCEPTS_PER_AREA} concepts`);
   }
   const conceptId = newId('concept');
-  const imagePath = await writeConceptImage(areaId, conceptId, ext, buffer);
+  const imagePath = await writeConceptImage(areaId, conceptId, magicExt, buffer);
   const concept = createConcept({
     id: conceptId,
     areaId,
@@ -681,14 +706,9 @@ function sendJson(res, status, data) {
 }
 
 function readBody(req) {
-  return readBodyBuffer(req).then((buf) => buf.toString('utf8'));
+  return readBodyLimited(req, DEFAULT_JSON_BODY_LIMIT);
 }
 
-function readBodyBuffer(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
+function readBodyBuffer(req, limit = DEFAULT_UPLOAD_LIMIT) {
+  return readBodyBufferLimited(req, limit);
 }

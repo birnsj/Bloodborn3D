@@ -136,6 +136,7 @@ export function validateLevelData(data) {
   }
 
   // Cycle check on the JSON graph (before Actor construction).
+  const byId = new Map(data.actors.map((a) => [a.id, a]));
   for (const actorData of data.actors) {
     if (!actorData.parentId) continue;
     const seen = new Set();
@@ -148,7 +149,7 @@ export function validateLevelData(data) {
         throw new Error(`Circular hierarchy involving actor ${actorData.id}`);
       }
       seen.add(current);
-      const parent = data.actors.find((a) => a.id === current);
+      const parent = byId.get(current);
       current = parent?.parentId || null;
     }
   }
@@ -193,21 +194,32 @@ function validateActorData(actorData) {
   }
 }
 
+/**
+ * Coerce a transform axis to a finite number.
+ * Accepts numbers and non-empty numeric strings (legacy levels).
+ * Rejects null, '', booleans, and other Number() coercions that would silently become 0/1.
+ */
+export function coerceFiniteNumber(value, actorId, path) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  throw new Error(
+    `Actor ${actorId} ${path} must be a finite number (got ${JSON.stringify(value)})`,
+  );
+}
+
 function validateFiniteVec3(actorId, label, vec, { required = true } = {}) {
   if (vec == null) {
     if (required) throw new Error(`Actor ${actorId} missing transform.${label}`);
     return;
   }
-  if (typeof vec !== 'object') {
+  if (typeof vec !== 'object' || Array.isArray(vec)) {
     throw new Error(`Actor ${actorId} transform.${label} must be an object`);
   }
   for (const axis of ['x', 'y', 'z']) {
-    const n = Number(vec[axis]);
-    if (!Number.isFinite(n)) {
-      throw new Error(
-        `Actor ${actorId} transform.${label}.${axis} must be a finite number`,
-      );
-    }
+    coerceFiniteNumber(vec[axis], actorId, `transform.${label}.${axis}`);
   }
 }
 

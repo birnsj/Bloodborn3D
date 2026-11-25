@@ -15,6 +15,10 @@ dist-ssr
 # OpenArt PoC staging (Phase 2H.1A) — never commit generated downloads
 .openart-staging/
 
+# Atomic write temps from asset/concept middleware
+**/.*.tmp
+public/assets/.registry.json.*.tmp
+
 # Concept Library images (Phase 2H.1D) — library.json is tracked; binary refs stay local
 concept-library/images/
 

@@ -132,7 +132,7 @@ describe('Phase 2H.1A — approval gate (no auto-spend)', () => {
     expect(submit).toHaveBeenCalledTimes(1);
   });
 
-  it('does not mark spent when submit throws (no silent retry charge)', async () => {
+  it('treats provider submit failures as ambiguous (no accidental resubmit)', async () => {
     __testSeedEstimate({
       estimateId: 'est_failcharge01',
       prompt: 'fail',
@@ -153,9 +153,39 @@ describe('Phase 2H.1A — approval gate (no auto-spend)', () => {
     })).rejects.toMatchObject({ code: 'GENERATION_FAILED' });
     expect(submit).toHaveBeenCalledTimes(1);
     const record = __testGetEstimate('est_failcharge01');
-    expect(record.spent).toBe(false);
+    expect(record.reservation).toBe('ambiguous');
+    expect(record.spent).toBe(true);
     expect(record.generationId).toBeNull();
     expect(record.lastError?.code).toBe('GENERATION_FAILED');
+    await expect(approveAndGenerate({
+      estimateId: 'est_failcharge01',
+      confirmSpend: true,
+      _submit: submit,
+    })).rejects.toMatchObject({ code: 'SPEND_AMBIGUOUS' });
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases reservation on preflight CLI failures so a safe retry is possible', async () => {
+    __testSeedEstimate({
+      estimateId: 'est_preflight0001',
+      prompt: 'preflight',
+      modelId: 'nano-banana-2',
+      mode: 'text2image',
+      totalCredits: 20,
+      spent: false,
+      generationId: null,
+    });
+    const submit = vi.fn(async () => {
+      throw new OpenArtCliError('CLI_MISSING', 'not installed');
+    });
+    await expect(approveAndGenerate({
+      estimateId: 'est_preflight0001',
+      confirmSpend: true,
+      _submit: submit,
+    })).rejects.toMatchObject({ code: 'CLI_MISSING' });
+    const record = __testGetEstimate('est_preflight0001');
+    expect(record.reservation).toBeNull();
+    expect(record.spent).toBe(false);
   });
 });
 

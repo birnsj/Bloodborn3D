@@ -4,12 +4,19 @@
  * In-memory approval records bind a cost quote to exact generate args. Spending
  * credits requires `confirmSpend: true` against a live estimate. No automatic
  * retries. Staging files land under `.openart-staging/` (gitignored).
+ *
+ * Hardening:
+ * - Synchronous reservation before paid submit (blocks concurrent double-spend).
+ * - Ambiguous provider failures block resubmit (charge may already have occurred).
+ * - Jobs persisted under staging for restart recovery without re-spend.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
   OpenArtCliError,
+  CLI_GENERATE_IMAGE_PARAMS,
+  UNSUPPORTED_GENERATE_CLI_PARAMS,
   defaultStagingRoot,
   detectOpenArtCli,
   downloadUrlToFile,
@@ -30,6 +37,23 @@ const jobs = new Map();
 
 const DEFAULT_MODEL = 'nano-banana-2';
 const DEFAULT_MODE = 'text2image';
+
+/** Codes that mean the paid CLI call never left this process. Safe to release reservation. */
+const PREFLIGHT_FAILURE_CODES = new Set([
+  'INVALID_ARGV',
+  'INVALID_PROMPT',
+  'INVALID_MODEL',
+  'INVALID_MODE',
+  'INVALID_IMAGE',
+  'INVALID_ASPECT',
+  'INVALID_RESOLUTION',
+  'CLI_MISSING',
+  'APPROVAL_REQUIRED',
+  'ESTIMATE_NOT_FOUND',
+  'ALREADY_SPENT',
+  'SPEND_RESERVED',
+  'SPEND_AMBIGUOUS',
+]);
 
 export function clearOpenArtSessionState() {
   estimates.clear();
@@ -69,6 +93,14 @@ export async function listOpenArtModels() {
 export async function getOpenArtModelForm(modelId, mode = DEFAULT_MODE) {
   const form = await getModelForm(modelId, mode);
   return { ok: true, form };
+}
+
+function buildCliSubmitParams(record) {
+  return {
+    prompt: record.prompt,
+    modelId: record.modelId,
+    imagePaths: record.imagePaths?.length ? [...record.imagePaths] : null,
+  };
 }
 
 /**
@@ -113,9 +145,13 @@ export async function createEstimate({
     dryRun,
     approved: false,
     spent: false,
+    /** null | 'reserved' | 'confirmed' | 'ambiguous' */
+    reservation: null,
     generationId: null,
   };
   estimates.set(estimateId, record);
+
+  const cliSubmitParams = buildCliSubmitParams(record);
 
   return {
     ok: true,
@@ -123,10 +159,15 @@ export async function createEstimate({
     prompt,
     modelId,
     mode,
+    aspectRatio,
+    resolution,
     totalCredits: record.totalCredits,
     unitCredits: record.unitCredits,
     costConfig: record.costConfig,
     dryRun,
+    cliSubmitParams,
+    cliGenerateParams: CLI_GENERATE_IMAGE_PARAMS,
+    unsupportedForCliSubmit: UNSUPPORTED_GENERATE_CLI_PARAMS,
     pricingNote: cost?.pricingNote || null,
     approvalRequired: true,
     message: 'Call approveAndGenerate with confirmSpend:true to spend credits once.',
@@ -141,6 +182,7 @@ export async function approveAndGenerate({
   estimateId,
   confirmSpend = false,
   _submit = submitGenerateImageAsync,
+  stagingRoot = defaultStagingRoot(),
 } = {}) {
   if (confirmSpend !== true) {
     throw new OpenArtCliError(
@@ -152,38 +194,72 @@ export async function approveAndGenerate({
   if (!record) {
     throw new OpenArtCliError('ESTIMATE_NOT_FOUND', `Unknown estimateId: ${estimateId}`);
   }
-  if (record.spent) {
+  if (record.reservation === 'reserved') {
+    throw new OpenArtCliError(
+      'SPEND_RESERVED',
+      `Estimate ${estimateId} is already reserved by an in-flight submit`,
+    );
+  }
+  if (record.reservation === 'ambiguous') {
+    throw new OpenArtCliError(
+      'SPEND_AMBIGUOUS',
+      `Estimate ${estimateId} had an ambiguous submit failure — recover the provider job; do not resubmit`,
+      { lastError: record.lastError || null },
+    );
+  }
+  if (record.spent || record.reservation === 'confirmed') {
     throw new OpenArtCliError(
       'ALREADY_SPENT',
       `Estimate ${estimateId} already submitted as generation ${record.generationId}`,
     );
   }
 
+  // Synchronous reservation BEFORE awaiting any paid provider call.
   record.approved = true;
+  record.reservation = 'reserved';
+  record.reservedAt = Date.now();
+
+  const cliSubmitParams = buildCliSubmitParams(record);
   let result;
   try {
-    result = await _submit({
-      prompt: record.prompt,
-      modelId: record.modelId,
-      imagePaths: record.imagePaths?.length ? record.imagePaths : null,
-    });
+    result = await _submit(cliSubmitParams);
   } catch (err) {
-    // Mark spent=false still, but do NOT auto-retry. Record the failure.
-    record.lastError = { code: err.code, message: err.message, at: Date.now() };
+    const code = err?.code || 'CLI_COMMAND_FAILED';
+    record.lastError = { code, message: err.message, at: Date.now() };
+    if (PREFLIGHT_FAILURE_CODES.has(code)) {
+      record.reservation = null;
+      record.approved = false;
+    } else {
+      // Provider may have accepted the job — block accidental resubmit/charge.
+      record.reservation = 'ambiguous';
+      record.spent = true;
+    }
     throw err;
   }
 
   const generationId = extractGenerationId(result);
   if (!generationId) {
-    record.lastError = { code: 'NO_GENERATION_ID', message: 'CLI returned no generation id', at: Date.now(), raw: result };
-    throw new OpenArtCliError('NO_GENERATION_ID', 'OpenArt async generate returned no id', { result });
+    record.lastError = {
+      code: 'NO_GENERATION_ID',
+      message: 'CLI returned no generation id',
+      at: Date.now(),
+      raw: result,
+    };
+    record.reservation = 'ambiguous';
+    record.spent = true;
+    throw new OpenArtCliError(
+      'NO_GENERATION_ID',
+      'OpenArt async generate returned no id — treat as ambiguous; do not resubmit',
+      { result },
+    );
   }
 
-  // Only mark spent after a successful submit with an id (one charge).
   record.spent = true;
+  record.reservation = 'confirmed';
   record.generationId = generationId;
   record.submittedAt = Date.now();
   record.submitRaw = result;
+  record.submittedParams = cliSubmitParams;
 
   const job = {
     jobId: `job_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
@@ -192,13 +268,16 @@ export async function approveAndGenerate({
     prompt: record.prompt,
     modelId: record.modelId,
     totalCredits: record.totalCredits,
+    submittedParams: cliSubmitParams,
     status: 'submitted',
     resultUrls: [],
     staging: null,
     createdAt: Date.now(),
+    recovered: false,
   };
   jobs.set(job.jobId, job);
   jobs.set(generationId, job);
+  await persistJob(job, stagingRoot);
 
   return {
     ok: true,
@@ -207,8 +286,104 @@ export async function approveAndGenerate({
     estimateId,
     totalCredits: record.totalCredits,
     status: 'submitted',
+    submittedParams: cliSubmitParams,
+    unsupportedForCliSubmit: UNSUPPORTED_GENERATE_CLI_PARAMS,
     message: 'Generation submitted. Poll getJobStatus / waitForJob. No retries will be issued.',
   };
+}
+
+/**
+ * Attach an existing provider generation id without spending.
+ * Used after restart / ambiguous failures when a charge may already exist.
+ */
+export async function recoverExistingGeneration({
+  generationId,
+  estimateId = null,
+  prompt = null,
+  modelId = null,
+  stagingRoot = defaultStagingRoot(),
+} = {}) {
+  if (typeof generationId !== 'string' || !generationId.trim()) {
+    throw new OpenArtCliError('INVALID_CREATION_ID', 'generationId is required for recovery');
+  }
+  const existing = jobs.get(generationId);
+  if (existing) {
+    return { ok: true, job: publicJob(existing), recovered: false, spent: false };
+  }
+
+  // Poll provider only — never call generate.
+  const creation = await getCreation(generationId);
+  const job = {
+    jobId: `job_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+    estimateId,
+    generationId,
+    prompt,
+    modelId,
+    totalCredits: null,
+    submittedParams: null,
+    status: 'submitted',
+    resultUrls: [],
+    staging: null,
+    createdAt: Date.now(),
+    recovered: true,
+  };
+  applyCreationToJob(job, creation);
+  jobs.set(job.jobId, job);
+  jobs.set(generationId, job);
+  await persistJob(job, stagingRoot);
+
+  if (estimateId && estimates.has(estimateId)) {
+    const record = estimates.get(estimateId);
+    record.spent = true;
+    record.reservation = 'confirmed';
+    record.generationId = generationId;
+  }
+
+  return {
+    ok: true,
+    job: publicJob(job),
+    recovered: true,
+    spent: false,
+    message: 'Recovered existing provider job without submitting a new paid generation.',
+  };
+}
+
+/**
+ * Reload persisted jobs from staging after a process restart.
+ * Never initiates paid generation.
+ */
+export async function recoverJobsFromDisk({ stagingRoot = defaultStagingRoot() } = {}) {
+  const dir = path.join(stagingRoot, 'jobs');
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch (err) {
+    if (err.code === 'ENOENT') return { ok: true, loaded: 0, jobs: [] };
+    throw err;
+  }
+
+  let loaded = 0;
+  const out = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      const raw = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8'));
+      if (!raw?.jobId || !raw?.generationId) continue;
+      if (jobs.has(raw.jobId) || jobs.has(raw.generationId)) continue;
+      const job = {
+        ...raw,
+        recovered: true,
+        resultUrls: Array.isArray(raw.resultUrls) ? raw.resultUrls : [],
+      };
+      jobs.set(job.jobId, job);
+      jobs.set(job.generationId, job);
+      loaded += 1;
+      out.push(publicJob(job));
+    } catch {
+      // skip corrupt job files
+    }
+  }
+  return { ok: true, loaded, jobs: out };
 }
 
 export async function getJobStatus({ jobId = null, generationId = null } = {}) {
@@ -242,7 +417,6 @@ export async function downloadJobToStaging({
 } = {}) {
   const job = resolveJob(jobId, generationId);
   if (!job.resultUrls?.length) {
-    // Refresh once.
     const creation = await getCreation(job.generationId);
     applyCreationToJob(job, creation);
   }
@@ -277,6 +451,7 @@ export async function downloadJobToStaging({
     'utf8',
   );
   job.staging = meta;
+  await persistJob(job, stagingRoot);
   return { ok: true, staging: meta, job: publicJob(job) };
 }
 
@@ -292,6 +467,31 @@ export async function readStagingFile(stagingId, { stagingRoot = defaultStagingR
   }
   const buffer = await fs.readFile(abs);
   return { meta, buffer, absolutePath: abs };
+}
+
+async function persistJob(job, stagingRoot) {
+  const dir = path.join(stagingRoot, 'jobs');
+  await fs.mkdir(dir, { recursive: true });
+  const dest = path.join(dir, `${job.jobId}.json`);
+  const tmp = `${dest}.${process.pid}.tmp`;
+  const payload = {
+    jobId: job.jobId,
+    estimateId: job.estimateId,
+    generationId: job.generationId,
+    prompt: job.prompt,
+    modelId: job.modelId,
+    totalCredits: job.totalCredits,
+    submittedParams: job.submittedParams || null,
+    status: job.status,
+    resultUrls: job.resultUrls || [],
+    staging: job.staging || null,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt || null,
+    recovered: Boolean(job.recovered),
+    error: job.error || null,
+  };
+  await fs.writeFile(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  await fs.rename(tmp, dest);
 }
 
 function resolveJob(jobId, generationId) {
@@ -315,7 +515,6 @@ function applyCreationToJob(job, creation) {
 }
 
 function normalizeStatus(creation) {
-  // Official CLI shape: { history: { id, status }, resources: [...] }
   const raw = String(
     creation?.history?.status
     || creation?.status
@@ -399,21 +598,34 @@ function publicJob(job) {
     prompt: job.prompt,
     modelId: job.modelId,
     totalCredits: job.totalCredits,
+    submittedParams: job.submittedParams || null,
     status: job.status,
     resultUrls: job.resultUrls,
     staging: job.staging,
     error: job.error,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt || null,
+    recovered: Boolean(job.recovered),
   };
 }
 
 /** Test helper: seed an estimate without calling the CLI. */
 export function __testSeedEstimate(record) {
-  estimates.set(record.estimateId, record);
-  return record;
+  estimates.set(record.estimateId, {
+    reservation: null,
+    spent: false,
+    approved: false,
+    generationId: null,
+    imagePaths: [],
+    ...record,
+  });
+  return estimates.get(record.estimateId);
 }
 
 export function __testGetEstimate(estimateId) {
   return estimates.get(estimateId) || null;
+}
+
+export function __testGetJob(id) {
+  return jobs.get(id) || null;
 }

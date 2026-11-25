@@ -21,8 +21,19 @@ import {
   getOpenArtStatus,
   listOpenArtModels,
   readStagingFile,
+  recoverExistingGeneration,
+  recoverJobsFromDisk,
   waitForJob,
 } from '../src/dev/openart/openArtSession.js';
+import {
+  DEFAULT_JSON_BODY_LIMIT,
+  DEFAULT_UPLOAD_LIMIT,
+  detectImageMagic,
+  extensionForImageMagic,
+  isLocalDevHost,
+  readBodyBufferLimited,
+  readBodyLimited,
+} from './fsSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -35,8 +46,32 @@ export function openArtApiPlugin() {
     configureServer(server) {
       server.middlewares.use('/api/openart', async (req, res) => {
         try {
+          // Paid-generation middleware is local-development-only.
+          if (!isLocalDevHost(req)) {
+            sendJson(res, 403, {
+              ok: false,
+              error: 'OpenArt API is restricted to localhost during development',
+              code: 'LOCALHOST_ONLY',
+            });
+            return;
+          }
+
           const url = new URL(req.url || '/', 'http://localhost');
           const action = url.searchParams.get('action') || '';
+
+          if (req.method === 'POST' && action === 'recover-jobs') {
+            sendJson(res, 200, await recoverJobsFromDisk({ stagingRoot: STAGING_ROOT }));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'recover-generation') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await recoverExistingGeneration({
+              ...body,
+              stagingRoot: STAGING_ROOT,
+            }));
+            return;
+          }
 
           if (req.method === 'GET' && action === 'status') {
             sendJson(res, 200, await getOpenArtStatus());
@@ -98,16 +133,18 @@ export function openArtApiPlugin() {
           if (req.method === 'POST' && action === 'upload-reference') {
             const url = new URL(req.url || '/', 'http://localhost');
             const originalName = path.basename(url.searchParams.get('name') || 'reference.png');
-            const ext = path.extname(originalName).toLowerCase() || '.png';
-            if (!['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) {
-              sendJson(res, 400, { ok: false, error: `Unsupported reference type: ${ext}`, code: 'INVALID_IMAGE' });
-              return;
-            }
+            let ext = path.extname(originalName).toLowerCase() || '.png';
             const buffer = await readBodyBuffer(req);
             if (!buffer.length) {
               sendJson(res, 400, { ok: false, error: 'Empty upload', code: 'INVALID_IMAGE' });
               return;
             }
+            const magic = detectImageMagic(buffer);
+            if (!magic) {
+              sendJson(res, 400, { ok: false, error: 'Unrecognized image signature', code: 'INVALID_IMAGE' });
+              return;
+            }
+            ext = extensionForImageMagic(magic) || ext;
             await fs.mkdir(STAGING_ROOT, { recursive: true });
             const stagingId = `ref_${Date.now().toString(36)}`;
             const fileName = `${stagingId}${ext}`;
@@ -195,9 +232,13 @@ function mapErrorStatus(code) {
     case 'APPROVAL_REQUIRED':
     case 'ESTIMATE_NOT_FOUND':
     case 'ALREADY_SPENT':
+    case 'SPEND_RESERVED':
+    case 'SPEND_AMBIGUOUS':
     case 'INVALID_PROMPT':
     case 'INVALID_MODEL':
     case 'INVALID_ARGV':
+    case 'INVALID_IMAGE':
+    case 'LOCALHOST_ONLY':
       return 400;
     case 'GENERATION_FAILED':
     case 'INSUFFICIENT_CREDITS':
@@ -227,14 +268,9 @@ function sendJson(res, code, data) {
 }
 
 function readBody(req) {
-  return readBodyBuffer(req).then((buf) => buf.toString('utf8'));
+  return readBodyLimited(req, DEFAULT_JSON_BODY_LIMIT);
 }
 
-function readBodyBuffer(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
+function readBodyBuffer(req, limit = DEFAULT_UPLOAD_LIMIT) {
+  return readBodyBufferLimited(req, limit);
 }
