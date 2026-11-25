@@ -104,6 +104,16 @@ export function deleteLibraryPrompt(payload) {
   return conceptFetch('prompt-delete', { method: 'POST', body: payload });
 }
 
+/** Copy a concept image into OpenArt staging (no credit spend). */
+export function stageConceptReference(payload) {
+  return conceptFetch('stage-reference', { method: 'POST', body: payload });
+}
+
+/** Persist production asset ↔ concept/prompt association. */
+export function attachGeneratedAsset(payload) {
+  return conceptFetch('attach-asset', { method: 'POST', body: payload });
+}
+
 export function conceptImageUrl(imagePath) {
   if (!imagePath) return null;
   return `/api/concept-library?action=image&path=${encodeURIComponent(imagePath)}`;

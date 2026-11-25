@@ -95,8 +95,11 @@ export function OpenArtControls() {
     }
     const latest = getOpenArtUiState();
     const credits = latest.estimate?.totalCredits;
+    const finalPrompt = String(latest.prompt || '').trim() || '(empty prompt)';
     const ok = await confirm(
-      `Spend ${credits ?? '?'} OpenArt credits to generate this image?\n\nThis cannot be undone and will not auto-retry.`,
+      `Spend ${credits ?? '?'} OpenArt credits to generate this image?\n\n`
+      + `Final submitted prompt:\n${finalPrompt}\n\n`
+      + 'This cannot be undone and will not auto-retry.',
       {
         title: 'Approve OpenArt spend',
         confirmLabel: `Spend ${credits ?? '?'} credits`,
@@ -190,6 +193,13 @@ export function OpenArtControls() {
           onChange={(e) => openArtSetPrompt(e.target.value)}
         />
       </label>
+
+      {ui.prompt?.trim() && (
+        <div className="bb-openart__final-prompt">
+          <div className="bb-field-caption">Final submitted prompt (complete)</div>
+          <pre className="bb-openart__final-prompt-text">{ui.prompt}</pre>
+        </div>
+      )}
 
       {primary.map((key) => (
         <SchemaField

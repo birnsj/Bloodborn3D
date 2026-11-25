@@ -81,7 +81,7 @@ export function createConcept({
     tags: normalizeTags(tags),
     provenance: provenance && typeof provenance === 'object' ? { ...provenance } : null,
     associatedPromptIds: Array.isArray(associatedPromptIds) ? [...associatedPromptIds] : [],
-    generatedAssetRefs: Array.isArray(generatedAssetRefs) ? [...generatedAssetRefs] : [],
+    generatedAssetRefs: normalizeAssetRefs(generatedAssetRefs),
     createdAt: now,
     updatedAt: now,
   };
@@ -99,6 +99,7 @@ export function createPrompt({
   preferredModel = '',
   generationParams = {},
   tags = [],
+  generatedAssetRefs = [],
 } = {}) {
   const now = new Date().toISOString();
   const cat = PROMPT_CATEGORY_IDS.includes(category) ? category : 'other';
@@ -116,6 +117,7 @@ export function createPrompt({
       ? { ...generationParams }
       : {},
     tags: normalizeTags(tags),
+    generatedAssetRefs: normalizeAssetRefs(generatedAssetRefs),
     createdAt: now,
     updatedAt: now,
   };
@@ -124,6 +126,24 @@ export function createPrompt({
 export function normalizeTags(tags) {
   if (!Array.isArray(tags)) return [];
   return [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))];
+}
+
+export function normalizeAssetRefs(refs) {
+  if (!Array.isArray(refs)) return [];
+  const out = [];
+  for (const raw of refs) {
+    if (!raw || typeof raw !== 'object' || !raw.id || !raw.kind) continue;
+    out.push({
+      id: String(raw.id),
+      kind: String(raw.kind),
+      name: String(raw.name || raw.id),
+      areaId: raw.areaId ? String(raw.areaId) : null,
+      conceptId: raw.conceptId ? String(raw.conceptId) : null,
+      promptId: raw.promptId ? String(raw.promptId) : null,
+      attachedAt: typeof raw.attachedAt === 'string' ? raw.attachedAt : null,
+    });
+  }
+  return out;
 }
 
 /**

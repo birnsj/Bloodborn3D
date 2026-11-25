@@ -3150,6 +3150,28 @@ select {
   gap: 6px;
 }
 
+.bb-openart__final-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bb-openart__final-prompt-text {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--bb-text);
+  background: var(--bb-panel-bg, transparent);
+  border: 1px solid var(--bb-border);
+  border-radius: 4px;
+}
+
 .bb-concept-detail__prov {
   font-size: 11px;
 }

@@ -2,12 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
+  clearGenerationOrigin,
   getAiAssetsUiState,
   setAiAssetsSection,
   setConceptSaveTargetAreaId,
   subscribeAiAssetsUi,
 } from '../aiAssets/aiAssetsUiStore.js';
-import { conceptLibrarySaveFromStaging } from '../conceptLibrary/conceptLibraryStore.js';
+import {
+  conceptLibraryAttachGeneratedAsset,
+  conceptLibrarySaveFromStaging,
+} from '../conceptLibrary/conceptLibraryStore.js';
 import {
   getOpenArtUiState,
   openArtCreateMaterial,
@@ -28,9 +32,42 @@ export function OpenArtResults() {
   useEffect(() => subscribeOpenArtUi(setUi), []);
   useEffect(() => subscribeAiAssetsUi(setAiUi), []);
 
+  const attachOriginIfAny = useCallback(async (result) => {
+    const origin = getAiAssetsUiState().generationOrigin;
+    if (!origin?.conceptId) return;
+    const assets = [];
+    if (result?.texture?.id) {
+      assets.push({
+        id: result.texture.id,
+        kind: 'texture',
+        name: result.texture.name || result.texture.id,
+      });
+    }
+    if (result?.material?.id) {
+      assets.push({
+        id: result.material.id,
+        kind: 'material',
+        name: result.material.name || result.material.id,
+      });
+    }
+    for (const asset of assets) {
+      try {
+        await conceptLibraryAttachGeneratedAsset({
+          conceptId: origin.conceptId,
+          promptId: origin.promptId,
+          areaId: origin.areaId,
+          asset,
+        });
+      } catch (err) {
+        notify(err.message || `Could not link ${asset.kind} to concept`);
+      }
+    }
+  }, [notify]);
+
   const onImportTexture = useCallback(async () => {
     try {
       const result = await openArtImportTexture();
+      await attachOriginIfAny(result);
       await refreshRegistry();
       if (result.texture?.id) selectAsset(result.texture.id);
       patch({ contentFolder: 'Textures' });
@@ -39,11 +76,12 @@ export function OpenArtResults() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [notify, patch, refreshRegistry, selectAsset, setStatus]);
+  }, [attachOriginIfAny, notify, patch, refreshRegistry, selectAsset, setStatus]);
 
   const onCreateMaterial = useCallback(async () => {
     try {
       const result = await openArtCreateMaterial();
+      await attachOriginIfAny(result);
       await refreshRegistry();
       if (result.material?.id) selectAsset(result.material.id);
       patch({ contentFolder: 'Materials' });
@@ -52,10 +90,11 @@ export function OpenArtResults() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [notify, patch, refreshRegistry, selectAsset, setStatus]);
+  }, [attachOriginIfAny, notify, patch, refreshRegistry, selectAsset, setStatus]);
 
   const hasResult = Boolean(ui.staging?.stagingId || ui.previewUrl);
   const saveTargetAreaId = aiUi.conceptSaveTargetAreaId;
+  const generationOrigin = aiUi.generationOrigin;
 
   const onSaveToConceptLibrary = useCallback(async () => {
     if (!ui.staging?.stagingId || !saveTargetAreaId) return;
@@ -77,6 +116,7 @@ export function OpenArtResults() {
         },
       });
       setConceptSaveTargetAreaId(null);
+      clearGenerationOrigin();
       setAiAssetsSection('concepts');
       setStatus('Saved concept to Concept Library');
       notify('Concept saved to Concept Library');
@@ -155,7 +195,32 @@ export function OpenArtResults() {
               <dd>{ui.mode}</dd>
             </>
           )}
+          {generationOrigin?.conceptId && (
+            <>
+              <dt>Origin concept</dt>
+              <dd>{generationOrigin.conceptId}</dd>
+            </>
+          )}
+          {generationOrigin?.promptId && (
+            <>
+              <dt>Origin prompt</dt>
+              <dd>{generationOrigin.promptId}</dd>
+            </>
+          )}
+          {generationOrigin?.areaId && (
+            <>
+              <dt>Origin area</dt>
+              <dd>{generationOrigin.areaId}</dd>
+            </>
+          )}
         </dl>
+      )}
+
+      {generationOrigin?.finalPrompt && (
+        <div className="bb-openart__final-prompt">
+          <div className="bb-field-caption">Final submitted prompt</div>
+          <pre className="bb-openart__final-prompt-text">{generationOrigin.finalPrompt}</pre>
+        </div>
       )}
 
       {saveTargetAreaId && (

@@ -15,6 +15,7 @@ import {
   createConcept,
   createEmptyLibrary,
   createPrompt,
+  normalizeAssetRefs,
   normalizeLibrary,
 } from '../src/editor/conceptLibrary/schema.js';
 import { analyzeConceptImage, getVisionCapability } from '../src/editor/conceptLibrary/visionProvider.js';
@@ -131,10 +132,22 @@ export function conceptLibraryApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'stage-reference') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await stageConceptReferenceAction(body));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'attach-asset') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await attachGeneratedAssetAction(body));
+            return;
+          }
+
           sendJson(res, 405, { ok: false, error: 'Method or action not allowed', action });
         } catch (err) {
           const code = err.code === 'CONCEPT_LIMIT' ? 409
-            : err.code === 'NOT_FOUND' ? 404
+            : err.code === 'NOT_FOUND' || err.code === 'MISSING_IMAGE' ? 404
               : err.code === 'INVALID' ? 400
                 : 500;
           sendJson(res, code, {
@@ -374,7 +387,7 @@ async function updateConceptAction({ conceptId, patch } = {}) {
     concept.associatedPromptIds = patch.associatedPromptIds.map(String);
   }
   if (Array.isArray(patch?.generatedAssetRefs)) {
-    concept.generatedAssetRefs = patch.generatedAssetRefs;
+    concept.generatedAssetRefs = normalizeAssetRefs(patch.generatedAssetRefs);
   }
   // Never auto-clobber provenance unless explicitly patched.
   if (patch?.provenance && typeof patch.provenance === 'object') {
@@ -527,6 +540,82 @@ async function deletePromptAction({ promptId } = {}) {
   return { ok: true, library: next };
 }
 
+/**
+ * Copy a Concept Library image into OpenArt staging so the CLI can use --image.
+ * Does not spend credits. Returns an absolute staging path for the OpenArt adapter.
+ */
+async function stageConceptReferenceAction({ conceptId } = {}) {
+  const library = await loadLibrary();
+  const concept = library.concepts.find((c) => c.id === conceptId);
+  if (!concept) fail('NOT_FOUND', `Unknown concept: ${conceptId}`);
+  if (!concept.imagePath) fail('MISSING_IMAGE', 'Concept has no image path');
+  let buffer;
+  try {
+    buffer = await readConceptImageBuffer(concept.imagePath);
+  } catch (err) {
+    if (err.code === 'ENOENT' || err.code === 'INVALID') {
+      fail('MISSING_IMAGE', `Concept image file is missing: ${concept.imagePath}`);
+    }
+    throw err;
+  }
+  const ext = path.extname(concept.imagePath).toLowerCase() || '.png';
+  await fs.mkdir(STAGING_ROOT, { recursive: true });
+  const stagingId = `cref_${Date.now().toString(36)}`;
+  const fileName = `${stagingId}${ext}`;
+  const absolutePath = path.join(STAGING_ROOT, fileName);
+  await fs.writeFile(absolutePath, buffer);
+  return {
+    ok: true,
+    conceptId,
+    stagingId,
+    fileName,
+    originalName: path.basename(concept.imagePath),
+    absolutePath,
+    bytes: buffer.length,
+  };
+}
+
+/** Persist a production asset association onto a concept (and optional prompt). */
+async function attachGeneratedAssetAction({
+  conceptId,
+  promptId = null,
+  areaId = null,
+  asset = null,
+} = {}) {
+  if (!asset?.id || !asset?.kind) fail('INVALID', 'asset.id and asset.kind are required');
+  const library = await loadLibrary();
+  const concept = library.concepts.find((c) => c.id === conceptId);
+  if (!concept) fail('NOT_FOUND', `Unknown concept: ${conceptId}`);
+  const ref = normalizeAssetRefs([{
+    id: String(asset.id),
+    kind: String(asset.kind),
+    name: String(asset.name || asset.id),
+    areaId: areaId || concept.areaId || null,
+    conceptId: concept.id,
+    promptId: promptId || null,
+    attachedAt: new Date().toISOString(),
+  }])[0];
+  const existing = Array.isArray(concept.generatedAssetRefs) ? concept.generatedAssetRefs : [];
+  concept.generatedAssetRefs = normalizeAssetRefs([
+    ...existing.filter((r) => !(r.id === ref.id && r.kind === ref.kind)),
+    ref,
+  ]);
+  concept.updatedAt = new Date().toISOString();
+  if (promptId) {
+    const prompt = library.prompts.find((p) => p.id === promptId);
+    if (prompt) {
+      const prefs = Array.isArray(prompt.generatedAssetRefs) ? prompt.generatedAssetRefs : [];
+      prompt.generatedAssetRefs = normalizeAssetRefs([
+        ...prefs.filter((r) => !(r.id === ref.id && r.kind === ref.kind)),
+        ref,
+      ]);
+      prompt.updatedAt = new Date().toISOString();
+    }
+  }
+  const next = await saveLibrary(library);
+  return { ok: true, library: next, ref };
+}
+
 async function writeConceptImage(areaId, conceptId, ext, buffer) {
   const rel = conceptImageRelativePath(areaId, conceptId, ext);
   const abs = resolveSafeImagePath(rel);
@@ -564,17 +653,25 @@ function resolveSafeImagePath(relPath) {
 }
 
 async function serveImage(res, relPath) {
-  const abs = resolveSafeImagePath(relPath);
-  const buf = await fs.readFile(abs);
-  const ext = path.extname(abs).toLowerCase();
-  const type = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-    : ext === '.webp' ? 'image/webp'
-      : ext === '.gif' ? 'image/gif'
-        : 'image/png';
-  res.statusCode = 200;
-  res.setHeader('Content-Type', type);
-  res.setHeader('Cache-Control', 'no-store');
-  res.end(buf);
+  try {
+    const abs = resolveSafeImagePath(relPath);
+    const buf = await fs.readFile(abs);
+    const ext = path.extname(abs).toLowerCase();
+    const type = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+      : ext === '.webp' ? 'image/webp'
+        : ext === '.gif' ? 'image/gif'
+          : 'image/png';
+    res.statusCode = 200;
+    res.setHeader('Content-Type', type);
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(buf);
+  } catch (err) {
+    sendJson(res, err.code === 'INVALID' ? 400 : 404, {
+      ok: false,
+      error: err.message || 'Image not found',
+      code: err.code === 'INVALID' ? 'INVALID' : 'MISSING_IMAGE',
+    });
+  }
 }
 
 function sendJson(res, status, data) {

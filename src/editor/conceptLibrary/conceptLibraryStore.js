@@ -3,6 +3,7 @@
  */
 import {
   analyzeConcept,
+  attachGeneratedAsset,
   conceptImageUrl,
   createConceptArea,
   createLibraryPrompt,
@@ -17,6 +18,7 @@ import {
   reorderConcepts,
   saveConceptFromStaging,
   setPrimaryConcept,
+  stageConceptReference,
   updateConcept,
   updateConceptArea,
   updateLibraryPrompt,
@@ -217,6 +219,24 @@ export function conceptLibraryDeletePrompt(promptId) {
     if (state.selectedPromptId === promptId) setState({ selectedPromptId: null });
     return result;
   });
+}
+
+/** Stage concept image into OpenArt staging when the model supports references. */
+export async function conceptLibraryStageReference(conceptId) {
+  setState({ busy: true, error: null });
+  try {
+    const result = await stageConceptReference({ conceptId });
+    setState({ busy: false });
+    return result;
+  } catch (err) {
+    setState({ busy: false, error: err.message });
+    throw err;
+  }
+}
+
+/** Record a production texture/material against its originating concept/prompt. */
+export function conceptLibraryAttachGeneratedAsset(payload) {
+  return mutate(() => attachGeneratedAsset(payload));
 }
 
 export function getSelectedArea() {

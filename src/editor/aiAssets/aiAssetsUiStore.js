@@ -12,6 +12,12 @@ let state = {
   selectedProviderId: DEFAULT_AI_PROVIDER_ID,
   /** When generating a concept into an area (OpenArt save target). */
   conceptSaveTargetAreaId: null,
+  /**
+   * Origin of an Asset Generation launch from Concept Library.
+   * Preserved through OpenArt estimate/generate/import so associations can be written.
+   * { areaId, conceptId, promptId, finalPrompt } | null
+   */
+  generationOrigin: null,
 };
 
 export function getAiAssetsUiState() {
@@ -52,11 +58,32 @@ export function setConceptSaveTargetAreaId(areaId) {
   return state;
 }
 
+export function setGenerationOrigin(origin) {
+  state = {
+    ...state,
+    generationOrigin: origin && typeof origin === 'object'
+      ? {
+        areaId: origin.areaId || null,
+        conceptId: origin.conceptId || null,
+        promptId: origin.promptId || null,
+        finalPrompt: String(origin.finalPrompt || ''),
+      }
+      : null,
+  };
+  emit();
+  return state;
+}
+
+export function clearGenerationOrigin() {
+  return setGenerationOrigin(null);
+}
+
 export function __testResetAiAssetsUi() {
   state = {
     section: 'concepts',
     selectedProviderId: DEFAULT_AI_PROVIDER_ID,
     conceptSaveTargetAreaId: null,
+    generationOrigin: null,
   };
   emit();
 }
@@ -67,6 +94,8 @@ if (typeof window !== 'undefined') {
     select: selectAiProvider,
     setSection: setAiAssetsSection,
     setConceptSaveTarget: setConceptSaveTargetAreaId,
+    setGenerationOrigin,
+    clearGenerationOrigin,
     reset: __testResetAiAssetsUi,
   };
 }

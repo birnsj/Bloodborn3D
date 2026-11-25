@@ -4,10 +4,14 @@ import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import {
   setAiAssetsSection,
   setConceptSaveTargetAreaId,
+  setGenerationOrigin,
   selectAiProvider,
 } from '../aiAssets/aiAssetsUiStore.js';
+import { useLayout } from '../layout/LayoutContext.jsx';
 import {
+  getOpenArtUiState,
   openArtApplySeed,
+  openArtConnect,
   openArtSetReference,
 } from '../openart/openArtUiStore.js';
 import {
@@ -25,6 +29,7 @@ import {
   conceptLibraryLoad,
   conceptLibraryReorder,
   conceptLibrarySetPrimary,
+  conceptLibraryStageReference,
   conceptLibraryUpdateArea,
   conceptLibraryUpdateConcept,
   conceptLibraryUpdatePrompt,
@@ -41,6 +46,12 @@ import {
   setPromptFilter,
   subscribeConceptLibrary,
 } from './conceptLibraryStore.js';
+import {
+  buildFinalConceptPrompt,
+  createGenerationOrigin,
+  openArtSupportsReferenceImages,
+  preferReferenceMode,
+} from './conceptGeneration.js';
 import { mergeAnalysisSuggestions } from './visionProvider.js';
 
 /**
@@ -48,8 +59,9 @@ import { mergeAnalysisSuggestions } from './visionProvider.js';
  */
 export function ConceptLibraryPanel() {
   const [ui, setUi] = useState(() => getConceptLibraryState());
+  const { patch } = useLayout();
   const { confirm, prompt } = useEditorDialogs();
-  const { notify, setStatus } = useAssetBrowser();
+  const { notify, setStatus, selectAsset } = useAssetBrowser();
   const fileRef = useRef(null);
   const loadedRef = useRef(false);
 
@@ -105,6 +117,7 @@ export function ConceptLibraryPanel() {
       notify(`This area already has ${MAX_CONCEPTS_PER_AREA} concepts`);
       return;
     }
+    setGenerationOrigin(null);
     setConceptSaveTargetAreaId(ui.selectedAreaId);
     selectAiProvider('openart');
     setAiAssetsSection('generation');
@@ -117,13 +130,13 @@ export function ConceptLibraryPanel() {
       notify('No prompt text to generate from');
       return;
     }
-    const finalPrompt = [
-      area?.artDirection ? `[Art direction] ${area.artDirection}` : '',
-      text,
-    ].filter(Boolean).join('\n\n');
+    const finalPrompt = buildFinalConceptPrompt({
+      artDirection: area?.artDirection,
+      promptText: text,
+    });
 
     const ok = await confirm(
-      `Open OpenArt with this prompt?\n\n${finalPrompt.slice(0, 600)}${finalPrompt.length > 600 ? '…' : ''}`,
+      `Open OpenArt with this final submitted prompt?\n\n${finalPrompt}`,
       {
         title: 'Generate Asset',
         confirmLabel: 'Open OpenArt',
@@ -132,6 +145,13 @@ export function ConceptLibraryPanel() {
     );
     if (!ok) return;
 
+    const origin = createGenerationOrigin({
+      areaId: area?.id || concept?.areaId || null,
+      conceptId: concept?.id || null,
+      promptId: promptEntry?.id || null,
+      finalPrompt,
+    });
+    setGenerationOrigin(origin);
     setConceptSaveTargetAreaId(null);
     selectAiProvider('openart');
     setAiAssetsSection('generation');
@@ -143,15 +163,63 @@ export function ConceptLibraryPanel() {
       formValues.negativePrompt = promptEntry.negativePrompt;
     }
 
-    // Concept images live outside OpenArt staging — for image2image the designer
-    // can re-attach via Choose image. We still seed text/params/model.
-    await openArtApplySeed({
-      prompt: finalPrompt,
-      modelId: promptEntry?.preferredModel || null,
-      formValues,
-    });
-    openArtSetReference({});
-    setStatus('OpenArt seeded from Concept Library — estimate before spending');
+    try {
+      await openArtConnect().catch(() => {});
+      // Apply preferred model first so reference-support checks use the right schema/modes.
+      await openArtApplySeed({
+        prompt: finalPrompt,
+        modelId: promptEntry?.preferredModel || null,
+        formValues,
+      });
+
+      const oa = getOpenArtUiState();
+      const model = oa.imageModels.find((m) => m.id === oa.modelId);
+      const availableModes = model?.modes?.image || [{ mode: 'text2image' }];
+      const schemaProperties = oa.form?.jsonSchema?.properties || {};
+      const supportsRefs = openArtSupportsReferenceImages({
+        mode: oa.mode,
+        schemaProperties,
+        availableModes,
+      });
+
+      let referenceFileName = null;
+      let referenceStagingPath = null;
+      let mode = null;
+
+      if (supportsRefs && concept?.id && concept?.imagePath) {
+        try {
+          const staged = await conceptLibraryStageReference(concept.id);
+          referenceFileName = staged.originalName || staged.fileName || 'concept-reference';
+          referenceStagingPath = staged.absolutePath;
+          mode = preferReferenceMode({
+            availableModes,
+            currentMode: oa.mode,
+            hasReference: true,
+          });
+        } catch (err) {
+          if (err.code === 'MISSING_IMAGE') {
+            notify('Concept image is missing — seeding prompt only (no reference)');
+          } else {
+            notify(err.message || 'Could not stage concept reference');
+          }
+        }
+      }
+
+      if (referenceStagingPath || mode) {
+        await openArtApplySeed({
+          prompt: finalPrompt,
+          mode,
+          referenceFileName,
+          referenceStagingPath,
+        });
+      }
+      if (!referenceStagingPath) openArtSetReference({});
+      setStatus(referenceStagingPath
+        ? 'OpenArt seeded with concept reference — estimate before spending'
+        : 'OpenArt seeded from Concept Library — estimate before spending');
+    } catch (err) {
+      notify(err.message || String(err));
+    }
   }, [area, confirm, notify, setStatus]);
 
   return (
@@ -320,6 +388,7 @@ export function ConceptLibraryPanel() {
               notify={notify}
               onGenerateAsset={onGenerateAsset}
               confirm={confirm}
+              onOpenAsset={(ref) => openAssociatedAsset(ref, { selectAsset, patch, notify })}
             />
           ) : (
             <PromptDetail
@@ -328,6 +397,7 @@ export function ConceptLibraryPanel() {
               busy={ui.busy}
               notify={notify}
               onGenerateAsset={onGenerateAsset}
+              onOpenAsset={(ref) => openAssociatedAsset(ref, { selectAsset, patch, notify })}
             />
           )}
         </div>
@@ -459,7 +529,9 @@ function PromptList({ prompts, filter, selectedPromptId, onFilter, onSelect }) {
   );
 }
 
-function ConceptDetail({ area, concept, vision, prompts, busy, notify, onGenerateAsset, confirm }) {
+function ConceptDetail({
+  area, concept, vision, prompts, busy, notify, onGenerateAsset, confirm, onOpenAsset,
+}) {
   const [draft, setDraft] = useState(null);
   const [metaOpen, setMetaOpen] = useState(true);
 
@@ -473,6 +545,7 @@ function ConceptDetail({ area, concept, vision, prompts, busy, notify, onGenerat
   const url = conceptPreviewUrl(concept);
   const linkedPrompts = prompts.filter((p) => (concept.associatedPromptIds || []).includes(p.id)
     || (p.conceptIds || []).includes(concept.id));
+  const assetRefs = concept.generatedAssetRefs || [];
 
   return (
     <div className="bb-concept-detail">
@@ -621,6 +694,21 @@ function ConceptDetail({ area, concept, vision, prompts, busy, notify, onGenerat
         ))}
         {!linkedPrompts.length && <div className="bb-muted">No linked prompts yet.</div>}
       </div>
+
+      <div className="bb-concept-detail__linked">
+        <div className="bb-field-caption">Associated production assets</div>
+        {assetRefs.map((ref) => (
+          <button
+            key={`${ref.kind}:${ref.id}`}
+            type="button"
+            className="bb-btn bb-btn--ghost"
+            onClick={() => onOpenAsset?.(ref)}
+          >
+            {ref.kind}: {ref.name || ref.id}
+          </button>
+        ))}
+        {!assetRefs.length && <div className="bb-muted">No generated assets linked yet.</div>}
+      </div>
     </div>
   );
 }
@@ -669,13 +757,14 @@ function AreaDirectionEditor({ area, busy, notify }) {
   );
 }
 
-function PromptDetail({ promptEntry, concepts, busy, notify, onGenerateAsset }) {
+function PromptDetail({ promptEntry, concepts, busy, notify, onGenerateAsset, onOpenAsset }) {
   const [draft, setDraft] = useState(null);
   useEffect(() => {
     setDraft(promptEntry ? { ...promptEntry, tags: [...(promptEntry.tags || [])] } : null);
   }, [promptEntry]);
 
   if (!promptEntry || !draft) return <div className="bb-muted">Select a prompt.</div>;
+  const assetRefs = promptEntry.generatedAssetRefs || [];
 
   return (
     <div className="bb-concept-detail">
@@ -795,6 +884,36 @@ function PromptDetail({ promptEntry, concepts, busy, notify, onGenerateAsset }) 
           Delete
         </button>
       </div>
+
+      <div className="bb-concept-detail__linked">
+        <div className="bb-field-caption">Associated production assets</div>
+        {assetRefs.map((ref) => (
+          <button
+            key={`${ref.kind}:${ref.id}`}
+            type="button"
+            className="bb-btn bb-btn--ghost"
+            onClick={() => onOpenAsset?.(ref)}
+          >
+            {ref.kind}: {ref.name || ref.id}
+          </button>
+        ))}
+        {!assetRefs.length && <div className="bb-muted">No generated assets linked yet.</div>}
+      </div>
     </div>
   );
+}
+
+function openAssociatedAsset(ref, { selectAsset, patch, notify }) {
+  if (!ref?.id) {
+    notify?.('Missing asset reference');
+    return;
+  }
+  try {
+    selectAsset?.(ref.id);
+    patch?.({
+      contentFolder: ref.kind === 'material' ? 'Materials' : 'Textures',
+    });
+  } catch (err) {
+    notify?.(err.message || 'Could not open associated asset (it may have been deleted)');
+  }
 }
