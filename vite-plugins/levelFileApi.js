@@ -15,7 +15,7 @@ export function levelFileApiPlugin() {
     name: 'bloodbound-level-file-api',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/levels', async (req, res, next) => {
+      server.middlewares.use('/api/levels', async (req, res, _next) => {
         try {
           if (req.method === 'GET') {
             await handleListOrRead(req, res);

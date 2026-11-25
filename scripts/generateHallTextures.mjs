@@ -40,34 +40,6 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crcBuf]);
 }
 
-function writePng(path, width, height, rgbaFn) {
-  const raw = Buffer.alloc((width * 4 + 1) * height);
-  for (let y = 0; y < height; y++) {
-    const row = y * (width * 4 + 1);
-    raw[row] = 0;
-    for (let x = 0; x < width; x++) {
-      const [r, g, b, a = 255] = rgbaFn(x, y, width, height);
-      const i = row + 1 + x * 4;
-      raw[i] = r;
-      raw[i + 1] = g;
-      raw[i + 2] = b;
-      raw[i + 3] = a;
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  const png = Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 6 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-  writeFileSync(path, png);
-}
-
 function writePngBuffer(path, width, height, rgba) {
   const raw = Buffer.alloc((width * 4 + 1) * height);
   for (let y = 0; y < height; y++) {

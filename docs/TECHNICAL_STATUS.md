@@ -95,13 +95,12 @@ These were out of scope for the pass and are unchanged.
 | L | Low | `GameRuntime.stop()` / `restoreAuthoredSnapshot()` clear the world with an O(n²) loop (`World.clear` → `removeActor` filters the array each time). |
 | L | Low | `Component.js` defines `onStart` / `onUpdate` / `onStop`, which nothing calls (only `onAttach` / `onDetach` are invoked, by `Actor`). |
 | L | Low | `EditorContext.jsx` (~2,100 lines) and `SceneView.js` (~1,500 lines) are large. Not recommended to split without a concrete need. |
-| L | Low | 88 lint warnings (hook dependencies, refs during render, unused test imports). |
+| L | Low | ~87 lint warnings remain (mostly React hooks / refs-during-render / export-components). Unused-import/var set cleared in 2F.7D. |
 | L | Low | Production build is one ~6 MB chunk. |
 | L | Low | The dev file APIs (`vite-plugins/`) have no authentication; path traversal is rejected. Dev-only. |
 
 ## 5. Observations made during this pass (not fixed, not yet confirmed as defects)
 
-- **Dead legacy UI files.** `src/editor/Toolbar.jsx`, `Hierarchy.jsx` and `Inspector.jsx` are not imported anywhere (verified by search); they appear superseded by `layout/LevelToolBar.jsx`, `SceneOutliner.jsx` and `DetailsPanel.jsx`.
 - **Tutorial "Save as" drops the stored project snapshot.** `saveTutorialWorkAs` sets `sessionStackRef.current = []` after saving, discarding the project world captured when the tutorial began. Not reproduced.
 - **Orphan parent references are silently nulled on load.** `LevelDeserializer` resets a `parentId` that points at a missing actor to `null`, so a file produced by the old H1 bug loads as unparented actors rather than failing. This was left as is.
 - **Dirty detection cost.** The check serializes the whole world. It is debounced (200 ms) for the indicator and computed synchronously only when guarding a load or closing the tab. Very large levels may need a cheaper scheme.
@@ -111,12 +110,12 @@ These were out of scope for the pass and are unchanged.
 ## 6. Deferred technical debt
 
 - Incremental scene synchronization (M6) — **done** in Phase **2F.7C** (`ACCEPTANCE_INCREMENTAL_SYNC.md`).
-- Runtime/editor dependency separation (M8).
+- Code cleanup pass — **done** in Phase **2F.7D** (`ACCEPTANCE_CODE_CLEANUP.md`); legacy Toolbar/Hierarchy/Inspector removed; `worldSolidFit` in runtime.
+- Runtime/editor dependency separation (M8) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Static-mesh collider generation (M10).
 - Splitting the single production chunk.
-- Removing the dead legacy UI files listed above.
-- Lint warning cleanup.
+- Remaining React hooks / refs-during-render lint warnings (dedicated pass; avoid drive-by dep array changes).
 
 ## 7. Manual acceptance tests
 

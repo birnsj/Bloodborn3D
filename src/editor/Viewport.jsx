@@ -127,7 +127,6 @@ export function Viewport() {
     commitFaceMove,
     cancelFaceMove,
     clipSession,
-    beginClipSession,
     cancelClipSession,
     addClipPoint,
     commitClipSession,

@@ -3,7 +3,6 @@ import { World } from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { Transform } from '../core/Transform.js';
 import { BrushComponent } from '../components/BrushComponent.js';
-import { StaticMeshComponent } from '../components/StaticMeshComponent.js';
 import { createCellActor } from '../editor/cellFactory.js';
 import { createStaticMeshActor } from '../editor/meshFactory.js';
 import {
@@ -17,7 +16,6 @@ import {
   syncPrefabInstances,
   setOverride,
   getOverrides,
-  getInstanceActors,
 } from '../prefabs/prefabOps.js';
 import { normalizePrefabDefinition } from '../prefabs/PrefabDefinition.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
@@ -130,16 +128,13 @@ describe('Phase 2C recommended verification', () => {
     expect(rootA.prefab.prefabId).toBe('prefab_room');
     expect(rootB.prefab.prefabId).toBe('prefab_room');
 
-    // Relative contents preserved under each instance root
-    const membersA = getInstanceActors(world, instA.instanceId);
-    const lampA = membersA.find((a) => a.name === 'lamp' || a.prefab?.templateId
-      && roomPrefab.definition.actors.find((t) => t.id === a.prefab.templateId)?.name === 'lamp');
     // Find by matching source template name via definition
     const lampTpl = roomPrefab.definition.actors.find((a) => a.name === 'lamp');
     const meshTpl = roomPrefab.definition.actors.find((a) => a.name === 'Crate');
     const wallTpl = roomPrefab.definition.actors.find((a) => a.name === 'wall');
     expect(lampTpl).toBeTruthy();
     expect(meshTpl).toBeTruthy();
+    expect(wallTpl).toBeTruthy();
 
     const findByTemplate = (instanceId, templateId) => world.actors.find((a) => (
       (a.prefab?.instanceId === instanceId && a.prefab?.templateId === templateId)
@@ -149,9 +144,9 @@ describe('Phase 2C recommended verification', () => {
     const lampAActor = findByTemplate(instA.instanceId, lampTpl.id);
     const lampBActor = findByTemplate(instB.instanceId, lampTpl.id);
     const meshAActor = findByTemplate(instA.instanceId, meshTpl.id);
-    const wallAActor = findByTemplate(instA.instanceId, wallTpl.id);
     expect(lampAActor).toBeTruthy();
     expect(meshAActor).toBeTruthy();
+    expect(findByTemplate(instA.instanceId, wallTpl.id)).toBeTruthy();
 
     const lampAWorldBefore = getWorldTransform(lampAActor, world);
     expect(lampAWorldBefore.position.x).toBeCloseTo(1000 + 100, 3);

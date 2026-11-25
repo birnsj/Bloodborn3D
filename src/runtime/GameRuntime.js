@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
-import { ensureWorldSolidContainsSubtracts } from '../editor/worldSolidFit.js';
+import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
 import { SceneView } from './SceneView.js';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { PlayerController } from './PlayerController.js';

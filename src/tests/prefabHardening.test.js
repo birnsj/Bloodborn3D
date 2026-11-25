@@ -10,7 +10,6 @@ import {
   syncPrefabInstances,
   recordActorPrefabOverride,
   getOverrides,
-  getInstanceActors,
   findInstanceRoot,
   setOverride,
 } from '../prefabs/prefabOps.js';
@@ -150,7 +149,6 @@ describe('nested prefab alternating synchronization', () => {
     const { world, defs, placed } = buildRoomWithDoor();
     const getDefinition = (id) => defs[id];
 
-    const roomRoot = world.getActor(placed.rootActorIds[0]);
     const nestedDoors = world.actors.filter((a) => (
       a.prefab?.prefabId === 'prefab_door'
       && a.prefab?.ownerInstanceId === placed.instanceId

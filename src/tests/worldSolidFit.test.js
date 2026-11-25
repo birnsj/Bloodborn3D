@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { World } from '../core/World.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
-import { ensureWorldSolidContainsSubtracts } from '../editor/worldSolidFit.js';
+import { ensureWorldSolidContainsSubtracts } from '../runtime/worldSolidFit.js';
 import { boundsWithShell, WORLD_SOLID_SHELL } from '../editor/newMapFactory.js';
 
 describe('ensureWorldSolidContainsSubtracts', () => {

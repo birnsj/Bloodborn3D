@@ -1,13 +1,11 @@
 import { World, normalizeMapMode } from '../core/World.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
+import { WORLD_SOLID_SHELL } from '../runtime/worldSolidFit.js';
 import { createBrushFromBounds } from './brushFactory.js';
 import { createPlayerSpawnActor } from './spawnFactory.js';
 
-/**
- * Outer shell thickness around carved space for World Solid (eu).
- * Floor / ceiling / perimeter walls are this thick — not a giant empty cube.
- */
-export const WORLD_SOLID_SHELL = 100;
+/** Re-export for editor / factory callers (canonical value lives in runtime). */
+export { WORLD_SOLID_SHELL };
 
 /**
  * @deprecated Prefer shell-fitted solids via boundsWithShell / createNewMapWorld.

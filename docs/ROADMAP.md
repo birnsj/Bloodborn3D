@@ -226,13 +226,20 @@ load / Play restore / asset refresh / recovery. Phase 2F.7B epochs and ownership
 - Units: `phase2f7cIncrementalSync.test.js`; bench `scripts/bench-incremental-sync.mjs`
 - Report: `docs/ACCEPTANCE_INCREMENTAL_SYNC.md`
 
+### Phase 2F.7D — Code Cleanup and Maintainability
+
+**Done** (2026-11-24). Removed dead legacy editor UI; moved World Solid fit into runtime to cut
+runtime→editor coupling; cleared unused-import/var lint warnings. No feature or geometry changes.
+
+- Report: `docs/ACCEPTANCE_CODE_CLEANUP.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D
 ```
 
 ### Out of scope for 2F
@@ -246,5 +253,5 @@ load / Play restore / asset refresh / recovery. Phase 2F.7B epochs and ownership
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7C) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7D) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

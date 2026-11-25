@@ -8,7 +8,6 @@ import {
   useState,
 } from 'react';
 import {
-  DEFAULT_LAYOUT,
   loadLayoutPrefs,
   saveLayoutPrefs,
   WORKSPACES,
@@ -26,7 +25,6 @@ import {
   DOCK_PANELS,
   getPanelVisibility,
   reopenPanel,
-  setViewportMaximized,
 } from './dockLayout.js';
 import {
   FACTORY_LAYOUT_ID,

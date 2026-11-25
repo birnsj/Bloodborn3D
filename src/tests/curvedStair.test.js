@@ -4,7 +4,6 @@ import { Transform } from '../core/Transform.js';
 import { Actor } from '../core/Actor.js';
 import { HistoryStack } from '../editor/history/HistoryStack.js';
 import {
-  AddActorsCommand,
   SetStairPropertiesCommand,
 } from '../editor/history/commands.js';
 import { StairComponent } from '../components/StairComponent.js';

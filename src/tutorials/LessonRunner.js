@@ -35,7 +35,7 @@ export function createLessonRuntimeState(lesson) {
 
 export function enterStep(state, lesson, editorSnapshot) {
   const stepIndex = clampStepIndex(lesson, state.stepIndex);
-  const step = getStep(lesson, stepIndex);
+  getStep(lesson, stepIndex); // validate step exists for this index
   const baseline = captureBaseline(editorSnapshot.world, editorSnapshot.selectedActorIds);
   return {
     ...state,

@@ -125,7 +125,6 @@ export function evaluateVerify(verify, ctx) {
     modeHistory = [],
     gridSize,
     canUndo,
-    canRedo,
     viewportLayoutMode,
     viewportCameraMode,
     selectedSurface,

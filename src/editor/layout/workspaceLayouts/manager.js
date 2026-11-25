@@ -6,7 +6,6 @@ import {
   AUTOSAVE_LAYOUT_ID,
   AUTOSAVE_LAYOUT_NAME,
   FACTORY_LAYOUT_ID,
-  createCatalog,
   createFactoryLayout,
   normalizeCatalog,
   normalizeSnapshot,

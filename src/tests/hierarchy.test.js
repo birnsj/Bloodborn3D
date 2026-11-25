@@ -3,7 +3,6 @@ import { World } from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { Transform } from '../core/Transform.js';
 import { BrushComponent } from '../components/BrushComponent.js';
-import { CellComponent } from '../components/CellComponent.js';
 import {
   getWorldTransform,
   reparentActor,

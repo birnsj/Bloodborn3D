@@ -50,28 +50,6 @@ function fakeMaterial(label) {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function makeCanvas() {
-  return {
-    clientWidth: 64,
-    clientHeight: 64,
-    width: 64,
-    height: 64,
-    style: {},
-    getContext: () => ({
-      getExtension: () => null,
-      getParameter: () => 0,
-      createTexture: () => ({}),
-      createBuffer: () => ({}),
-      createFramebuffer: () => ({}),
-      createRenderbuffer: () => ({}),
-      createProgram: () => ({}),
-      createShader: () => ({}),
-    }),
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  };
-}
-
 beforeEach(() => {
   factory.pending.length = 0;
   meshLoader.pending.length = 0;
@@ -211,8 +189,7 @@ describe('Phase 2F.7B — disposeObjectTree shared safety', () => {
 
 describe('Phase 2F.7B — world sync still invalidates globally', () => {
   it('bumps sync token on syncFromWorld so prior loads are abandoned', () => {
-    const canvas = makeCanvas();
-    // SceneView constructor needs a real-ish canvas; skip full construct — test token API only.
+    // Prototype harness — avoid SceneView constructor (needs a real WebGL canvas).
     const view = Object.create(SceneView.prototype);
     view._syncToken = 0;
     view._actorMeshes = new Map();

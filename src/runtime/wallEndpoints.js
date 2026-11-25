@@ -247,7 +247,6 @@ export function yawForStraightWallDirection(actor, dir) {
   if (!brush) return 0;
   const axes = getWallAxes(brush.size);
   const n = normXZ(dir);
-  const worldYaw = radToDeg(Math.atan2(n.x, n.z)); // yaw 0 → +Z
   // Local along for lengthAxis x is +X (yaw 0 maps local +X to world +X → need yaw so +X → dir)
   // Our rotateYaw: local (1,0,0) → (c, 0, s) with yaw; local (0,0,1) → (-s, 0, c)
   // For length along X: want (c,s) = (n.x, n.z) → yaw = atan2(n.z, n.x)? 

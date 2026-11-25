@@ -67,7 +67,7 @@ export function materialDraftToSavePayload(draft) {
 export function materialDraftForDuplicate(source, nameSuffix = ' Copy') {
   const normalized = normalizeMaterialDefinition(source);
   if (!normalized) return null;
-  const { id, createdAt, updatedAt, ...rest } = normalized;
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = normalized;
   return {
     ...rest,
     name: `${normalized.name || 'Material'}${nameSuffix}`,

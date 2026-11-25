@@ -39,7 +39,6 @@ export function createSubtractiveAcceptanceWorld({
     const minX = rp.x - hx;
     const maxX = rp.x + hx;
     const minZ = rp.z - hz;
-    const maxZ = rp.z + hz;
 
     // Overlapping cut: alcove that overlaps Room 0,0 and extends through the wall.
     const overlap = createBrushFromBounds({

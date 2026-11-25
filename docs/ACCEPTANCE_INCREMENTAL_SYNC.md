@@ -64,4 +64,4 @@ Unrelated actor groups and `visualEpoch` values are preserved (regression tests)
 - Incremental sync still walks all actors to compare fingerprints (O(n) CPU); it avoids O(n) GPU teardown/rebuild.
 - Prefab bulk updates still go through `afterWorldMutation` (incremental); very large prefab replaces may prefer an explicit `fullSync` later.
 - Geometry/material alloc counters are post-populate proxies under actor groups, not Three.js allocator hooks.
-- Phase **2F.7D** not started.
+- Phase **2F.7D** completed separately (`ACCEPTANCE_CODE_CLEANUP.md`).

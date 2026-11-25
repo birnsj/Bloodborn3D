@@ -51,8 +51,7 @@ export function sampleRomanArchY(x, halfW, rise) {
   const r = Math.max(1e-6, rise);
   // cy is center Y relative to spring line (usually negative for semicircle rise=hw)
   const cy = (r * r - hw * hw) / (2 * r);
-  const R = Math.hypot(hw, -cy); // distance from center (0,cy) to spring (±hw,0)
-  // Actually R = sqrt(hw^2 + cy^2) since spring y=0: sqrt(hw^2 + (0-cy)^2)
+  // Radius from center (0,cy) to spring (±hw,0): sqrt(hw^2 + cy^2)
   const radius = Math.sqrt(hw * hw + cy * cy);
   const under = radius * radius - x * x;
   if (under <= 0) return 0;
@@ -151,19 +150,7 @@ export function getArchColliderSolids(arch) {
     const xm = (x0 + x1) * 0.5;
     const span = Math.abs(x1 - x0);
     const innerY = L.springY + sampleArchProfileY(xm, L.halfInnerW, L.archRise, L.archType);
-    // Outer curve: same profile but scaled to outer half-width, plus thickness above crown conceptually
-    const outerXm = (xm / L.halfInnerW) * L.halfOuterW;
-    const outerRise = L.archRise + L.thickness;
-    const outerY = L.springY + sampleArchProfileY(
-      outerXm,
-      L.halfOuterW,
-      outerRise,
-      L.archType,
-    );
-    // Fill from max(innerY, spring) up to topY for this slice — use outerY as bottom of fill above opening
-    const yLo = Math.max(innerY, L.springY);
-    const yHi = Math.max(yLo + 1, Math.min(L.topY, Math.max(outerY, L.crownY + L.thickness * 0.5)));
-    // Prefer fill from intrados to flat top for solid crown
+    // Fill from intrados to flat top for solid crown (extrados was unused in the solid path).
     const fillLo = innerY;
     const fillHi = L.topY;
     const h = fillHi - fillLo;
@@ -258,7 +245,6 @@ export function createArchGeometry(arch) {
     if (Math.abs(nz) > 0.7) return nz > 0 ? 'front' : 'back';
     if (ny > 0.7) return 'top';
     if (ny < -0.7) return 'bottom';
-    const radial = Math.hypot(cx, 0); // in XY of shape before extrude; after extrude X is width
     const distFromAxis = Math.abs(cx);
     if (distFromAxis < halfInner * 1.05 && Math.abs(cz) < halfD * 0.95) {
       return 'passage';

@@ -19,7 +19,7 @@ export class Component {
   onStop() {}
 
   toJSON() {
-    const { actor, ...rest } = this;
+    const { actor: _actor, ...rest } = this;
     return structuredClone(rest);
   }
 

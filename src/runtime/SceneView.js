@@ -71,7 +71,7 @@ import {
   isAdditiveBrushActor,
   isSubtractBrushActor,
 } from './actorVisualFingerprint.js';
-import { ensureWorldSolidContainsSubtracts } from '../editor/worldSolidFit.js';
+import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
 import { installStudioEnvironment } from './studioEnvironment.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import { createRampFromBounds } from '../editor/rampFactory.js';

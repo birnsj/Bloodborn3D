@@ -1,7 +1,12 @@
 import { getWorldMatrix } from '../core/hierarchy.js';
 import { mat4TransformPoint } from '../core/math3d.js';
-import { isSubtractBrush, isWorldSolidActor } from '../runtime/brushBoolean.js';
-import { WORLD_SOLID_SHELL } from './newMapFactory.js';
+import { isSubtractBrush, isWorldSolidActor } from './brushBoolean.js';
+
+/**
+ * Outer shell thickness around carved space for World Solid (eu).
+ * Shared by new-map factories and auto-fit.
+ */
+export const WORLD_SOLID_SHELL = 100;
 
 /**
  * World-space AABB of a brush actor (axis-aligned from 8 corners).
