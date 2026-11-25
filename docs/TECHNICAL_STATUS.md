@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **748 / 748 pass** (738 prior + Phase 2H.1B OpenArt editor + dock updates; see `ACCEPTANCE_OPENART_EDITOR.md`) |
+| `npm test` | **754 / 754 pass** (see `ACCEPTANCE_AI_ASSETS_WORKSPACE.md` for Phase 2H.1C) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -36,6 +36,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2G solid limit | `MAX_SUBTRACT_SOLIDS = 512`. Load / save / edit / Play reject over-cap with structured diagnostics. See `ACCEPTANCE_SOLID_LIMIT_512.md`. |
 | Phase 2H.1A OpenArt PoC | Official CLI adapter + dev-only `/api/openart`; estimate/approve gate; staging import into existing texture/material pipeline. No generation UI. See `ACCEPTANCE_OPENART_POC.md`. |
 | Phase 2H.1B OpenArt Editor | Generation panel in Asset Viewer + optional dock; dynamic CLI models/params; explicit spend confirm; import texture / create material; mocked tests + browser harness. See `ACCEPTANCE_OPENART_EDITOR.md`. |
+| Phase 2H.1C AI Assets Workspace | AI Assets three-column workspace; OpenArt live; ComfyUI/Meshy Coming Soon; standalone OpenArt folder/dock removed. See `ACCEPTANCE_AI_ASSETS_WORKSPACE.md`. |
 
 ## 2. Implemented systems
 

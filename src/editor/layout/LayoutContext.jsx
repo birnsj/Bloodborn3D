@@ -62,7 +62,6 @@ function readWorkingSnapshot(layout) {
     contentVisible: layout.contentVisible,
     assetViewerVisible: layout.assetViewerVisible,
     tutorialsVisible: Boolean(layout.tutorialsVisible),
-    openartVisible: Boolean(layout.openartVisible),
     viewportMaximized: false,
     viewportView: readLiveViewportView(layout.viewportView),
   };
@@ -213,7 +212,6 @@ export function LayoutProvider({ children }) {
         contentVisible: snapshot.contentVisible !== false,
         assetViewerVisible: snapshot.assetViewerVisible !== false,
         tutorialsVisible: Boolean(snapshot.tutorialsVisible),
-        openartVisible: Boolean(snapshot.openartVisible),
         viewportMaximized: false,
       };
       if (api) {
@@ -269,9 +267,7 @@ export function LayoutProvider({ children }) {
             ? 'assetViewer'
             : key === 'tutorialsVisible'
               ? 'tutorials'
-              : key === 'openartVisible'
-                ? 'openart'
-                : null;
+              : null;
     if (!panelKey || !api) return;
 
     const panel = api.getPanel(panelKey);

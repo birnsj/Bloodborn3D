@@ -498,9 +498,9 @@ export const HELP_CONTENT = {
     title: 'Content Folder',
     body: 'Chooses which folder the Asset Viewer lists. The Content Browser is for navigation only.',
   },
-  'content.openart': {
-    title: 'OpenArt',
-    body: 'Opens the OpenArt generation panel in the Asset Viewer. Estimates cost before any spend; Generate asks for explicit approval.',
+  'workspace.ai': {
+    title: 'AI Assets',
+    body: 'Dedicated workspace for AI-assisted asset generation. OpenArt is available now; other providers appear as Coming Soon.',
   },
 
   'content.search': {

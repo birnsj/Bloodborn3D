@@ -25,7 +25,6 @@ export function createEmptySnapshot() {
     contentVisible: true,
     assetViewerVisible: true,
     tutorialsVisible: false,
-    openartVisible: false,
     viewportMaximized: false,
     viewportView: { ...DEFAULT_VIEWPORT_VIEW },
   };
@@ -65,7 +64,6 @@ export function normalizeSnapshot(raw) {
     contentVisible: raw.contentVisible !== false,
     assetViewerVisible: raw.assetViewerVisible !== false,
     tutorialsVisible: Boolean(raw.tutorialsVisible),
-    openartVisible: Boolean(raw.openartVisible),
     // Dock maximize is deprecated — layouts never restore it.
     viewportMaximized: false,
     viewportView: normalizeViewportView(raw.viewportView || base.viewportView),

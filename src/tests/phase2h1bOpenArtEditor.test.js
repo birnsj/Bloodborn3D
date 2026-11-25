@@ -17,6 +17,7 @@ import {
 import { buildGenerateImageArgv } from '../dev/openart/openArtCli.js';
 import { DOCK_PANELS, PANEL_VISIBILITY_KEYS } from '../editor/layout/dockLayout.js';
 import { ASSET_FOLDERS } from '../data/sampleAssets.js';
+import { WORKSPACES } from '../editor/layout/layoutPrefs.js';
 
 const fetchMock = vi.fn();
 
@@ -39,13 +40,14 @@ function jsonResponse(data, status = 200) {
   };
 }
 
-describe('Phase 2H.1B — dock / browser registration', () => {
-  it('registers an OpenArt dock panel and visibility key', () => {
-    expect(DOCK_PANELS.openart).toMatchObject({ id: 'openart', component: 'openart', title: 'OpenArt' });
-    expect(PANEL_VISIBILITY_KEYS.openart).toBe('openartVisible');
+describe('Phase 2H.1B — OpenArt registration (consolidated into AI Assets in 2H.1C)', () => {
+  it('does not register a standalone OpenArt dock panel (AI Assets workspace owns OpenArt)', () => {
+    expect(DOCK_PANELS.openart).toBeUndefined();
+    expect(PANEL_VISIBILITY_KEYS.openart).toBeUndefined();
+    expect(WORKSPACES.some((w) => w.id === 'ai')).toBe(true);
   });
 
-  it('keeps registry asset folders unchanged (OpenArt is a tool folder in the browser context)', () => {
+  it('keeps registry asset folders free of OpenArt (generation is not a Content Browser folder)', () => {
     expect(ASSET_FOLDERS).not.toContain('OpenArt');
     expect(ASSET_FOLDERS).toContain('Textures');
   });

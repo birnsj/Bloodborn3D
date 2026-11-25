@@ -447,11 +447,6 @@ export function AppMenuBar() {
               close={close}
               onClick={() => togglePanel('tutorialsVisible')}
             />
-            <Item
-              label={`${layout.openartVisible ? 'Hide' : 'Show'} OpenArt`}
-              close={close}
-              onClick={() => togglePanel('openartVisible')}
-            />
             <Sep />
             <Item
               label="Maximize Active View"

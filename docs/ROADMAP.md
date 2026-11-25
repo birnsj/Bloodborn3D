@@ -349,3 +349,10 @@ See `docs/ACCEPTANCE_OPENART_POC.md`.
 Dynamic models/params from CLI; estimate + explicit spend approval; import texture /
 create material; status persists across panel switches. See
 `docs/ACCEPTANCE_OPENART_EDITOR.md`. No automatic paid generation; no other providers.
+
+### Phase 2H.1C — AI Assets Workspace
+
+**Done.** Consolidated AI generation under the AI Assets workspace (provider nav /
+controls / results). OpenArt is the live provider; ComfyUI and Meshy are Coming Soon.
+Standalone OpenArt Content Browser folder and Window dock entry removed. See
+`docs/ACCEPTANCE_AI_ASSETS_WORKSPACE.md`.

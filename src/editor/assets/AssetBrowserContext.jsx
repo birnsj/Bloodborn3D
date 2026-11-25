@@ -354,8 +354,7 @@ export function AssetBrowserProvider({ children }) {
   ]);
 
   const value = useMemo(() => ({
-    // OpenArt is a generation tool folder, not a registry kind.
-    folders: [...REGISTRY_ASSET_FOLDERS, 'OpenArt'],
+    folders: REGISTRY_ASSET_FOLDERS,
     registry,
     revision,
     materialDefs,

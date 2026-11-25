@@ -9,12 +9,10 @@ import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewC
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
-import { OpenArtGeneratePanel } from '../openart/OpenArtGeneratePanel.jsx';
-
 /**
  * Bottom Asset Viewer — lists assets from the Content Browser folder.
  * Double-click opens a temporary preview window (not embedded in the panel).
- * Folder "OpenArt" hosts the generation panel (Phase 2H.1B).
+ * AI generation lives in the AI Assets workspace (Phase 2H.1C).
  */
 export function AssetViewer({ docked = false } = {}) {
   const { layout, patch } = useLayout();
@@ -48,20 +46,15 @@ export function AssetViewer({ docked = false } = {}) {
   const [previewAsset, setPreviewAsset] = useState(null);
   const textureInputRef = useRef(null);
   const meshInputRef = useRef(null);
-  const isOpenArt = folder === 'OpenArt';
 
   const assets = useMemo(
-    () => (isOpenArt ? [] : queryAssets(folder)),
-    [queryAssets, folder, searchQuery, isOpenArt],
+    () => queryAssets(folder),
+    [queryAssets, folder, searchQuery],
   );
 
   useEffect(() => {
     setPreviewAsset(null);
   }, [folder]);
-
-  if (isOpenArt) {
-    return <OpenArtGeneratePanel docked={docked} />;
-  }
 
   const onFilesDropped = async (fileList) => {
     const files = [...fileList];

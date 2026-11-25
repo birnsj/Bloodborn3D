@@ -24,19 +24,18 @@ export function ContentBrowser({ docked = false } = {}) {
         <div className="bb-content__path">Content</div>
         <ul className="bb-content-folder-list">
           {folders.map((name) => {
-            const isTool = name === 'OpenArt';
-            const count = isTool ? 'gen' : queryAssets(name).length;
+            const count = queryAssets(name).length;
             const selected = folder === name;
             return (
               <li key={name}>
                 <button
                   type="button"
-                  className={`bb-content-folder${selected ? ' is-selected' : ''}${isTool ? ' bb-content-folder--tool' : ''}`}
+                  className={`bb-content-folder${selected ? ' is-selected' : ''}`}
                   onClick={() => {
                     patch({ contentFolder: name });
                     ensurePanel?.('assetViewer');
                   }}
-                  {...helpProps(isTool ? 'content.openart' : 'content.folder')}
+                  {...helpProps('content.folder')}
                 >
                   <IconFolder />
                   <span className="bb-content-folder__name">{name}</span>

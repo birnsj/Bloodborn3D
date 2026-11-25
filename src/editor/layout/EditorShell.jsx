@@ -8,6 +8,7 @@ import { StatusBar } from './StatusBar.jsx';
 import { PlaceholderWorkspace } from './PlaceholderWorkspace.jsx';
 import { LevelDockWorkspace } from './LevelDockWorkspace.jsx';
 import { MaterialsWorkspace } from '../materials/MaterialsWorkspace.jsx';
+import { AiAssetsWorkspace } from '../aiAssets/AiAssetsWorkspace.jsx';
 import { HoverHelpLayer } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { TutorialCoachMark } from '../../tutorials/TutorialCoachMark.jsx';
 
@@ -15,6 +16,7 @@ export function EditorShell() {
   const { layout, setDockApi } = useLayout();
   const isLevel = layout.workspace === 'level';
   const isMaterials = layout.workspace === 'materials';
+  const isAiAssets = layout.workspace === 'ai';
   const scale = viewScaleFactor(layout.uiScale);
 
   useEffect(() => {
@@ -67,6 +69,8 @@ export function EditorShell() {
           </>
         ) : isMaterials ? (
           <MaterialsWorkspace />
+        ) : isAiAssets ? (
+          <AiAssetsWorkspace />
         ) : (
           <PlaceholderWorkspace workspaceId={layout.workspace} />
         )}

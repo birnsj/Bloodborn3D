@@ -77,7 +77,6 @@ describe('dock layout defaults', () => {
       'content',
       'assetViewer',
       'tutorials',
-      'openart',
     ]);
   });
 
@@ -174,7 +173,6 @@ describe('dock panel open/close helpers', () => {
       contentVisible: false,
       assetViewerVisible: false,
       tutorialsVisible: false,
-      openartVisible: false,
       viewportMaximized: false,
     });
   });

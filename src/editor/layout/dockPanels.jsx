@@ -4,7 +4,6 @@ import { ContentBrowser } from './ContentBrowser.jsx';
 import { AssetViewer } from './AssetViewer.jsx';
 import { Viewport } from '../Viewport.jsx';
 import { TutorialsPanel } from '../../tutorials/TutorialsPanel.jsx';
-import { OpenArtGeneratePanel } from '../openart/OpenArtGeneratePanel.jsx';
 
 function DockPanelShell({ children, className = '' }) {
   return (
@@ -70,16 +69,6 @@ function TutorialsDockPanel() {
   );
 }
 
-function OpenArtDockPanel() {
-  return (
-    <DockPanelShell className="bb-dock-panel--openart">
-      <div data-bb-tutorial="panel.openart" className="bb-dock-panel__fill">
-        <OpenArtGeneratePanel docked />
-      </div>
-    </DockPanelShell>
-  );
-}
-
 /** Registered dockview component map (stable identity). */
 export const dockviewComponents = {
   viewport: ViewportDockPanel,
@@ -88,5 +77,4 @@ export const dockviewComponents = {
   content: ContentDockPanel,
   assetViewer: AssetViewerDockPanel,
   tutorials: TutorialsDockPanel,
-  openart: OpenArtDockPanel,
 };

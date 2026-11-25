@@ -7,6 +7,9 @@
  *
  * Never spends credits. Default `mock: true` stubs /api/openart.
  * Pass `{ mock: false }` for live estimate-only (still no generate).
+ *
+ * Note (2H.1C): OpenArt now lives under AI Assets. Prefer
+ * `/dev/phase2h1cAiAssets.js`. This harness still exercises the store API.
  */
 (function phase2h1bOpenArtEditor() {
   const MOCK_MODELS = [{
@@ -113,16 +116,12 @@
     try {
       if (api?.reset) api.reset();
 
-      const folderBtn = [...document.querySelectorAll('.bb-content-folder')].find(
-        (el) => el.textContent?.includes('OpenArt'),
-      );
-      steps.push({ step: 'content-folder', ok: Boolean(folderBtn) });
-
-      if (folderBtn) {
-        folderBtn.click();
-        await new Promise((r) => setTimeout(r, 80));
-      }
-      const panel = document.querySelector('.bb-openart');
+      const aiTab = [...document.querySelectorAll('.bb-workspace-tab, nav.bb-workspace-nav button')]
+        .find((el) => el.textContent?.includes('AI Assets'));
+      steps.push({ step: 'content-folder', ok: Boolean(aiTab), note: '2H.1C: AI Assets tab' });
+      aiTab?.click();
+      await new Promise((r) => setTimeout(r, 100));
+      const panel = document.querySelector('.bb-openart-controls, .bb-ai-assets');
       steps.push({ step: 'panel-mounted', ok: Boolean(panel), storeHook: Boolean(api) });
 
       if (!api) {
