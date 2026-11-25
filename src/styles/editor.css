@@ -2903,11 +2903,11 @@ select {
 
 .bb-concept-library {
   display: grid;
-  grid-template-columns: minmax(200px, 240px) minmax(320px, 1fr) minmax(280px, 360px);
-  gap: 8px;
+  grid-template-columns: minmax(170px, 200px) minmax(280px, 1fr) minmax(360px, 1.15fr);
+  gap: 12px;
   min-height: 0;
   height: 100%;
-  padding: 8px;
+  padding: 10px;
   overflow: hidden;
 }
 
@@ -2928,7 +2928,13 @@ select {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 10px;
+  padding: 12px;
+}
+
+.bb-concept-library__detail-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .bb-concept-library__area-list {
@@ -3009,8 +3015,8 @@ select {
 
 .bb-concept-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
 }
 
 .bb-concept-tile {
@@ -3042,20 +3048,20 @@ select {
 
 .bb-concept-tile__img {
   width: 100%;
-  height: 110px;
+  height: 168px;
   object-fit: contain;
   background: #0b0e14;
 }
 
 .bb-concept-tile__empty {
-  height: 110px;
+  height: 168px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .bb-concept-tile__title {
-  padding: 6px 8px;
+  padding: 8px 10px;
   font-size: 12px;
   font-weight: 650;
 }
@@ -3063,8 +3069,8 @@ select {
 .bb-concept-tile__tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 0 6px 6px;
+  gap: 4px;
+  padding: 0 8px 8px;
 }
 
 .bb-concept-prompts__filters {
@@ -3107,27 +3113,71 @@ select {
 }
 
 .bb-concept-detail {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-auto-rows: auto;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bb-concept-detail__hero {
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: #0b0e14;
+  overflow: hidden;
+}
+
+.bb-concept-detail__controls {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.bb-concept-detail__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bb-concept-detail__more-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
 }
 
 .bb-concept-detail__preview {
   width: 100%;
-  max-height: 260px;
+  height: 100%;
+  max-height: 100%;
   object-fit: contain;
-  border: 1px solid var(--bb-border);
-  border-radius: var(--bb-radius);
-  background: #0b0e14;
+  display: block;
 }
 
 .bb-concept-detail__preview-empty {
-  min-height: 140px;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px dashed var(--bb-border);
   border-radius: var(--bb-radius);
+}
+
+.bb-concept-detail__title {
+  margin: 0;
 }
 
 .bb-concept-detail__summary {
@@ -3143,7 +3193,14 @@ select {
   gap: 8px;
 }
 
-.bb-concept-detail__actions,
+.bb-concept-detail__actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .bb-concept-detail__linked {
   display: flex;
   flex-direction: column;
@@ -3196,11 +3253,57 @@ select {
   overflow: hidden;
 }
 
-@media (max-width: 1100px) {
+/* Prefer nav + (compact gallery / large detail) so the concept image keeps room. */
+@media (max-width: 1280px) {
+  .bb-concept-library {
+    grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
+    grid-template-rows: minmax(140px, 26vh) minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .bb-concept-library__nav {
+    grid-row: 1 / -1;
+  }
+
+  .bb-concept-library__center {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .bb-concept-library__detail {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .bb-concept-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .bb-concept-tile__img,
+  .bb-concept-tile__empty {
+    height: 112px;
+  }
+
+  .bb-concept-detail__hero {
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 560px) {
   .bb-concept-library {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(160px, 24vh) minmax(240px, 1fr) minmax(220px, 32vh);
+    grid-template-rows: minmax(120px, 20vh) minmax(180px, 1fr) minmax(280px, 44vh);
     overflow: auto;
+  }
+
+  .bb-concept-library__nav,
+  .bb-concept-library__center,
+  .bb-concept-library__detail {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 

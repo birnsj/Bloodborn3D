@@ -533,7 +533,7 @@ function ConceptDetail({
   area, concept, vision, prompts, busy, notify, onGenerateAsset, confirm, onOpenAsset,
 }) {
   const [draft, setDraft] = useState(null);
-  const [metaOpen, setMetaOpen] = useState(true);
+  const [metaOpen, setMetaOpen] = useState(false);
 
   useEffect(() => {
     setDraft(concept ? { ...concept, tags: [...(concept.tags || [])] } : null);
@@ -549,165 +549,177 @@ function ConceptDetail({
 
   return (
     <div className="bb-concept-detail">
-      {url ? (
-        <img className="bb-concept-detail__preview" src={url} alt={concept.title} />
-      ) : (
-        <div className="bb-concept-detail__preview-empty bb-muted">No preview</div>
-      )}
+      <div className="bb-concept-detail__hero">
+        {url ? (
+          <img className="bb-concept-detail__preview" src={url} alt={concept.title} />
+        ) : (
+          <div className="bb-concept-detail__preview-empty bb-muted">No preview</div>
+        )}
+      </div>
 
-      <label className="bb-field">
-        <span className="bb-field-caption">Title</span>
-        <input
-          className="bb-input"
-          value={draft.title}
-          disabled={busy}
-          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-        />
-      </label>
-
-      <AreaDirectionEditor area={area} busy={busy} notify={notify} />
-
-      <details open={metaOpen} onToggle={(e) => setMetaOpen(e.currentTarget.open)}>
-        <summary className="bb-concept-detail__summary">Metadata</summary>
-        <div className="bb-concept-detail__meta">
-          {[
-            ['description', 'Description', true],
-            ['generationPrompt', 'Original generation prompt', true],
-            ['architecturalStyle', 'Architectural style', false],
-            ['materials', 'Materials', false],
-            ['colorPalette', 'Color palette', false],
-            ['lighting', 'Lighting', false],
-            ['atmosphere', 'Atmosphere', false],
-            ['distinctiveElements', 'Distinctive visual elements', true],
-          ].map(([key, label, long]) => (
-            <label key={key} className="bb-field">
-              <span className="bb-field-caption">{label}</span>
-              {long ? (
-                <textarea
-                  className="bb-input bb-openart__prompt"
-                  rows={3}
-                  value={draft[key] || ''}
-                  disabled={busy}
-                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-                />
-              ) : (
-                <input
-                  className="bb-input"
-                  value={draft[key] || ''}
-                  disabled={busy}
-                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-                />
-              )}
-            </label>
-          ))}
-          <label className="bb-field">
-            <span className="bb-field-caption">Tags</span>
+      <div className="bb-concept-detail__controls">
+        <div className="bb-concept-detail__toolbar">
+          <label className="bb-field bb-concept-detail__title">
+            <span className="bb-field-caption">Title</span>
             <input
               className="bb-input"
-              value={(draft.tags || []).join(', ')}
+              value={draft.title}
               disabled={busy}
-              onChange={(e) => setDraft({
-                ...draft,
-                tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
-              })}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             />
           </label>
+          <div className="bb-concept-detail__actions">
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={busy}
+              onClick={() => conceptLibraryUpdateConcept(concept.id, draft).catch((err) => notify(err.message))}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={busy}
+              title={vision?.reason || 'Vision analysis'}
+              onClick={async () => {
+                const result = await conceptLibraryAnalyze(concept.id).catch((err) => {
+                  notify(err.message);
+                  return null;
+                });
+                if (!result) return;
+                if (!result.ok) {
+                  notify(result.error || 'Image analysis is not available');
+                  return;
+                }
+                const merged = mergeAnalysisSuggestions(draft, result.suggestions, { overwriteEmptyOnly: true });
+                setDraft(merged);
+                notify('Suggestions applied to empty fields only — review and Save');
+              }}
+            >
+              Analyze…
+            </button>
+            <button
+              type="button"
+              className="bb-btn bb-btn--primary"
+              disabled={busy}
+              onClick={() => onGenerateAsset(null, draft)}
+            >
+              Generate Asset
+            </button>
+            <button
+              type="button"
+              className="bb-btn bb-btn--ghost"
+              disabled={busy}
+              onClick={async () => {
+                const ok = await confirm('Delete this concept image from the library? Production assets are unaffected.', {
+                  title: 'Delete concept',
+                  confirmLabel: 'Delete',
+                  tone: 'warning',
+                });
+                if (!ok) return;
+                await conceptLibraryDeleteConcept(concept.id).catch((err) => notify(err.message));
+              }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
-      </details>
 
-      {concept.provenance && (
-        <div className="bb-muted bb-concept-detail__prov">
-          Provenance: {concept.provenance.source || 'unknown'}
-          {concept.provenance.modelId ? ` · ${concept.provenance.modelId}` : ''}
-          {concept.provenance.generationId ? ` · ${concept.provenance.generationId}` : ''}
-        </div>
-      )}
+        <details className="bb-concept-detail__more">
+          <summary className="bb-concept-detail__summary">
+            Direction, metadata & associations
+          </summary>
+          <div className="bb-concept-detail__more-body">
+            <AreaDirectionEditor area={area} busy={busy} notify={notify} />
 
-      <div className="bb-concept-detail__actions">
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={busy}
-          onClick={() => conceptLibraryUpdateConcept(concept.id, draft).catch((err) => notify(err.message))}
-        >
-          Save metadata
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={busy}
-          title={vision?.reason || 'Vision analysis'}
-          onClick={async () => {
-            const result = await conceptLibraryAnalyze(concept.id).catch((err) => {
-              notify(err.message);
-              return null;
-            });
-            if (!result) return;
-            if (!result.ok) {
-              notify(result.error || 'Image analysis is not available');
-              return;
-            }
-            const merged = mergeAnalysisSuggestions(draft, result.suggestions, { overwriteEmptyOnly: true });
-            setDraft(merged);
-            notify('Suggestions applied to empty fields only — review and Save');
-          }}
-        >
-          Analyze image…
-        </button>
-        <button
-          type="button"
-          className="bb-btn bb-btn--primary"
-          disabled={busy}
-          onClick={() => onGenerateAsset(null, draft)}
-        >
-          Generate Asset
-        </button>
-        <button
-          type="button"
-          className="bb-btn bb-btn--ghost"
-          disabled={busy}
-          onClick={async () => {
-            const ok = await confirm('Delete this concept image from the library? Production assets are unaffected.', {
-              title: 'Delete concept',
-              confirmLabel: 'Delete',
-              tone: 'warning',
-            });
-            if (!ok) return;
-            await conceptLibraryDeleteConcept(concept.id).catch((err) => notify(err.message));
-          }}
-        >
-          Delete
-        </button>
-      </div>
+            <details open={metaOpen} onToggle={(e) => setMetaOpen(e.currentTarget.open)}>
+              <summary className="bb-concept-detail__summary">Metadata</summary>
+              <div className="bb-concept-detail__meta">
+                {[
+                  ['description', 'Description', true],
+                  ['generationPrompt', 'Original generation prompt', true],
+                  ['architecturalStyle', 'Architectural style', false],
+                  ['materials', 'Materials', false],
+                  ['colorPalette', 'Color palette', false],
+                  ['lighting', 'Lighting', false],
+                  ['atmosphere', 'Atmosphere', false],
+                  ['distinctiveElements', 'Distinctive visual elements', true],
+                ].map(([key, label, long]) => (
+                  <label key={key} className="bb-field">
+                    <span className="bb-field-caption">{label}</span>
+                    {long ? (
+                      <textarea
+                        className="bb-input bb-openart__prompt"
+                        rows={3}
+                        value={draft[key] || ''}
+                        disabled={busy}
+                        onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                      />
+                    ) : (
+                      <input
+                        className="bb-input"
+                        value={draft[key] || ''}
+                        disabled={busy}
+                        onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                      />
+                    )}
+                  </label>
+                ))}
+                <label className="bb-field">
+                  <span className="bb-field-caption">Tags</span>
+                  <input
+                    className="bb-input"
+                    value={(draft.tags || []).join(', ')}
+                    disabled={busy}
+                    onChange={(e) => setDraft({
+                      ...draft,
+                      tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
+                    })}
+                  />
+                </label>
+              </div>
+            </details>
 
-      <div className="bb-concept-detail__linked">
-        <div className="bb-field-caption">Associated prompts</div>
-        {linkedPrompts.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className="bb-btn bb-btn--ghost"
-            onClick={() => onGenerateAsset(p, concept)}
-          >
-            Generate from “{p.name}”
-          </button>
-        ))}
-        {!linkedPrompts.length && <div className="bb-muted">No linked prompts yet.</div>}
-      </div>
+            {concept.provenance && (
+              <div className="bb-muted bb-concept-detail__prov">
+                Provenance: {concept.provenance.source || 'unknown'}
+                {concept.provenance.modelId ? ` · ${concept.provenance.modelId}` : ''}
+                {concept.provenance.generationId ? ` · ${concept.provenance.generationId}` : ''}
+              </div>
+            )}
 
-      <div className="bb-concept-detail__linked">
-        <div className="bb-field-caption">Associated production assets</div>
-        {assetRefs.map((ref) => (
-          <button
-            key={`${ref.kind}:${ref.id}`}
-            type="button"
-            className="bb-btn bb-btn--ghost"
-            onClick={() => onOpenAsset?.(ref)}
-          >
-            {ref.kind}: {ref.name || ref.id}
-          </button>
-        ))}
-        {!assetRefs.length && <div className="bb-muted">No generated assets linked yet.</div>}
+            <div className="bb-concept-detail__linked">
+              <div className="bb-field-caption">Associated prompts</div>
+              {linkedPrompts.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="bb-btn bb-btn--ghost"
+                  onClick={() => onGenerateAsset(p, concept)}
+                >
+                  Generate from “{p.name}”
+                </button>
+              ))}
+              {!linkedPrompts.length && <div className="bb-muted">No linked prompts yet.</div>}
+            </div>
+
+            <div className="bb-concept-detail__linked">
+              <div className="bb-field-caption">Associated production assets</div>
+              {assetRefs.map((ref) => (
+                <button
+                  key={`${ref.kind}:${ref.id}`}
+                  type="button"
+                  className="bb-btn bb-btn--ghost"
+                  onClick={() => onOpenAsset?.(ref)}
+                >
+                  {ref.kind}: {ref.name || ref.id}
+                </button>
+              ))}
+              {!assetRefs.length && <div className="bb-muted">No generated assets linked yet.</div>}
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
