@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **701 / 701 pass** (Phase 2G prerequisites D1–D3; see `ACCEPTANCE_PREREQUISITES.md`) |
+| `npm test` | **718 / 718 pass** (701 + 17 flag-gated rendering-batching tests; see `EVAL_SUBTRACTIVE_RENDERING.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -32,6 +32,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | **Phase 2F.7** | **Complete** (incl. 2F.7H corrections) |
 | Phase 2G prerequisites | Audit defects D1 (additive carve invalidation), D2 (subtractive complexity validated on load / save / Play), D3 (geometry payload validation); see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
 | Phase 2G scale eval | Evaluation only — solid limit still **64**. Carve fine past 1k solids; draw-call/material-per-solid path is the wall. Practical next budget **512** if raised; larger maps need decomposition/batching. See `EVAL_SUBTRACTIVE_SCALE.md`. |
+| Phase 2G rendering experiment | World Solid batching + shared cutter materials, both **default OFF** (`src/runtime/renderExperiments.js`); not integrated, cap still 64. See `EVAL_SUBTRACTIVE_RENDERING.md`. |
 
 ## 2. Implemented systems
 

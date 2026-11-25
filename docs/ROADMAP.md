@@ -297,6 +297,14 @@ seams, player damping) remain open.
 25–200. Product limit remains **64**. See `docs/EVAL_SUBTRACTIVE_SCALE.md`.
 **Do not begin map generation** until the designer directs a solid-budget decision.
 
+### Phase 2G subtractive rendering optimization
+
+**Experiment complete, not integrated.** Two default-OFF flags (World Solid batching,
+shared cutter materials). 99.9 % fewer World Solid materials, 59–84 % fewer draw calls,
+2.5–3× faster frames, collision unchanged. Stairs, not subtractive surfaces, keep the
+benchmark "rep" maps just under the 80 % material target. Awaiting designer decision on
+integration. See `docs/EVAL_SUBTRACTIVE_RENDERING.md`.
+
 ### Dependencies
 
 ```

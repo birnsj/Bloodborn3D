@@ -37,9 +37,11 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   createBrushBoxGeometry,
   createBrushSolidGeometry,
+  createBatchedWorldSolidGeometry,
   createExposedWorldSolidGeometry,
   getBrushRenderSolids,
 } from './brushGeometry.js';
+import { isCutterMaterialSharingEnabled, isWorldSolidBatchingEnabled } from './renderExperiments.js';
 import {
   isSubtractBrush,
   isWorldSolidActor,
@@ -63,7 +65,7 @@ import {
   surfaceIdFromHit,
 } from './surfaces.js';
 import { cloneLoadedMesh } from './meshLoader.js';
-import { disposeObjectTree, disposeOwnedMaterial } from './gpuResources.js';
+import { disposeObjectTree, disposeOwnedMaterial, markSharedGpuResource } from './gpuResources.js';
 import {
   actorContentFingerprint,
   actorParentFingerprint,
@@ -1090,7 +1092,8 @@ export class SceneView {
         toMeters(comp.size.z),
       );
       const subtractColor = this.viewportColors.subtract;
-      const mat = new THREE.MeshBasicMaterial({
+      const shared = isCutterMaterialSharingEnabled() ? this._getSharedCutterMaterials() : null;
+      const mat = shared?.fill || new THREE.MeshBasicMaterial({
         color: subtractColor,
         transparent: true,
         opacity: 0.14,
@@ -1107,7 +1110,7 @@ export class SceneView {
       group.add(mesh);
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(geom),
-        new THREE.LineBasicMaterial({ color: subtractColor }),
+        shared?.line || new THREE.LineBasicMaterial({ color: subtractColor }),
       );
       edges.userData.actorId = actor.id;
       edges.userData.editorOnly = true;
@@ -1183,7 +1186,13 @@ export class SceneView {
     const hideOuterHull = isWorldSolidActor(actor);
     let anyVisibleFace = false;
 
-    for (const solid of solids) {
+    // Experiment (Phase 2G, default off): one mesh for every exposed patch.
+    const batched = hideOuterHull && isWorldSolidBatchingEnabled();
+    if (batched) {
+      anyVisibleFace = this._addBatchedWorldSolidMesh(group, actor, comp, solids, syncToken);
+    }
+
+    for (const solid of (batched ? [] : solids)) {
       // Brush-local min corner so cut pieces share continuous world-aligned UVs.
       const bias = {
         origin: {
@@ -1277,6 +1286,62 @@ export class SceneView {
       group.add(ghost);
       ghostGeom.dispose();
     }
+  }
+
+  /**
+   * Experiment (default off): cutter wireframes share one fill + one line material.
+   * Marked shared so per-actor teardown skips them; SceneView.dispose() frees them.
+   */
+  _getSharedCutterMaterials() {
+    const color = this.viewportColors.subtract;
+    if (!this._sharedCutterMaterials) {
+      this._sharedCutterMaterials = {
+        fill: markSharedGpuResource(new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.14,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        })),
+        line: markSharedGpuResource(new THREE.LineBasicMaterial({ color })),
+      };
+    }
+    this._sharedCutterMaterials.fill.color.setHex(color);
+    this._sharedCutterMaterials.line.color.setHex(color);
+    return this._sharedCutterMaterials;
+  }
+
+  /**
+   * Batched World Solid visual: one mesh, six face-keyed materials. Surface IDs are
+   * the semantic face keys (grouped scheme), so picking, highlight and per-face
+   * material / UV edits behave as on any other grouped mesh. The actor group owns it
+   * and the normal rebuild path disposes it.
+   * @returns {boolean} whether anything was drawn
+   */
+  _addBatchedWorldSolidMesh(group, actor, comp, solids, syncToken) {
+    const geom = createBatchedWorldSolidGeometry(solids, comp.size, comp.uv, comp.faceUVs);
+    if (!geom) return false;
+
+    // Surviving World Solid pieces are carve products (role 'cut'); keep the same
+    // fallback tint as the per-solid path when no material is assigned.
+    const baseColor = comp.materialId
+      ? (comp.color || '#888888')
+      : darkenHex(comp.color || '#888888', 0.12);
+    const fallback = createFallbackBrushMaterial(baseColor, { editMode: this.editMode });
+    const surfaceIds = [...BOX_SURFACE_IDS];
+    const mats = surfaceIds.map((_, i) => (i === 0 ? fallback : fallback.clone()));
+    const mesh = new THREE.Mesh(geom, mats);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.actorId = actor.id;
+    mesh.userData.pickable = true;
+    mesh.userData.substrateMesh = true;
+    mesh.userData.batchedWorldSolid = true;
+    mesh.userData.surfaceScheme = 'grouped';
+    mesh.userData.surfaceIds = surfaceIds;
+    group.add(mesh);
+    void this._applySurfaceMaterials(mesh, comp, syncToken);
+    return true;
   }
 
   /** Hide materials for World Solid faces that still sit on the outer brush hull. */
@@ -2787,6 +2852,11 @@ export class SceneView {
     if (this.gridHelper) {
       this.scene.remove(this.gridHelper);
       disposeObject(this.gridHelper);
+    }
+    if (this._sharedCutterMaterials) {
+      this._sharedCutterMaterials.fill.dispose();
+      this._sharedCutterMaterials.line.dispose();
+      this._sharedCutterMaterials = null;
     }
     this._studioEnv?.dispose?.();
     this.scene.environment = null;

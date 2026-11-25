@@ -1,0 +1,1205 @@
+{
+  "generatedAt": "2026-11-25T04:02:11.946Z",
+  "rows": [
+    {
+      "label": "flush-25",
+      "actors": 61,
+      "rooms": 25,
+      "baseline": {
+        "all": {
+          "meshes": 129,
+          "drawUnits": 285,
+          "triangles": 1236,
+          "liveGeometries": 179,
+          "liveMaterials": 579
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 80,
+            "drawUnits": 187,
+            "triangles": 648,
+            "liveGeometries": 81,
+            "liveMaterials": 481,
+            "materialsCreated": 1041
+          },
+          "cutters": {
+            "meshes": 49,
+            "drawUnits": 98,
+            "triangles": 588,
+            "liveGeometries": 98,
+            "liveMaterials": 98,
+            "materialsCreated": 98
+          }
+        },
+        "worldSolid": {
+          "meshes": 80,
+          "drawUnits": 187,
+          "triangles": 648,
+          "liveGeometries": 81,
+          "liveMaterials": 481
+        },
+        "materialsCreated": 1139,
+        "geometriesCreated": 180,
+        "buildSyncMs": 19.2,
+        "buildTotalMs": 25.6,
+        "worldSolidRebuildMs": 3.33
+      },
+      "batched": {
+        "all": {
+          "meshes": 50,
+          "drawUnits": 105,
+          "triangles": 1236,
+          "liveGeometries": 100,
+          "liveMaterials": 105
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 648,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 49,
+            "drawUnits": 98,
+            "triangles": 588,
+            "liveGeometries": 98,
+            "liveMaterials": 98,
+            "materialsCreated": 98
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 648,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 111,
+        "geometriesCreated": 181,
+        "buildSyncMs": 4.8,
+        "buildTotalMs": 5.6,
+        "worldSolidRebuildMs": 1.9
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 50,
+          "drawUnits": 105,
+          "triangles": 1236,
+          "liveGeometries": 100,
+          "liveMaterials": 9
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 648,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 49,
+            "drawUnits": 98,
+            "triangles": 588,
+            "liveGeometries": 98,
+            "liveMaterials": 98,
+            "materialsCreated": 2
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 648,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 15,
+        "geometriesCreated": 181,
+        "buildSyncMs": 2.5,
+        "buildTotalMs": 3.1,
+        "worldSolidRebuildMs": 1.21
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 90.3,
+        "liveMaterialsPct": 81.9,
+        "worldSolidMaterialsPct": 98.5,
+        "drawUnitsPct": 63.2,
+        "worldSolidDrawUnitsPct": 96.3,
+        "geometriesCreatedPct": -0.6
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 98.7,
+        "liveMaterialsPct": 98.4,
+        "worldSolidMaterialsPct": 98.5,
+        "drawUnitsPct": 63.2,
+        "worldSolidDrawUnitsPct": 96.3,
+        "geometriesCreatedPct": -0.6
+      }
+    },
+    {
+      "label": "rep-25",
+      "actors": 99,
+      "rooms": 25,
+      "baseline": {
+        "all": {
+          "meshes": 378,
+          "drawUnits": 1085,
+          "triangles": 2896,
+          "liveGeometries": 535,
+          "liveMaterials": 2020
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 222,
+            "drawUnits": 398,
+            "triangles": 1024,
+            "liveGeometries": 223,
+            "liveMaterials": 1333,
+            "materialsCreated": 2887
+          },
+          "cutters": {
+            "meshes": 81,
+            "drawUnits": 162,
+            "triangles": 972,
+            "liveGeometries": 162,
+            "liveMaterials": 162,
+            "materialsCreated": 162
+          },
+          "stairs": {
+            "meshes": 75,
+            "drawUnits": 525,
+            "triangles": 900,
+            "liveGeometries": 150,
+            "liveMaterials": 525,
+            "materialsCreated": 605
+          }
+        },
+        "worldSolid": {
+          "meshes": 222,
+          "drawUnits": 398,
+          "triangles": 1024,
+          "liveGeometries": 223,
+          "liveMaterials": 1333
+        },
+        "materialsCreated": 3654,
+        "geometriesCreated": 536,
+        "buildSyncMs": 22,
+        "buildTotalMs": 29.1,
+        "worldSolidRebuildMs": 7.47
+      },
+      "batched": {
+        "all": {
+          "meshes": 157,
+          "drawUnits": 694,
+          "triangles": 2896,
+          "liveGeometries": 314,
+          "liveMaterials": 694
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 1024,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 81,
+            "drawUnits": 162,
+            "triangles": 972,
+            "liveGeometries": 162,
+            "liveMaterials": 162,
+            "materialsCreated": 162
+          },
+          "stairs": {
+            "meshes": 75,
+            "drawUnits": 525,
+            "triangles": 900,
+            "liveGeometries": 150,
+            "liveMaterials": 525,
+            "materialsCreated": 605
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 1024,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 780,
+        "geometriesCreated": 537,
+        "buildSyncMs": 10.5,
+        "buildTotalMs": 11.9,
+        "worldSolidRebuildMs": 4.65
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 157,
+          "drawUnits": 694,
+          "triangles": 2896,
+          "liveGeometries": 314,
+          "liveMaterials": 534
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 1024,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 81,
+            "drawUnits": 162,
+            "triangles": 972,
+            "liveGeometries": 162,
+            "liveMaterials": 162,
+            "materialsCreated": 2
+          },
+          "stairs": {
+            "meshes": 75,
+            "drawUnits": 525,
+            "triangles": 900,
+            "liveGeometries": 150,
+            "liveMaterials": 525,
+            "materialsCreated": 605
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 1024,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 620,
+        "geometriesCreated": 537,
+        "buildSyncMs": 9.6,
+        "buildTotalMs": 10.5,
+        "worldSolidRebuildMs": 4.68
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 78.7,
+        "liveMaterialsPct": 65.6,
+        "worldSolidMaterialsPct": 99.5,
+        "drawUnitsPct": 36,
+        "worldSolidDrawUnitsPct": 98.2,
+        "geometriesCreatedPct": -0.2
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 83,
+        "liveMaterialsPct": 73.6,
+        "worldSolidMaterialsPct": 99.5,
+        "drawUnitsPct": 36,
+        "worldSolidDrawUnitsPct": 98.2,
+        "geometriesCreatedPct": -0.2
+      }
+    },
+    {
+      "label": "flush-50",
+      "actors": 130,
+      "rooms": 56,
+      "baseline": {
+        "all": {
+          "meshes": 265,
+          "drawUnits": 614,
+          "triangles": 2812,
+          "liveGeometries": 377,
+          "liveMaterials": 1147
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 154,
+            "drawUnits": 392,
+            "triangles": 1480,
+            "liveGeometries": 155,
+            "liveMaterials": 925,
+            "materialsCreated": 2003
+          },
+          "cutters": {
+            "meshes": 111,
+            "drawUnits": 222,
+            "triangles": 1332,
+            "liveGeometries": 222,
+            "liveMaterials": 222,
+            "materialsCreated": 222
+          }
+        },
+        "worldSolid": {
+          "meshes": 154,
+          "drawUnits": 392,
+          "triangles": 1480,
+          "liveGeometries": 155,
+          "liveMaterials": 925
+        },
+        "materialsCreated": 2225,
+        "geometriesCreated": 378,
+        "buildSyncMs": 8.3,
+        "buildTotalMs": 13,
+        "worldSolidRebuildMs": 4.48
+      },
+      "batched": {
+        "all": {
+          "meshes": 112,
+          "drawUnits": 229,
+          "triangles": 2812,
+          "liveGeometries": 224,
+          "liveMaterials": 229
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 1480,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 111,
+            "drawUnits": 222,
+            "triangles": 1332,
+            "liveGeometries": 222,
+            "liveMaterials": 222,
+            "materialsCreated": 222
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 1480,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 235,
+        "geometriesCreated": 379,
+        "buildSyncMs": 7.6,
+        "buildTotalMs": 8.6,
+        "worldSolidRebuildMs": 3.03
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 112,
+          "drawUnits": 229,
+          "triangles": 2812,
+          "liveGeometries": 224,
+          "liveMaterials": 9
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 1480,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 111,
+            "drawUnits": 222,
+            "triangles": 1332,
+            "liveGeometries": 222,
+            "liveMaterials": 222,
+            "materialsCreated": 2
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 1480,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 15,
+        "geometriesCreated": 379,
+        "buildSyncMs": 6.2,
+        "buildTotalMs": 7.3,
+        "worldSolidRebuildMs": 3.45
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 89.4,
+        "liveMaterialsPct": 80,
+        "worldSolidMaterialsPct": 99.2,
+        "drawUnitsPct": 62.7,
+        "worldSolidDrawUnitsPct": 98.2,
+        "geometriesCreatedPct": -0.3
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 99.3,
+        "liveMaterialsPct": 99.2,
+        "worldSolidMaterialsPct": 99.2,
+        "drawUnitsPct": 62.7,
+        "worldSolidDrawUnitsPct": 98.2,
+        "geometriesCreatedPct": -0.3
+      }
+    },
+    {
+      "label": "rep-50",
+      "actors": 208,
+      "rooms": 56,
+      "baseline": {
+        "all": {
+          "meshes": 690,
+          "drawUnits": 2121,
+          "triangles": 6002,
+          "liveGeometries": 1019,
+          "liveMaterials": 3579
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 362,
+            "drawUnits": 715,
+            "triangles": 2066,
+            "liveGeometries": 363,
+            "liveMaterials": 2173,
+            "materialsCreated": 4707
+          },
+          "cutters": {
+            "meshes": 178,
+            "drawUnits": 356,
+            "triangles": 2136,
+            "liveGeometries": 356,
+            "liveMaterials": 356,
+            "materialsCreated": 356
+          },
+          "stairs": {
+            "meshes": 150,
+            "drawUnits": 1050,
+            "triangles": 1800,
+            "liveGeometries": 300,
+            "liveMaterials": 1050,
+            "materialsCreated": 1210
+          }
+        },
+        "worldSolid": {
+          "meshes": 362,
+          "drawUnits": 715,
+          "triangles": 2066,
+          "liveGeometries": 363,
+          "liveMaterials": 2173
+        },
+        "materialsCreated": 6273,
+        "geometriesCreated": 1020,
+        "buildSyncMs": 21,
+        "buildTotalMs": 29.8,
+        "worldSolidRebuildMs": 10.88
+      },
+      "batched": {
+        "all": {
+          "meshes": 329,
+          "drawUnits": 1413,
+          "triangles": 6002,
+          "liveGeometries": 658,
+          "liveMaterials": 1413
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 2066,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 178,
+            "drawUnits": 356,
+            "triangles": 2136,
+            "liveGeometries": 356,
+            "liveMaterials": 356,
+            "materialsCreated": 356
+          },
+          "stairs": {
+            "meshes": 150,
+            "drawUnits": 1050,
+            "triangles": 1800,
+            "liveGeometries": 300,
+            "liveMaterials": 1050,
+            "materialsCreated": 1210
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 2066,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 1579,
+        "geometriesCreated": 1021,
+        "buildSyncMs": 17.5,
+        "buildTotalMs": 19.8,
+        "worldSolidRebuildMs": 8.16
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 329,
+          "drawUnits": 1413,
+          "triangles": 6002,
+          "liveGeometries": 658,
+          "liveMaterials": 1059
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 2066,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 178,
+            "drawUnits": 356,
+            "triangles": 2136,
+            "liveGeometries": 356,
+            "liveMaterials": 356,
+            "materialsCreated": 2
+          },
+          "stairs": {
+            "meshes": 150,
+            "drawUnits": 1050,
+            "triangles": 1800,
+            "liveGeometries": 300,
+            "liveMaterials": 1050,
+            "materialsCreated": 1210
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 2066,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 1225,
+        "geometriesCreated": 1021,
+        "buildSyncMs": 17,
+        "buildTotalMs": 18.5,
+        "worldSolidRebuildMs": 8.58
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 74.8,
+        "liveMaterialsPct": 60.5,
+        "worldSolidMaterialsPct": 99.7,
+        "drawUnitsPct": 33.4,
+        "worldSolidDrawUnitsPct": 99,
+        "geometriesCreatedPct": -0.1
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 80.5,
+        "liveMaterialsPct": 70.4,
+        "worldSolidMaterialsPct": 99.7,
+        "drawUnitsPct": 33.4,
+        "worldSolidDrawUnitsPct": 99,
+        "geometriesCreatedPct": -0.1
+      }
+    },
+    {
+      "label": "flush-100",
+      "actors": 227,
+      "rooms": 100,
+      "baseline": {
+        "all": {
+          "meshes": 454,
+          "drawUnits": 1075,
+          "triangles": 5132,
+          "liveGeometries": 654,
+          "liveMaterials": 1929
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 255,
+            "drawUnits": 677,
+            "triangles": 2744,
+            "liveGeometries": 256,
+            "liveMaterials": 1531,
+            "materialsCreated": 3316
+          },
+          "cutters": {
+            "meshes": 199,
+            "drawUnits": 398,
+            "triangles": 2388,
+            "liveGeometries": 398,
+            "liveMaterials": 398,
+            "materialsCreated": 398
+          }
+        },
+        "worldSolid": {
+          "meshes": 255,
+          "drawUnits": 677,
+          "triangles": 2744,
+          "liveGeometries": 256,
+          "liveMaterials": 1531
+        },
+        "materialsCreated": 3714,
+        "geometriesCreated": 655,
+        "buildSyncMs": 12.5,
+        "buildTotalMs": 18.2,
+        "worldSolidRebuildMs": 8.21
+      },
+      "batched": {
+        "all": {
+          "meshes": 200,
+          "drawUnits": 405,
+          "triangles": 5132,
+          "liveGeometries": 400,
+          "liveMaterials": 405
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 2744,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 199,
+            "drawUnits": 398,
+            "triangles": 2388,
+            "liveGeometries": 398,
+            "liveMaterials": 398,
+            "materialsCreated": 398
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 2744,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 411,
+        "geometriesCreated": 656,
+        "buildSyncMs": 11.4,
+        "buildTotalMs": 12.6,
+        "worldSolidRebuildMs": 6.53
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 200,
+          "drawUnits": 405,
+          "triangles": 5132,
+          "liveGeometries": 400,
+          "liveMaterials": 9
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 2744,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 199,
+            "drawUnits": 398,
+            "triangles": 2388,
+            "liveGeometries": 398,
+            "liveMaterials": 398,
+            "materialsCreated": 2
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 2744,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 15,
+        "geometriesCreated": 656,
+        "buildSyncMs": 10.8,
+        "buildTotalMs": 12.4,
+        "worldSolidRebuildMs": 6.46
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 88.9,
+        "liveMaterialsPct": 79,
+        "worldSolidMaterialsPct": 99.5,
+        "drawUnitsPct": 62.3,
+        "worldSolidDrawUnitsPct": 99,
+        "geometriesCreatedPct": -0.2
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 99.6,
+        "liveMaterialsPct": 99.5,
+        "worldSolidMaterialsPct": 99.5,
+        "drawUnitsPct": 62.3,
+        "worldSolidDrawUnitsPct": 99,
+        "geometriesCreatedPct": -0.2
+      }
+    },
+    {
+      "label": "rep-100",
+      "actors": 364,
+      "rooms": 100,
+      "baseline": {
+        "all": {
+          "meshes": 1182,
+          "drawUnits": 3680,
+          "triangles": 10728,
+          "liveGeometries": 1756,
+          "liveMaterials": 6076
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 609,
+            "drawUnits": 1259,
+            "triangles": 3852,
+            "liveGeometries": 610,
+            "liveMaterials": 3655,
+            "materialsCreated": 7918
+          },
+          "cutters": {
+            "meshes": 318,
+            "drawUnits": 636,
+            "triangles": 3816,
+            "liveGeometries": 636,
+            "liveMaterials": 636,
+            "materialsCreated": 636
+          },
+          "stairs": {
+            "meshes": 255,
+            "drawUnits": 1785,
+            "triangles": 3060,
+            "liveGeometries": 510,
+            "liveMaterials": 1785,
+            "materialsCreated": 2057
+          }
+        },
+        "worldSolid": {
+          "meshes": 609,
+          "drawUnits": 1259,
+          "triangles": 3852,
+          "liveGeometries": 610,
+          "liveMaterials": 3655
+        },
+        "materialsCreated": 10611,
+        "geometriesCreated": 1757,
+        "buildSyncMs": 39.6,
+        "buildTotalMs": 51.7,
+        "worldSolidRebuildMs": 28.57
+      },
+      "batched": {
+        "all": {
+          "meshes": 574,
+          "drawUnits": 2428,
+          "triangles": 10728,
+          "liveGeometries": 1148,
+          "liveMaterials": 2428
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 3852,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 318,
+            "drawUnits": 636,
+            "triangles": 3816,
+            "liveGeometries": 636,
+            "liveMaterials": 636,
+            "materialsCreated": 636
+          },
+          "stairs": {
+            "meshes": 255,
+            "drawUnits": 1785,
+            "triangles": 3060,
+            "liveGeometries": 510,
+            "liveMaterials": 1785,
+            "materialsCreated": 2057
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 3852,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 2706,
+        "geometriesCreated": 1758,
+        "buildSyncMs": 35.5,
+        "buildTotalMs": 38.6,
+        "worldSolidRebuildMs": 20.03
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 574,
+          "drawUnits": 2428,
+          "triangles": 10728,
+          "liveGeometries": 1148,
+          "liveMaterials": 1794
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 3852,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 318,
+            "drawUnits": 636,
+            "triangles": 3816,
+            "liveGeometries": 636,
+            "liveMaterials": 636,
+            "materialsCreated": 2
+          },
+          "stairs": {
+            "meshes": 255,
+            "drawUnits": 1785,
+            "triangles": 3060,
+            "liveGeometries": 510,
+            "liveMaterials": 1785,
+            "materialsCreated": 2057
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 3852,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 2072,
+        "geometriesCreated": 1758,
+        "buildSyncMs": 36.7,
+        "buildTotalMs": 40.5,
+        "worldSolidRebuildMs": 19.64
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 74.5,
+        "liveMaterialsPct": 60,
+        "worldSolidMaterialsPct": 99.8,
+        "drawUnitsPct": 34,
+        "worldSolidDrawUnitsPct": 99.4,
+        "geometriesCreatedPct": -0.1
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 80.5,
+        "liveMaterialsPct": 70.5,
+        "worldSolidMaterialsPct": 99.8,
+        "drawUnitsPct": 34,
+        "worldSolidDrawUnitsPct": 99.4,
+        "geometriesCreatedPct": -0.1
+      }
+    },
+    {
+      "label": "flush-200",
+      "actors": 478,
+      "rooms": 210,
+      "baseline": {
+        "all": {
+          "meshes": 916,
+          "drawUnits": 2210,
+          "triangles": 10740,
+          "liveGeometries": 1336,
+          "liveMaterials": 3821
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 497,
+            "drawUnits": 1372,
+            "triangles": 5712,
+            "liveGeometries": 498,
+            "liveMaterials": 2983,
+            "materialsCreated": 6462
+          },
+          "cutters": {
+            "meshes": 419,
+            "drawUnits": 838,
+            "triangles": 5028,
+            "liveGeometries": 838,
+            "liveMaterials": 838,
+            "materialsCreated": 838
+          }
+        },
+        "worldSolid": {
+          "meshes": 497,
+          "drawUnits": 1372,
+          "triangles": 5712,
+          "liveGeometries": 498,
+          "liveMaterials": 2983
+        },
+        "materialsCreated": 7300,
+        "geometriesCreated": 1337,
+        "buildSyncMs": 33.6,
+        "buildTotalMs": 44.6,
+        "worldSolidRebuildMs": 23.93
+      },
+      "batched": {
+        "all": {
+          "meshes": 420,
+          "drawUnits": 845,
+          "triangles": 10740,
+          "liveGeometries": 840,
+          "liveMaterials": 845
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 5712,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 419,
+            "drawUnits": 838,
+            "triangles": 5028,
+            "liveGeometries": 838,
+            "liveMaterials": 838,
+            "materialsCreated": 838
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 5712,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 851,
+        "geometriesCreated": 1338,
+        "buildSyncMs": 27.4,
+        "buildTotalMs": 30.6,
+        "worldSolidRebuildMs": 19.84
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 420,
+          "drawUnits": 845,
+          "triangles": 10740,
+          "liveGeometries": 840,
+          "liveMaterials": 9
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 5712,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 419,
+            "drawUnits": 838,
+            "triangles": 5028,
+            "liveGeometries": 838,
+            "liveMaterials": 838,
+            "materialsCreated": 2
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 5712,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 15,
+        "geometriesCreated": 1338,
+        "buildSyncMs": 29.7,
+        "buildTotalMs": 32.1,
+        "worldSolidRebuildMs": 20.13
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 88.3,
+        "liveMaterialsPct": 77.9,
+        "worldSolidMaterialsPct": 99.8,
+        "drawUnitsPct": 61.8,
+        "worldSolidDrawUnitsPct": 99.5,
+        "geometriesCreatedPct": -0.1
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 99.8,
+        "liveMaterialsPct": 99.8,
+        "worldSolidMaterialsPct": 99.8,
+        "drawUnitsPct": 61.8,
+        "worldSolidDrawUnitsPct": 99.5,
+        "geometriesCreatedPct": -0.1
+      }
+    },
+    {
+      "label": "rep-200",
+      "actors": 760,
+      "rooms": 210,
+      "baseline": {
+        "all": {
+          "meshes": 2491,
+          "drawUnits": 7652,
+          "triangles": 22980,
+          "liveGeometries": 3682,
+          "liveMaterials": 12812
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1301,
+            "drawUnits": 2647,
+            "triangles": 8700,
+            "liveGeometries": 1302,
+            "liveMaterials": 7807,
+            "materialsCreated": 16914
+          },
+          "cutters": {
+            "meshes": 665,
+            "drawUnits": 1330,
+            "triangles": 7980,
+            "liveGeometries": 1330,
+            "liveMaterials": 1330,
+            "materialsCreated": 1330
+          },
+          "stairs": {
+            "meshes": 525,
+            "drawUnits": 3675,
+            "triangles": 6300,
+            "liveGeometries": 1050,
+            "liveMaterials": 3675,
+            "materialsCreated": 4235
+          }
+        },
+        "worldSolid": {
+          "meshes": 1301,
+          "drawUnits": 2647,
+          "triangles": 8700,
+          "liveGeometries": 1302,
+          "liveMaterials": 7807
+        },
+        "materialsCreated": 22479,
+        "geometriesCreated": 3683,
+        "buildSyncMs": 110,
+        "buildTotalMs": 144,
+        "worldSolidRebuildMs": 88.3
+      },
+      "batched": {
+        "all": {
+          "meshes": 1191,
+          "drawUnits": 5012,
+          "triangles": 22980,
+          "liveGeometries": 2382,
+          "liveMaterials": 5012
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 8700,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 665,
+            "drawUnits": 1330,
+            "triangles": 7980,
+            "liveGeometries": 1330,
+            "liveMaterials": 1330,
+            "materialsCreated": 1330
+          },
+          "stairs": {
+            "meshes": 525,
+            "drawUnits": 3675,
+            "triangles": 6300,
+            "liveGeometries": 1050,
+            "liveMaterials": 3675,
+            "materialsCreated": 4235
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 8700,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 5578,
+        "geometriesCreated": 3684,
+        "buildSyncMs": 102.1,
+        "buildTotalMs": 107.6,
+        "worldSolidRebuildMs": 65.84
+      },
+      "batchedShared": {
+        "all": {
+          "meshes": 1191,
+          "drawUnits": 5012,
+          "triangles": 22980,
+          "liveGeometries": 2382,
+          "liveMaterials": 3684
+        },
+        "byCategory": {
+          "worldSolid": {
+            "meshes": 1,
+            "drawUnits": 7,
+            "triangles": 8700,
+            "liveGeometries": 2,
+            "liveMaterials": 7,
+            "materialsCreated": 13
+          },
+          "cutters": {
+            "meshes": 665,
+            "drawUnits": 1330,
+            "triangles": 7980,
+            "liveGeometries": 1330,
+            "liveMaterials": 1330,
+            "materialsCreated": 2
+          },
+          "stairs": {
+            "meshes": 525,
+            "drawUnits": 3675,
+            "triangles": 6300,
+            "liveGeometries": 1050,
+            "liveMaterials": 3675,
+            "materialsCreated": 4235
+          }
+        },
+        "worldSolid": {
+          "meshes": 1,
+          "drawUnits": 7,
+          "triangles": 8700,
+          "liveGeometries": 2,
+          "liveMaterials": 7
+        },
+        "materialsCreated": 4250,
+        "geometriesCreated": 3684,
+        "buildSyncMs": 96.5,
+        "buildTotalMs": 103.9,
+        "worldSolidRebuildMs": 66.93
+      },
+      "reductionBatched": {
+        "materialsCreatedPct": 75.2,
+        "liveMaterialsPct": 60.9,
+        "worldSolidMaterialsPct": 99.9,
+        "drawUnitsPct": 34.5,
+        "worldSolidDrawUnitsPct": 99.7,
+        "geometriesCreatedPct": 0
+      },
+      "reductionBatchedShared": {
+        "materialsCreatedPct": 81.1,
+        "liveMaterialsPct": 71.2,
+        "worldSolidMaterialsPct": 99.9,
+        "drawUnitsPct": 34.5,
+        "worldSolidDrawUnitsPct": 99.7,
+        "geometriesCreatedPct": 0
+      }
+    }
+  ]
+}

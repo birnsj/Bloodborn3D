@@ -14,6 +14,8 @@ import {
   TEXTURE_TILE_EDITOR_UNITS,
   applyFaceUvsToGeometry,
   composeActorUv,
+  isIdentityUv,
+  normalizeActorUv,
 } from './uvMapping.js';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 
@@ -189,6 +191,101 @@ export function createExposedWorldSolidGeometry(
     geom.addGroup(g.start, g.count, g.materialIndex);
   }
   applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
+  return geom;
+}
+
+/**
+ * Phase 2G rendering experiment: ALL exposed World Solid patches in one geometry.
+ *
+ * Built from createExposedWorldSolidGeometry per solid (so clipping, winding and
+ * UVs are identical to the per-solid path) and merged in brush-local space.
+ * Triangles are grouped by semantic face (px…nz, `userData.surfaceIds`), so the
+ * mesh needs at most six materials and six draw calls regardless of solid count,
+ * while per-face materials, per-face UV overrides and surface picking keep working.
+ * Collision still uses the unmerged solids.
+ *
+ * Returns null when nothing is exposed. Origin is the brush center (mesh sits at 0).
+ */
+export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, faceUVs = null) {
+  const positions = [];
+  const normals = [];
+  const uvs = [];
+  const faceIndices = FACE_KEYS.map(() => []);
+  let vertexCount = 0;
+
+  // Per-face overrides compose onto each vertex exactly once as it is copied (every
+  // vertex belongs to one face). applyFaceUvsToGeometry walks index entries, which
+  // would re-transform vertices shared by a quad's two triangles.
+  const faceUvOverride = FACE_KEYS.map((key) => {
+    const suv = faceUVs?.[key];
+    return suv && !isIdentityUv(suv) ? normalizeActorUv(suv) : null;
+  });
+
+  for (const solid of solids || []) {
+    const bias = {
+      origin: {
+        x: solid.center.x - solid.size.x * 0.5,
+        y: solid.center.y - solid.size.y * 0.5,
+        z: solid.center.z - solid.size.z * 0.5,
+      },
+    };
+    // faceUVs are applied once on the merged geometry (per-solid 'box' indexing
+    // assumes four vertices per face and is wrong for clipped patches).
+    const part = createExposedWorldSolidGeometry(solid, solids, brushSize, uv, bias, null);
+    if (!part) continue;
+
+    const pos = part.attributes.position;
+    const nor = part.attributes.normal;
+    const uvAttr = part.attributes.uv;
+    const index = part.index;
+    const cx = toMeters(solid.center.x);
+    const cy = toMeters(solid.center.y);
+    const cz = toMeters(solid.center.z);
+    const remap = new Map();
+
+    for (const g of part.groups) {
+      const target = faceIndices[g.materialIndex];
+      for (let i = g.start; i < g.start + g.count; i += 1) {
+        const old = index.getX(i);
+        let next = remap.get(old);
+        if (next === undefined) {
+          next = vertexCount;
+          vertexCount += 1;
+          remap.set(old, next);
+          positions.push(pos.getX(old) + cx, pos.getY(old) + cy, pos.getZ(old) + cz);
+          normals.push(nor.getX(old), nor.getY(old), nor.getZ(old));
+          const override = faceUvOverride[g.materialIndex];
+          if (override) {
+            const [u, v] = composeActorUv(uvAttr.getX(old), uvAttr.getY(old), override);
+            uvs.push(u, v);
+          } else {
+            uvs.push(uvAttr.getX(old), uvAttr.getY(old));
+          }
+        }
+        target.push(next);
+      }
+    }
+    part.dispose();
+  }
+
+  if (!vertexCount) return null;
+
+  const index = [];
+  const groups = [];
+  for (let fi = 0; fi < FACE_KEYS.length; fi += 1) {
+    if (!faceIndices[fi].length) continue;
+    groups.push({ start: index.length, count: faceIndices[fi].length, materialIndex: fi });
+    for (const v of faceIndices[fi]) index.push(v);
+  }
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geom.setIndex(index);
+  for (const g of groups) geom.addGroup(g.start, g.count, g.materialIndex);
+  geom.userData.surfaceIds = [...FACE_KEYS];
+  geom.userData.surfaceScheme = 'grouped';
   return geom;
 }
 

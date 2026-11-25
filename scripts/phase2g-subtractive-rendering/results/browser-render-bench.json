@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-11-24",
+  "source": "public/dev/phase2gRenderBatching.js (Chromium in Cursor browser, editor viewport, single-pane 744x790)",
+  "legend": {
+    "cm": "materials created during full sync",
+    "lm": "live unique materials after sync",
+    "du": "draw units (meshes x materials-with-groups)",
+    "dc": "renderer.info.render.calls, single pane",
+    "tri": "renderer.info.render.triangles, single pane (batched mode loses per-solid frustum culling)",
+    "s1": "single-viewport frame median ms (gl.finish)",
+    "q": "quad-viewport frame median ms (gl.finish)",
+    "eS": "cutter nudge -> syncIncremental median ms",
+    "eR": "same, plus render median ms",
+    "eFull": "full syncs during edit loop (must stay 0)",
+    "col": "play-mode collider count",
+    "pick": "surface picks whose surfaceId matches hit-normal face / hits",
+    "edit": "edit-mode pixel diff vs baseline, % pixels with channel delta > 8, per camera pose",
+    "game": "game-view (no editor overlays) pixel diff vs baseline, '% over 8 / max delta', per pose"
+  },
+  "rows": [
+    {"l":"flush-25","actors":61,"baseline":{"cm":1249,"lm":689,"du":395,"dc":939,"tri":4754,"s1":1.8,"q":9.2,"qc":990,"eS":4.4,"eR":22.2,"eFull":0,"col":98,"pick":"19.9/201"},"batched":{"cm":142,"lm":136,"du":136,"dc":153,"tri":7476,"s1":0.7,"q":2.9,"qc":162,"eS":2,"eR":12.3,"eFull":0,"col":98,"pick":"100/230","edit":[15.47,0,14.29],"game":["0/1","0/1","0/1"]},"batchedShared":{"cm":44,"lm":40,"du":136,"dc":153,"tri":7476,"s1":0.7,"q":2.9,"eS":2,"eR":15.5,"eFull":0,"col":98}},
+    {"l":"rep-25","actors":99,"baseline":{"cm":3983,"lm":2349,"du":1414,"dc":2278,"tri":6782,"s1":6.7,"q":37.6,"qc":2618,"eS":12.4,"eR":31.9,"eFull":0,"col":352,"pick":"16.2/136"},"batched":{"cm":888,"lm":802,"du":802,"dc":928,"tri":12236,"s1":2.3,"q":9.8,"qc":980,"eS":5.8,"eR":9.7,"eFull":0,"col":352,"pick":"100/149","edit":[5.62,0,0.04],"game":["0/4","0/1","0/2"]},"batchedShared":{"cm":726,"lm":642,"du":802,"dc":928,"tri":12236,"s1":2.2,"q":9.1,"eS":5.7,"eR":9.4,"eFull":0,"col":352}},
+    {"l":"flush-50","actors":130,"baseline":{"cm":2430,"lm":1352,"du":819,"dc":1155,"tri":8560,"s1":3.3,"q":14.3,"qc":1128,"eS":8.3,"eR":31.1,"eFull":0,"col":172,"pick":"24.1/166"},"batched":{"cm":287,"lm":281,"du":281,"dc":219,"tri":15112,"s1":1.1,"q":4.2,"qc":198,"eS":4.2,"eR":15.4,"eFull":0,"col":172,"pick":"100/227","edit":[11.07,0,15.95],"game":["0/3","0/1","0/1"]},"batchedShared":{"cm":65,"lm":61,"du":281,"dc":219,"tri":15112,"s1":1.1,"q":4.1,"eS":4.1,"eR":14.2,"eFull":0,"col":172}},
+    {"l":"rep-50","actors":208,"baseline":{"cm":6838,"lm":4144,"du":2686,"dc":2477,"tri":10048,"s1":9.9,"q":45.1,"qc":2424,"eS":20.5,"eR":50.2,"eFull":0,"col":541,"pick":"29.2/178"},"batched":{"cm":1783,"lm":1617,"du":1617,"dc":929,"tri":21378,"s1":3.5,"q":12.5,"qc":822,"eS":11.6,"eR":17.3,"eFull":0,"col":541,"pick":"100/205","edit":[10.44,0,13.21],"game":["0.0003/12","0/1","0/2"]},"batchedShared":{"cm":1427,"lm":1263,"du":1617,"dc":929,"tri":21378,"s1":3.2,"q":12.1,"eS":11,"eR":16.1,"eFull":0,"col":541}},
+    {"l":"flush-100","actors":227,"baseline":{"cm":4047,"lm":2262,"du":1408,"dc":1405,"tri":12728,"s1":5.4,"q":20.3,"qc":1164,"eS":13.8,"eR":40.9,"eFull":0,"col":278,"pick":"27.2/191"},"batched":{"cm":490,"lm":484,"du":484,"dc":301,"tri":25044,"s1":1.7,"q":5.6,"qc":222,"eS":8.4,"eR":20.8,"eFull":0,"col":278,"pick":"100/229","edit":[1.82,0,9.6],"game":["0/1","0/1","0.0002/9"]},"batchedShared":{"cm":92,"lm":88,"du":484,"dc":301,"tri":25044,"s1":1.7,"q":5.6,"eS":8.4,"eR":20.2,"eFull":0,"col":278}},
+    {"l":"rep-100","actors":364,"baseline":{"cm":11555,"lm":7020,"du":4624,"dc":3147,"tri":13952,"s1":15.5,"q":61.3,"qc":2375,"eS":39.1,"eR":78.5,"eFull":0,"col":901,"pick":"23.7/177"},"batched":{"cm":3042,"lm":2764,"du":2764,"dc":1275,"tri":35648,"s1":6.1,"q":21,"qc":953,"eS":22.7,"eR":33,"eFull":0,"col":901,"pick":"100/220","edit":[5.3,0,5.04],"game":["0/4","0/1","0/3"]},"batchedShared":{"cm":2406,"lm":2130,"du":2764,"dc":1275,"tri":35648,"s1":5.6,"q":20,"eS":23.8,"eR":32.1,"eFull":0,"col":901}},
+    {"l":"flush-200","actors":478,"baseline":{"cm":7968,"lm":4489,"du":2878,"dc":1908,"tri":23250,"s1":10.3,"q":32.6,"qc":1176,"eS":32.6,"eR":76.4,"eFull":0,"col":522,"pick":"28.5/172"},"batched":{"cm":1023,"lm":1017,"du":1017,"dc":468,"tri":49708,"s1":3.2,"q":8.6,"qc":222,"eS":22.7,"eR":39.6,"eFull":0,"col":522,"pick":"100/234","edit":[1.92,0,9.56],"game":["0/2","0/1","0.0002/9"]},"batchedShared":{"cm":185,"lm":181,"du":1017,"dc":468,"tri":49708,"s1":2.9,"q":8.4,"eS":22,"eR":37.6,"eFull":0,"col":522}},
+    {"l":"rep-200","actors":760,"baseline":{"cm":24478,"lm":14811,"du":9651,"dc":4729,"tri":25686,"s1":30.3,"q":105.1,"qc":2577,"eS":113.7,"eR":187.5,"eFull":0,"col":1912,"pick":"23.6/165"},"batched":{"cm":6277,"lm":5711,"du":5711,"dc":1909,"tri":74792,"s1":12.1,"q":35.3,"qc":777,"eS":76.4,"eR":95.2,"eFull":0,"col":1912,"pick":"100/219","edit":[5.11,0,4.52],"game":["0.0053/18","0/1","0/3"]},"batchedShared":{"cm":4947,"lm":4383,"du":5711,"dc":1909,"tri":74792,"s1":11.7,"q":32.8,"eS":77.4,"eR":90.8,"eFull":0,"col":1912}}
+  ]
+}
