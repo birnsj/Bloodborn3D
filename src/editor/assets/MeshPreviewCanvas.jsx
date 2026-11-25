@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { cloneLoadedMesh } from '../../runtime/meshLoader.js';
 import { createThreeMaterial, assetUrl } from '../../runtime/materialFactory.js';
+import { disposeObjectTree, disposeOwnedMaterial } from '../../runtime/gpuResources.js';
 import { installStudioEnvironment } from '../../runtime/studioEnvironment.js';
 
 /**
@@ -70,7 +71,11 @@ export function MeshPreviewCanvas({ url }) {
     ro.observe(canvas);
 
     cloneLoadedMesh(url).then((loaded) => {
-      if (disposed || !loaded?.root) return;
+      if (!loaded?.root) return;
+      if (disposed) {
+        disposeObjectTree(loaded.root);
+        return;
+      }
       root = loaded.root;
       scene.add(root);
       fit(root);
@@ -91,13 +96,8 @@ export function MeshPreviewCanvas({ url }) {
       controls.dispose();
       if (root) {
         scene.remove(root);
-        root.traverse((child) => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
-            else child.material.dispose();
-          }
-        });
+        // Skip shared cached GLTF geometries; dispose instance-owned materials only.
+        disposeObjectTree(root);
       }
       renderer.dispose();
     };
@@ -236,14 +236,14 @@ export function MaterialPreviewCanvas({
       };
       const next = await createThreeMaterial(definition, resolver);
       if (disposed) {
-        next.dispose();
+        disposeOwnedMaterial(next);
         return;
       }
       for (const mapKey of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
         if (next[mapKey]) textures.push(next[mapKey]);
       }
       mesh.material = next;
-      mat.dispose();
+      disposeOwnedMaterial(mat);
       mat = next;
     };
 
@@ -279,9 +279,12 @@ export function MaterialPreviewCanvas({
       controls.dispose();
       mesh.geometry.dispose();
       ground.geometry.dispose();
-      ground.material.dispose();
-      for (const tex of textures) tex.dispose?.();
-      mat.dispose();
+      disposeOwnedMaterial(ground.material);
+      // Instance-owned clones only — shared cache textures are not in `textures`.
+      for (const tex of textures) {
+        if (!tex?.userData?.bbShared) tex.dispose?.();
+      }
+      disposeOwnedMaterial(mat);
       studioEnv?.dispose?.();
       scene.environment = null;
       renderer.dispose();

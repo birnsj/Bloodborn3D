@@ -2,14 +2,14 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.6** complete, Phase **2F.7A** subtractive map mode complete.
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.6** complete, Phase **2F.7A** subtractive map mode complete, Phase **2F.7B** asset lifecycle hardening complete.
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **560 / 560 pass** (2F.7A gate; see `ACCEPTANCE_SUBTRACTIVE.md`) |
+| `npm test` | **569 / 569 pass** (2F.7B gate; see `ACCEPTANCE_ASSET_LIFECYCLE.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
@@ -21,6 +21,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.5 | Integrated pipeline; `phase2f5Integration.test.js`; `acceptance-convex-brushes.json`; browser PASS; mansion regression |
 | Phase 2F.6 | Multi-viewport + ortho + marquee; scissor shared SceneView; browser harness PASS |
 | Phase 2F.7A | Subtractive map mode; empty-adjacent face culling; World Solid auto-fit; `acceptance-subtractive.json` |
+| Phase 2F.7B | Asset lifecycle / GPU ownership; actor visualEpoch; shared vs owned dispose; see `ACCEPTANCE_ASSET_LIFECYCLE.md` |
 
 ## 2. Implemented systems
 
@@ -41,6 +42,7 @@ Status is what the code does today, not an intent.
 | Geometry integration (2F.5) | Verified | Full pipeline + prefab/schema/Play-Stop/mansion regression; see `ACCEPTANCE_CONVEX_BRUSHES.md`. |
 | Multi-viewport (2F.6) | Verified | Shared SceneView scissor panes; ortho + display modes + marquee; see `ACCEPTANCE_MULTI_VIEWPORT.md`. |
 | Subtractive map mode (2F.7A) | Verified | New Map → Subtractive; World Solid empty-adjacent faces only; auto-fit shell; additive pipeline unchanged; see `ACCEPTANCE_SUBTRACTIVE.md`. |
+| Asset / GPU lifecycle (2F.7B) | Verified | Per-actor visual epochs; shared cache vs owned clones; preview abandonment; see `ACCEPTANCE_ASSET_LIFECYCLE.md`. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |
@@ -103,12 +105,12 @@ These were out of scope for the pass and are unchanged.
 - **Tutorial "Save as" drops the stored project snapshot.** `saveTutorialWorkAs` sets `sessionStackRef.current = []` after saving, discarding the project world captured when the tutorial began. Not reproduced.
 - **Orphan parent references are silently nulled on load.** `LevelDeserializer` resets a `parentId` that points at a missing actor to `null`, so a file produced by the old H1 bug loads as unparented actors rather than failing. This was left as is.
 - **Dirty detection cost.** The check serializes the whole world. It is debounced (200 ms) for the indicator and computed synchronously only when guarding a load or closing the tab. Very large levels may need a cheaper scheme.
-- **Late materials in two other paths.** `_applySimpleParamMaterial` and `_applyRampMaterial` already ignore stale results but dispose with `material.dispose()` only (cloned textures are not released). Minor; not changed.
+- **Late materials in surface/ramp paths.** Now use the same actor-epoch + `disposeOwnedMaterial` path as brushes (2F.7B).
 - **Selection after Stop.** Selection is cleared on Stop. Preserving it was not requested.
 
 ## 6. Deferred technical debt
 
-- Incremental scene synchronization (M6).
+- Incremental scene synchronization (M6) — Phase **2F.7C**.
 - Runtime/editor dependency separation (M8).
 - Static-mesh collider generation (M10).
 - Splitting the single production chunk.

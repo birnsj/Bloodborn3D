@@ -63,6 +63,7 @@ import {
   surfaceIdFromHit,
 } from './surfaces.js';
 import { cloneLoadedMesh } from './meshLoader.js';
+import { disposeObjectTree, disposeOwnedMaterial } from './gpuResources.js';
 import { installStudioEnvironment } from './studioEnvironment.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import { createRampFromBounds } from '../editor/rampFactory.js';
@@ -619,6 +620,9 @@ export class SceneView {
    * Rebuild only this actor's brush / convex-brush meshes in place.
    * Avoids syncFromWorld on every gizmo resize sample (which was disposing the
    * entire scene graph and could make brushes vanish).
+   *
+   * Bumps only this actor's visualEpoch — not the global sync token — so other
+   * actors' in-flight material/mesh loads are not cancelled.
    */
   updateBrushGeometry(actor) {
     const brush = actor?.getComponent?.('Brush');
@@ -642,9 +646,13 @@ export class SceneView {
       disposeObject(child);
     }
 
-    const token = ++this._syncToken;
+    entry.visualEpoch = (entry.visualEpoch || 0) + 1;
+    const token = this._syncToken;
     if (convex) this._addConvexBrushVisual(entry.group, actor, convex, token);
     else this._addBrushVisual(entry.group, actor, brush, token);
+    entry.group.traverse((obj) => {
+      if (obj.userData?.actorId === actor.id) this._stampActorVisual(obj, actor.id);
+    });
     for (const child of childGroups) {
       entry.group.add(child);
     }
@@ -654,6 +662,25 @@ export class SceneView {
       this._refreshGeometryFaceOverlays(actor.world);
       this._updateGeometryGizmo(actor.world);
     }
+  }
+
+  /** True when a full-world sync token and this actor's visual epoch still match. */
+  _isActorVisualCurrent(actorId, syncToken, visualEpoch) {
+    if (syncToken !== this._syncToken) return false;
+    // Direct helper calls (unit tests) may omit actor binding — sync token only.
+    if (actorId == null || actorId === '') return true;
+    const entry = this._actorMeshes.get(actorId);
+    if (!entry) return false;
+    if (visualEpoch != null && entry.visualEpoch !== visualEpoch) return false;
+    return true;
+  }
+
+  /** Stamp meshes so async material/mesh loads can detect actor-local rebuilds. */
+  _stampActorVisual(obj, actorId) {
+    if (!obj) return;
+    const entry = this._actorMeshes.get(actorId);
+    obj.userData.actorId = actorId;
+    obj.userData.visualEpoch = entry?.visualEpoch ?? 0;
   }
 
   /** Pull nested actor Three groups out of a parent group without disposing them. */
@@ -689,6 +716,14 @@ export class SceneView {
     const scale = actor.transform.scale;
     group.scale.set(scale.x, scale.y, scale.z);
     group.visible = isEffectivelyVisible(actor, world);
+
+    // Register before component visuals so async loads can read visualEpoch.
+    const prevEpoch = this._actorMeshes.get(actor.id)?.visualEpoch || 0;
+    this._actorMeshes.set(actor.id, {
+      group,
+      actor,
+      visualEpoch: prevEpoch + 1,
+    });
 
     for (const comp of actor.components) {
       if (!comp.enabled) continue;
@@ -742,11 +777,15 @@ export class SceneView {
       }
     }
 
+    group.traverse((obj) => {
+      if (obj === group || obj.userData?.actorId === actor.id) {
+        this._stampActorVisual(obj, actor.id);
+      }
+    });
+
     const parentEntry = actor.parentId ? this._actorMeshes.get(actor.parentId) : null;
     if (parentEntry) parentEntry.group.add(group);
     else this.root.add(group);
-
-    this._actorMeshes.set(actor.id, { group, actor });
   }
 
   _addConvexBrushVisual(group, actor, comp, syncToken) {
@@ -1166,6 +1205,9 @@ export class SceneView {
   async _applySurfaceMaterials(mesh, comp, syncToken) {
     const resolver = this.assetResolver;
     if (!resolver?.getMaterialDefinition) return;
+    const actorId = mesh.userData?.actorId;
+    const visualEpoch = mesh.userData?.visualEpoch;
+    const stillCurrent = () => this._isActorVisualCurrent(actorId, syncToken, visualEpoch);
     const surfaceIds = mesh.userData?.surfaceIds
       || mesh.geometry?.userData?.surfaceIds
       || null;
@@ -1184,11 +1226,11 @@ export class SceneView {
       const matId = comp.materialId;
       if (!matId) return;
       const def = await resolveDef(matId);
-      if (syncToken !== this._syncToken || !def) return;
+      if (!stillCurrent() || !def) return;
       const mat = await createThreeMaterial(def, mapResolver, {
         maxAnisotropy: this.maxAnisotropy,
       });
-      if (syncToken !== this._syncToken) {
+      if (!stillCurrent()) {
         disposeMaterial(mat);
         return;
       }
@@ -1202,7 +1244,7 @@ export class SceneView {
     }
 
     const defaultDef = await resolveDef(comp.materialId);
-    if (syncToken !== this._syncToken) return;
+    if (!stillCurrent()) return;
 
     for (let i = 0; i < surfaceIds.length; i += 1) {
       const surfaceId = surfaceIds[i];
@@ -1210,13 +1252,13 @@ export class SceneView {
       let def = null;
       if (faceMatId && faceMatId === comp.materialId) def = defaultDef;
       else if (faceMatId) def = await resolveDef(faceMatId);
-      if (syncToken !== this._syncToken) return;
+      if (!stillCurrent()) return;
       if (!def) continue;
 
       const mat = await createThreeMaterial(def, mapResolver, {
         maxAnisotropy: this.maxAnisotropy,
       });
-      if (syncToken !== this._syncToken) {
+      if (!stillCurrent()) {
         disposeMaterial(mat);
         return;
       }
@@ -1235,6 +1277,9 @@ export class SceneView {
 
   async _applyBrushMaterials(mesh, comp, syncToken) {
     const resolver = this.assetResolver;
+    const actorId = mesh.userData?.actorId;
+    const visualEpoch = mesh.userData?.visualEpoch;
+    const stillCurrent = () => this._isActorVisualCurrent(actorId, syncToken, visualEpoch);
     const mapResolver = (assetId) => {
       if (!resolver?.getTextureUrl) return null;
       return assetUrl(resolver.getTextureUrl(assetId));
@@ -1246,7 +1291,7 @@ export class SceneView {
     };
 
     const defaultDef = await resolveDef(comp.materialId);
-    if (syncToken !== this._syncToken) return;
+    if (!stillCurrent()) return;
 
     for (let i = 0; i < FACE_KEYS.length; i += 1) {
       const faceKey = FACE_KEYS[i];
@@ -1254,13 +1299,12 @@ export class SceneView {
       let def = null;
       if (faceMatId && faceMatId === comp.materialId) def = defaultDef;
       else if (faceMatId) def = await resolveDef(faceMatId);
-      if (syncToken !== this._syncToken) return;
+      if (!stillCurrent()) return;
 
       if (def) {
         const mat = await createThreeMaterial(def, mapResolver);
-        // The scene may have been rebuilt while textures loaded; this mesh is
-        // already disposed, so release the new material instead of attaching it.
-        if (syncToken !== this._syncToken) {
+        // Actor rebuilt / world synced while textures loaded — release, do not attach.
+        if (!stillCurrent()) {
           disposeMaterial(mat);
           return;
         }
@@ -1290,25 +1334,30 @@ export class SceneView {
     placeholder.userData.actorId = actor.id;
     placeholder.userData.pickable = true;
     placeholder.userData.placeholder = true;
+    this._stampActorVisual(placeholder, actor.id);
     group.add(placeholder);
 
     const url = this.assetResolver?.getMeshUrl?.(comp.assetId);
     if (!url) return;
 
+    const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
     const loaded = await cloneLoadedMesh(assetUrl(url) || url);
-    if (syncToken !== this._syncToken) return;
+    if (!this._isActorVisualCurrent(actor.id, syncToken, visualEpoch)) {
+      // Abandoned load — cloned materials are owned; geometries stay shared in cache.
+      if (loaded?.root) disposeObject(loaded.root);
+      return;
+    }
     if (!loaded?.root) return;
-    if (!this._actorMeshes.has(actor.id)) return;
 
     group.remove(placeholder);
     disposeObject(placeholder);
 
     loaded.root.traverse((obj) => {
       if (obj.isMesh) {
-        obj.userData.actorId = actor.id;
         obj.userData.pickable = true;
         obj.castShadow = true;
         obj.receiveShadow = true;
+        this._stampActorVisual(obj, actor.id);
       }
     });
     group.add(loaded.root);
@@ -2515,26 +2564,11 @@ function closestParamOnSegment2D(p, a, b) {
 }
 
 function disposeObject(obj) {
-  obj.traverse?.((child) => {
-    if (child.geometry) child.geometry.dispose();
-    if (child.material) {
-      if (Array.isArray(child.material)) child.material.forEach((m) => disposeMaterial(m));
-      else disposeMaterial(child.material);
-    }
-  });
-  if (obj.geometry) obj.geometry.dispose();
-  if (obj.material) {
-    if (Array.isArray(obj.material)) obj.material.forEach((m) => disposeMaterial(m));
-    else disposeMaterial(obj.material);
-  }
+  disposeObjectTree(obj);
 }
 
 function disposeMaterial(mat) {
-  if (!mat) return;
-  for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
-    if (mat[key]?.dispose) mat[key].dispose();
-  }
-  mat.dispose?.();
+  disposeOwnedMaterial(mat);
 }
 
 /** Darken a CSS hex for cut-face fallback tinting. */

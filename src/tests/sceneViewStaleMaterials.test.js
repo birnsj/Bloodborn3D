@@ -26,11 +26,14 @@ function fakeMaterial(label) {
 function makeView(token = 1) {
   return {
     _syncToken: token,
+    _actorMeshes: new Map(),
     maxAnisotropy: 4,
     assetResolver: {
       getMaterialDefinition: async (id) => ({ id }),
       getTextureUrl: () => null,
     },
+    _isActorVisualCurrent: SceneView.prototype._isActorVisualCurrent,
+    _applyHiddenHullFaces() {},
   };
 }
 

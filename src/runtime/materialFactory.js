@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createRetryableCache } from './retryableCache.js';
+import { markOwnedGpuResource, markSharedGpuResource } from './gpuResources.js';
 
 const textureCache = createRetryableCache();
 const loader = new THREE.TextureLoader();
@@ -40,7 +41,11 @@ export function loadTexture(url, { normal = false } = {}) {
   return textureCache.get(key, () => new Promise((resolve) => {
     loader.load(
       url,
-      (tex) => resolve(normal ? configureNormalTexture(tex) : configureTexture(tex)),
+      (tex) => {
+        const configured = normal ? configureNormalTexture(tex) : configureTexture(tex);
+        // Cache entry is shared across materials — instances must clone first.
+        resolve(markSharedGpuResource(configured));
+      },
       undefined,
       () => resolve(null),
     );
@@ -86,8 +91,8 @@ export async function createThreeMaterial(definition, mapResolver = () => null, 
     if (!url) return;
     const tex = await loadTexture(url, { normal });
     if (!tex) return;
-    // Clone so UV transforms can differ per brush instance
-    const clone = tex.clone();
+    // Clone so UV transforms can differ per brush instance; clone is instance-owned.
+    const clone = markOwnedGpuResource(tex.clone());
     clone.needsUpdate = true;
     if (options.maxAnisotropy) {
       clone.anisotropy = options.maxAnisotropy;

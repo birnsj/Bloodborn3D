@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { validateMeshScale, metersToEditorSize } from '../assets/assetCatalog.js';
 import { createRetryableCache } from './retryableCache.js';
+import { markOwnedGpuResource, markSharedGpuResource, markSharedSubtree } from './gpuResources.js';
 
 const gltfLoader = new GLTFLoader();
 const meshCache = createRetryableCache();
@@ -34,6 +35,8 @@ export function loadGltfScene(url) {
           triangles: countTriangles(root),
         };
         const validation = validateMeshScale(meta);
+        // Geometries/materials stay in the cache — mark shared before cloning out.
+        markSharedSubtree(root, { materials: true });
         resolve({
           scene: root,
           animations: gltf.animations || [],
@@ -55,11 +58,13 @@ export async function cloneLoadedMesh(url) {
     if (obj.isMesh) {
       obj.castShadow = true;
       obj.receiveShadow = true;
+      // Geometry remains shared with the cache; never dispose on instance teardown.
+      if (obj.geometry) markSharedGpuResource(obj.geometry);
       if (obj.material) {
         if (Array.isArray(obj.material)) {
-          obj.material = obj.material.map((m) => m.clone());
+          obj.material = obj.material.map((m) => markOwnedGpuResource(m.clone()));
         } else {
-          obj.material = obj.material.clone();
+          obj.material = markOwnedGpuResource(obj.material.clone());
         }
       }
     }

@@ -208,13 +208,22 @@ auto-grows to shell subtract volumes.
 - Units: `phase2f7aSubtractive.test.js`, `worldSolidFit.test.js`, `brushBoolean.test.js` (face hide)
 - Report: `docs/ACCEPTANCE_SUBTRACTIVE.md`
 
+### Phase 2F.7B — Asset Lifecycle and GPU Resource Hardening
+
+**Done** (2026-11-24). Actor-local visual epochs stop single-brush edits from cancelling unrelated
+asset loads. Shared vs instance-owned GPU resources prevent cache corruption on dispose. Preview
+canvases release abandoned loads safely. Additive/subtractive geometry unchanged.
+
+- Units: `gpuResources.test.js`, `phase2f7bAssetLifecycle.test.js`
+- Report: `docs/ACCEPTANCE_ASSET_LIFECYCLE.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B
 ```
 
 ### Out of scope for 2F
@@ -223,11 +232,11 @@ auto-grows to shell subtract volumes.
 - General polygon / Blender-style modeling; concave meshes; true CSG / full BSP
 - Replacing parametric construction tools
 - New npm dependencies for hull building
-- Phase **2F.7B** (not started)
+- Phase **2F.7C** incremental scene synchronization (not started)
 
 ---
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7A) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7B) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
