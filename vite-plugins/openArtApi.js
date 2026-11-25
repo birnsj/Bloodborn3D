@@ -95,6 +95,35 @@ export function openArtApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'upload-reference') {
+            const url = new URL(req.url || '/', 'http://localhost');
+            const originalName = path.basename(url.searchParams.get('name') || 'reference.png');
+            const ext = path.extname(originalName).toLowerCase() || '.png';
+            if (!['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) {
+              sendJson(res, 400, { ok: false, error: `Unsupported reference type: ${ext}`, code: 'INVALID_IMAGE' });
+              return;
+            }
+            const buffer = await readBodyBuffer(req);
+            if (!buffer.length) {
+              sendJson(res, 400, { ok: false, error: 'Empty upload', code: 'INVALID_IMAGE' });
+              return;
+            }
+            await fs.mkdir(STAGING_ROOT, { recursive: true });
+            const stagingId = `ref_${Date.now().toString(36)}`;
+            const fileName = `${stagingId}${ext}`;
+            const absolutePath = path.join(STAGING_ROOT, fileName);
+            await fs.writeFile(absolutePath, buffer);
+            sendJson(res, 200, {
+              ok: true,
+              stagingId,
+              fileName,
+              originalName,
+              absolutePath,
+              bytes: buffer.length,
+            });
+            return;
+          }
+
           if (req.method === 'GET' && action === 'staging-file') {
             const stagingId = url.searchParams.get('stagingId');
             const { meta, absolutePath } = await readStagingFile(stagingId, {
@@ -198,10 +227,14 @@ function sendJson(res, code, data) {
 }
 
 function readBody(req) {
+  return readBodyBuffer(req).then((buf) => buf.toString('utf8'));
+}
+
+function readBodyBuffer(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }

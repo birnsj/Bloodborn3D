@@ -13,6 +13,7 @@ import {
   DOCK_PANELS,
   ensureViewportPanel,
   isValidDockLayout,
+  reopenPanel,
 } from './dockLayout.js';
 
 /** True when the browser drag carries our asset/create payload (not a dock tab). */
@@ -120,6 +121,8 @@ export function LevelDockWorkspace() {
       if (!current.detailsVisible) api.getPanel(DOCK_PANELS.details.id)?.api.close();
       if (!current.contentVisible) api.getPanel(DOCK_PANELS.content.id)?.api.close();
       if (!current.assetViewerVisible) api.getPanel(DOCK_PANELS.assetViewer.id)?.api.close();
+      // OpenArt is opt-in (Window menu); not part of the default dock JSON.
+      if (current.openartVisible) reopenPanel(api, 'openart');
     }
 
     // Never start (or restore) dockview "maximize" — it hides Outliner/Details/etc.

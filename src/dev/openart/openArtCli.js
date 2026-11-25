@@ -226,10 +226,12 @@ export async function estimateCost({
 export async function dryRunGenerateImage({
   prompt,
   modelId,
+  imagePaths = null,
 } = {}, opts = {}) {
   const argv = buildGenerateImageArgv({
     prompt,
     modelId,
+    imagePaths,
     dryRun: true,
     async: false,
   });
@@ -292,6 +294,7 @@ export async function downloadUrlToFile(url, destPath, { fetchImpl = fetch } = {
 export function buildGenerateImageArgv({
   prompt,
   modelId,
+  imagePaths = null,
   dryRun = false,
   async: asyncMode = false,
 } = {}) {
@@ -302,12 +305,34 @@ export function buildGenerateImageArgv({
   }
 
   // Prompt is a single argv element — never interpolated into a shell string.
-  // CLI 0.1.1 image generate only accepts --model / --image / --async / -o;
+  // CLI 0.1.1 image generate accepts --model / --image / --async / -o;
   // aspect/resolution are quoted via `model cost` and applied as model defaults.
   const argv = ['generate', 'image', prompt, '--model', modelId];
+  const images = Array.isArray(imagePaths) ? imagePaths : (imagePaths ? [imagePaths] : []);
+  for (const img of images) {
+    assertLocalImagePath(img);
+    argv.push('--image', img);
+  }
   if (dryRun) argv.push('--dry-run');
   if (asyncMode) argv.push('--async');
   return argv;
+}
+
+/** Reference images must be absolute local paths (no URLs in argv for safety). */
+export function assertLocalImagePath(filePath) {
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    throw new OpenArtCliError('INVALID_IMAGE', 'Reference image path is required');
+  }
+  if (/^https?:\/\//i.test(filePath)) {
+    throw new OpenArtCliError('INVALID_IMAGE', 'Reference image must be a local file path');
+  }
+  if (!path.isAbsolute(filePath)) {
+    throw new OpenArtCliError('INVALID_IMAGE', 'Reference image path must be absolute');
+  }
+  const ext = path.extname(filePath).toLowerCase();
+  if (!['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) {
+    throw new OpenArtCliError('INVALID_IMAGE', `Unsupported reference image type: ${ext}`);
+  }
 }
 
 export function assertModelId(modelId) {

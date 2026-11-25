@@ -10,7 +10,7 @@ import {
 import {
   ASSET_DRAG_MIME,
   ASSET_DRAG_MIME_MATERIAL,
-  ASSET_FOLDERS,
+  ASSET_FOLDERS as REGISTRY_ASSET_FOLDERS,
   getCatalogAsset,
   listCatalogAssets,
 } from '../../assets/assetCatalog.js';
@@ -354,7 +354,8 @@ export function AssetBrowserProvider({ children }) {
   ]);
 
   const value = useMemo(() => ({
-    folders: ASSET_FOLDERS,
+    // OpenArt is a generation tool folder, not a registry kind.
+    folders: [...REGISTRY_ASSET_FOLDERS, 'OpenArt'],
     registry,
     revision,
     materialDefs,

@@ -498,6 +498,11 @@ export const HELP_CONTENT = {
     title: 'Content Folder',
     body: 'Chooses which folder the Asset Viewer lists. The Content Browser is for navigation only.',
   },
+  'content.openart': {
+    title: 'OpenArt',
+    body: 'Opens the OpenArt generation panel in the Asset Viewer. Estimates cost before any spend; Generate asks for explicit approval.',
+  },
+
   'content.search': {
     title: 'Search Assets',
     body: 'Filters assets in the current Content Browser folder by name, id, type, or tags.',

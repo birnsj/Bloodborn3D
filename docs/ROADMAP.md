@@ -341,4 +341,11 @@ designer directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
 
 **Done.** Official OpenArt CLI adapter, estimate → explicit approve → generate →
 staging → texture import → material. Dev-only `/api/openart`. No generation UI yet.
-See `docs/ACCEPTANCE_OPENART_POC.md`. **Stop before building the full generation interface.**
+See `docs/ACCEPTANCE_OPENART_POC.md`.
+
+### Phase 2H.1B — OpenArt Editor Integration
+
+**Done.** OpenArt generation panel in Content Browser / Asset Viewer (+ optional dock).
+Dynamic models/params from CLI; estimate + explicit spend approval; import texture /
+create material; status persists across panel switches. See
+`docs/ACCEPTANCE_OPENART_EDITOR.md`. No automatic paid generation; no other providers.

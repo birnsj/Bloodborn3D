@@ -67,3 +67,22 @@ export function importOpenArtStaging(payload) {
 export function openArtStagingPreviewUrl(stagingId) {
   return `/api/openart?action=staging-file&stagingId=${encodeURIComponent(stagingId)}`;
 }
+
+/** Upload a local reference image into OpenArt staging (dev server only). */
+export async function uploadOpenArtReference(file) {
+  const res = await fetch(
+    `/api/openart?action=upload-reference&name=${encodeURIComponent(file.name)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Reference upload failed: ${res.status}`);
+    err.code = data.code || `HTTP_${res.status}`;
+    throw err;
+  }
+  return data;
+}

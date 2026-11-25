@@ -30,6 +30,11 @@ export const DOCK_PANELS = {
     component: 'tutorials',
     title: 'Tutorials',
   },
+  openart: {
+    id: 'openart',
+    component: 'openart',
+    title: 'OpenArt',
+  },
 };
 
 export const DOCK_PANEL_IDS = Object.values(DOCK_PANELS).map((p) => p.id);
@@ -41,6 +46,7 @@ export const PANEL_VISIBILITY_KEYS = {
   content: 'contentVisible',
   assetViewer: 'assetViewerVisible',
   tutorials: 'tutorialsVisible',
+  openart: 'openartVisible',
 };
 
 /**
@@ -141,6 +147,8 @@ export function applyDockSnapshot(api, snapshot = {}) {
   if (snapshot.contentVisible === false) closePanelByKey(api, 'content');
   if (snapshot.assetViewerVisible === false) closePanelByKey(api, 'assetViewer');
   if (snapshot.tutorialsVisible === true) reopenPanel(api, 'tutorials');
+  if (snapshot.openartVisible === true) reopenPanel(api, 'openart');
+  else closePanelByKey(api, 'openart');
   setViewportMaximized(api, false);
   return true;
 }
@@ -162,6 +170,7 @@ export function getPanelVisibility(api) {
     contentVisible: Boolean(api?.getPanel(DOCK_PANELS.content.id)),
     assetViewerVisible: Boolean(api?.getPanel(DOCK_PANELS.assetViewer.id)),
     tutorialsVisible: Boolean(api?.getPanel(DOCK_PANELS.tutorials.id)),
+    openartVisible: Boolean(api?.getPanel(DOCK_PANELS.openart.id)),
     viewportMaximized: Boolean(api?.getPanel(DOCK_PANELS.viewport.id)?.api.isMaximized()),
   };
 }
@@ -212,6 +221,16 @@ export function reopenPanel(api, panelKey) {
       },
       initialWidth: 320,
       initialHeight: 280,
+    },
+    openart: {
+      position: {
+        referencePanel: api.getPanel(DOCK_PANELS.assetViewer.id)
+          ? DOCK_PANELS.assetViewer.id
+          : DOCK_PANELS.viewport.id,
+        direction: 'right',
+      },
+      initialWidth: 380,
+      initialHeight: 420,
     },
   };
 

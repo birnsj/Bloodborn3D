@@ -32,6 +32,7 @@ export const DEFAULT_LAYOUT = {
   detailsVisible: true,
   contentVisible: true,
   assetViewerVisible: true,
+  openartVisible: false,
   /** Tutorials panel starts closed; open via Help → Tutorials. */
   tutorialsVisible: false,
   viewportMaximized: false,
@@ -69,6 +70,7 @@ export function clampLayout(partial = {}) {
   next.contentVisible = Boolean(next.contentVisible);
   next.assetViewerVisible = next.assetViewerVisible !== false;
   next.tutorialsVisible = Boolean(next.tutorialsVisible);
+  next.openartVisible = Boolean(next.openartVisible);
   next.viewportMaximized = false;
   next.viewportView = normalizeViewportView(next.viewportView);
   if (next.contentViewMode !== 'list' && next.contentViewMode !== 'grid') {

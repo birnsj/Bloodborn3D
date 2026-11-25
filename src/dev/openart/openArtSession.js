@@ -81,12 +81,19 @@ export async function createEstimate({
   mode = DEFAULT_MODE,
   aspectRatio = '1:1',
   resolution = '1K',
+  imagePaths = null,
+  formValues = null,
 } = {}) {
   const cost = await estimateCost({ modelId, mode, aspectRatio, resolution });
   const item = Array.isArray(cost?.items)
     ? cost.items.find((i) => i.model === modelId && i.mode === mode) || cost.items[0]
     : null;
-  const dryRun = await dryRunGenerateImage({ prompt, modelId });
+  const images = Array.isArray(imagePaths) ? imagePaths.filter(Boolean) : [];
+  const dryRun = await dryRunGenerateImage({
+    prompt,
+    modelId,
+    imagePaths: images.length ? images : null,
+  });
 
   const estimateId = `est_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const record = {
@@ -97,6 +104,8 @@ export async function createEstimate({
     mode,
     aspectRatio,
     resolution,
+    imagePaths: images,
+    formValues: formValues && typeof formValues === 'object' ? { ...formValues } : null,
     totalCredits: item?.totalCredits ?? null,
     unitCredits: item?.unitCredits ?? null,
     costConfig: item?.config ?? null,
@@ -156,6 +165,7 @@ export async function approveAndGenerate({
     result = await _submit({
       prompt: record.prompt,
       modelId: record.modelId,
+      imagePaths: record.imagePaths?.length ? record.imagePaths : null,
     });
   } catch (err) {
     // Mark spent=false still, but do NOT auto-retry. Record the failure.
