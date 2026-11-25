@@ -37,12 +37,12 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import {
   createBrushBoxGeometry,
   createBrushSolidGeometry,
+  createExposedWorldSolidGeometry,
   getBrushRenderSolids,
 } from './brushGeometry.js';
 import {
   isSubtractBrush,
   isWorldSolidActor,
-  solidFacesToHide,
 } from './brushBoolean.js';
 import { createRampWedgeGeometry } from './rampGeometry.js';
 import { createStairGeometry } from './stairGeometry.js';
@@ -1144,9 +1144,24 @@ export class SceneView {
           z: solid.center.z - solid.size.z * 0.5,
         },
       };
-      const geom = solids.length === 1 && solid.role === 'solid'
-        ? createBrushBoxGeometry(solid.size, comp.uv, comp.faceUVs)
-        : createBrushSolidGeometry(solid.size, comp.uv, bias, comp.faceUVs);
+      // Subtractive World Solid: clip faces to empty-adjacent patches only.
+      // Additive brushes keep full solid boxes (unchanged).
+      let geom;
+      if (hideOuterHull) {
+        geom = createExposedWorldSolidGeometry(
+          solid,
+          solids,
+          comp.size,
+          comp.uv,
+          bias,
+          comp.faceUVs,
+        );
+        if (!geom) continue;
+      } else if (solids.length === 1 && solid.role === 'solid') {
+        geom = createBrushBoxGeometry(solid.size, comp.uv, comp.faceUVs);
+      } else {
+        geom = createBrushSolidGeometry(solid.size, comp.uv, bias, comp.faceUVs);
+      }
 
       // Cut pieces inherit brush materials; slightly darker fallback for newly exposed faces.
       const baseColor = solid.role === 'cut' && !comp.materialId
@@ -1169,16 +1184,9 @@ export class SceneView {
       mesh.userData.brushSolid = solid.role;
       mesh.userData.surfaceScheme = 'box';
       mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
-
-      // Subtractive World Solid only: hide exterior + internal partitions;
-      // keep faces that border carved empty space (UnrealEd-style interiors).
-      // Additive brush meshes are unchanged.
       if (hideOuterHull) {
-        const hide = solidFacesToHide(solid, solids, comp.size);
-        mesh.userData.hideHullFaces = hide;
         mesh.userData.substrateMesh = true;
-        this._applyHiddenHullFaces?.(mesh);
-        if (FACE_KEYS.some((key) => !hide[key])) anyVisibleFace = true;
+        anyVisibleFace = true;
       } else {
         anyVisibleFace = true;
       }

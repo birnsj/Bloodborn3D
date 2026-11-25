@@ -19,9 +19,12 @@ import {
   isWorldSolidActor,
   solidFacesOnBrushHull,
   solidFacesToHide,
+  exposedSolidFaceRects,
+  subtractFaceRects2,
   subtractAabbFromSolid,
 } from '../runtime/brushBoolean.js';
 import {
+  createExposedWorldSolidGeometry,
   getBrushBaseSolids,
   getBrushRenderSolids,
   validateWorldSubtractComplexity,
@@ -782,5 +785,47 @@ describe('world-solid hull faces', () => {
     // Outer hull still hidden
     expect(hideL.nx).toBe(true);
     expect(hideR.px).toBe(true);
+  });
+
+  it('clips a partially covered face instead of showing the whole quad', () => {
+    // Left solid's +X face is only partly flush with a shorter neighbor.
+    const brushSize = { x: 400, y: 200, z: 200 };
+    const left = { center: { x: -50, y: 0, z: 0 }, size: { x: 100, y: 100, z: 100 } };
+    const right = { center: { x: 50, y: 0, z: 0 }, size: { x: 100, y: 40, z: 100 } };
+    const solids = [left, right];
+    const exposed = exposedSolidFaceRects(left, solids, brushSize);
+    // Shared band |y|<=20 is blocked; bands above/below remain empty-adjacent.
+    expect(exposed.px.length).toBeGreaterThanOrEqual(1);
+    const area = exposed.px.reduce((s, r) => s + (r.u1 - r.u0) * (r.v1 - r.v0), 0);
+    const full = 100 * 100;
+    const blocked = 40 * 100;
+    expect(area).toBeCloseTo(full - blocked, 0);
+    // Must not treat the whole face as a single full-size visible quad.
+    expect(exposed.px.some((r) => Math.abs((r.u1 - r.u0) * (r.v1 - r.v0) - full) < 1)).toBe(false);
+  });
+
+  it('subtractFaceRects2 removes the hole and keeps the remainder', () => {
+    const subject = { u0: 0, u1: 100, v0: 0, v1: 100 };
+    const hole = { u0: 25, u1: 75, v0: 25, v1: 75 };
+    const parts = subtractFaceRects2(subject, [hole]);
+    const area = parts.reduce((s, r) => s + (r.u1 - r.u0) * (r.v1 - r.v0), 0);
+    expect(area).toBeCloseTo(100 * 100 - 50 * 50, 5);
+  });
+
+  it('builds exposed World Solid geometry with only clipped quads', () => {
+    const brushSize = { x: 400, y: 200, z: 200 };
+    const left = { center: { x: -50, y: 0, z: 0 }, size: { x: 100, y: 100, z: 100 } };
+    const right = { center: { x: 50, y: 0, z: 0 }, size: { x: 100, y: 40, z: 100 } };
+    const geom = createExposedWorldSolidGeometry(
+      left,
+      [left, right],
+      brushSize,
+      {},
+      { origin: { x: -100, y: -50, z: -50 } },
+    );
+    expect(geom).toBeTruthy();
+    expect(geom.getAttribute('position').count).toBeGreaterThan(0);
+    // Full uncut box would be 24 verts; clipped substrate should differ.
+    expect(geom.getAttribute('position').count).not.toBe(24);
   });
 });

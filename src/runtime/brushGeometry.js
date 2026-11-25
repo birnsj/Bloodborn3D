@@ -3,15 +3,19 @@ import { toMeters } from '../core/units.js';
 import { buildWallOpeningSolids, validateOpenings } from './wallOpenings.js';
 import {
   applyWorldSubtraction,
+  BRUSH_FACE_KEYS,
+  exposedSolidFaceRects,
   formatSubtractComplexityMessage,
   isSubtractBrush,
   MAX_SUBTRACT_SOLIDS,
+  solidToAabb,
 } from './brushBoolean.js';
 import {
   TEXTURE_TILE_EDITOR_UNITS,
   applyFaceUvsToGeometry,
   composeActorUv,
 } from './uvMapping.js';
+import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 
 /**
  * Texture resolution contract: one 2048² map covers 1 m (100 editor units).
@@ -54,6 +58,136 @@ export function createBrushSolidGeometry(sizeEditor, uv = {}, uvBias = null, fac
   const sz = Math.max(1e-4, sizeEditor.z);
   const geom = new THREE.BoxGeometry(toMeters(sx), toMeters(sy), toMeters(sz));
   applyBrushUvs(geom, sx, sy, sz, uv, uvBias);
+  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
+  return geom;
+}
+
+/**
+ * World Solid only: emit quads for empty-adjacent face patches (clipped against
+ * sibling solids + outer hull). Returns null when nothing is exposed.
+ * Local space matches createBrushSolidGeometry (solid center at origin).
+ */
+export function createExposedWorldSolidGeometry(
+  solid,
+  solids,
+  brushSize,
+  uv = {},
+  uvBias = null,
+  faceUVs = null,
+) {
+  const exposed = exposedSolidFaceRects(solid, solids, brushSize);
+  const hasAny = BRUSH_FACE_KEYS.some((k) => exposed[k]?.length > 0);
+  if (!hasAny) return null;
+
+  const cx = solid.center.x;
+  const cy = solid.center.y;
+  const cz = solid.center.z;
+  const positions = [];
+  const normals = [];
+  const uvs = [];
+  const index = [];
+  const groups = [];
+
+  const scaleX = Number(uv.scale?.x) || 1;
+  const scaleY = Number(uv.scale?.y) || 1;
+  const tile = TEXTURE_TILE_EDITOR_UNITS;
+  const ox = Number(uvBias?.origin?.x);
+  const oy = Number(uvBias?.origin?.y);
+  const oz = Number(uvBias?.origin?.z);
+  const hasOrigin = Number.isFinite(ox) && Number.isFinite(oy) && Number.isFinite(oz);
+
+  const pushQuad = (faceKey, rect, nx, ny, nz) => {
+    const box = solidToAabb(solid);
+    let cornersBrush; // brush-local XYZ
+    if (faceKey === 'px' || faceKey === 'nx') {
+      const x = faceKey === 'px' ? box.max.x : box.min.x;
+      cornersBrush = [
+        { x, y: rect.u0, z: rect.v0 },
+        { x, y: rect.u1, z: rect.v0 },
+        { x, y: rect.u1, z: rect.v1 },
+        { x, y: rect.u0, z: rect.v1 },
+      ];
+    } else if (faceKey === 'py' || faceKey === 'ny') {
+      const y = faceKey === 'py' ? box.max.y : box.min.y;
+      cornersBrush = [
+        { x: rect.u0, y, z: rect.v0 },
+        { x: rect.u1, y, z: rect.v0 },
+        { x: rect.u1, y, z: rect.v1 },
+        { x: rect.u0, y, z: rect.v1 },
+      ];
+    } else {
+      const z = faceKey === 'pz' ? box.max.z : box.min.z;
+      cornersBrush = [
+        { x: rect.u0, y: rect.v0, z },
+        { x: rect.u1, y: rect.v0, z },
+        { x: rect.u1, y: rect.v1, z },
+        { x: rect.u0, y: rect.v1, z },
+      ];
+    }
+
+    // Winding: outward normal. BoxGeometry +X uses CCW when looking along +X.
+    // For -X/-Y/-Z flip winding so normal faces outward.
+    const flip = faceKey === 'nx' || faceKey === 'ny' || faceKey === 'nz';
+    const order = flip ? [0, 3, 2, 1] : [0, 1, 2, 3];
+
+    const base = positions.length / 3;
+    for (const oi of order) {
+      const p = cornersBrush[oi];
+      positions.push(
+        toMeters(p.x - cx),
+        toMeters(p.y - cy),
+        toMeters(p.z - cz),
+      );
+      normals.push(nx, ny, nz);
+
+      // Continuous brush-local UVs (same axes as applyBrushUvs with origin bias).
+      let u;
+      let v;
+      if (faceKey === 'px' || faceKey === 'nx') {
+        u = ((hasOrigin ? p.z : p.z - box.min.z) / tile) * scaleX;
+        v = ((hasOrigin ? p.y : p.y - box.min.y) / tile) * scaleY;
+      } else if (faceKey === 'py' || faceKey === 'ny') {
+        u = ((hasOrigin ? p.x : p.x - box.min.x) / tile) * scaleX;
+        v = ((hasOrigin ? p.z : p.z - box.min.z) / tile) * scaleY;
+      } else {
+        u = ((hasOrigin ? p.x : p.x - box.min.x) / tile) * scaleX;
+        v = ((hasOrigin ? p.y : p.y - box.min.y) / tile) * scaleY;
+      }
+      const [ru, rv] = composeActorUv(u, v, {
+        scale: { x: 1, y: 1 },
+        offset: uv.offset,
+        rotation: uv.rotation,
+      });
+      uvs.push(ru, rv);
+    }
+    index.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  };
+
+  for (let fi = 0; fi < FACE_KEYS.length; fi += 1) {
+    const faceKey = FACE_KEYS[fi];
+    const start = index.length;
+    const n = ({
+      px: [1, 0, 0], nx: [-1, 0, 0],
+      py: [0, 1, 0], ny: [0, -1, 0],
+      pz: [0, 0, 1], nz: [0, 0, -1],
+    })[faceKey];
+    for (const rect of exposed[faceKey] || []) {
+      pushQuad(faceKey, rect, n[0], n[1], n[2]);
+    }
+    const count = index.length - start;
+    groups.push({ start, count, materialIndex: fi });
+  }
+
+  if (!positions.length) return null;
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geom.setIndex(index);
+  for (const g of groups) {
+    geom.addGroup(g.start, g.count, g.materialIndex);
+  }
   applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
   return geom;
 }

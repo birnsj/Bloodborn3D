@@ -233,6 +233,14 @@ runtime→editor coupling; cleared unused-import/var lint warnings. No feature o
 
 - Report: `docs/ACCEPTANCE_CODE_CLEANUP.md`
 
+### Subtractive face-clip hotfix (pre-2F.7E)
+
+**Done** (2026-11-24). World Solid rendering clips faces to empty-adjacent patches instead of
+center-sample whole-face hide/show (fixes textured strips across carved rooms). Additive pipeline
+and collision solids unchanged.
+
+- Report: `docs/ACCEPTANCE_SUBTRACTIVE_FACE_CLIP.md`
+
 ### Dependencies
 
 ```

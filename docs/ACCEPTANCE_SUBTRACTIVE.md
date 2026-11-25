@@ -42,4 +42,9 @@ Contains: 2×2 maze rooms + doorways, overlapping alcove, raised upper alcove, a
 - Axis-aligned AABB subtract only (existing constraint).
 - Hard cap `MAX_SUBTRACT_SOLIDS = 64` per additive brush — dense intersecting layouts can still exceed it; designers should use fewer/larger cutters.
 - No full BSP / external CSG dependency.
-- Phase **2F.7B** not started.
+
+## Follow-up: partial face clipping
+
+Center-sample whole-face hide/show left textured strips on partially empty-adjacent faces.
+Fixed by clipping World Solid faces to exposed patches only — see
+[`ACCEPTANCE_SUBTRACTIVE_FACE_CLIP.md`](./ACCEPTANCE_SUBTRACTIVE_FACE_CLIP.md).

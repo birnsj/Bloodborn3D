@@ -120,35 +120,137 @@ export function pointInsideAnySolid(p, solids, eps = 1e-4) {
 
 /**
  * Subtractive World Solid face visibility (brush-local).
- * Returns `{ px: true, … }` where **true = hide**.
+ * Returns `{ px: true, … }` where **true = hide entire face**.
  *
- * Hide when a sample just outside the face is outside the parent brush
- * (invisible uncarved exterior) or inside a sibling solid piece (internal
- * partition). Show only faces that border carved empty space.
+ * Legacy center-sample test. Prefer `exposedSolidFaceRects` for rendering —
+ * a face can be only partially empty-adjacent, and center sampling wrongly
+ * shows or hides the whole quad (textured strips across carved rooms).
  *
  * Used only for World Solid on subtractive maps — additive brushes unchanged.
  */
 export function solidFacesToHide(solid, solids, brushSize, sampleEps = 0.51) {
-  const hx = (Number(brushSize?.x) || 0) * 0.5;
-  const hy = (Number(brushSize?.y) || 0) * 0.5;
-  const hz = (Number(brushSize?.z) || 0) * 0.5;
-  const brushAabb = {
-    min: { x: -hx, y: -hy, z: -hz },
-    max: { x: hx, y: hy, z: hz },
-  };
+  const exposed = exposedSolidFaceRects(solid, solids, brushSize, sampleEps);
   const hide = {};
   for (const key of BRUSH_FACE_KEYS) {
-    const n = FACE_OUTWARD[key];
-    const c = solidFaceCenter(solid, key);
-    const p = {
-      x: c.x + n.x * sampleEps,
-      y: c.y + n.y * sampleEps,
-      z: c.z + n.z * sampleEps,
-    };
-    hide[key] = !pointInsideAabb(p, brushAabb, 0)
-      || pointInsideAnySolid(p, solids, 1e-4);
+    hide[key] = !(exposed[key]?.length > 0);
   }
   return hide;
+}
+
+/** @typedef {{ u0:number, u1:number, v0:number, v1:number }} FaceRect2 */
+
+/**
+ * Face rectangle in brush-local face-plane coords (u,v) for one AABB face.
+ * px/nx → (y,z); py/ny → (x,z); pz/nz → (x,y).
+ */
+export function solidFaceRect2(solid, faceKey) {
+  const box = solidToAabb(solid);
+  switch (faceKey) {
+    case 'px':
+    case 'nx':
+      return { u0: box.min.y, u1: box.max.y, v0: box.min.z, v1: box.max.z };
+    case 'py':
+    case 'ny':
+      return { u0: box.min.x, u1: box.max.x, v0: box.min.z, v1: box.max.z };
+    case 'pz':
+    case 'nz':
+      return { u0: box.min.x, u1: box.max.x, v0: box.min.y, v1: box.max.y };
+    default:
+      return { u0: 0, u1: 0, v0: 0, v1: 0 };
+  }
+}
+
+/** Axis-aligned rect intersection; null if empty. */
+export function intersectFaceRect2(a, b, eps = 1e-6) {
+  const u0 = Math.max(a.u0, b.u0);
+  const u1 = Math.min(a.u1, b.u1);
+  const v0 = Math.max(a.v0, b.v0);
+  const v1 = Math.min(a.v1, b.v1);
+  if (u1 - u0 <= eps || v1 - v0 <= eps) return null;
+  return { u0, u1, v0, v1 };
+}
+
+/**
+ * Subject minus one hole → 0..4 rects (rectilinear difference).
+ */
+export function subtractFaceRect2(subject, hole, eps = 1e-6) {
+  const hit = intersectFaceRect2(subject, hole, eps);
+  if (!hit) return [subject];
+  const out = [];
+  if (hit.u0 - subject.u0 > eps) {
+    out.push({ u0: subject.u0, u1: hit.u0, v0: subject.v0, v1: subject.v1 });
+  }
+  if (subject.u1 - hit.u1 > eps) {
+    out.push({ u0: hit.u1, u1: subject.u1, v0: subject.v0, v1: subject.v1 });
+  }
+  if (hit.v0 - subject.v0 > eps) {
+    out.push({ u0: hit.u0, u1: hit.u1, v0: subject.v0, v1: hit.v0 });
+  }
+  if (subject.v1 - hit.v1 > eps) {
+    out.push({ u0: hit.u0, u1: hit.u1, v0: hit.v1, v1: subject.v1 });
+  }
+  return out;
+}
+
+/** Subtract many holes from a subject face. */
+export function subtractFaceRects2(subject, holes, eps = 1e-6) {
+  let parts = [subject];
+  for (const hole of holes || []) {
+    const next = [];
+    for (const part of parts) {
+      next.push(...subtractFaceRect2(part, hole, eps));
+    }
+    parts = next;
+    if (!parts.length) break;
+  }
+  return parts;
+}
+
+/**
+ * Sibling solid projections that cover this face from the outside (internal
+ * partitions), plus the full face when it sits on the parent outer hull.
+ */
+export function blockingRectsOnSolidFace(solid, faceKey, solids, brushSize, flushEps = 0.51) {
+  const face = solidFaceRect2(solid, faceKey);
+  if (solidFacesOnBrushHull(solid, brushSize, flushEps)[faceKey]) {
+    return [face];
+  }
+  const box = solidToAabb(solid);
+  const blockers = [];
+  for (const other of solids || []) {
+    if (other === solid) continue;
+    const ob = solidToAabb(other);
+    let flush = false;
+    if (faceKey === 'px') flush = Math.abs(ob.min.x - box.max.x) <= flushEps;
+    else if (faceKey === 'nx') flush = Math.abs(ob.max.x - box.min.x) <= flushEps;
+    else if (faceKey === 'py') flush = Math.abs(ob.min.y - box.max.y) <= flushEps;
+    else if (faceKey === 'ny') flush = Math.abs(ob.max.y - box.min.y) <= flushEps;
+    else if (faceKey === 'pz') flush = Math.abs(ob.min.z - box.max.z) <= flushEps;
+    else if (faceKey === 'nz') flush = Math.abs(ob.max.z - box.min.z) <= flushEps;
+    if (!flush) continue;
+    const otherFace = solidFaceRect2(other, faceKey);
+    const hit = intersectFaceRect2(face, otherFace, 1e-4);
+    if (hit) blockers.push(hit);
+  }
+  return blockers;
+}
+
+/**
+ * Empty-adjacent face patches for World Solid rendering (brush-local).
+ * Returns `{ px: FaceRect2[], … }` — only these quads should be drawn.
+ */
+export function exposedSolidFaceRects(solid, solids, brushSize, flushEps = 0.51) {
+  const out = {};
+  for (const key of BRUSH_FACE_KEYS) {
+    const face = solidFaceRect2(solid, key);
+    if (face.u1 - face.u0 < 1e-4 || face.v1 - face.v0 < 1e-4) {
+      out[key] = [];
+      continue;
+    }
+    const blockers = blockingRectsOnSolidFace(solid, key, solids, brushSize, flushEps);
+    out[key] = subtractFaceRects2(face, blockers, 1e-4);
+  }
+  return out;
 }
 
 export function isWorldSolidActor(actor) {
