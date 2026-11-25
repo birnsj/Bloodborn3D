@@ -152,6 +152,41 @@ export function openArtSetPrompt(prompt) {
   setState({ prompt: String(prompt ?? ''), estimate: null, phase: state.phase === 'estimated' ? 'ready' : state.phase });
 }
 
+/**
+ * Seed OpenArt controls from a Concept Library prompt / concept (Generate Asset).
+ * Does not spend credits. Caller still must Estimate → approve.
+ */
+export async function openArtApplySeed({
+  prompt = '',
+  modelId = null,
+  mode = null,
+  formValues = null,
+  referenceFileName = null,
+  referenceStagingPath = null,
+} = {}) {
+  if (modelId && modelId !== state.modelId) {
+    await openArtSetModel(modelId);
+  }
+  if (mode && mode !== state.mode) {
+    await openArtSetMode(mode);
+  }
+  openArtSetPrompt(prompt);
+  if (formValues && typeof formValues === 'object') {
+    setState({
+      formValues: { ...state.formValues, ...formValues },
+      estimate: null,
+      phase: state.phase === 'estimated' ? 'ready' : state.phase,
+    });
+  }
+  if (referenceStagingPath) {
+    openArtSetReference({
+      fileName: referenceFileName || 'concept-reference',
+      stagingPath: referenceStagingPath,
+    });
+  }
+  return getOpenArtUiState();
+}
+
 export function openArtSetFormValue(key, value) {
   setState({
     formValues: { ...state.formValues, [key]: value },
@@ -407,6 +442,7 @@ if (typeof window !== 'undefined') {
     discard: openArtDiscardResult,
     reset: openArtResetSession,
     setPrompt: openArtSetPrompt,
+    applySeed: openArtApplySeed,
     __testSet: __testSetOpenArtUiState,
   };
 }

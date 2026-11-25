@@ -2,6 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
+  getAiAssetsUiState,
+  setAiAssetsSection,
+  setConceptSaveTargetAreaId,
+  subscribeAiAssetsUi,
+} from '../aiAssets/aiAssetsUiStore.js';
+import { conceptLibrarySaveFromStaging } from '../conceptLibrary/conceptLibraryStore.js';
+import {
   getOpenArtUiState,
   openArtCreateMaterial,
   openArtDiscardResult,
@@ -10,14 +17,16 @@ import {
 } from './openArtUiStore.js';
 
 /**
- * Phase 2H.1C — OpenArt results / actions (right column).
+ * Phase 2H.1C/D — OpenArt results / actions (right column).
  */
 export function OpenArtResults() {
   const [ui, setUi] = useState(() => getOpenArtUiState());
+  const [aiUi, setAiUi] = useState(() => getAiAssetsUiState());
   const { refreshRegistry, selectAsset, notify, setStatus } = useAssetBrowser();
   const { patch } = useLayout();
 
   useEffect(() => subscribeOpenArtUi(setUi), []);
+  useEffect(() => subscribeAiAssetsUi(setAiUi), []);
 
   const onImportTexture = useCallback(async () => {
     try {
@@ -46,6 +55,35 @@ export function OpenArtResults() {
   }, [notify, patch, refreshRegistry, selectAsset, setStatus]);
 
   const hasResult = Boolean(ui.staging?.stagingId || ui.previewUrl);
+  const saveTargetAreaId = aiUi.conceptSaveTargetAreaId;
+
+  const onSaveToConceptLibrary = useCallback(async () => {
+    if (!ui.staging?.stagingId || !saveTargetAreaId) return;
+    try {
+      await conceptLibrarySaveFromStaging({
+        areaId: saveTargetAreaId,
+        stagingId: ui.staging.stagingId,
+        title: suggestConceptTitle(ui.prompt),
+        generationPrompt: ui.prompt,
+        provenance: {
+          source: 'openart',
+          modelId: ui.modelId,
+          mode: ui.mode,
+          stagingId: ui.staging.stagingId,
+          jobId: ui.job?.jobId || null,
+          generationId: ui.job?.generationId || null,
+          formValues: { ...ui.formValues },
+          savedAt: new Date().toISOString(),
+        },
+      });
+      setConceptSaveTargetAreaId(null);
+      setAiAssetsSection('concepts');
+      setStatus('Saved concept to Concept Library');
+      notify('Concept saved to Concept Library');
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [notify, saveTargetAreaId, setStatus, ui]);
 
   return (
     <div className="bb-openart-results">
@@ -120,6 +158,20 @@ export function OpenArtResults() {
         </dl>
       )}
 
+      {saveTargetAreaId && (
+        <div className="bb-openart__concept-save">
+          <div className="bb-muted">Saving into Concept Library area…</div>
+          <button
+            type="button"
+            className="bb-btn bb-btn--primary"
+            disabled={!hasResult || ui.busy}
+            onClick={onSaveToConceptLibrary}
+          >
+            Save to Concept Library
+          </button>
+        </div>
+      )}
+
       <div className="bb-openart__result-actions">
         <button
           type="button"
@@ -172,4 +224,14 @@ function describePhase(ui) {
     case 'failed': return ui.error || 'Failed';
     default: return ui.phase;
   }
+}
+
+function suggestConceptTitle(promptText) {
+  const cleaned = String(promptText || '')
+    .replace(/[^a-zA-Z0-9 ]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 5)
+    .join(' ');
+  return cleaned || 'Generated concept';
 }

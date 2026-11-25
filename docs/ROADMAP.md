@@ -356,3 +356,10 @@ create material; status persists across panel switches. See
 controls / results). OpenArt is the live provider; ComfyUI and Meshy are Coming Soon.
 Standalone OpenArt Content Browser folder and Window dock entry removed. See
 `docs/ACCEPTANCE_AI_ASSETS_WORKSPACE.md`.
+
+### Phase 2H.1D — Concept Library and Prompt Database
+
+**Done.** Concept Library section in AI Assets: areas (≤10 concepts), import/generate
+concepts, editable metadata, reusable prompt DB, Generate Asset seeding into OpenArt.
+Project-local JSON + images under `concept-library/`. OpenArt vision unsupported —
+manual metadata + extension point. See `docs/ACCEPTANCE_CONCEPT_LIBRARY.md`.
