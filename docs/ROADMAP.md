@@ -217,13 +217,22 @@ canvases release abandoned loads safely. Additive/subtractive geometry unchanged
 - Units: `gpuResources.test.js`, `phase2f7bAssetLifecycle.test.js`
 - Report: `docs/ACCEPTANCE_ASSET_LIFECYCLE.md`
 
+### Phase 2F.7C — Incremental Scene Synchronization
+
+**Done** (2026-11-24). Ordinary editor mutations use fingerprint-based incremental sync
+(`syncIncremental`) instead of full-world reconstruction. Full `syncFromWorld` remains for
+load / Play restore / asset refresh / recovery. Phase 2F.7B epochs and ownership preserved.
+
+- Units: `phase2f7cIncrementalSync.test.js`; bench `scripts/bench-incremental-sync.mjs`
+- Report: `docs/ACCEPTANCE_INCREMENTAL_SYNC.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C
 ```
 
 ### Out of scope for 2F
@@ -232,11 +241,10 @@ canvases release abandoned loads safely. Additive/subtractive geometry unchanged
 - General polygon / Blender-style modeling; concave meshes; true CSG / full BSP
 - Replacing parametric construction tools
 - New npm dependencies for hull building
-- Phase **2F.7C** incremental scene synchronization (not started)
 
 ---
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7B) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7C) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

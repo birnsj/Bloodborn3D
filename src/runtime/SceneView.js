@@ -64,6 +64,14 @@ import {
 } from './surfaces.js';
 import { cloneLoadedMesh } from './meshLoader.js';
 import { disposeObjectTree, disposeOwnedMaterial } from './gpuResources.js';
+import {
+  actorContentFingerprint,
+  actorParentFingerprint,
+  actorTransformFingerprint,
+  isAdditiveBrushActor,
+  isSubtractBrushActor,
+} from './actorVisualFingerprint.js';
+import { ensureWorldSolidContainsSubtracts } from '../editor/worldSolidFit.js';
 import { installStudioEnvironment } from './studioEnvironment.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import { createRampFromBounds } from '../editor/rampFactory.js';
@@ -171,6 +179,8 @@ export class SceneView {
     this.geometryEdgePickThresholdPx = 12;
     this.geometryVertexPickThresholdPx = 12;
     this._syncToken = 0;
+    /** Instrumentation for Phase 2F.7C incremental sync benchmarks. */
+    this.syncStats = createEmptySyncStats();
 
     /** @type {{ getTextureUrl:(id:string)=>string|null, getMaterialDefinition:(id:string)=>Promise<object|null>, getMeshUrl:(id:string)=>string|null } | null} */
     this.assetResolver = null;
@@ -539,6 +549,8 @@ export class SceneView {
   }
 
   syncFromWorld(world) {
+    if (!this.syncStats) this.syncStats = createEmptySyncStats();
+    this.syncStats.fullSyncs += 1;
     const token = ++this._syncToken;
     if (world) {
       world.ambient = migrateLegacyWorldAmbient(world.ambient);
@@ -565,11 +577,179 @@ export class SceneView {
     this._applyEditorOverlayVisibility();
   }
 
+  /**
+   * Targeted sync: add/remove/rebuild only actors whose content changed.
+   * Full-world sync remains for load / Play restore / explicit recovery.
+   * Preserves Phase 2F.7B visualEpoch (no global token bump).
+   */
+  syncIncremental(world) {
+    if (!this.syncStats) this.syncStats = createEmptySyncStats();
+    this.syncStats.incrementalSyncs += 1;
+    if (!world) return;
+    world.ambient = migrateLegacyWorldAmbient(world.ambient);
+    this.applyWorldAmbient(world.ambient);
+
+    const liveIds = new Set(world.actors.map((a) => a.id));
+    for (const id of [...this._actorMeshes.keys()]) {
+      if (!liveIds.has(id)) {
+        this.removeActorVisual(id);
+        this.syncStats.actorRemoves += 1;
+      }
+    }
+
+    let carveDirty = false;
+    for (const actor of world.actors) {
+      const entry = this._actorMeshes.get(actor.id);
+      const contentFp = actorContentFingerprint(actor);
+      const transformFp = actorTransformFingerprint(actor);
+      if (!entry) {
+        if (isSubtractBrushActor(actor) || isWorldSolidActor(actor)) carveDirty = true;
+        continue;
+      }
+      const contentChanged = entry.contentFingerprint !== contentFp;
+      const transformChanged = entry.transformFingerprint !== transformFp;
+      if (
+        (isSubtractBrushActor(actor) && (contentChanged || transformChanged))
+        || (isWorldSolidActor(actor) && contentChanged)
+      ) {
+        carveDirty = true;
+      }
+    }
+
+    if (carveDirty && world.mapMode === 'subtractive') {
+      ensureWorldSolidContainsSubtracts(world, { gridSize: this.gridSize || 25 });
+    }
+
+    const syncOne = (actor, { forceRebuild = false } = {}) => {
+      const contentFp = actorContentFingerprint(actor);
+      const transformFp = actorTransformFingerprint(actor);
+      const parentFp = actorParentFingerprint(actor);
+      let entry = this._actorMeshes.get(actor.id);
+
+      if (!entry) {
+        this._addActorVisual(actor, this._syncToken, world);
+        entry = this._actorMeshes.get(actor.id);
+        if (entry) {
+          entry.contentFingerprint = contentFp;
+          entry.transformFingerprint = transformFp;
+          entry.parentFingerprint = parentFp;
+        }
+        this.syncStats.actorAdds += 1;
+        return;
+      }
+
+      const needRebuild = forceRebuild
+        || entry.contentFingerprint !== contentFp
+        || (carveDirty && (isAdditiveBrushActor(actor) || isWorldSolidActor(actor)));
+
+      if (needRebuild) {
+        this.rebuildActorVisual(actor, world);
+        this.syncStats.actorRebuilds += 1;
+      } else if (entry.transformFingerprint !== transformFp) {
+        this.updateActorTransform(actor);
+        this.syncStats.transformUpdates += 1;
+      }
+
+      entry = this._actorMeshes.get(actor.id);
+      if (entry) {
+        entry.contentFingerprint = actorContentFingerprint(actor);
+        entry.transformFingerprint = actorTransformFingerprint(actor);
+        entry.parentFingerprint = actorParentFingerprint(actor);
+      }
+    };
+
+    const forceRebuild = carveDirty;
+    const visit = (actor) => {
+      syncOne(actor, { forceRebuild: forceRebuild && (isAdditiveBrushActor(actor) || isWorldSolidActor(actor)) });
+      for (const child of getChildren(actor.id, world)) visit(child);
+    };
+    for (const root of getRootActors(world)) visit(root);
+    for (const actor of world.actors) {
+      if (!this._actorMeshes.has(actor.id)) syncOne(actor, { forceRebuild: false });
+    }
+
+    this._syncActorHierarchy(world);
+    this.setSelection(this.selectedActorIds, world);
+    if (this.selectedSurface) this._refreshSurfaceHighlight();
+    this._applyEditorOverlayVisibility();
+  }
+
+  /** Re-parent Three groups when actor.parentId changes without mesh rebuild. */
+  _syncActorHierarchy(world) {
+    if (!world) return;
+    for (const actor of world.actors) {
+      const entry = this._actorMeshes.get(actor.id);
+      if (!entry?.group) continue;
+      const parentFp = actorParentFingerprint(actor);
+      if (entry.parentFingerprint === parentFp && entry.group.parent) {
+        // Still verify parent pointer in case of prior detach.
+        const desired = actor.parentId
+          ? this._actorMeshes.get(actor.parentId)?.group
+          : this.root;
+        if (desired && entry.group.parent === desired) continue;
+      }
+      const desiredParent = actor.parentId
+        ? this._actorMeshes.get(actor.parentId)?.group
+        : this.root;
+      if (!desiredParent) continue;
+      if (entry.group.parent !== desiredParent) {
+        desiredParent.add(entry.group);
+        this.syncStats.hierarchyMoves += 1;
+      }
+      entry.parentFingerprint = parentFp;
+      this.updateActorTransform(actor);
+    }
+  }
+
+  /**
+   * Rebuild one actor's component meshes in place (visualEpoch only — no global token).
+   */
+  rebuildActorVisual(actor, world = actor.world) {
+    const entry = this._actorMeshes.get(actor.id);
+    if (!entry) {
+      this._addActorVisual(actor, this._syncToken, world);
+      const created = this._actorMeshes.get(actor.id);
+      if (created) {
+        created.contentFingerprint = actorContentFingerprint(actor);
+        created.transformFingerprint = actorTransformFingerprint(actor);
+        created.parentFingerprint = actorParentFingerprint(actor);
+      }
+      return;
+    }
+
+    const childGroups = this._detachChildActorGroups(entry.group, actor.id);
+    for (const child of [...entry.group.children]) {
+      entry.group.remove(child);
+      disposeObject(child);
+    }
+
+    entry.visualEpoch = (entry.visualEpoch || 0) + 1;
+    entry.actor = actor;
+    this._populateActorComponents(entry.group, actor, this._syncToken, world);
+    entry.group.traverse((obj) => {
+      if (obj.userData?.actorId === actor.id) this._stampActorVisual(obj, actor.id);
+    });
+    for (const child of childGroups) {
+      entry.group.add(child);
+    }
+    this.updateActorTransform(actor);
+    entry.contentFingerprint = actorContentFingerprint(actor);
+    entry.transformFingerprint = actorTransformFingerprint(actor);
+    entry.parentFingerprint = actorParentFingerprint(actor);
+  }
+
+  resetSyncStats() {
+    this.syncStats = createEmptySyncStats();
+  }
+
+  getSyncStats() {
+    return { ...this.syncStats };
+  }
+
   addOrUpdateActorVisual(actor) {
-    // Hierarchy parenting changes need a full resync; geometry/transform
-    // refreshes must not tear down the whole scene (gizmo resize path).
+    // Prefer incremental sync when the actor belongs to a live world.
     if (actor.world) {
-      this.syncFromWorld(actor.world);
+      this.syncIncremental(actor.world);
       return;
     }
     this.removeActorVisual(actor.id);
@@ -604,6 +784,7 @@ export class SceneView {
     const scale = actor.transform.scale;
     entry.group.scale.set(scale.x, scale.y, scale.z);
     entry.group.visible = isEffectivelyVisible(actor, actor.world);
+    entry.transformFingerprint = actorTransformFingerprint(actor);
     // Spot / directional lights need target matrices current after the group moves.
     entry.group.updateMatrixWorld(true);
     entry.group.traverse((obj) => {
@@ -658,6 +839,10 @@ export class SceneView {
     }
 
     this.updateActorTransform(actor);
+    entry.contentFingerprint = actorContentFingerprint(actor);
+    entry.transformFingerprint = actorTransformFingerprint(actor);
+    if (!this.syncStats) this.syncStats = createEmptySyncStats();
+    this.syncStats.actorRebuilds += 1;
     if (this.geometrySelection?.items?.some((it) => it.actorId === actor.id)) {
       this._refreshGeometryFaceOverlays(actor.world);
       this._updateGeometryGizmo(actor.world);
@@ -723,8 +908,27 @@ export class SceneView {
       group,
       actor,
       visualEpoch: prevEpoch + 1,
+      contentFingerprint: actorContentFingerprint(actor),
+      transformFingerprint: actorTransformFingerprint(actor),
+      parentFingerprint: actorParentFingerprint(actor),
     });
 
+    this._populateActorComponents(group, actor, syncToken, world);
+
+    group.traverse((obj) => {
+      if (obj === group || obj.userData?.actorId === actor.id) {
+        this._stampActorVisual(obj, actor.id);
+      }
+    });
+
+    const parentEntry = actor.parentId ? this._actorMeshes.get(actor.parentId) : null;
+    if (parentEntry) parentEntry.group.add(group);
+    else this.root.add(group);
+  }
+
+  /** Component visuals for an actor group (shared by add + rebuild). */
+  _populateActorComponents(group, actor, syncToken, world = actor.world) {
+    void world;
     for (const comp of actor.components) {
       if (!comp.enabled) continue;
 
@@ -776,16 +980,9 @@ export class SceneView {
         group.add(marker);
       }
     }
-
-    group.traverse((obj) => {
-      if (obj === group || obj.userData?.actorId === actor.id) {
-        this._stampActorVisual(obj, actor.id);
-      }
-    });
-
-    const parentEntry = actor.parentId ? this._actorMeshes.get(actor.parentId) : null;
-    if (parentEntry) parentEntry.group.add(group);
-    else this.root.add(group);
+    const counted = countOwnedResources(group, actor.id);
+    this.syncStats.geometryAllocs += counted.geometries;
+    this.syncStats.materialAllocs += counted.materials;
   }
 
   _addConvexBrushVisual(group, actor, comp, syncToken) {
@@ -2569,6 +2766,46 @@ function disposeObject(obj) {
 
 function disposeMaterial(mat) {
   disposeOwnedMaterial(mat);
+}
+
+function createEmptySyncStats() {
+  return {
+    fullSyncs: 0,
+    incrementalSyncs: 0,
+    actorAdds: 0,
+    actorRemoves: 0,
+    actorRebuilds: 0,
+    transformUpdates: 0,
+    hierarchyMoves: 0,
+    geometryAllocs: 0,
+    materialAllocs: 0,
+  };
+}
+
+/** Count owned geometries / materials under a group (excludes nested actor roots). */
+function countOwnedResources(group, actorId) {
+  let geometries = 0;
+  let materials = 0;
+  const seenGeo = new Set();
+  const seenMat = new Set();
+  group?.traverse?.((obj) => {
+    if (obj.userData?.actorId && obj.userData.actorId !== actorId && obj !== group) {
+      return;
+    }
+    if (obj.geometry && !seenGeo.has(obj.geometry)) {
+      seenGeo.add(obj.geometry);
+      geometries += 1;
+    }
+    const mats = obj.material
+      ? (Array.isArray(obj.material) ? obj.material : [obj.material])
+      : [];
+    for (const mat of mats) {
+      if (!mat || seenMat.has(mat)) continue;
+      seenMat.add(mat);
+      materials += 1;
+    }
+  });
+  return { geometries, materials };
 }
 
 /** Darken a CSS hex for cut-face fallback tinting. */

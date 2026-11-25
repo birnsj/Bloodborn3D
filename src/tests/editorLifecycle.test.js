@@ -50,6 +50,7 @@ vi.mock('../runtime/SceneView.js', async () => {
     }
 
     syncFromWorld() {}
+    syncIncremental() {}
     setEditMode() {}
     setSelection() {}
     setGridSize() {}

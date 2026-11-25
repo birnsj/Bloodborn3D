@@ -135,6 +135,23 @@ export class GameRuntime {
     }
   }
 
+  /**
+   * Incremental scene sync for ordinary editor mutations (Phase 2F.7C).
+   * Use resyncWorld() for load / Play restore / explicit recovery.
+   */
+  syncIncremental() {
+    if (!this.world) return;
+    this.sceneView.syncIncremental(this.world);
+  }
+
+  resetSyncStats() {
+    this.sceneView.resetSyncStats?.();
+  }
+
+  getSyncStats() {
+    return this.sceneView.getSyncStats?.() || null;
+  }
+
   setGridSize(gridSize) {
     this.sceneView.setGridSize(gridSize);
   }

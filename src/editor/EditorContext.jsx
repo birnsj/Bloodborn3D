@@ -324,9 +324,20 @@ export function EditorProvider({ children }) {
   }, []);
 
   const afterWorldMutation = useCallback((options = {}) => {
-    const { resync = true, selectIds, geometryLineageByActor = null } = options;
+    // Phase 2F.7C: default to incremental sync. Pass fullSync/resync:'full' for
+    // complete reconstruction (load recovery, asset library refresh, etc.).
+    const {
+      resync = true,
+      fullSync = false,
+      selectIds,
+      geometryLineageByActor = null,
+    } = options;
     if (resync) {
-      runtimeRef.current?.resyncWorld();
+      if (fullSync || resync === 'full') {
+        runtimeRef.current?.resyncWorld();
+      } else {
+        runtimeRef.current?.syncIncremental?.();
+      }
     }
     const nextIds = selectIds !== undefined ? selectIds : selectedRef.current;
     if (selectIds !== undefined) {

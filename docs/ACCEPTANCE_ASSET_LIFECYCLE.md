@@ -19,7 +19,7 @@ M4/M5 (retryable null eviction; stale brush materials vs full rebuild) remain in
 | `SceneView.js` | Per-actor `visualEpoch`; `updateBrushGeometry` no longer bumps global `_syncToken`; async apply/static-mesh paths check actor epoch |
 | `MeshPreviewCanvas.jsx` | Uses owned disposal; abandons mid-load clones safely |
 
-No geometry algorithm, serialization, or incremental sync (2F.7C) changes.
+No geometry algorithm or serialization changes. Incremental sync landed separately in Phase 2F.7C.
 
 ## Verification (2026-11-24)
 
@@ -37,7 +37,6 @@ No geometry algorithm, serialization, or incremental sync (2F.7C) changes.
 
 ## Remaining limitations
 
-- Full-world `syncFromWorld` still rebuilds all meshes (M6 / Phase **2F.7C**).
 - Texture/mesh caches are process-lifetime (no LRU eviction beyond failed-load eviction).
 - Browser memory tooling cannot fully prove JS heap leaks; GPU `info.memory` is the measured proxy.
-- Phase **2F.7C** not started.
+- Ordinary edits now use incremental sync (Phase **2F.7C**); full `syncFromWorld` retained for load/recovery.

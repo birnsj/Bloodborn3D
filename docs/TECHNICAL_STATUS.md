@@ -110,8 +110,9 @@ These were out of scope for the pass and are unchanged.
 
 ## 6. Deferred technical debt
 
-- Incremental scene synchronization (M6) — Phase **2F.7C**.
+- Incremental scene synchronization (M6) — **done** in Phase **2F.7C** (`ACCEPTANCE_INCREMENTAL_SYNC.md`).
 - Runtime/editor dependency separation (M8).
+- Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Static-mesh collider generation (M10).
 - Splitting the single production chunk.
 - Removing the dead legacy UI files listed above.
