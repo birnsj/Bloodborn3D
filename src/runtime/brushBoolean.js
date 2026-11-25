@@ -57,10 +57,21 @@ export function aabbToSolid(aabb, role = 'solid') {
   };
 }
 
+/** Outward normals for BoxGeometry face keys (brush-local). */
+export const FACE_OUTWARD = {
+  px: { x: 1, y: 0, z: 0 },
+  nx: { x: -1, y: 0, z: 0 },
+  py: { x: 0, y: 1, z: 0 },
+  ny: { x: 0, y: -1, z: 0 },
+  pz: { x: 0, y: 0, z: 1 },
+  nz: { x: 0, y: 0, z: -1 },
+};
+
+export const BRUSH_FACE_KEYS = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+
 /**
  * Which faces of a carved solid piece lie on the parent additive brush’s outer hull
- * (local brush space, center at origin). Used so World Solid reads as invisible
- * substrate — only faces exposed by subtract cuts stay visible.
+ * (local brush space, center at origin).
  */
 export function solidFacesOnBrushHull(solid, brushSize, eps = 0.51) {
   const hx = (Number(brushSize?.x) || 0) * 0.5;
@@ -75,6 +86,69 @@ export function solidFacesOnBrushHull(solid, brushSize, eps = 0.51) {
     pz: Math.abs(box.max.z - hz) <= eps,
     nz: Math.abs(box.min.z + hz) <= eps,
   };
+}
+
+/** Center of one AABB face (brush-local). */
+export function solidFaceCenter(solid, faceKey) {
+  const box = solidToAabb(solid);
+  const { x, y, z } = solid.center;
+  switch (faceKey) {
+    case 'px': return { x: box.max.x, y, z };
+    case 'nx': return { x: box.min.x, y, z };
+    case 'py': return { x, y: box.max.y, z };
+    case 'ny': return { x, y: box.min.y, z };
+    case 'pz': return { x, y, z: box.max.z };
+    case 'nz': return { x, y, z: box.min.z };
+    default: return { x, y, z };
+  }
+}
+
+/** Open-interval interior test so shared face midpoints are not "inside". */
+export function pointInsideAabb(p, aabb, eps = 1e-4) {
+  return p.x > aabb.min.x + eps && p.x < aabb.max.x - eps
+    && p.y > aabb.min.y + eps && p.y < aabb.max.y - eps
+    && p.z > aabb.min.z + eps && p.z < aabb.max.z - eps;
+}
+
+export function pointInsideAnySolid(p, solids, eps = 1e-4) {
+  if (!solids?.length) return false;
+  for (const solid of solids) {
+    if (pointInsideAabb(p, solidToAabb(solid), eps)) return true;
+  }
+  return false;
+}
+
+/**
+ * Subtractive World Solid face visibility (brush-local).
+ * Returns `{ px: true, … }` where **true = hide**.
+ *
+ * Hide when a sample just outside the face is outside the parent brush
+ * (invisible uncarved exterior) or inside a sibling solid piece (internal
+ * partition). Show only faces that border carved empty space.
+ *
+ * Used only for World Solid on subtractive maps — additive brushes unchanged.
+ */
+export function solidFacesToHide(solid, solids, brushSize, sampleEps = 0.51) {
+  const hx = (Number(brushSize?.x) || 0) * 0.5;
+  const hy = (Number(brushSize?.y) || 0) * 0.5;
+  const hz = (Number(brushSize?.z) || 0) * 0.5;
+  const brushAabb = {
+    min: { x: -hx, y: -hy, z: -hz },
+    max: { x: hx, y: hy, z: hz },
+  };
+  const hide = {};
+  for (const key of BRUSH_FACE_KEYS) {
+    const n = FACE_OUTWARD[key];
+    const c = solidFaceCenter(solid, key);
+    const p = {
+      x: c.x + n.x * sampleEps,
+      y: c.y + n.y * sampleEps,
+      z: c.z + n.z * sampleEps,
+    };
+    hide[key] = !pointInsideAabb(p, brushAabb, 0)
+      || pointInsideAnySolid(p, solids, 1e-4);
+  }
+  return hide;
 }
 
 export function isWorldSolidActor(actor) {

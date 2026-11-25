@@ -1,0 +1,881 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance Subtractive",
+  "mapMode": "subtractive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
+  "actors": [
+    {
+      "id": "actor_acaeafb4-21cc-4385-a545-4154de948870",
+      "name": "World Solid",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 137.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "world-solid"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": true,
+      "components": [
+        {
+          "id": "comp_330d696a-8aab-4b4e-89cb-7cabf071eaa8",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1000,
+            "y": 475,
+            "z": 1000
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_7b4f68a3-6776-46c2-a502-9b69096796ad",
+      "name": "Room 0,0",
+      "transform": {
+        "position": {
+          "x": -225,
+          "y": 137.5,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room",
+        "acceptance-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cabacb10-1ea6-46a0-8bf6-998a06093709",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 350,
+            "y": 275,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_3edeb1ef-285a-4d02-9406-df5adde931d7",
+      "name": "Room 1,0",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 137.5,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room",
+        "acceptance-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_15487895-2812-457e-94a8-c88b5d48a567",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 350,
+            "y": 275,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e5dabc60-cc48-4490-bfee-da4d86176e44",
+      "name": "Room 0,1",
+      "transform": {
+        "position": {
+          "x": -225,
+          "y": 137.5,
+          "z": 225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room",
+        "acceptance-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_5d760972-2d57-4380-8caa-e49aa44b3788",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 350,
+            "y": 275,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e62c495c-c6f2-4baa-9ca8-a35dc085bd84",
+      "name": "Room 1,1",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 137.5,
+          "z": 225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room",
+        "acceptance-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_aafec83c-6e24-4bec-977c-73e1c3d609f5",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 350,
+            "y": 275,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_438a4260-465f-4e8d-b568-c4aeeb0a6457",
+      "name": "Doorway 0",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 137.5,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway",
+        "acceptance-corridor"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_85bdfbd7-c029-4c3c-851b-c2687c0514b9",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 275,
+            "z": 150
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_51f955be-d85c-4f3c-9fb0-94801df654f7",
+      "name": "Doorway 1",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 137.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway",
+        "acceptance-corridor"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_00210fbe-e17c-4a35-bc77-dccf6f323c9a",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 275,
+            "z": 100
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_21301de9-eca6-4cac-ac72-3bae83cfa471",
+      "name": "Doorway 2",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 137.5,
+          "z": 225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway",
+        "acceptance-corridor"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_05e09266-ffc6-493c-afa1-d12a085a9d8a",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 275,
+            "z": 150
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_4fb9c5b9-216d-4039-9587-89dd62fce70c",
+      "name": "Maze Ambient",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 200,
+          "z": 0
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "ambient"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e106e504-3e0e-49df-a484-3c82faaac2b8",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "ambient",
+          "color": "#c8d0e0",
+          "intensity": 0.22,
+          "range": 1200,
+          "castShadow": false,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_b637fc0d-477a-463f-a49a-acb938cbbe85",
+      "name": "Maze Light 0",
+      "transform": {
+        "position": {
+          "x": -225,
+          "y": 225,
+          "z": -225
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b280ff0c-67fb-4bf9-8afa-ebc60f35fa92",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffe6c0",
+          "intensity": 2.4,
+          "range": 900,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_a6b1daf8-3e6c-4a43-bb1b-b9678bd5cee9",
+      "name": "Player Start",
+      "transform": {
+        "position": {
+          "x": -225,
+          "y": 20,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn",
+        "gameplay"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_90f3f4b0-dde0-4552-a872-0ef4608d58b9",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    },
+    {
+      "id": "actor_733c5564-4db4-4a87-9474-9d398bcbed68",
+      "name": "Overlap Alcove",
+      "transform": {
+        "position": {
+          "x": -37.5,
+          "y": 125,
+          "z": -262.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "acceptance-overlap"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cb891150-0162-4922-97e0-60ac137e8d02",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 175,
+            "y": 250,
+            "z": 125
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_933616f0-2750-49b4-b4fa-34f5150f13d3",
+      "name": "Upper Alcove",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 200,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "acceptance-upper"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_18690e59-15d4-4732-b7d8-b1200be6758c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 150,
+            "z": 150
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_d83224e6-18bd-468b-8430-116dc586aea1",
+      "name": "Pillar A",
+      "transform": {
+        "position": {
+          "x": -325,
+          "y": 100,
+          "z": -325
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_4bc8a4e1-8b35-4d8a-a552-011e6c7ce913",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 200,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_2e420c68-4d94-45f2-8022-addde71d5a85",
+      "name": "Platform A",
+      "transform": {
+        "position": {
+          "x": -225,
+          "y": 112.5,
+          "z": -300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1174e4dc-b842-4ded-b305-1be485fe8958",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 25,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    }
+  ]
+}

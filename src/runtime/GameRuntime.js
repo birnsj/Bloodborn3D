@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
+import { ensureWorldSolidContainsSubtracts } from '../editor/worldSolidFit.js';
 import { SceneView } from './SceneView.js';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { PlayerController } from './PlayerController.js';
@@ -114,6 +115,10 @@ export class GameRuntime {
     }
     this.refreshBrush(actor);
     if (!this.world || brush.operation !== 'subtract') return;
+    // Subtractive maps only: keep World Solid shelled around all cutters.
+    ensureWorldSolidContainsSubtracts(this.world, {
+      gridSize: this.sceneView?.gridSize || 25,
+    });
     for (const other of this.world.actors) {
       if (other.id === actor.id) continue;
       const otherBrush = other.getComponent?.('Brush');

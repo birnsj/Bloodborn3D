@@ -186,7 +186,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Harness `public/dev/phase2f5Acceptance.js`; report `docs/ACCEPTANCE_CONVEX_BRUSHES.md`; unit suite `phase2f5Integration.test.js`.
 - Gothic mansion regression re-verified unmodified (no ConvexBrush injected).
 - Prefab create/override/sync/nested, schema 1–3, Play/Stop, and undo/redo covered by unit + browser passes.
-- Phase 2F is **complete** after **2F.6**.
+- Phase 2F geometry editing (2F.0–2F.6) is complete. **2F.7A** adds subtractive map-mode stabilization.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 
@@ -197,25 +197,37 @@ single vs quad frame timing in harness.
 - Acceptance: `docs/ACCEPTANCE_MULTI_VIEWPORT.md`; harness `public/dev/phase2f6Acceptance.js`
 - Units: `viewportPrefs.test.js`, `viewportCameras.test.js`, `marqueeSelection.test.js`, `phase2f6MultiViewport.test.js`
 
+### Phase 2F.7A — Subtractive Map Mode
+
+**Done** (2026-11-24). File → New Map → Subtractive activates subtractive construction. World Solid is
+an invisible substrate; only faces bordering carved empty space render (outer hull + internal AABB
+partitions hidden). Additive maps and the additive geometry pipeline are unchanged. World Solid
+auto-grows to shell subtract volumes.
+
+- Acceptance level: `public/levels/acceptance-subtractive.json`
+- Units: `phase2f7aSubtractive.test.js`, `worldSolidFit.test.js`, `brushBoolean.test.js` (face hide)
+- Report: `docs/ACCEPTANCE_SUBTRACTIVE.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A
 ```
 
 ### Out of scope for 2F
 
 - Rule-based map generation (**Phase 2G**)
-- General polygon / Blender-style modeling; concave meshes; true CSG
+- General polygon / Blender-style modeling; concave meshes; true CSG / full BSP
 - Replacing parametric construction tools
 - New npm dependencies for hull building
+- Phase **2F.7B** (not started)
 
 ---
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.6) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7A) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

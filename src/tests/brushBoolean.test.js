@@ -18,6 +18,7 @@ import {
   isAxisAlignedRotationMatrix,
   isWorldSolidActor,
   solidFacesOnBrushHull,
+  solidFacesToHide,
   subtractAabbFromSolid,
 } from '../runtime/brushBoolean.js';
 import {
@@ -766,5 +767,20 @@ describe('world-solid hull faces', () => {
   it('detects world-solid actors by tag', () => {
     expect(isWorldSolidActor({ tags: ['world-solid'] })).toBe(true);
     expect(isWorldSolidActor({ tags: ['brush'] })).toBe(false);
+  });
+
+  it('hides sibling partition faces while keeping empty-adjacent faces', () => {
+    const brushSize = { x: 200, y: 100, z: 100 };
+    const left = { center: { x: -50, y: 0, z: 0 }, size: { x: 100, y: 100, z: 100 } };
+    const right = { center: { x: 50, y: 0, z: 0 }, size: { x: 100, y: 100, z: 100 } };
+    const solids = [left, right];
+    const hideL = solidFacesToHide(left, solids, brushSize);
+    const hideR = solidFacesToHide(right, solids, brushSize);
+    // Shared interface at x=0
+    expect(hideL.px).toBe(true);
+    expect(hideR.nx).toBe(true);
+    // Outer hull still hidden
+    expect(hideL.nx).toBe(true);
+    expect(hideR.px).toBe(true);
   });
 });

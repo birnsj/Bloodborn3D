@@ -42,7 +42,7 @@ import {
 import {
   isSubtractBrush,
   isWorldSolidActor,
-  solidFacesOnBrushHull,
+  solidFacesToHide,
 } from './brushBoolean.js';
 import { createRampWedgeGeometry } from './rampGeometry.js';
 import { createStairGeometry } from './stairGeometry.js';
@@ -934,12 +934,15 @@ export class SceneView {
       mesh.userData.surfaceScheme = 'box';
       mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
 
-      // World Solid = invisible substrate. Only faces opened by subtract cuts render.
+      // Subtractive World Solid only: hide exterior + internal partitions;
+      // keep faces that border carved empty space (UnrealEd-style interiors).
+      // Additive brush meshes are unchanged.
       if (hideOuterHull) {
-        const hull = solidFacesOnBrushHull(solid, comp.size);
-        mesh.userData.hideHullFaces = hull;
-        this._applyHiddenHullFaces(mesh);
-        if (FACE_KEYS.some((key) => !hull[key])) anyVisibleFace = true;
+        const hide = solidFacesToHide(solid, solids, comp.size);
+        mesh.userData.hideHullFaces = hide;
+        mesh.userData.substrateMesh = true;
+        this._applyHiddenHullFaces?.(mesh);
+        if (FACE_KEYS.some((key) => !hide[key])) anyVisibleFace = true;
       } else {
         anyVisibleFace = true;
       }
@@ -1270,7 +1273,7 @@ export class SceneView {
       }
     }
     // Re-apply after async material swap (World Solid outer hull stays invisible).
-    this._applyHiddenHullFaces(mesh);
+    this._applyHiddenHullFaces?.(mesh);
     mesh.material.needsUpdate = true;
   }
 
