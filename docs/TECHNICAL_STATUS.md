@@ -2,16 +2,17 @@
 
 Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.6** complete, Phase **2F.7A** subtractive map mode complete, Phase **2F.7B** asset lifecycle hardening complete.
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.7** complete (final gate **2F.7G**).
 - **Finding IDs** (C1, H1, …) are the audit's own.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **605 / 605 pass** (2F.7F gate; see `ACCEPTANCE_PHYSICS.md`) |
+| `npm test` | **627 / 627 pass** (2F.7G gate; see `ACCEPTANCE_STABILIZATION.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
+| CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
 | Phase 2F.0 | ConvexBrush architecture; convert / render / hull collision / schema 3; `phase2f0ConvexBrush.test.js` |
 | Phase 2F.1 | Face mode; `phase2f1FaceEditing.test.js`; `acceptance-face-editing.json`; browser PASS (`34af8bd`) |
@@ -22,8 +23,12 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.6 | Multi-viewport + ortho + marquee; scissor shared SceneView; browser harness PASS |
 | Phase 2F.7A | Subtractive map mode; empty-adjacent face culling; World Solid auto-fit; `acceptance-subtractive.json` |
 | Phase 2F.7B | Asset lifecycle / GPU ownership; actor visualEpoch; shared vs owned dispose; see `ACCEPTANCE_ASSET_LIFECYCLE.md` |
-| Phase 2F.7E | Persistence / data integrity; strict level validate; atomic saves; Play/Stop mapMode+ambient; World Solid exact-fit; prefab duplicate ids; see `ACCEPTANCE_DATA_INTEGRITY.md` |
-| Phase 2F.7F | Physics / collision; fixed 60 Hz timestep; StaticMesh asset-bounds boxes; opening/parent-scale agreement; see `ACCEPTANCE_PHYSICS.md` |
+| Phase 2F.7C | Incremental scene sync; see `ACCEPTANCE_INCREMENTAL_SYNC.md` |
+| Phase 2F.7D | Code cleanup; see `ACCEPTANCE_CODE_CLEANUP.md` |
+| Phase 2F.7E | Persistence / data integrity; see `ACCEPTANCE_DATA_INTEGRITY.md` |
+| Phase 2F.7F | Physics / collision + player grounding/jump/mesh centers; see `ACCEPTANCE_PHYSICS.md` |
+| Phase 2F.7G | Final regression / profiling / stress; CI; see `ACCEPTANCE_STABILIZATION.md` |
+| **Phase 2F.7** | **Complete** |
 
 ## 2. Implemented systems
 
@@ -34,8 +39,8 @@ Status is what the code does today, not an intent.
 | Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | No Three.js / React dependency. Transforms are local to `parentId`. |
 | Component types | Implemented | Brush, **ConvexBrush**, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
 | Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads 1–3; rejects other versions (see M9). |
-| Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). ConvexBrush uses grouped per-face mesh + per-actor rebuild path. |
-| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; **fixed 60 Hz** step; StaticMesh box uses asset bounds (M10 closed in 2F.7F). |
+| Rendering (`SceneView`) | Implemented | Incremental sync for ordinary edits (2F.7C); full sync for load / Play restore / recovery. ConvexBrush grouped per-face mesh. |
+| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; **fixed 60 Hz** step; StaticMesh box uses asset bounds + center (2F.7F). |
 | ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported. |
 | Geometry Face editing (2F.1) | Implemented | Toolbar Face mode; `geometrySelection`; face overlays; gizmo + normal handle; grid snap; reject invalid; multi-actor atomic undo. |
 | Geometry Edge editing (2F.2) | Implemented | Toolbar Edge mode; derived edge keys; screen-space pick + Alt x-ray; `Line2` highlight; same moveVertices pipeline. |
@@ -46,6 +51,8 @@ Status is what the code does today, not an intent.
 | Subtractive map mode (2F.7A) | Verified | New Map → Subtractive; World Solid empty-adjacent faces only; auto-fit shell; additive pipeline unchanged; see `ACCEPTANCE_SUBTRACTIVE.md`. |
 | Asset / GPU lifecycle (2F.7B) | Verified | Per-actor visual epochs; shared cache vs owned clones; preview abandonment; see `ACCEPTANCE_ASSET_LIFECYCLE.md`. |
 | Data integrity (2F.7E) | Verified | Strict deserialize; atomic level writes; Play/Stop world fields; undo failure integrity; prefab instance duplicate fix; see `ACCEPTANCE_DATA_INTEGRITY.md`. |
+| Physics stabilization (2F.7F) | Verified | Grounded jump edge; stair-assist probe; off-center mesh colliders; FPS-stable fixed step; see `ACCEPTANCE_PHYSICS.md`. |
+| Final stabilization (2F.7G) | Verified | Full regression, profiling, lifecycle stress, CI; see `ACCEPTANCE_STABILIZATION.md`. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |
@@ -91,14 +98,15 @@ These were out of scope for the pass and are unchanged.
 
 | ID | Severity | Finding |
 | --- | --- | --- |
-| M6 | Medium | Every edit triggers a full `SceneView.syncFromWorld` (geometry and up to 6 materials per solid rebuilt). Acceptable for current level sizes; will not scale. Incremental sync was explicitly deferred. |
-| M8 | Medium | `SceneView` (runtime) imports editor modules (`runtime/SceneView.js`, imports near the top). Runtime/editor separation was explicitly deferred. |
-| M10 | Medium | **Closed in 2F.7F** — StaticMesh `collisionType: 'box'` uses `meta.boundingBoxMeters` via `getMeshBoundsMeters` (fallback 1 m cube). |
-| L | Low | `PlayerController.js` stair-assist hack (~lines 129–139). |
+| M6 | Medium | **Closed in 2F.7C** — ordinary edits use `syncIncremental`; full sync retained for load / Play restore / recovery. |
+| M8 | Medium | `SceneView` (runtime) still imports some editor helpers. Partial mitigation in 2F.7D (`worldSolidFit` moved); residual deferred. |
+| M10 | Medium | **Closed in 2F.7F** — StaticMesh box uses `boundingBoxMeters` + `boundingBoxCenterMeters` (fallback 1 m cube at origin). |
+| M | Medium | Level-switch can leave extra `renderer.info.textures` vs return-to-same-level baseline (shared material cache). Geometries stable (2F.7G). |
+| L | Low | Stair-assist is now grounded + ledge-probed (2F.7F); remaining assist feel tweaks are design, not defects. |
 | L | Low | `GameRuntime.stop()` / `restoreAuthoredSnapshot()` clear the world with an O(n²) loop (`World.clear` → `removeActor` filters the array each time). |
 | L | Low | `Component.js` defines `onStart` / `onUpdate` / `onStop`, which nothing calls (only `onAttach` / `onDetach` are invoked, by `Actor`). |
-| L | Low | `EditorContext.jsx` (~2,100 lines) and `SceneView.js` (~1,500 lines) are large. Not recommended to split without a concrete need. |
-| L | Low | ~87 lint warnings remain (mostly React hooks / refs-during-render / export-components). Unused-import/var set cleared in 2F.7D. |
+| L | Low | `EditorContext.jsx` and `SceneView.js` are large. Not recommended to split without a concrete need. |
+| L | Low | ~80+ lint warnings remain (mostly React hooks / refs-during-render / export-components). Unused-import/var set cleared in 2F.7D. |
 | L | Low | Production build is one ~6 MB chunk. |
 | L | Low | The dev file APIs (`vite-plugins/`) have no authentication; path traversal is rejected. Dev-only. |
 
@@ -116,9 +124,10 @@ These were out of scope for the pass and are unchanged.
 - Code cleanup pass — **done** in Phase **2F.7D** (`ACCEPTANCE_CODE_CLEANUP.md`); legacy Toolbar/Hierarchy/Inspector removed; `worldSolidFit` in runtime.
 - Persistence / data integrity — **done** in Phase **2F.7E** (`ACCEPTANCE_DATA_INTEGRITY.md`).
 - Physics / collision hardening — **done** in Phase **2F.7F** (`ACCEPTANCE_PHYSICS.md`).
+- Final regression / profiling / CI — **done** in Phase **2F.7G** (`ACCEPTANCE_STABILIZATION.md`).
 - Runtime/editor dependency separation (M8) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
-- Static-mesh collider generation (M10).
+- Level-switch texture `renderer.info` retention (shared caches) — monitor; geometries already stable.
 - Splitting the single production chunk.
 - Remaining React hooks / refs-during-render lint warnings (dedicated pass; avoid drive-by dep array changes).
 

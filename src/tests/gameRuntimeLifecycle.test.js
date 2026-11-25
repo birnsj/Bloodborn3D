@@ -179,6 +179,23 @@ describe('GameRuntime Play/Stop lifecycle', () => {
     expect(freeSpy).toHaveBeenCalledTimes(5);
   });
 
+  it('Phase 2F.7G — frees Rapier exactly once across 50 Play/Stop cycles', async () => {
+    const freeSpy = vi.spyOn(RAPIER.World.prototype, 'free');
+    mocks.playerCtor = 0;
+    mocks.playerStops = 0;
+    for (let i = 0; i < 50; i += 1) {
+      await runtime.play();
+      expect(runtime.mode).toBe('play');
+      expect(runtime.physics.world).not.toBeNull();
+      runtime.stop();
+      expect(runtime.mode).toBe('edit');
+      expect(runtime.physics.world).toBeNull();
+    }
+    expect(freeSpy).toHaveBeenCalledTimes(50);
+    expect(mocks.playerCtor).toBe(50);
+    expect(mocks.playerStops).toBe(50);
+  });
+
   it('frees the Rapier world when Play is cancelled before it starts (M1)', async () => {
     const freeSpy = vi.spyOn(RAPIER.World.prototype, 'free');
     const pending = runtime.play();

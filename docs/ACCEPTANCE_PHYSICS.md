@@ -95,4 +95,4 @@ Harness via live editor (`localhost:5175`) + `window.__bloodboundViewport.getRun
 - Mesh collision is still primitive box only (no convex hull / trimesh).
 - Convex / open showcase maps can drop the player when walking off pad edges (layout, not a physics redesign item).
 
-Phase **2F.7G** not started.
+Phase **2F.7G** — see `ACCEPTANCE_STABILIZATION.md` (Phase 2F.7 complete).

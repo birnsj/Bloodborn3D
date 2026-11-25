@@ -186,7 +186,7 @@ editable geometry is a separate `ConvexBrush` component reached by explicit conv
 - Harness `public/dev/phase2f5Acceptance.js`; report `docs/ACCEPTANCE_CONVEX_BRUSHES.md`; unit suite `phase2f5Integration.test.js`.
 - Gothic mansion regression re-verified unmodified (no ConvexBrush injected).
 - Prefab create/override/sync/nested, schema 1–3, Play/Stop, and undo/redo covered by unit + browser passes.
-- Phase 2F geometry editing (2F.0–2F.6) is complete. **2F.7A** adds subtractive map-mode stabilization.
+- Phase 2F geometry editing (2F.0–2F.6) is complete. **2F.7A–2F.7G** complete the stabilization track.
 
 ### Phase 2F.6 — Multiple Viewports and Orthographic Editing
 
@@ -252,11 +252,25 @@ exact-fit for undo; prefab duplicate instanceIds + history-safe auto-overrides.
 
 ### Phase 2F.7F — Physics and Collision Hardening
 
-**Done** (2026-11-24). Fixed 60 Hz physics with capped catch-up; verified brush/opening/parent-scale
-collision agreement; StaticMesh box colliders use asset `boundingBoxMeters` (M10).
+**Done** (2026-11-24 / 25). Fixed 60 Hz physics with capped catch-up; brush/opening/parent-scale
+collision agreement; StaticMesh boxes use asset bounds + center; grounded jump edge + stair-assist
+probe (final stabilization).
 
-- Units: `phase2f7fPhysics.test.js`
+- Units: `phase2f7fPhysics.test.js`, `phase2f7fStabilization.test.js`
 - Report: `docs/ACCEPTANCE_PHYSICS.md`
+
+### Phase 2F.7G — Final Regression, Profiling and Stabilization
+
+**Done** (2026-11-25). Full regression across additive/subtractive/convex/materials/prefabs/Play;
+small/medium/large profiling; lifecycle stress (Play/Stop×50, level switches, create/delete,
+materials, asset preview); CI workflow; technical baseline before 2G.
+
+- Units: `phase2f7gStabilization.test.js` (+ Play/Stop×50 in `gameRuntimeLifecycle.test.js`)
+- Harness: `public/dev/phase2f7gAcceptance.js`
+- CI: `.github/workflows/ci.yml`
+- Report: `docs/ACCEPTANCE_STABILIZATION.md`
+
+**Phase 2F.7 complete.** Do not begin Phase 2G until the designer directs it.
 
 ### Dependencies
 
@@ -264,7 +278,7 @@ collision agreement; StaticMesh box colliders use asset `boundingBoxMeters` (M10
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E → 2F.7F
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E → 2F.7F → 2F.7G
 ```
 
 ### Out of scope for 2F
@@ -278,5 +292,5 @@ collision agreement; StaticMesh box colliders use asset `boundingBoxMeters` (M10
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7F) is complete and the designer
-directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
+Reserved. Not started. Do not begin until Phase **2F.7** is complete (satisfied by **2F.7G**) and the
+designer directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
