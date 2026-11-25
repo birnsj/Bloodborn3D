@@ -491,6 +491,12 @@ export function Viewport() {
       // until the user released and pressed again.
       flyKeysRef.current.add(e.code);
       if (FLY_MOVE_KEYS.has(e.code)) {
+        // Q/E are vertical only while already free-flying. Alone, E is Rotate (and Q
+        // is unused as a tool) — do not start fly or the camera jumps on gizmo hotkeys.
+        if ((e.code === 'KeyQ' || e.code === 'KeyE') && !flyModeRef.current) {
+          flyKeysRef.current.delete(e.code);
+          return;
+        }
         e.preventDefault();
         if (runtime.mode === 'edit') enterFlyMode();
       }

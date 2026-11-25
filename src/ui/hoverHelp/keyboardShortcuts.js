@@ -32,7 +32,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     title: 'Transform',
     rows: [
       { keys: ['W'], action: 'Move', note: 'also starts free-fly when held with A/S/D' },
-      { keys: ['E'], action: 'Rotate', note: 'also fly-up while free-flying' },
+      { keys: ['E'], action: 'Rotate', note: 'fly-up only while already free-flying (WASD)' },
       { keys: ['R'], action: 'Scale', note: 'again toggles face-resize ↔ Unreal axis gizmo' },
       { keys: ['F'], action: 'Focus selection', note: 'frames selection · pane Reset = home zoom' },
       { keys: ['Alt', 'LMB'], action: 'Duplicate + drag', note: 'Move / Rotate / Scale · stays on grid snap' },
@@ -73,7 +73,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     title: 'Camera',
     rows: [
       { keys: ['WASD'], action: 'Free-fly', note: 'perspective · mouse looks while held · W also selects Move' },
-      { keys: ['Q', 'E'], action: 'Fly down / up', note: 'E also selects Rotate when not flying' },
+      { keys: ['Q', 'E'], action: 'Fly down / up', note: 'only while free-flying · tap E alone = Rotate' },
       { keys: ['Shift'], action: 'Fly boost' },
       { keys: ['RMB'], action: 'Look (perspective)', note: 'drag while held' },
       { keys: ['Ctrl'], action: 'Orbit (perspective)', note: 'hold + move mouse · no button · ortho: RMB' },
