@@ -828,4 +828,36 @@ describe('world-solid hull faces', () => {
     // Full uncut box would be 24 verts; clipped substrate should differ.
     expect(geom.getAttribute('position').count).not.toBe(24);
   });
+
+  it('winds floor and ceiling quads so normals face into carved space', () => {
+    // Floor slab under a room: only +Y should be exposed.
+    const floor = { center: { x: 0, y: -40, z: 0 }, size: { x: 200, y: 20, z: 200 } };
+    const brushSize = { x: 200, y: 100, z: 200 };
+    const geom = createExposedWorldSolidGeometry(floor, [floor], brushSize, {}, {
+      origin: { x: -100, y: -50, z: -100 },
+    });
+    expect(geom).toBeTruthy();
+    const pos = geom.getAttribute('position');
+    const nrm = geom.getAttribute('normal');
+    const idx = geom.getIndex();
+    // First triangle of the +Y group should wind to +Y.
+    const pyGroup = geom.groups.find((g) => g.materialIndex === 2 && g.count > 0);
+    expect(pyGroup).toBeTruthy();
+    const i0 = idx.getX(pyGroup.start);
+    const i1 = idx.getX(pyGroup.start + 1);
+    const i2 = idx.getX(pyGroup.start + 2);
+    const ax = pos.getX(i1) - pos.getX(i0);
+    const ay = pos.getY(i1) - pos.getY(i0);
+    const az = pos.getZ(i1) - pos.getZ(i0);
+    const bx = pos.getX(i2) - pos.getX(i0);
+    const by = pos.getY(i2) - pos.getY(i0);
+    const bz = pos.getZ(i2) - pos.getZ(i0);
+    const cx = ay * bz - az * by;
+    const cy = az * bx - ax * bz;
+    const cz = ax * by - ay * bx;
+    expect(cy).toBeGreaterThan(0);
+    expect(Math.abs(cx)).toBeLessThan(1e-6);
+    expect(Math.abs(cz)).toBeLessThan(1e-6);
+    expect(nrm.getY(i0)).toBe(1);
+  });
 });

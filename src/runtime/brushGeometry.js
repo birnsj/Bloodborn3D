@@ -125,9 +125,9 @@ export function createExposedWorldSolidGeometry(
       ];
     }
 
-    // Winding: outward normal. BoxGeometry +X uses CCW when looking along +X.
-    // For -X/-Y/-Z flip winding so normal faces outward.
-    const flip = faceKey === 'nx' || faceKey === 'ny' || faceKey === 'nz';
+    // Winding must match the outward normal (into carved empty space).
+    // +X/+Z corners [0,1,2,3] already yield +axis; +Y needs the opposite order.
+    const flip = faceKey === 'nx' || faceKey === 'py' || faceKey === 'nz';
     const order = flip ? [0, 3, 2, 1] : [0, 1, 2, 3];
 
     const base = positions.length / 3;
