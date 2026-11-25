@@ -12,6 +12,7 @@
 | `src/editor/Toolbar.jsx` | Dead legacy UI (superseded by `layout/LevelToolBar.jsx` / AppMenuBar) |
 | `src/editor/Hierarchy.jsx` | Dead legacy UI (superseded by `SceneOutliner.jsx`) |
 | `src/editor/Inspector.jsx` | Dead legacy UI (superseded by `DetailsPanel.jsx`) |
+| `src/editor/layout/ResizeHandle.jsx` | Orphan (zero importers; Dockview owns panel resizing) |
 | `src/editor/worldSolidFit.js` | Moved to runtime (see below) |
 | Unused `writePng` in `scripts/generateHallTextures.mjs` | Superseded by `writePngBuffer` |
 | Unused imports / locals across tests, tutorials, Viewport, LayoutContext, archGeometry, wallEndpoints, etc. | Lint-correct cleanup; no behavior change |
