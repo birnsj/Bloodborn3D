@@ -1,6 +1,7 @@
 /**
  * Phase 2H.1B — OpenArt editor integration (mocked; never spends credits).
  */
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __testSetOpenArtUiState,
@@ -50,14 +51,18 @@ describe('Phase 2H.1B — dock / browser registration', () => {
   });
 
   it('builds generate argv with optional local --image references', () => {
+    // Absolute path must be valid on the host OS (Windows local vs Linux CI).
+    const refPath = path.resolve('/tmp', 'openart-ref.png');
+    expect(path.isAbsolute(refPath)).toBe(true);
+
     const argv = buildGenerateImageArgv({
       prompt: 'stone wall',
       modelId: 'nano-banana-2',
-      imagePaths: ['C:\\\\tmp\\\\ref.png'],
+      imagePaths: [refPath],
       async: true,
     });
     expect(argv).toContain('--image');
-    expect(argv).toContain('C:\\\\tmp\\\\ref.png');
+    expect(argv).toContain(refPath);
     expect(argv).toContain('--async');
   });
 });
