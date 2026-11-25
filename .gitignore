@@ -22,17 +22,7 @@ public/assets/.registry.json.*.tmp
 # Concept Library images (Phase 2H.1D) — library.json is tracked; binary refs stay local
 concept-library/images/
 
-# Project Art Library — track .bb-art/library.json + empty dirs (.gitkeep); ignore binaries/thumbs
-project-art/**/*.png
-project-art/**/*.jpg
-project-art/**/*.jpeg
-project-art/**/*.webp
-project-art/**/*.gif
-project-art/**/*.PNG
-project-art/**/*.JPG
-project-art/**/*.JPEG
-project-art/**/*.WEBP
-project-art/**/*.GIF
+# Project Art Library — track artwork + .bb-art/library.json; ignore generated thumbs only
 project-art/.bb-art/thumbs/**
 !project-art/.bb-art/thumbs/.gitkeep
 
