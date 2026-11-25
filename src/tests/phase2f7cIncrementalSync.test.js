@@ -52,6 +52,7 @@ function makeHarness() {
   const view = Object.create(SceneView.prototype);
   view._syncToken = 1;
   view._actorMeshes = new Map();
+  view._actorEpochHighWater = new Map();
   view.selectedActorIds = [];
   view.selectedSurface = null;
   view.geometrySelection = null;
@@ -160,7 +161,9 @@ describe('Phase 2F.7C — incremental scene sync', () => {
     view.syncFromWorld(world);
     expect(view._syncToken).toBe(token + 1);
     expect(view.getSyncStats().fullSyncs).toBe(2);
-    expect(view._actorMeshes.get(a.id).visualEpoch).toBe(epochA);
+    // High-water epochs advance across full sync so async loads from the prior
+    // generation cannot attach (Phase 2F.7H).
+    expect(view._actorMeshes.get(a.id).visualEpoch).toBeGreaterThan(epochA);
   });
 
   it('transform-only edit does not rebuild unrelated actors', () => {

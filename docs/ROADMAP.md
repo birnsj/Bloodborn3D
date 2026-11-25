@@ -270,7 +270,16 @@ materials, asset preview); CI workflow; technical baseline before 2G.
 - CI: `.github/workflows/ci.yml`
 - Report: `docs/ACCEPTANCE_STABILIZATION.md`
 
-**Phase 2F.7 complete.** Do not begin Phase 2G until the designer directs it.
+### Phase 2F.7H — Independent Audit Corrections
+
+**Done** (2026-11-25). Source-level audit fixes: subtractive carve invalidation under
+incremental sync; shared GLB texture ownership; visual-epoch high-water; dispose-once;
+finite transform validation; world-space parented player spawn.
+
+- Units: `phase2f7hAuditCorrections.test.js`
+- Report: `docs/ACCEPTANCE_AUDIT_CORRECTIONS.md`
+
+**Phase 2F.7 complete** (including 2F.7H). Do not begin Phase 2G until the designer directs it.
 
 ### Dependencies
 
@@ -278,7 +287,7 @@ materials, asset preview); CI workflow; technical baseline before 2G.
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E → 2F.7F → 2F.7G
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → … → 2F.7G → 2F.7H
 ```
 
 ### Out of scope for 2F

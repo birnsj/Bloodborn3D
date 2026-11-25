@@ -165,6 +165,8 @@ export class SceneView {
     this.gridHelper = null;
     this.gridSize = DEFAULT_GRID_EDITOR_UNITS;
     this._actorMeshes = new Map();
+    /** actorId → highest visualEpoch ever assigned (survives delete for undo recreate). */
+    this._actorEpochHighWater = new Map();
     this._selectionHelpers = [];
     this._surfaceHighlight = null;
     /** @type {{ actorId: string, surfaceId: string } | null} */
@@ -540,7 +542,11 @@ export class SceneView {
 
   clearWorldMeshes() {
     this._clearGeometryFaceOverlays();
-    for (const entry of this._actorMeshes.values()) {
+    if (!this._actorEpochHighWater) this._actorEpochHighWater = new Map();
+    for (const [actorId, entry] of this._actorMeshes.entries()) {
+      const epoch = entry.visualEpoch || 0;
+      const prev = this._actorEpochHighWater.get(actorId) || 0;
+      if (epoch > prev) this._actorEpochHighWater.set(actorId, epoch);
       this.root.remove(entry.group);
       disposeObject(entry.group);
     }
@@ -589,30 +595,63 @@ export class SceneView {
     world.ambient = migrateLegacyWorldAmbient(world.ambient);
     this.applyWorldAmbient(world.ambient);
 
+    let carveDirty = false;
     const liveIds = new Set(world.actors.map((a) => a.id));
+    // Deleting a subtract / World Solid must invalidate carved dependents.
     for (const id of [...this._actorMeshes.keys()]) {
-      if (!liveIds.has(id)) {
-        this.removeActorVisual(id);
-        this.syncStats.actorRemoves += 1;
+      if (liveIds.has(id)) continue;
+      const entry = this._actorMeshes.get(id);
+      if (entry?.carveRole === 'subtract' || entry?.carveRole === 'world-solid') {
+        carveDirty = true;
+      } else if (entry?.actor && (isSubtractBrushActor(entry.actor) || isWorldSolidActor(entry.actor))) {
+        carveDirty = true;
       }
+      this.removeActorVisual(id);
+      this.syncStats.actorRemoves += 1;
     }
 
-    let carveDirty = false;
     for (const actor of world.actors) {
       const entry = this._actorMeshes.get(actor.id);
       const contentFp = actorContentFingerprint(actor);
       const transformFp = actorTransformFingerprint(actor);
+      const isSubtract = isSubtractBrushActor(actor);
+      const isSolid = isWorldSolidActor(actor);
       if (!entry) {
-        if (isSubtractBrushActor(actor) || isWorldSolidActor(actor)) carveDirty = true;
+        if (isSubtract || isSolid) carveDirty = true;
         continue;
       }
       const contentChanged = entry.contentFingerprint !== contentFp;
       const transformChanged = entry.transformFingerprint !== transformFp;
+      // Operation flip add↔subtract: entry.carveRole is the pre-edit role.
+      const wasSubtract = entry.carveRole === 'subtract';
+      if (wasSubtract !== isSubtract) carveDirty = true;
       if (
-        (isSubtractBrushActor(actor) && (contentChanged || transformChanged))
-        || (isWorldSolidActor(actor) && contentChanged)
+        (isSubtract && (contentChanged || transformChanged))
+        || (isSolid && contentChanged)
       ) {
         carveDirty = true;
+      }
+    }
+
+    // Parent (or ancestor) transform of a subtract brush changes world carve pose.
+    if (!carveDirty) {
+      for (const actor of world.actors) {
+        if (!isSubtractBrushActor(actor)) continue;
+        let ancestorId = actor.parentId;
+        while (ancestorId) {
+          const ancestor = world.getActor(ancestorId);
+          if (!ancestor) break;
+          const aEntry = this._actorMeshes.get(ancestorId);
+          if (
+            aEntry
+            && aEntry.transformFingerprint !== actorTransformFingerprint(ancestor)
+          ) {
+            carveDirty = true;
+            break;
+          }
+          ancestorId = ancestor.parentId;
+        }
+        if (carveDirty) break;
       }
     }
 
@@ -655,6 +694,7 @@ export class SceneView {
         entry.contentFingerprint = actorContentFingerprint(actor);
         entry.transformFingerprint = actorTransformFingerprint(actor);
         entry.parentFingerprint = actorParentFingerprint(actor);
+        entry.carveRole = carveRoleForActor(actor);
       }
     };
 
@@ -736,6 +776,8 @@ export class SceneView {
     entry.contentFingerprint = actorContentFingerprint(actor);
     entry.transformFingerprint = actorTransformFingerprint(actor);
     entry.parentFingerprint = actorParentFingerprint(actor);
+    entry.carveRole = carveRoleForActor(actor);
+    this._actorEpochHighWater.set(actor.id, entry.visualEpoch || 0);
   }
 
   resetSyncStats() {
@@ -762,6 +804,11 @@ export class SceneView {
   removeActorVisual(actorId) {
     const entry = this._actorMeshes.get(actorId);
     if (!entry) return;
+    // Preserve high-water epoch so undo-recreate cannot reuse a stale generation.
+    if (!this._actorEpochHighWater) this._actorEpochHighWater = new Map();
+    const epoch = entry.visualEpoch || 0;
+    const prev = this._actorEpochHighWater.get(actorId) || 0;
+    if (epoch > prev) this._actorEpochHighWater.set(actorId, epoch);
     // Re-parent nested actor groups before disposing so children stay in the map.
     this._detachChildActorGroups(entry.group, actorId);
     if (entry.group.parent) entry.group.parent.remove(entry.group);
@@ -903,14 +950,20 @@ export class SceneView {
     group.visible = isEffectivelyVisible(actor, world);
 
     // Register before component visuals so async loads can read visualEpoch.
-    const prevEpoch = this._actorMeshes.get(actor.id)?.visualEpoch || 0;
+    // High-water survives delete so undo/redo recreate never reuses a generation.
+    if (!this._actorEpochHighWater) this._actorEpochHighWater = new Map();
+    const liveEpoch = this._actorMeshes.get(actor.id)?.visualEpoch || 0;
+    const highWater = this._actorEpochHighWater.get(actor.id) || 0;
+    const nextEpoch = Math.max(liveEpoch, highWater) + 1;
+    this._actorEpochHighWater.set(actor.id, nextEpoch);
     this._actorMeshes.set(actor.id, {
       group,
       actor,
-      visualEpoch: prevEpoch + 1,
+      visualEpoch: nextEpoch,
       contentFingerprint: actorContentFingerprint(actor),
       transformFingerprint: actorTransformFingerprint(actor),
       parentFingerprint: actorParentFingerprint(actor),
+      carveRole: carveRoleForActor(actor),
     });
 
     this._populateActorComponents(group, actor, syncToken, world);
@@ -2788,6 +2841,13 @@ function createEmptySyncStats() {
     geometryAllocs: 0,
     materialAllocs: 0,
   };
+}
+
+function carveRoleForActor(actor) {
+  if (isWorldSolidActor(actor)) return 'world-solid';
+  if (isSubtractBrushActor(actor)) return 'subtract';
+  if (isAdditiveBrushActor(actor)) return 'additive';
+  return null;
 }
 
 /** Count owned geometries / materials under a group (excludes nested actor roots). */

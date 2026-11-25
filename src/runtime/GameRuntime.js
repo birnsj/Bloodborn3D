@@ -5,6 +5,7 @@ import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
 import { SceneView } from './SceneView.js';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { PlayerController } from './PlayerController.js';
+import { getWorldTransform } from '../core/hierarchy.js';
 
 /** Camera framing used only when no editor camera was captured before Play. */
 const DEFAULT_EDITOR_CAMERA_POSITION = [6, 5, 8];
@@ -12,6 +13,28 @@ const DEFAULT_EDITOR_CAMERA_TARGET = [0, 1.5, 0];
 
 function isDocumentHidden() {
   return typeof document !== 'undefined' && document.hidden === true;
+}
+
+/**
+ * World-space player start pose (respects parent cells / prefab instances).
+ */
+export function resolvePlayerSpawnPose(world) {
+  const spawn = world?.actors?.find((a) => a.getComponent('PlayerSpawn'));
+  if (!spawn) {
+    return {
+      position: { x: 0, y: 20, z: 0 },
+      yawDegrees: 0,
+      spawn: null,
+      spawnComp: null,
+    };
+  }
+  const worldXform = getWorldTransform(spawn, world);
+  return {
+    position: { ...worldXform.position },
+    yawDegrees: worldXform.rotation?.y ?? 0,
+    spawn,
+    spawnComp: spawn.getComponent('PlayerSpawn'),
+  };
 }
 
 /**
@@ -104,10 +127,11 @@ export class GameRuntime {
   }
 
   /**
-   * After a brush moves/resizes: rebuild carved solids for dependents.
-   * Subtractive changes refresh all additive brushes (cutter may leave a volume).
+   * After a brush moves/resizes/operation-flips: rebuild carved solids for dependents.
+   * Subtractive maps also keep World Solid shelled around cutters.
+   * Pass `{ forceCarve: true }` when the brush left the subtract role (delete / flip to add).
    */
-  refreshBrushCarveDependents(actor) {
+  refreshBrushCarveDependents(actor, { forceCarve = false } = {}) {
     if (!actor) return;
     const brush = actor.getComponent?.('Brush');
     if (!brush) {
@@ -115,11 +139,14 @@ export class GameRuntime {
       return;
     }
     this.refreshBrush(actor);
-    if (!this.world || brush.operation !== 'subtract') return;
-    // Subtractive maps only: keep World Solid shelled around all cutters.
-    ensureWorldSolidContainsSubtracts(this.world, {
-      gridSize: this.sceneView?.gridSize || 25,
-    });
+    if (!this.world) return;
+    const isSubtract = brush.operation === 'subtract';
+    if (!isSubtract && !forceCarve) return;
+    if (this.world.mapMode === 'subtractive') {
+      ensureWorldSolidContainsSubtracts(this.world, {
+        gridSize: this.sceneView?.gridSize || 25,
+      });
+    }
     for (const other of this.world.actors) {
       if (other.id === actor.id) continue;
       const otherBrush = other.getComponent?.('Brush');
@@ -212,12 +239,11 @@ export class GameRuntime {
     this.physics.resetAccumulator();
     this.physics.buildFromWorld(this.world);
 
-    const spawn = this.world.actors.find((a) => a.getComponent('PlayerSpawn'));
-    const spawnComp = spawn?.getComponent('PlayerSpawn');
-    const spawnPos = spawn
-      ? { ...spawn.transform.position }
-      : { x: 0, y: 20, z: 0 };
-    const yaw = spawn?.transform.rotation?.y ?? 0;
+    const {
+      position: spawnPos,
+      yawDegrees: yaw,
+      spawnComp,
+    } = resolvePlayerSpawnPose(this.world);
 
     this.physics.spawnPlayer({
       position: spawnPos,

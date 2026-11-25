@@ -6,6 +6,7 @@ import {
   LEVEL_SCHEMA_VERSION,
   MIN_SUPPORTED_LEVEL_SCHEMA_VERSION,
 } from './LevelSerializer.js';
+import { getRegisteredComponentTypes } from '../components/componentRegistry.js';
 
 /**
  * Shared scene loading used by editor and game runtime.
@@ -122,8 +123,58 @@ function validateActorData(actorData) {
   if (!actorData.transform || typeof actorData.transform !== 'object') {
     throw new Error(`Actor ${actorData.id} missing transform`);
   }
+  validateFiniteTransform(actorData.id, actorData.transform);
   if (!Array.isArray(actorData.components)) {
     throw new Error(`Actor ${actorData.id} missing components array`);
+  }
+  for (const comp of actorData.components) {
+    validateComponentData(actorData.id, comp);
+  }
+}
+
+function validateFiniteVec3(actorId, label, vec, { required = true } = {}) {
+  if (vec == null) {
+    if (required) throw new Error(`Actor ${actorId} missing transform.${label}`);
+    return;
+  }
+  if (typeof vec !== 'object') {
+    throw new Error(`Actor ${actorId} transform.${label} must be an object`);
+  }
+  for (const axis of ['x', 'y', 'z']) {
+    const n = Number(vec[axis]);
+    if (!Number.isFinite(n)) {
+      throw new Error(
+        `Actor ${actorId} transform.${label}.${axis} must be a finite number`,
+      );
+    }
+  }
+}
+
+function validateFiniteTransform(actorId, transform) {
+  validateFiniteVec3(actorId, 'position', transform.position);
+  validateFiniteVec3(actorId, 'rotation', transform.rotation);
+  // Legacy levels may omit scale; Actor/Transform defaults apply.
+  validateFiniteVec3(actorId, 'scale', transform.scale, { required: false });
+}
+
+/**
+ * Validate component entries without rejecting unknown future/legacy types
+ * (those still load as generic Component). Known types must carry an object payload.
+ */
+function validateComponentData(actorId, comp) {
+  if (!comp || typeof comp !== 'object') {
+    throw new Error(`Actor ${actorId} has invalid component entry`);
+  }
+  if (typeof comp.type !== 'string' || comp.type.length === 0) {
+    throw new Error(`Actor ${actorId} component missing type`);
+  }
+  const known = getRegisteredComponentTypes();
+  if (!known.includes(comp.type)) {
+    // Legacy / forward-compat: unknown types are allowed (generic Component).
+    return;
+  }
+  if (comp.id != null && (typeof comp.id !== 'string' || comp.id.length === 0)) {
+    throw new Error(`Actor ${actorId} component ${comp.type} has invalid id`);
   }
 }
 

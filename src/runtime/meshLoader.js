@@ -2,7 +2,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { validateMeshScale, metersToEditorSize } from '../assets/assetCatalog.js';
 import { createRetryableCache } from './retryableCache.js';
-import { markOwnedGpuResource, markSharedGpuResource, markSharedSubtree } from './gpuResources.js';
+import {
+  markOwnedGpuResource,
+  markSharedGpuResource,
+  markSharedMaterialTextures,
+  markSharedSubtree,
+} from './gpuResources.js';
 
 const gltfLoader = new GLTFLoader();
 const meshCache = createRetryableCache();
@@ -68,10 +73,17 @@ export async function cloneLoadedMesh(url) {
       // Geometry remains shared with the cache; never dispose on instance teardown.
       if (obj.geometry) markSharedGpuResource(obj.geometry);
       if (obj.material) {
+        // Clone materials so per-instance edits cannot mutate the cache, but keep
+        // map textures shared — disposing one instance must not free GLB maps.
+        const cloneMat = (m) => {
+          const owned = markOwnedGpuResource(m.clone());
+          markSharedMaterialTextures(owned);
+          return owned;
+        };
         if (Array.isArray(obj.material)) {
-          obj.material = obj.material.map((m) => markOwnedGpuResource(m.clone()));
+          obj.material = obj.material.map(cloneMat);
         } else {
-          obj.material = markOwnedGpuResource(obj.material.clone());
+          obj.material = cloneMat(obj.material);
         }
       }
     }

@@ -136,6 +136,7 @@ describe('Phase 2F.7G — actor create/delete + transform incremental stress', (
     const view = Object.create(SceneView.prototype);
     view._syncToken = 1;
     view._actorMeshes = new Map();
+    view._actorEpochHighWater = new Map();
     view.selectedActorIds = [];
     view.selectedSurface = null;
     view.geometrySelection = null;
