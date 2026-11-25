@@ -15,6 +15,7 @@ import {
 } from '../editor/aiAssets/aiAssetsUiStore.js';
 import {
   humanizeFieldName,
+  partitionPrimaryForLayout,
   partitionSchemaKeys,
 } from '../editor/openart/schemaForm.jsx';
 import { WORKSPACES } from '../editor/layout/layoutPrefs.js';
@@ -72,5 +73,19 @@ describe('Phase 2H.1C — dynamic schema partitioning', () => {
   it('humanizes camelCase field names', () => {
     expect(humanizeFieldName('aspectRatio')).toBe('Aspect Ratio');
     expect(humanizeFieldName('negative_prompt')).toBe('Negative prompt');
+  });
+
+  it('packs count / ratio / resolution into a compact row without hardcoding models', () => {
+    const { compact, rest, advanced } = partitionPrimaryForLayout({
+      prompt: { type: 'string' },
+      imageCount: { type: 'integer' },
+      aspectRatio: { type: 'string', enum: ['1:1'] },
+      resolution: { type: 'string', enum: ['1K'] },
+      negativePrompt: { type: 'string' },
+      seed: { type: 'integer' },
+    });
+    expect(compact).toEqual(['imageCount', 'aspectRatio', 'resolution']);
+    expect(rest).toEqual(['negativePrompt']);
+    expect(advanced).toEqual(['seed']);
   });
 });
