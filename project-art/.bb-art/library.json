@@ -1,9 +1,516 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-25T00:00:00.000Z",
+  "updatedAt": "2026-11-25T21:18:22.340Z",
   "migratedFrom": null,
-  "items": [],
+  "items": [
+    {
+      "id": "art_25a09c16b03a",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/grand_hall.png",
+      "title": "Grand Hall",
+      "description": "A grand entrance hall with a sweeping staircase, carved stone columns, pointed arches, ornate railings, patterned stone flooring and a high vaulted ceiling. Wide establishing interior view.",
+      "tags": [
+        "mansion",
+        "interior",
+        "grand-hall",
+        "gothic",
+        "staircase"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A grand entrance hall with a sweeping staircase, carved stone columns, pointed arches, ornate railings, patterned stone flooring and a high vaulted ceiling. Wide establishing interior view.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A grand entrance hall with a sweeping staircase, carved stone columns, pointed arches, ornate railings, patterned stone flooring and a high vaulted ceiling. Wide establishing interior view.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "text2image",
+        "stagingId": "stg_6735e37a3a5c",
+        "jobId": "job_600bb50b9ca5",
+        "generationId": "NX48BvdCie5o2VClZ9oG",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A grand entrance hall with a sweeping staircase, carved stone columns, pointed arches, ornate railings, patterned stone flooring and a high vaulted ceiling. Wide establishing interior view.",
+        "savedAt": "2026-11-25T21:11:44.437Z"
+      },
+      "createdAt": "2026-11-25T21:11:44.457Z",
+      "updatedAt": "2026-11-25T21:15:16.782Z"
+    },
+    {
+      "id": "art_ae373eef1374",
+      "relativePath": "Environments/Mansion/Concepts/Exterior/mansion_exterior.png",
+      "title": "Mansion Exterior",
+      "description": "An imposing Victorian Gothic mansion exterior with dark limestone facades, pointed windows, an ornate entrance, steep roofs, weathered masonry and an overgrown estate. Full facade establishing shot.",
+      "tags": [
+        "mansion",
+        "exterior",
+        "gothic",
+        "estate"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An imposing Victorian Gothic mansion exterior with dark limestone facades, pointed windows, an ornate entrance, steep roofs, weathered masonry and an overgrown estate. Full facade establishing shot.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An imposing Victorian Gothic mansion exterior with dark limestone facades, pointed windows, an ornate entrance, steep roofs, weathered masonry and an overgrown estate. Full facade establishing shot.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_699086cd3e71",
+        "jobId": "job_35ace2eaf26d",
+        "generationId": "vaajJ8IuP6gDSQttfwJu",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An imposing Victorian Gothic mansion exterior with dark limestone facades, pointed windows, an ornate entrance, steep roofs, weathered masonry and an overgrown estate. Full facade establishing shot.",
+        "savedAt": "2026-11-25T21:12:05.826Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:12:05.850Z",
+      "updatedAt": "2026-11-25T21:15:16.770Z"
+    },
+    {
+      "id": "art_fcc89ae6bdc2",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/library.png",
+      "title": "Library",
+      "description": "A two-story Gothic library with dark carved wooden bookcases, balconies, ladders, an elaborate fireplace and antique reading furniture. Same mansion material language as the grand hall.",
+      "tags": [
+        "mansion",
+        "interior",
+        "library",
+        "books"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A two-story Gothic library with dark carved wooden bookcases, balconies, ladders, an elaborate fireplace and antique reading furniture. Same mansion material language as the grand hall.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A two-story Gothic library with dark carved wooden bookcases, balconies, ladders, an elaborate fireplace and antique reading furniture. Same mansion material language as the grand hall.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_f0c64296eadf",
+        "jobId": "job_5d55063f1ab0",
+        "generationId": "BOR6vOE3rkCv5KrFKvdt",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A two-story Gothic library with dark carved wooden bookcases, balconies, ladders, an elaborate fireplace and antique reading furniture. Same mansion material language as the grand hall.",
+        "savedAt": "2026-11-25T21:12:25.978Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:12:25.998Z",
+      "updatedAt": "2026-11-25T21:15:16.802Z"
+    },
+    {
+      "id": "art_c62c9ab98d2c",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/dining_room.png",
+      "title": "Dining Room",
+      "description": "A formal Victorian dining room with a long wooden table, ornate wall paneling, Gothic windows, chandeliers and decorative architectural details. Same mansion as the grand hall.",
+      "tags": [
+        "mansion",
+        "interior",
+        "dining"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A formal Victorian dining room with a long wooden table, ornate wall paneling, Gothic windows, chandeliers and decorative architectural details. Same mansion as the grand hall.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A formal Victorian dining room with a long wooden table, ornate wall paneling, Gothic windows, chandeliers and decorative architectural details. Same mansion as the grand hall.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_62477bb1ee95",
+        "jobId": "job_c314756c7149",
+        "generationId": "Me4ot5P7WMs5ue1tHJL3",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A formal Victorian dining room with a long wooden table, ornate wall paneling, Gothic windows, chandeliers and decorative architectural details. Same mansion as the grand hall.",
+        "savedAt": "2026-11-25T21:12:48.711Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:12:48.732Z",
+      "updatedAt": "2026-11-25T21:18:22.340Z"
+    },
+    {
+      "id": "art_f1ecc1bd24b2",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/corridor.png",
+      "title": "Corridor",
+      "description": "A long mansion corridor with repeating Gothic arches, aged limestone walls, dark wooden doors, wall-mounted lighting fixtures and patterned flooring. Same estate architecture.",
+      "tags": [
+        "mansion",
+        "interior",
+        "corridor",
+        "arches"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A long mansion corridor with repeating Gothic arches, aged limestone walls, dark wooden doors, wall-mounted lighting fixtures and patterned flooring. Same estate architecture.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A long mansion corridor with repeating Gothic arches, aged limestone walls, dark wooden doors, wall-mounted lighting fixtures and patterned flooring. Same estate architecture.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_d905bb457ea9",
+        "jobId": "job_201bf22db9fc",
+        "generationId": "enI2nmzE8JnL4p73QQea",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: A long mansion corridor with repeating Gothic arches, aged limestone walls, dark wooden doors, wall-mounted lighting fixtures and patterned flooring. Same estate architecture.",
+        "savedAt": "2026-11-25T21:13:08.355Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:13:08.377Z",
+      "updatedAt": "2026-11-25T21:15:16.789Z"
+    },
+    {
+      "id": "art_60b2ed4a4dc3",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/master_bedroom.png",
+      "title": "Master Bedroom",
+      "description": "An elaborate Victorian bedroom with antique furniture, a carved four-poster bed, rich fabrics, dark wood paneling and an ornate fireplace. Same mansion interiors language.",
+      "tags": [
+        "mansion",
+        "interior",
+        "bedroom"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An elaborate Victorian bedroom with antique furniture, a carved four-poster bed, rich fabrics, dark wood paneling and an ornate fireplace. Same mansion interiors language.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An elaborate Victorian bedroom with antique furniture, a carved four-poster bed, rich fabrics, dark wood paneling and an ornate fireplace. Same mansion interiors language.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_ea574e180242",
+        "jobId": "job_5a02ca16ca6c",
+        "generationId": "kOel8kEN6JDkH6Lt2KsX",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An elaborate Victorian bedroom with antique furniture, a carved four-poster bed, rich fabrics, dark wood paneling and an ornate fireplace. Same mansion interiors language.",
+        "savedAt": "2026-11-25T21:13:31.679Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:13:31.695Z",
+      "updatedAt": "2026-11-25T21:15:16.822Z"
+    },
+    {
+      "id": "art_83789e1a401a",
+      "relativePath": "Environments/Mansion/Concepts/Interiors/basement.png",
+      "title": "Basement",
+      "description": "An underground stone cellar with vaulted ceilings, rough limestone masonry, structural arches, damp surfaces and restrained environmental decay beneath the Gothic mansion.",
+      "tags": [
+        "mansion",
+        "interior",
+        "basement",
+        "cellar"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An underground stone cellar with vaulted ceilings, rough limestone masonry, structural arches, damp surfaces and restrained environmental decay beneath the Gothic mansion.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An underground stone cellar with vaulted ceilings, rough limestone masonry, structural arches, damp surfaces and restrained environmental decay beneath the Gothic mansion.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_02be1b423e4e",
+        "jobId": "job_5907741f32fe",
+        "generationId": "Qzb5RrfT37GK2xsDJG7s",
+        "formValues": {
+          "aspectRatio": "16:9",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "environment_concept",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: An underground stone cellar with vaulted ceilings, rough limestone masonry, structural arches, damp surfaces and restrained environmental decay beneath the Gothic mansion.",
+        "savedAt": "2026-11-25T21:13:52.311Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:13:52.328Z",
+      "updatedAt": "2026-11-25T21:15:16.809Z"
+    },
+    {
+      "id": "art_736ffceee06a",
+      "relativePath": "Environments/Mansion/References/Architecture/architectural_details.png",
+      "title": "Architectural Details",
+      "description": "Close-up architectural concept emphasizing Gothic stone arches, carved columns, capitals, moldings, window surrounds and ornamental stonework consistent with the mansion interiors. Detail study, not a full room.",
+      "tags": [
+        "mansion",
+        "reference",
+        "architecture",
+        "stonework"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up architectural concept emphasizing Gothic stone arches, carved columns, capitals, moldings, window surrounds and ornamental stonework consistent with the mansion interiors. Detail study, not a full room.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up architectural concept emphasizing Gothic stone arches, carved columns, capitals, moldings, window surrounds and ornamental stonework consistent with the mansion interiors. Detail study, not a full room.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_8a0657fc3182",
+        "jobId": "job_d104a85e1340",
+        "generationId": "jLVzteqi3cE5g8FDXC0h",
+        "formValues": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "architectural_element",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up architectural concept emphasizing Gothic stone arches, carved columns, capitals, moldings, window surrounds and ornamental stonework consistent with the mansion interiors. Detail study, not a full room.",
+        "savedAt": "2026-11-25T21:14:13.292Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:14:13.305Z",
+      "updatedAt": "2026-11-25T21:15:16.795Z"
+    },
+    {
+      "id": "art_47dd92cdeeb5",
+      "relativePath": "Environments/Mansion/References/Materials/material_reference.png",
+      "title": "Material Reference",
+      "description": "Close-up environmental material study emphasizing aged limestone, dark carved oak, worn stone flooring, wrought iron and restrained decorative metalwork from the Gothic mansion. Material board presentation.",
+      "tags": [
+        "mansion",
+        "reference",
+        "materials",
+        "limestone",
+        "oak"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up environmental material study emphasizing aged limestone, dark carved oak, worn stone flooring, wrought iron and restrained decorative metalwork from the Gothic mansion. Material board presentation.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up environmental material study emphasizing aged limestone, dark carved oak, worn stone flooring, wrought iron and restrained decorative metalwork from the Gothic mansion. Material board presentation.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_235e342a2f7f",
+        "jobId": "job_f0bd4326f038",
+        "generationId": "monhMuvoq1d2QLMPYi0B",
+        "formValues": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "wall_texture",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Close-up environmental material study emphasizing aged limestone, dark carved oak, worn stone flooring, wrought iron and restrained decorative metalwork from the Gothic mansion. Material board presentation.",
+        "savedAt": "2026-11-25T21:14:38.387Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:14:38.403Z",
+      "updatedAt": "2026-11-25T21:15:16.816Z"
+    },
+    {
+      "id": "art_f970aa9906f5",
+      "relativePath": "Environments/Mansion/References/Furniture/furniture_reference.png",
+      "title": "Furniture Reference",
+      "description": "Victorian Gothic furnishing study featuring antique cabinets, chairs, tables, bookshelves and decorative objects consistent with the mansion visual direction. Furniture concept sheet without text.",
+      "tags": [
+        "mansion",
+        "reference",
+        "furniture",
+        "victorian"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Victorian Gothic furnishing study featuring antique cabinets, chairs, tables, bookshelves and decorative objects consistent with the mansion visual direction. Furniture concept sheet without text.",
+      "originalGenerationPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Victorian Gothic furnishing study featuring antique cabinets, chairs, tables, bookshelves and decorative objects consistent with the mansion visual direction. Furniture concept sheet without text.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_bba759b387f7",
+        "jobId": "job_88be9ad086e8",
+        "generationId": "mp4KlG1OUPiHhdb1u3yl",
+        "formValues": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": false,
+        "tileVertical": false,
+        "assetCategory": "furniture",
+        "finalPrompt": "Imposing late Victorian Gothic estate, BloodBound mansion art direction. Aged dark limestone masonry, intricate carved dark oak woodwork, pointed Gothic arches, vaulted ceilings, ornate architectural moldings, antique Victorian furnishings, wrought iron fixtures, rich muted fabrics, atmospheric cinematic lighting, subtle age decay and neglect. Realistic, elegant, oppressive, mysterious. Believable architecture and consistent materials — not exaggerated fantasy. No text, labels, watermarks, borders, UI, collage, or contact sheet. Subject: Victorian Gothic furnishing study featuring antique cabinets, chairs, tables, bookshelves and decorative objects consistent with the mansion visual direction. Furniture concept sheet without text.",
+        "savedAt": "2026-11-25T21:15:01.142Z",
+        "referenceItemIds": [
+          "art_25a09c16b03a"
+        ]
+      },
+      "createdAt": "2026-11-25T21:15:01.160Z",
+      "updatedAt": "2026-11-25T21:15:16.776Z"
+    }
+  ],
   "prompts": [],
-  "collections": [],
+  "collections": [
+    {
+      "id": "col_0deb23d43f46",
+      "name": "Mansion — Art Direction",
+      "itemIds": [
+        "art_25a09c16b03a",
+        "art_ae373eef1374",
+        "art_fcc89ae6bdc2",
+        "art_c62c9ab98d2c",
+        "art_f1ecc1bd24b2",
+        "art_60b2ed4a4dc3",
+        "art_83789e1a401a",
+        "art_736ffceee06a",
+        "art_47dd92cdeeb5",
+        "art_f970aa9906f5"
+      ],
+      "createdAt": "2026-11-25T21:15:01.748Z",
+      "updatedAt": "2026-11-25T21:15:16.759Z"
+    }
+  ],
   "referenceSets": []
 }

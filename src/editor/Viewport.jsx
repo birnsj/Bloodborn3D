@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { useEditor } from './EditorContext.jsx';
 import { useEditorSettings } from './EditorSettingsContext.jsx';
+import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
+import { useEditorContextMenu } from '../ui/contextMenu/EditorContextMenu.jsx';
 import {
   viewportColorsFromSettings,
 } from './editorSettingsPrefs.js';
@@ -77,6 +79,9 @@ export function Viewport() {
   const ctrlOrbitHeldRef = useRef(false);
   /** Plain RMB drag freelook (perspective only; not while Ctrl orbits). */
   const rmbLookHeldRef = useRef(false);
+  /** Distinguishes short RMB click (context menu) from drag look/orbit. */
+  const rmbGestureRef = useRef(null);
+  const openViewportContextMenuRef = useRef(() => {});
   const lookRef = useRef({
     active: false,
     pointerId: null,
@@ -132,6 +137,8 @@ export function Viewport() {
     commitClipSession,
     deleteSelected,
     duplicateSelected,
+    renameSelected,
+    setSelectedActorFlags,
     undo,
     redo,
     saveLevel,
@@ -147,6 +154,8 @@ export function Viewport() {
   const { settings: editorSettings } = useEditorSettings();
   const { layout, setViewportView } = useLayout();
   const { dragMime, registry } = useAssetBrowser();
+  const { prompt, confirm } = useEditorDialogs();
+  const { openContextMenu } = useEditorContextMenu();
 
   editorSettingsRef.current = editorSettings;
 
@@ -548,12 +557,22 @@ export function Viewport() {
       if (ae?.tagName === 'INPUT' && ae.type === 'number') ae.blur();
 
       if (e.button !== 2 || runtime.mode !== 'edit') return;
-      // Perspective only — ortho/isometric keep plain RMB orbit.
-      if (isOrthographicMode(activeCameraMode())) return;
-      // Ctrl+move is orbit; plain RMB is freelook.
+      // Ctrl+move is orbit; don't treat as context / freelook start.
       if (ctrlOrbitHeldRef.current || e.ctrlKey || e.metaKey) return;
+
+      rmbGestureRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        moved: false,
+      };
+
+      // Perspective only for freelook — ortho keeps OrbitControls RMB orbit.
+      if (isOrthographicMode(activeCameraMode())) return;
+
+      // Defer beginFlyLook until the pointer moves past a small threshold so a
+      // short right-click can open the actor context menu instead.
       rmbLookHeldRef.current = true;
-      beginFlyLook(e);
       try {
         canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -583,11 +602,27 @@ export function Viewport() {
         return;
       }
 
+      const gesture = rmbGestureRef.current;
+      if (gesture && gesture.pointerId === e.pointerId && !gesture.moved) {
+        const dist = Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y);
+        if (dist >= 5) {
+          gesture.moved = true;
+          if (rmbLookHeldRef.current && !isOrthographicMode(activeCameraMode())) {
+            beginFlyLook(e);
+          }
+        } else if (rmbLookHeldRef.current && !lookRef.current.active) {
+          return;
+        }
+      }
+
       const looking = flyModeRef.current || rmbLookHeldRef.current;
       if (!looking) return;
       const look = lookRef.current;
       // WASD free-fly: mouse looks without a button. RMB drag: look while held.
-      if (!look.active) beginFlyLook(e);
+      if (!look.active) {
+        if (!gesture?.moved && rmbLookHeldRef.current) return;
+        beginFlyLook(e);
+      }
       if (look.pointerId != null && e.pointerId !== look.pointerId) return;
       const dx = e.clientX - look.lastX;
       const dy = e.clientY - look.lastY;
@@ -604,17 +639,26 @@ export function Viewport() {
     };
     const onLookPointerUp = (e) => {
       if (e.button != null && e.button !== 2) return;
-      if (!rmbLookHeldRef.current) return;
-      rmbLookHeldRef.current = false;
-      // Keep mouse look if still WASD flying; otherwise end the RMB look session.
-      if (!flyModeRef.current) {
-        lookRef.current.active = false;
-        lookRef.current.pointerId = null;
-        try {
-          canvas.releasePointerCapture(e.pointerId);
-        } catch {
-          /* ignore */
+      const gesture = rmbGestureRef.current;
+      rmbGestureRef.current = null;
+
+      if (rmbLookHeldRef.current) {
+        rmbLookHeldRef.current = false;
+        // Keep mouse look if still WASD flying; otherwise end the RMB look session.
+        if (!flyModeRef.current) {
+          lookRef.current.active = false;
+          lookRef.current.pointerId = null;
+          try {
+            canvas.releasePointerCapture(e.pointerId);
+          } catch {
+            /* ignore */
+          }
         }
+      }
+
+      // Short right-click (no meaningful drag) → context menu.
+      if (gesture && !gesture.moved && runtime.mode === 'edit') {
+        openViewportContextMenuRef.current(gesture.x, gesture.y);
       }
     };
     const onContextMenu = (e) => {
@@ -1079,6 +1123,108 @@ export function Viewport() {
   const activePaneCameraMode = () => {
     const p = viewportPrefsRef.current;
     return p.panes.find((x) => x.id === p.activePaneId)?.cameraMode || 'perspective';
+  };
+
+  openViewportContextMenuRef.current = (clientX, clientY) => {
+    if (mode !== 'edit' || !runtimeRef.current?.sceneView || !world) return;
+    const fakeEvent = { clientX, clientY };
+    const { nx, ny, camera } = pointerNorm(fakeEvent, { activate: true });
+    const sceneView = runtimeRef.current.sceneView;
+    const cam = camera || sceneView.camera;
+    const hits = sceneView.pickWorldHits?.(nx, ny, cam) || [];
+    const hitActorId = hits.find((h) => h?.actorId)?.actorId || null;
+
+    if (hitActorId) {
+      if (!selectedActorIds.includes(hitActorId)) {
+        selectActor(hitActorId, { additive: false });
+      }
+    }
+
+    const primaryId = hitActorId
+      || selectedActorIds[selectedActorIds.length - 1]
+      || null;
+    const primary = primaryId ? world.getActor(primaryId) : null;
+    const count = hitActorId && selectedActorIds.includes(hitActorId)
+      ? Math.max(1, selectedActorIds.length)
+      : (primary ? 1 : 0);
+    const hasSelection = Boolean(primary);
+
+    openContextMenu({
+      clientX,
+      clientY,
+      items: [
+        {
+          id: 'focus',
+          label: 'Focus Selection',
+          shortcut: 'F',
+          disabled: !hasSelection,
+          onSelect: () => {
+            window.dispatchEvent(new CustomEvent('bb:focus-selection'));
+          },
+        },
+        {
+          id: 'rename',
+          label: 'Rename',
+          disabled: !hasSelection || count > 1,
+          onSelect: async () => {
+            if (!primary) return;
+            const name = await prompt('Actor name', {
+              title: 'Rename',
+              initialValue: primary.name || primary.id,
+            });
+            if (!name || name === primary.name) return;
+            renameSelected(name);
+            setStatus(`Renamed to “${name}”`);
+          },
+        },
+        {
+          id: 'duplicate',
+          label: count > 1 ? `Duplicate ${count} Actors` : 'Duplicate',
+          shortcut: 'Ctrl+D',
+          disabled: !hasSelection,
+          onSelect: () => {
+            duplicateSelected();
+          },
+        },
+        {
+          id: 'hide',
+          label: primary?.visible === false ? 'Show' : 'Hide',
+          disabled: !hasSelection,
+          onSelect: () => {
+            if (!primary) return;
+            setSelectedActorFlags({ visible: primary.visible === false });
+          },
+        },
+        { id: 'sep-del', separator: true },
+        {
+          id: 'delete',
+          label: count > 1 ? `Delete ${count} Actors` : 'Delete',
+          shortcut: 'Del',
+          danger: true,
+          disabled: !hasSelection,
+          onSelect: async () => {
+            if (!hasSelection) return;
+            const label = count > 1
+              ? `Delete ${count} selected actors?`
+              : `Delete “${primary?.name || primaryId}”?`;
+            const ok = await confirm(label, {
+              title: 'Delete',
+              confirmLabel: 'Delete',
+              tone: 'warning',
+            });
+            if (!ok) return;
+            deleteSelected();
+          },
+        },
+        { id: 'sep-sel', separator: true },
+        {
+          id: 'deselect',
+          label: 'Deselect All',
+          disabled: selectedActorIds.length === 0,
+          onSelect: () => deselectAllActors(),
+        },
+      ],
+    });
   };
 
   const onPointerDown = (e) => {

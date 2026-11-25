@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import {
   LIBRARY_THUMB_SIZE_DEFAULT,
@@ -80,6 +81,7 @@ export function ProjectArtLibraryPanel() {
   const [store, setStore] = useState(() => getProjectArtState());
   const [aiUi, setAiUi] = useState(() => getAiAssetsUiState());
   const { confirm, prompt } = useEditorDialogs();
+  const { openFromEvent } = useEditorContextMenu();
   const { notify, setStatus } = useAssetBrowser();
   const fileRef = useRef(null);
   const loadedRef = useRef(false);
@@ -125,6 +127,125 @@ export function ProjectArtLibraryPanel() {
     return crumbs;
   }, [store.viewMode, store.currentFolder, store.activeCollectionId, collections]);
 
+  const runFolderAction = useCallback(async (action, node) => {
+    try {
+      if (action === 'open') {
+        await openFolder(node?.path || '');
+        return;
+      }
+      if (action === 'new') {
+        const name = await prompt('New folder name', {
+          title: 'New Folder',
+          initialValue: 'New Folder',
+        });
+        if (!name) return;
+        const path = node?.path ? `${node.path}/${name}` : name;
+        await projectArtMkdir({ path });
+        if (node?.path) setExpandedPath(node.path, true);
+        await openFolder(path);
+        setStatus(`Created folder “${name}”`);
+        return;
+      }
+      if (action === 'rename') {
+        if (!node?.path) return;
+        const name = await prompt('Rename folder', {
+          title: 'Rename',
+          initialValue: node.name,
+        });
+        if (!name || name === node.name) return;
+        await projectArtRename({ path: node.path, newName: name });
+        const parent = node.path.includes('/')
+          ? node.path.slice(0, node.path.lastIndexOf('/'))
+          : '';
+        await openFolder(parent ? `${parent}/${name}` : name);
+        setStatus(`Renamed to “${name}”`);
+        return;
+      }
+      if (action === 'delete') {
+        if (!node?.path) return;
+        const ok = await confirm(`Delete folder “${node.name}” and its contents?`, {
+          title: 'Delete folder',
+          confirmLabel: 'Delete',
+          tone: 'warning',
+        });
+        if (!ok) return;
+        await projectArtDelete({ path: node.path, recursive: true });
+        await openFolder('');
+        setStatus(`Deleted “${node.name}”`);
+        return;
+      }
+      if (action === 'explorer') {
+        await projectArtOpenInExplorer({ path: node?.path || '' });
+      }
+      if (action === 'refresh') {
+        await openFolder(store.currentFolder || '');
+      }
+      if (action === 'import') {
+        fileRef.current?.click();
+      }
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [confirm, prompt, notify, setStatus, store.currentFolder]);
+
+  const runItemAction = useCallback(async (action, item) => {
+    if (!item) return;
+    try {
+      if (action === 'add-refs') {
+        const targets = selectedItems.some((s) => s.id === item.id)
+          ? selectedItems
+          : [item];
+        addGenerationReferences(targets.map((i) => ({
+          id: i.id,
+          relativePath: i.relativePath,
+          title: i.title,
+        })));
+        setStatus(`Added ${targets.length} reference(s)`);
+        return;
+      }
+      if (action === 'favorite') {
+        await projectArtUpdateItem(item.id, { favorite: !item.favorite });
+        return;
+      }
+      if (action === 'rename') {
+        const name = await prompt('Rename image', {
+          title: 'Rename',
+          initialValue: item.relativePath.split('/').pop() || item.title,
+        });
+        if (!name || name === item.relativePath.split('/').pop()) return;
+        await projectArtRename({ path: item.relativePath, newName: name });
+        await openFolder(store.currentFolder || '');
+        setStatus(`Renamed to “${name}”`);
+        return;
+      }
+      if (action === 'delete') {
+        const targets = selectedItems.some((s) => s.id === item.id)
+          ? selectedItems
+          : [item];
+        const label = targets.length === 1
+          ? `Delete “${targets[0].title}”?`
+          : `Delete ${targets.length} images?`;
+        const ok = await confirm(label, {
+          title: 'Delete',
+          confirmLabel: 'Delete',
+          tone: 'warning',
+        });
+        if (!ok) return;
+        for (const t of targets) {
+          await projectArtDelete({ path: t.relativePath });
+        }
+        await openFolder(store.currentFolder || '');
+        setStatus(`Deleted ${targets.length} image(s)`);
+        return;
+      }
+      if (action === 'explorer') {
+        await projectArtOpenInExplorer({ path: item.relativePath });
+      }
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [confirm, prompt, notify, setStatus, selectedItems, store.currentFolder]);
+
   return (
     <div
       ref={rootRef}
@@ -169,44 +290,12 @@ export function ProjectArtLibraryPanel() {
             viewMode={store.viewMode}
             onOpen={(path) => openFolder(path).catch((err) => notify(err.message))}
             onToggle={toggleExpandedPath}
-            onContextAction={async (action, node) => {
-              try {
-                if (action === 'new') {
-                  const name = await prompt('New folder name', {
-                    title: 'New Folder',
-                    initialValue: 'New Folder',
-                  });
-                  if (!name) return;
-                  const path = node.path ? `${node.path}/${name}` : name;
-                  await projectArtMkdir({ path });
-                  setExpandedPath(node.path, true);
-                  await openFolder(path);
-                } else if (action === 'rename') {
-                  const name = await prompt('Rename folder', {
-                    title: 'Rename',
-                    initialValue: node.name,
-                  });
-                  if (!name || name === node.name) return;
-                  await projectArtRename({ path: node.path, newName: name });
-                  const parent = node.path.includes('/')
-                    ? node.path.slice(0, node.path.lastIndexOf('/'))
-                    : '';
-                  await openFolder(parent ? `${parent}/${name}` : name);
-                } else if (action === 'delete') {
-                  const ok = await confirm(`Delete folder “${node.name}”?`, {
-                    title: 'Delete folder',
-                    confirmLabel: 'Delete',
-                    tone: 'warning',
-                  });
-                  if (!ok) return;
-                  await projectArtDelete({ path: node.path, recursive: true });
-                  await openFolder('');
-                } else if (action === 'explorer') {
-                  await projectArtOpenInExplorer({ path: node.path });
-                }
-              } catch (err) {
-                notify(err.message);
-              }
+            onContextMenu={(event, node) => {
+              openFromEvent(event, buildFolderMenuItems({
+                node,
+                isRoot: !node?.path,
+                run: (action) => runFolderAction(action, node),
+              }));
             }}
           />
 
@@ -368,6 +457,32 @@ export function ProjectArtLibraryPanel() {
             onDeselectAll={deselectAll}
             onSetSelection={setSelection}
             onOpenFolder={(path) => openFolder(path).catch((err) => notify(err.message))}
+            onFolderContextMenu={(event, entry) => {
+              openFromEvent(event, buildFolderMenuItems({
+                node: { path: entry.path, name: entry.name },
+                isRoot: false,
+                run: (action) => runFolderAction(action, { path: entry.path, name: entry.name }),
+              }));
+            }}
+            onItemContextMenu={(event, item) => {
+              if (!store.selectedIds.includes(item.id)) selectOnly(item.id);
+              openFromEvent(event, buildImageMenuItems({
+                item,
+                multiCount: store.selectedIds.includes(item.id)
+                  ? Math.max(1, store.selectedIds.length)
+                  : 1,
+                run: (action) => runItemAction(action, item),
+              }));
+            }}
+            onBackgroundContextMenu={(event) => {
+              openFromEvent(event, buildGalleryBackgroundMenuItems({
+                hasFolder: Boolean(store.currentFolder) && store.viewMode === 'folder',
+                run: (action) => runFolderAction(action, {
+                  path: store.currentFolder || '',
+                  name: store.currentFolder?.split('/').pop() || 'Project Art',
+                }),
+              }));
+            }}
             onImportFiles={async (files) => {
               if (store.viewMode !== 'folder') {
                 notify('Switch to a folder to import files');
@@ -452,20 +567,24 @@ export function ProjectArtLibraryPanel() {
 }
 
 function FolderTree({
-  nodes, currentFolder, expandedPaths, viewMode, onOpen, onToggle, onContextAction,
+  nodes, currentFolder, expandedPaths, viewMode, onOpen, onToggle, onContextMenu,
 }) {
   return (
     <ul className="bb-project-art__tree">
       <li>
-        <button
-          type="button"
-          className={`bb-project-art__tree-node${
-            viewMode === 'folder' && currentFolder === '' ? ' is-active' : ''
-          }`}
-          onClick={() => onOpen('')}
-        >
-          <span className="bb-project-art__tree-label">Project Art</span>
-        </button>
+        <div className="bb-project-art__tree-row">
+          <span className="bb-project-art__tree-twist is-spacer" />
+          <button
+            type="button"
+            className={`bb-project-art__tree-node${
+              viewMode === 'folder' && currentFolder === '' ? ' is-active' : ''
+            }`}
+            onClick={() => onOpen('')}
+            onContextMenu={(e) => onContextMenu?.(e, { path: '', name: 'Project Art' })}
+          >
+            <span className="bb-project-art__tree-label">Project Art</span>
+          </button>
+        </div>
       </li>
       {(nodes || []).map((node) => (
         <TreeNode
@@ -477,7 +596,7 @@ function FolderTree({
           viewMode={viewMode}
           onOpen={onOpen}
           onToggle={onToggle}
-          onContextAction={onContextAction}
+          onContextMenu={onContextMenu}
         />
       ))}
     </ul>
@@ -485,13 +604,12 @@ function FolderTree({
 }
 
 function TreeNode({
-  node, depth, currentFolder, expandedPaths, viewMode, onOpen, onToggle, onContextAction,
+  node, depth, currentFolder, expandedPaths, viewMode, onOpen, onToggle, onContextMenu,
 }) {
   const hasChildren = Array.isArray(node.children) && node.children.length > 0;
   const expanded = Boolean(expandedPaths[node.path]) || currentFolder === node.path
     || String(currentFolder || '').startsWith(`${node.path}/`);
   const active = viewMode === 'folder' && currentFolder === node.path;
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <li style={{ paddingLeft: depth ? 10 : 0 }}>
@@ -512,10 +630,7 @@ function TreeNode({
           type="button"
           className={`bb-project-art__tree-node${active ? ' is-active' : ''}`}
           onClick={() => onOpen(node.path)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setMenuOpen((v) => !v);
-          }}
+          onContextMenu={(e) => onContextMenu?.(e, node)}
         >
           <span className="bb-project-art__tree-label">{node.name}</span>
         </button>
@@ -523,19 +638,11 @@ function TreeNode({
           type="button"
           className="bb-btn bb-btn--ghost bb-project-art__tree-more"
           aria-label="Folder actions"
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={(e) => onContextMenu?.(e, node)}
         >
           ⋯
         </button>
       </div>
-      {menuOpen && (
-        <div className="bb-project-art__ctx">
-          <button type="button" className="bb-btn bb-btn--ghost" onClick={() => { setMenuOpen(false); onContextAction('new', node); }}>New Folder</button>
-          <button type="button" className="bb-btn bb-btn--ghost" onClick={() => { setMenuOpen(false); onContextAction('rename', node); }}>Rename</button>
-          <button type="button" className="bb-btn bb-btn--ghost" onClick={() => { setMenuOpen(false); onContextAction('delete', node); }}>Delete</button>
-          <button type="button" className="bb-btn bb-btn--ghost" onClick={() => { setMenuOpen(false); onContextAction('explorer', node); }}>Open in Explorer</button>
-        </div>
-      )}
       {hasChildren && expanded && (
         <ul className="bb-project-art__tree">
           {node.children.map((child) => (
@@ -548,7 +655,7 @@ function TreeNode({
               viewMode={viewMode}
               onOpen={onOpen}
               onToggle={onToggle}
-              onContextAction={onContextAction}
+              onContextMenu={onContextMenu}
             />
           ))}
         </ul>
@@ -568,6 +675,9 @@ function ArtGallery({
   onDeselectAll,
   onSetSelection,
   onOpenFolder,
+  onFolderContextMenu,
+  onItemContextMenu,
+  onBackgroundContextMenu,
   onImportFiles,
   notify,
 }) {
@@ -677,6 +787,10 @@ function ArtGallery({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onContextMenu={(e) => {
+        if (e.target.closest('[data-id]') || e.target.closest('.bb-project-art__folder-tile')) return;
+        onBackgroundContextMenu?.(e);
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
@@ -697,6 +811,7 @@ function ArtGallery({
               className="bb-project-art__folder-tile"
               onDoubleClick={() => onOpenFolder(entry.path)}
               onClick={() => onOpenFolder(entry.path)}
+              onContextMenu={(e) => onFolderContextMenu?.(e, entry)}
             >
               <span className="bb-project-art__folder-icon" aria-hidden />
               <span className="bb-project-art__tile-title">{entry.name}</span>
@@ -718,6 +833,7 @@ function ArtGallery({
               else onSelectOnly(item.id);
             }}
             onDoubleClick={() => onSelectOnly(item.id)}
+            onContextMenu={(e) => onItemContextMenu?.(e, item)}
           >
             {url ? (
               <img src={url} alt={item.title} className="bb-project-art__tile-img" draggable={false} />
@@ -843,9 +959,23 @@ function ArtPreviewDetail({
       ...item,
       tags: [...(item.tags || [])],
     } : null);
+    // Selecting an image loads its saved working prompt into the prompt panel.
+    const saved = item?.generationPrompt || item?.originalGenerationPrompt || '';
+    setGeneratedPrompt(saved);
+    setInstruction('');
+    setPromptSource(item?.generationPrompt || item?.originalGenerationPrompt ? 'saved' : null);
+    setSavedPromptId(item?.associatedPromptIds?.[0] || null);
+    if (item?.provenance?.assetCategory) {
+      setAssetCategory(item.provenance.assetCategory);
+    }
+    if (item?.provenance?.tileHorizontal != null) setTileH(Boolean(item.provenance.tileHorizontal));
+    if (item?.provenance?.tileVertical != null) setTileV(Boolean(item.provenance.tileVertical));
   }, [item]);
 
   const url = item ? projectArtPreviewUrl(item) : null;
+  const originalPrompt = item?.originalGenerationPrompt
+    || item?.provenance?.finalPrompt
+    || '';
   const refStrip = trayRefs.length
     ? trayRefs
     : selectedItems.map((i) => ({
@@ -899,21 +1029,26 @@ function ArtPreviewDetail({
       return;
     }
     try {
+      // Persist the editable working prompt on the selected image (keeps original intact).
+      if (item?.id) {
+        await projectArtUpdateItem(item.id, { generationPrompt: generatedPrompt });
+        setDraft((prev) => (prev ? { ...prev, generationPrompt: generatedPrompt } : prev));
+      }
       const res = await projectArtCreatePrompt({
-        name: `${ASSET_CATEGORIES.find((c) => c.id === assetCategory)?.label || 'Asset'} prompt`,
+        name: `${item?.title || ASSET_CATEGORIES.find((c) => c.id === assetCategory)?.label || 'Asset'} prompt`,
         promptText: generatedPrompt,
         assetCategory,
         tileHorizontal: tileH,
         tileVertical: tileV,
-        itemIds: refStrip.map((r) => r.id),
+        itemIds: item?.id ? [item.id, ...refStrip.map((r) => r.id).filter((id) => id !== item.id)] : refStrip.map((r) => r.id),
         category: 'other',
       });
       setSavedPromptId(res.promptId || null);
-      setStatus('Prompt saved to Project Art Library');
+      setStatus('Prompt saved with image');
     } catch (err) {
       notify(err.message);
     }
-  }, [generatedPrompt, assetCategory, tileH, tileV, refStrip, notify, setStatus]);
+  }, [generatedPrompt, assetCategory, tileH, tileV, refStrip, notify, setStatus, item]);
 
   const onSendToGeneration = useCallback(async () => {
     const text = generatedPrompt.trim();
@@ -1186,16 +1321,31 @@ function ArtPreviewDetail({
                 Template-based prompt (not vision analysis). Review before generating.
               </div>
             )}
+            {promptSource === 'saved' && (
+              <div className="bb-project-art-detail__banner">
+                Loaded saved generation prompt for this image.
+              </div>
+            )}
 
             <label className="bb-field">
-              <span className="bb-field-caption">Generated prompt</span>
+              <span className="bb-field-caption">Generation prompt</span>
               <textarea
                 className="bb-input bb-openart__prompt"
-                rows={5}
+                rows={8}
                 value={generatedPrompt}
-                onChange={(e) => setGeneratedPrompt(e.target.value)}
+                onChange={(e) => {
+                  setGeneratedPrompt(e.target.value);
+                  if (promptSource === 'saved') setPromptSource('edited');
+                }}
               />
             </label>
+
+            {originalPrompt ? (
+              <details className="bb-project-art-detail__original">
+                <summary className="bb-field-caption">Original submitted prompt</summary>
+                <pre className="bb-project-art-detail__original-text">{originalPrompt}</pre>
+              </details>
+            ) : null}
 
             <div className="bb-project-art-detail__actions">
               <button
@@ -1265,4 +1415,57 @@ function ColumnResizeHandle({ onDelta, ariaLabel, title }) {
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
+}
+
+function buildFolderMenuItems({ node, isRoot = false, run }) {
+  const items = [
+    { id: 'open', label: 'Open', onSelect: () => run('open') },
+    { id: 'new', label: 'New Folder', onSelect: () => run('new') },
+  ];
+  if (!isRoot && node?.path) {
+    items.push(
+      { id: 'sep-edit', separator: true },
+      { id: 'rename', label: 'Rename', onSelect: () => run('rename') },
+      { id: 'delete', label: 'Delete', danger: true, onSelect: () => run('delete') },
+    );
+  }
+  items.push(
+    { id: 'sep-sys', separator: true },
+    { id: 'explorer', label: 'Open in Explorer', onSelect: () => run('explorer') },
+    { id: 'refresh', label: 'Refresh', onSelect: () => run('refresh') },
+  );
+  return items;
+}
+
+function buildImageMenuItems({ item, multiCount = 1, run }) {
+  const deleteLabel = multiCount > 1 ? `Delete ${multiCount} Images` : 'Delete';
+  const addLabel = multiCount > 1 ? `Add ${multiCount} to References` : 'Add to References';
+  return [
+    { id: 'add-refs', label: addLabel, onSelect: () => run('add-refs') },
+    {
+      id: 'favorite',
+      label: item?.favorite ? 'Remove Favorite' : 'Add to Favorites',
+      onSelect: () => run('favorite'),
+    },
+    { id: 'sep-edit', separator: true },
+    { id: 'rename', label: 'Rename', disabled: multiCount > 1, onSelect: () => run('rename') },
+    { id: 'delete', label: deleteLabel, danger: true, onSelect: () => run('delete') },
+    { id: 'sep-sys', separator: true },
+    { id: 'explorer', label: 'Open in Explorer', onSelect: () => run('explorer') },
+  ];
+}
+
+function buildGalleryBackgroundMenuItems({ hasFolder, run }) {
+  return [
+    { id: 'new', label: 'New Folder', onSelect: () => run('new') },
+    {
+      id: 'import',
+      label: 'Import Images…',
+      disabled: !hasFolder,
+      onSelect: () => run('import'),
+    },
+    { id: 'sep', separator: true },
+    { id: 'refresh', label: 'Refresh', onSelect: () => run('refresh') },
+    { id: 'explorer', label: 'Open in Explorer', onSelect: () => run('explorer') },
+  ];
 }

@@ -610,7 +610,8 @@ async function itemUpdateAction({ id, patch } = {}) {
   const item = library.items.find((i) => i.id === id);
   if (!item) fail('NOT_FOUND', `Unknown item: ${id}`);
   const editable = [
-    'title', 'description', 'generationPrompt', 'architecturalStyle', 'materials',
+    'title', 'description', 'generationPrompt', 'originalGenerationPrompt',
+    'architecturalStyle', 'materials',
     'colorPalette', 'lighting', 'atmosphere', 'distinctiveElements',
   ];
   for (const key of editable) {
@@ -882,6 +883,11 @@ async function saveFromStagingAction({
   await fs.writeFile(destAbs, buffer);
   const relativePath = relativeFromArt(destAbs);
 
+  const submittedPrompt = String(
+    metadata?.originalGenerationPrompt
+    || metadata?.generationPrompt
+    || '',
+  );
   const item = createArtItem({
     id: newId('art'),
     relativePath,
@@ -894,7 +900,8 @@ async function saveFromStagingAction({
     atmosphere: metadata?.atmosphere || '',
     distinctiveElements: metadata?.distinctiveElements || '',
     tags: metadata?.tags || [],
-    generationPrompt: metadata?.generationPrompt || '',
+    generationPrompt: metadata?.generationPrompt || submittedPrompt,
+    originalGenerationPrompt: submittedPrompt,
     provenance: provenance || {
       source: 'openart',
       stagingId: stagingId || null,

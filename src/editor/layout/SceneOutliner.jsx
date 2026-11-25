@@ -8,6 +8,8 @@ import {
 } from '../../ui/icons.jsx';
 import { getChildren, getRootActors } from '../../core/hierarchy.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
 
 const OUTLINER_DRAG = 'application/x-bloodbound-outliner-actor';
 
@@ -36,7 +38,13 @@ export function SceneOutliner({ docked = false } = {}) {
     reparentSelected,
     createCell,
     setSelectedActorFlags,
+    renameSelected,
+    duplicateSelected,
+    deleteSelected,
+    setStatus,
   } = useEditor();
+  const { prompt, confirm } = useEditorDialogs();
+  const { openFromEvent } = useEditorContextMenu();
   void revision;
 
   const [query, setQuery] = useState('');
@@ -87,6 +95,67 @@ export function SceneOutliner({ docked = false } = {}) {
       const target = world?.getActor(targetId);
       reparentSelected(target?.parentId || null);
     }
+  };
+
+  const openActorContextMenu = (event, actor) => {
+    if (!actor || mode === 'play') return;
+    if (!selectedActorIds.includes(actor.id)) {
+      selectActor(actor.id, { additive: false });
+    }
+    const count = selectedActorIds.includes(actor.id)
+      ? Math.max(1, selectedActorIds.length)
+      : 1;
+    openFromEvent(event, [
+      {
+        id: 'focus',
+        label: 'Focus Selection',
+        shortcut: 'F',
+        onSelect: () => window.dispatchEvent(new CustomEvent('bb:focus-selection')),
+      },
+      {
+        id: 'rename',
+        label: 'Rename',
+        disabled: count > 1,
+        onSelect: async () => {
+          const name = await prompt('Actor name', {
+            title: 'Rename',
+            initialValue: actor.name || actor.id,
+          });
+          if (!name || name === actor.name) return;
+          renameSelected(name);
+          setStatus?.(`Renamed to “${name}”`);
+        },
+      },
+      {
+        id: 'duplicate',
+        label: count > 1 ? `Duplicate ${count} Actors` : 'Duplicate',
+        onSelect: () => duplicateSelected(),
+      },
+      {
+        id: 'hide',
+        label: actor.visible === false ? 'Show' : 'Hide',
+        onSelect: () => {
+          selectActor(actor.id);
+          setSelectedActorFlags({ visible: actor.visible === false });
+        },
+      },
+      { id: 'sep', separator: true },
+      {
+        id: 'delete',
+        label: count > 1 ? `Delete ${count} Actors` : 'Delete',
+        danger: true,
+        onSelect: async () => {
+          const ok = await confirm(
+            count > 1
+              ? `Delete ${count} selected actors?`
+              : `Delete “${actor.name || actor.id}”?`,
+            { title: 'Delete', confirmLabel: 'Delete', tone: 'warning' },
+          );
+          if (!ok) return;
+          deleteSelected();
+        },
+      },
+    ]);
   };
 
   return (
@@ -181,6 +250,7 @@ export function SceneOutliner({ docked = false } = {}) {
                   setDropTargetId={setDropTargetId}
                   onDropOn={onDropOn}
                   setSelectedActorFlags={setSelectedActorFlags}
+                  onActorContextMenu={openActorContextMenu}
                 />
               ))}
               {roots.length === 0 && (
@@ -208,6 +278,7 @@ function OutlinerNode({
   setDropTargetId,
   onDropOn,
   setSelectedActorFlags,
+  onActorContextMenu,
 }) {
   const children = getChildren(actor.id, world)
     .filter((c) => !filteredIds || filteredIds.has(c.id));
@@ -240,6 +311,7 @@ function OutlinerNode({
           e.stopPropagation();
           onDropOn(actor.id, true);
         }}
+        onContextMenu={(e) => onActorContextMenu?.(e, actor)}
       >
         <button
           type="button"
@@ -322,6 +394,7 @@ function OutlinerNode({
               setDropTargetId={setDropTargetId}
               onDropOn={onDropOn}
               setSelectedActorFlags={setSelectedActorFlags}
+              onActorContextMenu={onActorContextMenu}
             />
           ))}
         </ul>

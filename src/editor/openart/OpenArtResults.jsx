@@ -181,9 +181,12 @@ export function OpenArtResults() {
         itemIds: origin?.itemIds || null,
         metadata: {
           generationPrompt: submittedPrompt,
+          originalGenerationPrompt: submittedPrompt,
+          tags: origin?.tags || [],
         },
         provenance: {
           source: 'openart',
+          provider: 'openart',
           modelId: ui.modelId,
           mode: ui.mode,
           stagingId: ui.staging.stagingId,
@@ -193,6 +196,7 @@ export function OpenArtResults() {
           tileHorizontal: Boolean(aiUi.promptComposition?.tileHorizontal),
           tileVertical: Boolean(aiUi.promptComposition?.tileVertical),
           assetCategory: origin?.assetCategory || null,
+          finalPrompt: submittedPrompt,
           savedAt: new Date().toISOString(),
         },
       });

@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   PROJECT_ART_SCHEMA_VERSION,
+  createArtItem,
   createEmptyLibrary,
   migrateConceptLibraryToProjectArt,
   normalizeLibrary,
@@ -18,6 +19,17 @@ import {
 } from '../editor/projectArt/visionProvider.js';
 
 describe('Project Art — schema v2', () => {
+  it('preserves originalGenerationPrompt separately from editable generationPrompt', () => {
+    const item = createArtItem({
+      id: 'art_1',
+      relativePath: 'Environments/Mansion/Concepts/Interiors/grand_hall.png',
+      generationPrompt: 'edited working prompt',
+      originalGenerationPrompt: 'original submitted prompt',
+    });
+    expect(item.originalGenerationPrompt).toBe('original submitted prompt');
+    expect(item.generationPrompt).toBe('edited working prompt');
+  });
+
   it('createEmptyLibrary returns schema version 2 with empty collections', () => {
     const lib = createEmptyLibrary();
     expect(lib.schemaVersion).toBe(PROJECT_ART_SCHEMA_VERSION);

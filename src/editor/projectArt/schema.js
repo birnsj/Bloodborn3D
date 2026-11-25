@@ -63,6 +63,8 @@ export function createArtItem({
   rating = 0,
   favorite = false,
   generationPrompt = '',
+  /** Immutable original submitted prompt (provenance). Editable copy lives in generationPrompt. */
+  originalGenerationPrompt = '',
   architecturalStyle = '',
   materials = '',
   colorPalette = '',
@@ -76,6 +78,8 @@ export function createArtItem({
   updatedAt = null,
 } = {}) {
   const now = new Date().toISOString();
+  const working = String(generationPrompt || '');
+  const original = String(originalGenerationPrompt || working);
   return {
     id: String(id || ''),
     relativePath: toPosixPath(relativePath),
@@ -84,7 +88,8 @@ export function createArtItem({
     tags: normalizeTags(tags),
     rating: clampRating(rating),
     favorite: Boolean(favorite),
-    generationPrompt: String(generationPrompt || ''),
+    generationPrompt: working,
+    originalGenerationPrompt: original,
     architecturalStyle: String(architecturalStyle || ''),
     materials: String(materials || ''),
     colorPalette: String(colorPalette || ''),
