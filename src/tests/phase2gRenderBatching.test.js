@@ -126,13 +126,14 @@ function mazeWorld(cols = 3, rows = 2) {
 beforeEach(resetFlags);
 afterEach(resetFlags);
 
-describe('Phase 2G rendering experiment — flags', () => {
-  it('defaults to off so shipped behavior is unchanged', () => {
-    expect(isWorldSolidBatchingEnabled()).toBe(false);
-    expect(isCutterMaterialSharingEnabled()).toBe(false);
+describe('Phase 2G rendering integration — flags', () => {
+  it('defaults to ON (product path)', () => {
+    expect(isWorldSolidBatchingEnabled()).toBe(true);
+    expect(isCutterMaterialSharingEnabled()).toBe(true);
   });
 
-  it('keeps the per-solid path when the flag is off', async () => {
+  it('keeps the per-solid path when batching is explicitly disabled', async () => {
+    globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = false;
     const { world } = mazeWorld();
     const view = makeView();
     view.syncFromWorld(world);
@@ -140,6 +141,17 @@ describe('Phase 2G rendering experiment — flags', () => {
     const meshes = worldSolidMeshes(view, world);
     expect(meshes.length).toBeGreaterThan(10);
     expect(meshes.some((m) => m.userData.batchedWorldSolid)).toBe(false);
+    expect(meshes.every((m) => m.userData.surfaceScheme === 'grouped')).toBe(true);
+  });
+
+  it('batches by default without setting the global', async () => {
+    const { world } = mazeWorld(4, 3);
+    const view = makeView();
+    view.syncFromWorld(world);
+    await settle();
+    const substrate = worldSolidMeshes(view, world).filter((m) => m.userData.substrateMesh);
+    expect(substrate).toHaveLength(1);
+    expect(substrate[0].userData.batchedWorldSolid).toBe(true);
   });
 });
 
@@ -243,13 +255,14 @@ describe('SceneView batched World Solid visual', () => {
   it('allocates far fewer materials and draw units than per-solid meshes', async () => {
     const { world } = mazeWorld(5, 4);
 
+    globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = false;
     const base = makeView();
     base.syncFromWorld(world);
     await settle();
     const baseMeshes = worldSolidMeshes(base, world).filter((m) => m.userData.substrateMesh);
     const baseMats = new Set(baseMeshes.flatMap((m) => m.material));
 
-    globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = true;
+    delete globalThis.__BLOODBOUND_BATCH_WORLD_SOLID;
     const batched = makeView();
     batched.syncFromWorld(world);
     await settle();
@@ -350,9 +363,8 @@ describe('SceneView batched World Solid visual', () => {
   });
 });
 
-describe('Shared cutter wireframe materials (experiment)', () => {
-  it('shares one fill + one line material across all cutters', async () => {
-    globalThis.__BLOODBOUND_SHARE_CUTTER_MATERIALS = true;
+describe('Shared cutter wireframe materials', () => {
+  it('shares one fill + one line material across all cutters by default', async () => {
     const { world } = mazeWorld(3, 2);
     const view = makeView();
     view.syncFromWorld(world);
@@ -374,8 +386,19 @@ describe('Shared cutter wireframe materials (experiment)', () => {
     expect(lines.size).toBe(1);
   });
 
+  it('uses polygonOffset on the cutter fill so coplanar faces do not z-fight', async () => {
+    const { world } = mazeWorld(3, 2);
+    const view = makeView();
+    view.syncFromWorld(world);
+    await settle();
+    const fill = view._getSharedCutterMaterials().fill;
+    expect(fill.polygonOffset).toBe(true);
+    expect(fill.polygonOffsetFactor).toBe(-1);
+    expect(fill.polygonOffsetUnits).toBe(-1);
+    expect(fill.depthWrite).toBe(false);
+  });
+
   it('actor teardown leaves the shared materials alive; view.dispose frees them', async () => {
-    globalThis.__BLOODBOUND_SHARE_CUTTER_MATERIALS = true;
     const { world } = mazeWorld(3, 2);
     const view = makeView();
     view.syncFromWorld(world);
@@ -391,7 +414,6 @@ describe('Shared cutter wireframe materials (experiment)', () => {
   });
 
   it('tracks the viewport subtract color', () => {
-    globalThis.__BLOODBOUND_SHARE_CUTTER_MATERIALS = true;
     const view = makeView();
     expect(view._getSharedCutterMaterials().fill.color.getHex()).toBe(0xc23b4a);
     view.viewportColors.subtract = 0x112233;
@@ -399,7 +421,8 @@ describe('Shared cutter wireframe materials (experiment)', () => {
     expect(view._getSharedCutterMaterials().line.color.getHex()).toBe(0x112233);
   });
 
-  it('is off by default: every cutter keeps its own materials', async () => {
+  it('falls back to per-cutter materials when sharing is disabled', async () => {
+    globalThis.__BLOODBOUND_SHARE_CUTTER_MATERIALS = false;
     const { world } = mazeWorld(3, 2);
     const view = makeView();
     view.syncFromWorld(world);

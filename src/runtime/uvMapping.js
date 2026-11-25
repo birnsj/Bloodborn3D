@@ -174,8 +174,13 @@ export function applyFaceUvsToGeometry(geom, faceUVs, options = {}) {
       const n = normalizeActorUv(suv);
       const end = g.start + g.count;
       if (index) {
+        // Indexed quads share vertices across the two triangles of a face.
+        // Transform each unique vertex once so scale/rotation is not squared.
+        const seen = new Set();
         for (let i = g.start; i < end; i += 1) {
           const vi = index.getX(i);
+          if (seen.has(vi)) continue;
+          seen.add(vi);
           const [u, v] = composeActorUv(uvAttr.getX(vi), uvAttr.getY(vi), n);
           uvAttr.setXY(vi, u, v);
         }

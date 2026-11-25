@@ -190,7 +190,10 @@ export function createExposedWorldSolidGeometry(
   for (const g of groups) {
     geom.addGroup(g.start, g.count, g.materialIndex);
   }
-  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'box' });
+  // Variable quad counts per face — 'box' (faceIndex/2, face*4) is wrong here.
+  geom.userData.surfaceIds = [...FACE_KEYS];
+  geom.userData.surfaceScheme = 'grouped';
+  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'grouped', surfaceIds: FACE_KEYS });
   return geom;
 }
 

@@ -299,11 +299,10 @@ seams, player damping) remain open.
 
 ### Phase 2G subtractive rendering optimization
 
-**Experiment complete, not integrated.** Two default-OFF flags (World Solid batching,
-shared cutter materials). 99.9 % fewer World Solid materials, 59–84 % fewer draw calls,
-2.5–3× faster frames, collision unchanged. Stairs, not subtractive surfaces, keep the
-benchmark "rep" maps just under the 80 % material target. Awaiting designer decision on
-integration. See `docs/EVAL_SUBTRACTIVE_RENDERING.md`.
+**Integrated.** World Solid batching and shared cutter materials are product defaults.
+Picking, clipped face UVs, indexed UV double-apply, and cutter overlay z-fighting
+corrected. Stairs unbatched by design. See `docs/ACCEPTANCE_SUBTRACTIVE_RENDERING.md`
+and `docs/EVAL_SUBTRACTIVE_RENDERING.md`.
 
 ### Dependencies
 

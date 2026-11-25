@@ -1098,11 +1098,18 @@ export class SceneView {
         transparent: true,
         opacity: 0.14,
         depthWrite: false,
+        depthTest: true,
         side: THREE.DoubleSide,
+        // Pull the translucent volume slightly toward the camera so it does not
+        // z-fight against coplanar carved faces (same trick as surface highlight).
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       });
       const mesh = new THREE.Mesh(geom, mat);
       mesh.castShadow = false;
       mesh.receiveShadow = false;
+      mesh.renderOrder = 2;
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.editorOnly = true;
@@ -1112,6 +1119,7 @@ export class SceneView {
         new THREE.EdgesGeometry(geom),
         shared?.line || new THREE.LineBasicMaterial({ color: subtractColor }),
       );
+      edges.renderOrder = 3;
       edges.userData.actorId = actor.id;
       edges.userData.editorOnly = true;
       group.add(edges);
@@ -1186,7 +1194,8 @@ export class SceneView {
     const hideOuterHull = isWorldSolidActor(actor);
     let anyVisibleFace = false;
 
-    // Experiment (Phase 2G, default off): one mesh for every exposed patch.
+    // Phase 2G: batched World Solid (default ON). Legacy per-solid path remains
+    // for opt-out harnesses and still uses grouped face picking/UVs.
     const batched = hideOuterHull && isWorldSolidBatchingEnabled();
     if (batched) {
       anyVisibleFace = this._addBatchedWorldSolidMesh(group, actor, comp, solids, syncToken);
@@ -1239,12 +1248,19 @@ export class SceneView {
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.brushSolid = solid.role;
-      mesh.userData.surfaceScheme = 'box';
-      mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
+      // Exposed World Solid patches have variable quads per face — use grouped
+      // scheme (geometry already stamps surfaceIds). Intact BoxGeometry solids
+      // keep the classic 2-triangles-per-face 'box' scheme.
       if (hideOuterHull) {
+        mesh.userData.surfaceScheme = 'grouped';
+        mesh.userData.surfaceIds = geom.userData?.surfaceIds
+          ? [...geom.userData.surfaceIds]
+          : [...BOX_SURFACE_IDS];
         mesh.userData.substrateMesh = true;
         anyVisibleFace = true;
       } else {
+        mesh.userData.surfaceScheme = 'box';
+        mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
         anyVisibleFace = true;
       }
 
@@ -1289,8 +1305,8 @@ export class SceneView {
   }
 
   /**
-   * Experiment (default off): cutter wireframes share one fill + one line material.
-   * Marked shared so per-actor teardown skips them; SceneView.dispose() frees them.
+   * Shared cutter wireframe materials (default ON). Marked shared so per-actor
+   * teardown skips them; SceneView.dispose() frees them.
    */
   _getSharedCutterMaterials() {
     const color = this.viewportColors.subtract;
@@ -1301,7 +1317,11 @@ export class SceneView {
           transparent: true,
           opacity: 0.14,
           depthWrite: false,
+          depthTest: true,
           side: THREE.DoubleSide,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
         })),
         line: markSharedGpuResource(new THREE.LineBasicMaterial({ color })),
       };
@@ -2658,6 +2678,11 @@ export class SceneView {
           transparent: true,
           opacity: 0.28,
           depthWrite: false,
+          depthTest: true,
+          side: THREE.DoubleSide,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
         }),
         edgeMat: new THREE.LineBasicMaterial({ color: subtractColor }),
       };
