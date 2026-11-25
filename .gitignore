@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# OpenArt PoC staging (Phase 2H.1A) — never commit generated downloads
+.openart-staging/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

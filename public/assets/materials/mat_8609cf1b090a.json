@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_8609cf1b090a",
+  "name": "OpenArt PoC Ashlar",
+  "type": "material",
+  "baseColor": "#ffffff",
+  "baseColorMapId": "tex_c483469396d2",
+  "normalMapId": null,
+  "normalScale": 1,
+  "roughness": 0.85,
+  "metalness": 0.02,
+  "roughnessMapId": null,
+  "metalnessMapId": null,
+  "envMapIntensity": 1,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 1,
+    "y": 1
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": null,
+  "createdAt": 1795581403650,
+  "updatedAt": 1795581403650
+}

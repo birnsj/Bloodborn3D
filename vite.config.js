@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { levelFileApiPlugin } from './vite-plugins/levelFileApi.js';
 import { assetFileApiPlugin } from './vite-plugins/assetFileApi.js';
+import { openArtApiPlugin } from './vite-plugins/openArtApi.js';
 
 export default defineConfig({
-  plugins: [react(), levelFileApiPlugin(), assetFileApiPlugin()],
+  plugins: [react(), levelFileApiPlugin(), assetFileApiPlugin(), openArtApiPlugin()],
   test: {
     environment: 'node',
     include: ['src/**/*.test.js'],

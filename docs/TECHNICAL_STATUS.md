@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **725 / 725 pass** (Phase 2G rendering integration; see `ACCEPTANCE_SUBTRACTIVE_RENDERING.md`) |
+| `npm test` | **738 / 738 pass** (725 + 13 OpenArt PoC; see `ACCEPTANCE_OPENART_POC.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -34,6 +34,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2G scale eval | Evaluation only — solid limit still **64**. Carve fine past 1k solids; draw-call/material-per-solid path is the wall. Practical next budget **512** if raised; larger maps need decomposition/batching. See `EVAL_SUBTRACTIVE_SCALE.md`. |
 | Phase 2G rendering integration | World Solid batching + shared cutter materials **default ON**; picking / clipped UV / indexed UV / cutter z-fight corrected. See `ACCEPTANCE_SUBTRACTIVE_RENDERING.md`. |
 | Phase 2G solid limit | `MAX_SUBTRACT_SOLIDS = 512`. Load / save / edit / Play reject over-cap with structured diagnostics. See `ACCEPTANCE_SOLID_LIMIT_512.md`. |
+| Phase 2H.1A OpenArt PoC | Official CLI adapter + dev-only `/api/openart`; estimate/approve gate; staging import into existing texture/material pipeline. No generation UI. See `ACCEPTANCE_OPENART_POC.md`. |
 
 ## 2. Implemented systems
 

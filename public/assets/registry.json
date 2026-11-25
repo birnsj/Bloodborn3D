@@ -434,6 +434,42 @@
       },
       "createdAt": 1795497051318,
       "updatedAt": 1795497051323
+    },
+    {
+      "id": "tex_c483469396d2",
+      "kind": "texture",
+      "name": "OpenArt PoC Ashlar",
+      "folder": "Textures",
+      "path": "textures/tex_c483469396d2.png",
+      "originalName": "stg_1828b817a36a.png",
+      "tags": [
+        "openart",
+        "phase2h1a",
+        "poc"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 2133017
+      },
+      "createdAt": 1795581403646,
+      "updatedAt": 1795581403646
+    },
+    {
+      "id": "mat_8609cf1b090a",
+      "kind": "material",
+      "name": "OpenArt PoC Ashlar",
+      "folder": "Materials",
+      "path": "materials/mat_8609cf1b090a.json",
+      "originalName": "mat_8609cf1b090a.json",
+      "tags": [],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.85,
+        "metalness": 0.02,
+        "hasBaseMap": true
+      },
+      "createdAt": 1795581403650,
+      "updatedAt": 1795581403650
     }
   ]
 }

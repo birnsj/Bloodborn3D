@@ -1,0 +1,41 @@
+{
+  "phase": "2H.1A",
+  "ok": true,
+  "startedAt": "2026-11-25T04:36:00.000Z",
+  "finishedAt": "2026-11-25T04:38:30.000Z",
+  "cli": {
+    "version": "0.1.1",
+    "executable": "%LOCALAPPDATA%\\Programs\\openart\\bin\\openart.exe"
+  },
+  "account": {
+    "email": "birnsj@n-fusion.com",
+    "plan": "Plus",
+    "creditsBefore": 11815,
+    "creditsAfter": 11795,
+    "spent": 20
+  },
+  "workflow": {
+    "prompt": "Seamless tileable ashlar stone wall albedo texture for a game, top-down orthographic, neutral lighting, no text, no watermark, PBR base color only",
+    "model": "nano-banana-2",
+    "mode": "text2image",
+    "estimateCredits": 20,
+    "costConfig": { "aspectRatio": "1:1", "imageCount": 1, "resolution": "1K" },
+    "approved": true,
+    "generationId": "VpVi1p1Pyra1vK7cbkUF",
+    "stagingId": "stg_1828b817a36a",
+    "textureId": "tex_c483469396d2",
+    "texturePath": "textures/tex_c483469396d2.png",
+    "materialId": "mat_8609cf1b090a",
+    "materialName": "OpenArt PoC Ashlar",
+    "previewPath": "/assets/textures/tex_c483469396d2.png",
+    "previewBytes": 2133017,
+    "resultUrl": "https://cdn.openart.ai/openart-ai/production/2026-11/create-image/cLfVi12UFuE3GsJni6yh/image_1795581369292_a6cb4b3a_1795581369442_39375cec.png"
+  },
+  "notes": [
+    "Paid generate required --approve-spend (confirmSpend:true); estimate alone spends nothing.",
+    "Async submit returned history id; creation get/wait JSON uses { history.status, resources[].url }.",
+    "First wait parse missed that shape; fixed and download/import resumed without a second charge.",
+    "Texture imported via importTextureBuffer (same registry path as Import Texture).",
+    "Material created with baseColorMapId pointing at the imported texture."
+  ]
+}

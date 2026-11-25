@@ -332,3 +332,13 @@ Play unchanged aside from the new budget. See `docs/ACCEPTANCE_SOLID_LIMIT_512.m
 
 Reserved. Not started. Do not begin until Phase **2F.7** is complete (satisfied by **2F.7G**) and the
 designer directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
+
+---
+
+## Phase 2H — OpenArt Media Integration
+
+### Phase 2H.1A — OpenArt PoC
+
+**Done.** Official OpenArt CLI adapter, estimate → explicit approve → generate →
+staging → texture import → material. Dev-only `/api/openart`. No generation UI yet.
+See `docs/ACCEPTANCE_OPENART_POC.md`. **Stop before building the full generation interface.**

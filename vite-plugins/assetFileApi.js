@@ -74,7 +74,10 @@ export function assetFileApiPlugin() {
           }
 
           if (req.method === 'POST' && action === 'import-texture') {
-            const result = await importBinaryAsset(req, 'texture', TEXTURE_EXTS);
+            const url = new URL(req.url || '/', 'http://localhost');
+            const originalName = url.searchParams.get('name') || 'import.png';
+            const buffer = await readBodyBuffer(req);
+            const result = await importTextureBuffer(buffer, originalName);
             sendJson(res, 200, result);
             return;
           }
@@ -165,6 +168,60 @@ function resolveSafeAssetPath(relPath) {
   return full;
 }
 
+/**
+ * Import a texture from an in-memory buffer through the normal registry path.
+ * Used by the HTTP upload handler and by the OpenArt staging import (Phase 2H.1A).
+ */
+export async function importTextureBuffer(buffer, originalName = 'import.png', {
+  tags = [],
+  name = null,
+} = {}) {
+  if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) {
+    throw new Error('Texture import requires a binary buffer');
+  }
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  if (!bytes.length) throw new Error('Empty upload');
+
+  const base = path.basename(originalName || 'import.png');
+  const ext = path.extname(base).toLowerCase() || '.png';
+  if (!TEXTURE_EXTS.has(ext)) {
+    throw new Error(`Unsupported texture extension: ${ext}`);
+  }
+
+  const id = `tex_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  const storedName = `${id}${ext}`;
+  const relPath = `${KIND_DIRS.texture}/${storedName}`;
+  const full = resolveSafeAssetPath(relPath);
+  await fs.writeFile(full, bytes);
+
+  const originalRel = `${KIND_DIRS.texture}/originals/${storedName}`;
+  const originalFull = resolveSafeAssetPath(originalRel);
+  await fs.mkdir(path.dirname(originalFull), { recursive: true });
+  await fs.copyFile(full, originalFull);
+
+  const entry = {
+    id,
+    kind: 'texture',
+    name: name || stripExt(base),
+    folder: 'Textures',
+    path: relPath,
+    originalName: base,
+    tags: Array.isArray(tags) ? tags : [],
+    meta: {
+      format: ext.replace('.', ''),
+      bytes: bytes.length,
+    },
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  const registry = await readRegistry();
+  registry.assets.push(entry);
+  await writeRegistry(registry);
+
+  return { ok: true, asset: entry, registry };
+}
+
 async function importBinaryAsset(req, kind, allowedExts) {
   const url = new URL(req.url || '/', 'http://localhost');
   const originalName = url.searchParams.get('name') || `import${kind === 'mesh' ? '.glb' : '.png'}`;
@@ -177,7 +234,11 @@ async function importBinaryAsset(req, kind, allowedExts) {
   const buffer = await readBodyBuffer(req);
   if (!buffer.length) throw new Error('Empty upload');
 
-  const id = `${kind === 'texture' ? 'tex' : 'mesh'}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  if (kind === 'texture') {
+    return importTextureBuffer(buffer, base);
+  }
+
+  const id = `mesh_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const storedName = `${id}${ext}`;
   const relPath = `${KIND_DIRS[kind]}/${storedName}`;
   const full = resolveSafeAssetPath(relPath);
@@ -189,28 +250,21 @@ async function importBinaryAsset(req, kind, allowedExts) {
   await fs.mkdir(path.dirname(originalFull), { recursive: true });
   await fs.copyFile(full, originalFull);
 
-  const meta = kind === 'mesh'
-    ? {
-        format: ext === '.gltf' ? 'gltf' : 'glb',
-        bytes: buffer.length,
-        unitAssumption: 'meters',
-        editorUnitsPerMeter: 100,
-        scaleWarning: null,
-      }
-    : {
-        format: ext.replace('.', ''),
-        bytes: buffer.length,
-      };
-
   const entry = {
     id,
     kind,
     name: stripExt(base),
-    folder: kind === 'texture' ? 'Textures' : 'Meshes',
+    folder: 'Meshes',
     path: relPath,
     originalName: base,
     tags: [],
-    meta,
+    meta: {
+      format: ext === '.gltf' ? 'gltf' : 'glb',
+      bytes: buffer.length,
+      unitAssumption: 'meters',
+      editorUnitsPerMeter: 100,
+      scaleWarning: null,
+    },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -220,6 +274,11 @@ async function importBinaryAsset(req, kind, allowedExts) {
   await writeRegistry(registry);
 
   return { ok: true, asset: entry, registry };
+}
+
+/** Public helper for OpenArt (and other) server-side material creation. */
+export async function createMaterialAssetFromDefinition(body) {
+  return createMaterialAsset(body);
 }
 
 async function createMaterialAsset(body) {
