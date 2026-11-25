@@ -12,8 +12,8 @@ dist
 dist-ssr
 *.local
 
-# OpenArt PoC staging (Phase 2H.1A) — never commit generated downloads
-.openart-staging/
+# OpenArt staging — track generation images + staging sidecar JSON; ignore job poll cache
+.openart-staging/jobs/
 
 # Atomic write temps from asset/concept middleware
 **/.*.tmp
