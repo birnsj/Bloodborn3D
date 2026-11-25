@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | See latest 2F.7A verification in `ACCEPTANCE_SUBTRACTIVE.md` |
+| `npm test` | **560 / 560 pass** (2F.7A gate; see `ACCEPTANCE_SUBTRACTIVE.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |

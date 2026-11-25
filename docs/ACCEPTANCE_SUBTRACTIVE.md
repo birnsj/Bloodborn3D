@@ -20,20 +20,22 @@ AABB partition carving produced many sibling solid boxes. Only faces on the **pa
 
 Contains: 2×2 maze rooms + doorways, overlapping alcove, raised upper alcove, additive pillar + platform, lights, spawn. World Solid solid-count ≤ 64.
 
-## Verification (2026-11-24)
+## Verification (2026-11-24 gate)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **558 pass** / 2 pre-existing fail (`colorThemes`, `hoverHelp`) — no 2F.7A failures |
+| `npm test` | **560 / 560 pass** (0 fail) |
+| `colorThemes` / `hoverHelp` | Fixed outdated expectations (`DEFAULT_COLOR_THEME` = midnight; grid help split Move Grid / Enable Snap) |
 | Unit: `phase2f7aSubtractive.test.js` | Pass |
 | Unit: `worldSolidFit.test.js` | Pass |
 | Unit: `brushBoolean.test.js` (partition hide) | Pass |
 | Existing additive / mansion / convex suites | Pass (no additive pipeline change) |
-| `npm run lint` | exit 0, warnings only |
+| `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | Pass |
-| Browser: `acceptance-subtractive.json` Lit | Interiors + yellow subtract helpers; **0** exterior hull faces visible; 40 substrate pieces / 42 empty-adjacent faces |
-| Browser: Play / Stop | Play hides all `editorOnly` helpers (69); Stop restores edit |
-| Browser: `acceptance-gothic-mansion.json` | Loads additive; mansion outliner + Lit smoke OK |
+| Browser: `acceptance-subtractive.json` | Subtractive Lit; World Solid present; **0** exterior hull faces; 40 substrate / 42 empty-adjacent faces; editor helpers visible |
+| Browser: Play / Stop (subtractive) | Play hides all `editorOnly` helpers; Stop restores edit |
+| Browser: `acceptance-gothic-mansion.json` | Additive; 35 actors; no World Solid |
+| Browser: `acceptance-convex-brushes.json` | Additive; 14 actors / 6 ConvexBrush |
 
 ## Limits
 

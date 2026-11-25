@@ -59,7 +59,9 @@ describe('hover help content', () => {
     for (const prefix of requiredPrefixes) {
       expect(ids.some((id) => id.startsWith(prefix))).toBe(true);
     }
-    expect(getHelpEntry('toolbar.grid')?.title).toBe('Grid Snap');
+    // Grid size vs snap toggle are separate toolbar controls.
+    expect(getHelpEntry('toolbar.grid')?.title).toBe('Move Grid');
+    expect(getHelpEntry('toolbar.gridSnap')?.title).toBe('Enable Snap');
     expect(getHelpEntry('toolbar.surface')?.title).toBe('Surface Selection');
     expect(getHelpEntry('toolbar.geometryFace')?.title).toBe('Geometry Face');
     expect(getHelpEntry('viewport.camera')?.title).toBe('Camera Mode');

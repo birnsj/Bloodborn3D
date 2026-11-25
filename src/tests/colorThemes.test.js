@@ -19,8 +19,9 @@ describe('color themes', () => {
 
   it('normalizes invalid theme ids', () => {
     expect(normalizeColorTheme('forge')).toBe('forge');
-    expect(normalizeColorTheme('nope')).toBe('bloodbound');
-    expect(normalizeColorTheme(null)).toBe('bloodbound');
+    expect(normalizeColorTheme('nope')).toBe(DEFAULT_COLOR_THEME);
+    expect(normalizeColorTheme(null)).toBe(DEFAULT_COLOR_THEME);
+    expect(DEFAULT_COLOR_THEME).toBe('midnight');
   });
 
   it('persists colorTheme through layout clamp', () => {
