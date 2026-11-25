@@ -38,6 +38,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2H.1B OpenArt Editor | Generation panel in Asset Viewer + optional dock; dynamic CLI models/params; explicit spend confirm; import texture / create material; mocked tests + browser harness. See `ACCEPTANCE_OPENART_EDITOR.md`. |
 | Phase 2H.1C AI Assets Workspace | AI Assets three-column workspace; OpenArt live; ComfyUI/Meshy Coming Soon; standalone OpenArt folder/dock removed. See `ACCEPTANCE_AI_ASSETS_WORKSPACE.md`. |
 | Phase 2H.1D Concept Library | Areas/concepts/prompts JSON DB under `concept-library/`; import + OpenArt save; Generate Asset seed; vision unsupported extension point. See `ACCEPTANCE_CONCEPT_LIBRARY.md`. |
+| Phase 2H.1E Project Art Library | Filesystem `project-art/` browser + `.bb-art/library.json`; collections; refs tray; template prompts; Asset Generation handoff. See `ACCEPTANCE_PROJECT_ART_LIBRARY.md`. |
 | Pipeline hardening (post-`08e15fd`) | OpenArt spend reservation / ambiguous failure / job recovery; atomic asset registry + mutex; concept-library request serialization; upload limits + magic bytes; localhost-only OpenArt API; transform coerceFiniteNumber. See `ACCEPTANCE_PIPELINE_HARDENING.md`. |
 
 ## 2. Implemented systems
@@ -73,7 +74,7 @@ Status is what the code does today, not an intent.
 | Editor shell | Implemented | Dock layout with named layouts, themes, UI scale, Edit → Settings, hover help, shortcut reference. |
 | Tutorials | Implemented | 13 lessons with starter levels under `public/levels/tutorials/`. |
 | Session recorder | Implemented | Record button in the toolbar. |
-| Non-level workspaces | Partial | **Materials** is implemented (2E.4). World Map, Characters, Animation, Visual Scripting, Dialogue, UI Editor, AI Assets remain `PlaceholderWorkspace`. |
+| Non-level workspaces | Partial | **Materials** (2E.4) and **AI Assets** (2H.1C–1E, Project Art Library + generation) are implemented. World Map, Characters, Animation, Visual Scripting, Dialogue, UI Editor remain `PlaceholderWorkspace`. |
 | Structural UV (2E.0) | Implemented | Local tiling at 100 eu; actor UV + material UV composition; stairs/ramps density-corrected. |
 | Surface selection (2E.1) | Implemented | Toolbar **Surface** mode; semantic `faceMaterials` IDs; emissive highlight; actor material fallback. Brush/miter/openings/ramp/stair/column/arch/curved wall. |
 | Per-surface UV (2E.2) | Implemented | `faceUVs[surfaceId]` after actor UV; Details Scale/Offset/Rotation + Reset; identity preserves authored look; undo/save/prefab via component JSON. |

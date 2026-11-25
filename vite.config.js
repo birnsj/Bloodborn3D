@@ -4,6 +4,7 @@ import { levelFileApiPlugin } from './vite-plugins/levelFileApi.js';
 import { assetFileApiPlugin } from './vite-plugins/assetFileApi.js';
 import { openArtApiPlugin } from './vite-plugins/openArtApi.js';
 import { conceptLibraryApiPlugin } from './vite-plugins/conceptLibraryApi.js';
+import { projectArtApiPlugin } from './vite-plugins/projectArtApi.js';
 
 export default defineConfig({
   plugins: [
@@ -12,6 +13,7 @@ export default defineConfig({
     assetFileApiPlugin(),
     openArtApiPlugin(),
     conceptLibraryApiPlugin(),
+    projectArtApiPlugin(),
   ],
   test: {
     environment: 'node',

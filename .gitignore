@@ -22,6 +22,11 @@ public/assets/.registry.json.*.tmp
 # Concept Library images (Phase 2H.1D) — library.json is tracked; binary refs stay local
 concept-library/images/
 
+# Project Art Library — track .bb-art/library.json + empty dirs (.gitkeep); ignore binaries/thumbs
+project-art/**/*.{png,jpg,jpeg,webp,gif,PNG,JPG,JPEG,WEBP,GIF}
+project-art/.bb-art/thumbs/**
+!project-art/.bb-art/thumbs/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

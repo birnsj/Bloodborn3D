@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ConceptLibraryPanel } from '../conceptLibrary/ConceptLibraryPanel.jsx';
+import { ProjectArtLibraryPanel } from '../projectArt/ProjectArtLibraryPanel.jsx';
 import { OpenArtControls } from '../openart/OpenArtControls.jsx';
 import { OpenArtResults } from '../openart/OpenArtResults.jsx';
 import {
@@ -19,7 +19,7 @@ const RESULTS_MIN = 360;
 
 /**
  * Phase 2H.1C/D — AI Assets workspace.
- * Top sections: Concept Library | Asset Generation
+ * Top sections: Project Art Library | Asset Generation
  */
 export function AiAssetsWorkspace() {
   const [ui, setUi] = useState(() => getAiAssetsUiState());
@@ -27,6 +27,8 @@ export function AiAssetsWorkspace() {
 
   const provider = getAiProvider(ui.selectedProviderId);
   const isConcepts = ui.section !== 'generation';
+  const artSaveMode = ui.artSaveTargetFolder != null;
+  const conceptSaveMode = Boolean(ui.conceptSaveTargetAreaId);
 
   return (
     <div className="bb-workspace bb-ai-assets-shell" data-bb-tutorial="workspace.ai">
@@ -36,7 +38,7 @@ export function AiAssetsWorkspace() {
           className={`bb-ai-assets-shell__tab${isConcepts ? ' is-active' : ''}`}
           onClick={() => setAiAssetsSection('concepts')}
         >
-          Concept Library
+          Project Art Library
         </button>
         <button
           type="button"
@@ -48,19 +50,23 @@ export function AiAssetsWorkspace() {
       </div>
 
       {isConcepts ? (
-        <ConceptLibraryPanel />
+        <ProjectArtLibraryPanel />
       ) : (
         <GenerationWorkspace
           provider={provider}
           selectedProviderId={ui.selectedProviderId}
-          conceptSaveMode={Boolean(ui.conceptSaveTargetAreaId)}
+          conceptSaveMode={conceptSaveMode}
+          artSaveMode={artSaveMode}
+          artSaveFolder={ui.artSaveTargetFolder}
         />
       )}
     </div>
   );
 }
 
-function GenerationWorkspace({ provider, selectedProviderId, conceptSaveMode }) {
+function GenerationWorkspace({
+  provider, selectedProviderId, conceptSaveMode, artSaveMode, artSaveFolder,
+}) {
   const rootRef = useRef(null);
   const [navW, setNavW] = useState(168);
   const [settingsW, setSettingsW] = useState(290);
@@ -110,7 +116,12 @@ function GenerationWorkspace({ provider, selectedProviderId, conceptSaveMode }) 
           {provider?.status === 'coming_soon' && (
             <span className="bb-ai-assets__badge">Coming soon</span>
           )}
-          {conceptSaveMode && (
+          {artSaveMode && (
+            <span className="bb-ai-assets__badge" title={artSaveFolder || '/'}>
+              Project Art save
+            </span>
+          )}
+          {!artSaveMode && conceptSaveMode && (
             <span className="bb-ai-assets__badge">Concept save mode</span>
           )}
         </div>

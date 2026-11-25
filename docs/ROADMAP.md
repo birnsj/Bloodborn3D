@@ -363,3 +363,11 @@ Standalone OpenArt Content Browser folder and Window dock entry removed. See
 concepts, editable metadata, reusable prompt DB, Generate Asset seeding into OpenArt.
 Project-local JSON + images under `concept-library/`. OpenArt vision unsupported —
 manual metadata + extension point. See `docs/ACCEPTANCE_CONCEPT_LIBRARY.md`.
+
+### Phase 2H.1E — Project Art Library
+
+**Done.** Evolved Concept Library into Adobe Bridge–style **Project Art Library**:
+filesystem browser under `project-art/`, collections, multi-select Generation References
+tray, Generate Asset Prompt (template composition; OpenArt vision still unsupported),
+Send to Asset Generation handoff without auto-spend. Legacy concept-library migrates
+when project-art metadata is empty. See `docs/ACCEPTANCE_PROJECT_ART_LIBRARY.md`.

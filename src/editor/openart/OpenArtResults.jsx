@@ -8,6 +8,7 @@ import {
   clearGenerationOrigin,
   getAiAssetsUiState,
   setAiAssetsSection,
+  setArtSaveTargetFolder,
   setConceptSaveTargetAreaId,
   setResultsThumbSize,
   subscribeAiAssetsUi,
@@ -18,6 +19,10 @@ import {
   conceptLibraryAttachGeneratedAsset,
   conceptLibrarySaveFromStaging,
 } from '../conceptLibrary/conceptLibraryStore.js';
+import {
+  attachProjectArtAsset,
+  saveProjectArtFromStaging,
+} from '../../io/projectArtClient.js';
 import {
   getOpenArtComposedPrompt,
   getOpenArtUiState,
@@ -42,7 +47,7 @@ export function OpenArtResults() {
 
   const attachOriginIfAny = useCallback(async (result) => {
     const origin = getAiAssetsUiState().generationOrigin;
-    if (!origin?.conceptId) return;
+    if (!origin) return;
     const assets = [];
     if (result?.texture?.id) {
       assets.push({
@@ -58,6 +63,29 @@ export function OpenArtResults() {
         name: result.material.name || result.material.id,
       });
     }
+    if (!assets.length) return;
+
+    const projectItemIds = Array.isArray(origin.itemIds) ? origin.itemIds.filter(Boolean) : [];
+    const isProjectArtOrigin = origin.folderPath != null
+      || origin.assetCategory
+      || projectItemIds.length > 0;
+    if (isProjectArtOrigin) {
+      if (!projectItemIds.length && !origin.promptId) return;
+      for (const asset of assets) {
+        try {
+          await attachProjectArtAsset({
+            itemIds: projectItemIds,
+            promptId: origin.promptId,
+            asset,
+          });
+        } catch (err) {
+          notify(err.message || `Could not link ${asset.kind} to Project Art`);
+        }
+      }
+      return;
+    }
+
+    if (!origin.conceptId) return;
     for (const asset of assets) {
       try {
         await conceptLibraryAttachGeneratedAsset({
@@ -102,8 +130,11 @@ export function OpenArtResults() {
 
   const hasResult = Boolean(ui.staging?.stagingId || ui.previewUrl);
   const saveTargetAreaId = aiUi.conceptSaveTargetAreaId;
+  const artSaveFolder = aiUi.artSaveTargetFolder;
   const generationOrigin = aiUi.generationOrigin;
-  const canSaveConcept = Boolean(hasResult && saveTargetAreaId && !ui.busy);
+  const projectArtSaveMode = artSaveFolder != null;
+  const canSaveConcept = Boolean(hasResult && saveTargetAreaId && !ui.busy && !projectArtSaveMode);
+  const canSaveProjectArt = Boolean(hasResult && projectArtSaveMode && ui.staging?.stagingId && !ui.busy);
 
   const onSaveToConceptLibrary = useCallback(async () => {
     if (!ui.staging?.stagingId || !saveTargetAreaId) return;
@@ -136,6 +167,44 @@ export function OpenArtResults() {
       notify(err.message || String(err));
     }
   }, [aiUi.promptComposition, notify, saveTargetAreaId, setStatus, ui]);
+
+  const onSaveToProjectArt = useCallback(async () => {
+    if (!ui.staging?.stagingId || artSaveFolder == null) return;
+    try {
+      const submittedPrompt = getOpenArtComposedPrompt() || ui.prompt;
+      const origin = getAiAssetsUiState().generationOrigin;
+      await saveProjectArtFromStaging({
+        folderPath: artSaveFolder,
+        stagingId: ui.staging.stagingId,
+        title: suggestConceptTitle(ui.prompt),
+        promptId: origin?.promptId || null,
+        itemIds: origin?.itemIds || null,
+        metadata: {
+          generationPrompt: submittedPrompt,
+        },
+        provenance: {
+          source: 'openart',
+          modelId: ui.modelId,
+          mode: ui.mode,
+          stagingId: ui.staging.stagingId,
+          jobId: ui.job?.jobId || null,
+          generationId: ui.job?.generationId || null,
+          formValues: { ...ui.formValues },
+          tileHorizontal: Boolean(aiUi.promptComposition?.tileHorizontal),
+          tileVertical: Boolean(aiUi.promptComposition?.tileVertical),
+          assetCategory: origin?.assetCategory || null,
+          savedAt: new Date().toISOString(),
+        },
+      });
+      setArtSaveTargetFolder(null);
+      clearGenerationOrigin();
+      setAiAssetsSection('concepts');
+      setStatus('Saved to Project Art Library');
+      notify('Saved to Project Art Library');
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [aiUi.promptComposition, artSaveFolder, notify, setStatus, ui]);
 
   const phaseLabel = describePhase(ui);
   const thumbSize = Number(aiUi.resultsThumbSize) || RESULTS_THUMB_SIZE_DEFAULT;
@@ -259,17 +328,31 @@ export function OpenArtResults() {
             >
               Create Material
             </button>
-            <button
-              type="button"
-              className="bb-btn"
-              disabled={!canSaveConcept}
-              title={saveTargetAreaId
-                ? 'Save into the selected Concept Library area'
-                : 'Start from Concept Library → Generate to enable'}
-              onClick={onSaveToConceptLibrary}
-            >
-              Save Concept
-            </button>
+            {projectArtSaveMode ? (
+              <button
+                type="button"
+                className="bb-btn"
+                disabled={!canSaveProjectArt}
+                title={artSaveFolder
+                  ? `Save into Project Art / ${artSaveFolder || '(root)'}`
+                  : 'Start from Project Art Library → Send to Asset Generation'}
+                onClick={onSaveToProjectArt}
+              >
+                Save to Project Art
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="bb-btn"
+                disabled={!canSaveConcept}
+                title={saveTargetAreaId
+                  ? 'Save into the selected Concept Library area'
+                  : 'Start from Concept Library → Generate to enable'}
+                onClick={onSaveToConceptLibrary}
+              >
+                Save Concept
+              </button>
+            )}
             <button
               type="button"
               className="bb-btn bb-btn--ghost bb-btn--icon"
@@ -383,6 +466,24 @@ export function OpenArtResults() {
                 <>
                   <dt>Origin area</dt>
                   <dd>{generationOrigin.areaId}</dd>
+                </>
+              )}
+              {Array.isArray(generationOrigin?.itemIds) && generationOrigin.itemIds.length > 0 && (
+                <>
+                  <dt>Origin items</dt>
+                  <dd>{generationOrigin.itemIds.join(', ')}</dd>
+                </>
+              )}
+              {generationOrigin?.folderPath != null && (
+                <>
+                  <dt>Save folder</dt>
+                  <dd>{generationOrigin.folderPath || '(root)'}</dd>
+                </>
+              )}
+              {generationOrigin?.assetCategory && (
+                <>
+                  <dt>Asset category</dt>
+                  <dd>{generationOrigin.assetCategory}</dd>
                 </>
               )}
             </dl>

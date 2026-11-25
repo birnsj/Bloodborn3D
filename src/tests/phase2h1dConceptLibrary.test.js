@@ -277,6 +277,11 @@ describe('Phase 2H.1D — generation origin UI state', () => {
       conceptId: 'c',
       promptId: 'p',
       finalPrompt: 'hello',
+      assetCategory: null,
+      tileHorizontal: false,
+      tileVertical: false,
+      itemIds: [],
+      folderPath: null,
     });
     clearGenerationOrigin();
     expect(getAiAssetsUiState().generationOrigin).toBeNull();
