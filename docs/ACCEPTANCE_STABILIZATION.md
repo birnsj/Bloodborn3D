@@ -2,7 +2,7 @@
 
 **Status:** Complete (2026-11-25)  
 **Baseline:** `df77689` — 612 tests  
-**Gate tip:** see git history after this commit  
+**Gate tip:** `5924ff0`  
 **Harness:** `public/dev/phase2f7gAcceptance.js` → `await window.__phase2f7gAcceptance()`  
 **CI:** `.github/workflows/ci.yml` (test + lint + production build on `main` / PRs)
 
