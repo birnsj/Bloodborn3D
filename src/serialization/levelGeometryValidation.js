@@ -19,8 +19,8 @@
  */
 import {
   applyWorldSubtraction,
+  getMaxSubtractSolids,
   isSubtractBrush,
-  MAX_SUBTRACT_SOLIDS,
 } from '../runtime/brushBoolean.js';
 import { getBrushBaseSolids } from '../runtime/brushGeometry.js';
 import { validateGeometryComponentPayload } from '../rules/geometryPayloadRules.js';
@@ -87,7 +87,7 @@ export function validateWorldPayloads(world) {
  * the solid limit. Unlike the edit-time check this reports all offenders, and it
  * never truncates — callers must reject the level.
  */
-export function validateWorldSubtractLimits(world, { maxSolids = MAX_SUBTRACT_SOLIDS } = {}) {
+export function validateWorldSubtractLimits(world, { maxSolids = getMaxSubtractSolids() } = {}) {
   const diagnostics = [];
   if (!world?.actors) return diagnostics;
 

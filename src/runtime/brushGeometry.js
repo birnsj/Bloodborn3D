@@ -6,8 +6,8 @@ import {
   BRUSH_FACE_KEYS,
   exposedSolidFaceRects,
   formatSubtractComplexityMessage,
+  getMaxSubtractSolids,
   isSubtractBrush,
-  MAX_SUBTRACT_SOLIDS,
   solidToAabb,
 } from './brushBoolean.js';
 import {
@@ -297,7 +297,7 @@ export function getBrushRenderSolids(brush, context = null) {
   }
 
   const carved = applyWorldSubtraction(base.solids, context.actor, context.world, {
-    maxSolids: context.maxSolids ?? MAX_SUBTRACT_SOLIDS,
+    maxSolids: context.maxSolids ?? getMaxSubtractSolids(),
   });
   return {
     hasOpenings: base.hasOpenings || carved.solids.length !== base.solids.length,
@@ -316,7 +316,7 @@ export function getBrushRenderSolids(brush, context = null) {
  * @returns {{ ok: true } | { ok: false, actorId, actorName, solidCount, maxSolids, message }}
  */
 export function validateWorldSubtractComplexity(world, {
-  maxSolids = MAX_SUBTRACT_SOLIDS,
+  maxSolids = getMaxSubtractSolids(),
 } = {}) {
   if (!world?.actors) return { ok: true, maxSolids };
 

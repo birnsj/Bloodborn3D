@@ -9,6 +9,19 @@ import { mat4Invert, mat4Multiply, mat4TransformPoint } from '../core/math3d.js'
 export const MAX_SUBTRACT_SOLIDS = 64;
 export const MIN_SOLID_SIZE = 0.5; // editor units — discard slivers
 
+/**
+ * Active solid budget for carve / validation. Defaults to MAX_SUBTRACT_SOLIDS.
+ * Evaluation harnesses may set `globalThis.__BLOODBOUND_MAX_SUBTRACT_SOLIDS`
+ * temporarily; production paths never set it. Cleared → back to 64.
+ */
+export function getMaxSubtractSolids() {
+  const override = globalThis.__BLOODBOUND_MAX_SUBTRACT_SOLIDS;
+  if (typeof override === 'number' && Number.isFinite(override) && override > 0) {
+    return override;
+  }
+  return MAX_SUBTRACT_SOLIDS;
+}
+
 /** @typedef {{ center: {x:number,y:number,z:number}, size: {x:number,y:number,z:number}, role?: string }} BrushSolid */
 /** @typedef {{ min: {x:number,y:number,z:number}, max: {x:number,y:number,z:number} }} Aabb */
 
@@ -453,7 +466,7 @@ export function cutterHoleInBrushLocal(targetActor, cutterActor, world) {
  * are not applied and the result is marked exceeded with the last valid solid list.
  */
 export function applyWorldSubtraction(solids, targetActor, world, {
-  maxSolids = MAX_SUBTRACT_SOLIDS,
+  maxSolids = getMaxSubtractSolids(),
   warnings = null,
 } = {}) {
   if (!world || !targetActor || !solids?.length) {

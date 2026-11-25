@@ -31,6 +31,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.7H | Independent audit corrections (carve invalidation, GLB textures, epochs, dispose, validate, spawn); see `ACCEPTANCE_AUDIT_CORRECTIONS.md` |
 | **Phase 2F.7** | **Complete** (incl. 2F.7H corrections) |
 | Phase 2G prerequisites | Audit defects D1 (additive carve invalidation), D2 (subtractive complexity validated on load / save / Play), D3 (geometry payload validation); see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
+| Phase 2G scale eval | Evaluation only — solid limit still **64**. Carve fine past 1k solids; draw-call/material-per-solid path is the wall. Practical next budget **512** if raised; larger maps need decomposition/batching. See `EVAL_SUBTRACTIVE_SCALE.md`. |
 
 ## 2. Implemented systems
 

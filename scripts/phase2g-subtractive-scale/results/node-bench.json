@@ -1,0 +1,1668 @@
+{
+  "generatedAt": "2026-11-25T03:48:03.307Z",
+  "permanentLimit": 64,
+  "caps": [
+    64,
+    128,
+    256,
+    512,
+    1024
+  ],
+  "roomCounts": [
+    25,
+    50,
+    100,
+    200
+  ],
+  "notes": [
+    "Carve / mesh / physics measured with temporary maxSolids; MAX_SUBTRACT_SOLIDS remains 64.",
+    "Representative worlds include corridors, upper floors, window punches, shafts, additive stairs.",
+    "Flush worlds are the maze-only baseline (lower fragmentation)."
+  ],
+  "flush": [
+    {
+      "label": "flush-25",
+      "meta": {
+        "roomCount": 25,
+        "cols": 5,
+        "rows": 5,
+        "upperCount": 0,
+        "windowCount": 0,
+        "stairCount": 0,
+        "cutters": 49,
+        "flush": true,
+        "actors": 61
+      },
+      "unconstrainedSolids": 98,
+      "unconstrainedCarveMs": {
+        "min": 0.53,
+        "median": 2.81,
+        "max": 3.39
+      },
+      "fullMesh": {
+        "solidCount": 98,
+        "meshes": 80,
+        "triangles": 648,
+        "geometryBytes": 45360,
+        "geometryKB": 44.3,
+        "meshGenMs": {
+          "min": 1.09,
+          "median": 1.13,
+          "max": 1.16
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 1,
+        "colliderCount": 98,
+        "worldSolidColliders": 98,
+        "physicsInitMs": 0.75
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 0.4,
+          "median": 0.42,
+          "max": 0.55
+        }
+      },
+      "io": {
+        "actors": 61,
+        "jsonBytes": 36631,
+        "jsonKB": 35.8,
+        "serializeMs": {
+          "min": 0.08,
+          "median": 0.09,
+          "max": 0.18
+        },
+        "deserializeMs": {
+          "min": 0.11,
+          "median": 0.16,
+          "max": 0.7
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 65,
+          "offendingCutterId": "actor_d987b508-c6ec-43f2-a658-97237657abc9",
+          "carveMs": {
+            "min": 0.15,
+            "median": 0.22,
+            "max": 0.51
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 98,
+          "wouldNeed": 98,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.28,
+            "median": 0.33,
+            "max": 0.81
+          },
+          "mesh": {
+            "solidCount": 98,
+            "meshes": 80,
+            "triangles": 648,
+            "geometryBytes": 45360,
+            "geometryKB": 44.3,
+            "meshGenMs": {
+              "min": 2.07,
+              "median": 5.08,
+              "max": 6.87
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.47,
+              "median": 0.87,
+              "max": 2.37
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 98,
+            "worldSolidColliders": 98,
+            "physicsInitMs": 33.06
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 98,
+            "approxVolumeEu3": 2036000000
+          }
+        },
+        "256": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 98,
+          "wouldNeed": 98,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.22,
+            "median": 0.24,
+            "max": 0.82
+          },
+          "mesh": {
+            "solidCount": 98,
+            "meshes": 80,
+            "triangles": 648,
+            "geometryBytes": 45360,
+            "geometryKB": 44.3,
+            "meshGenMs": {
+              "min": 2.59,
+              "median": 2.69,
+              "max": 3.91
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.49,
+              "median": 0.53,
+              "max": 0.79
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 98,
+            "worldSolidColliders": 98,
+            "physicsInitMs": 1
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 98,
+            "approxVolumeEu3": 2036000000
+          }
+        },
+        "512": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 98,
+          "wouldNeed": 98,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.21,
+            "median": 0.22,
+            "max": 0.34
+          },
+          "mesh": {
+            "solidCount": 98,
+            "meshes": 80,
+            "triangles": 648,
+            "geometryBytes": 45360,
+            "geometryKB": 44.3,
+            "meshGenMs": {
+              "min": 1.19,
+              "median": 1.21,
+              "max": 1.25
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.43,
+              "median": 0.52,
+              "max": 0.65
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 98,
+            "worldSolidColliders": 98,
+            "physicsInitMs": 0.96
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 98,
+            "approxVolumeEu3": 2036000000
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 98,
+          "wouldNeed": 98,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.21,
+            "median": 0.24,
+            "max": 0.35
+          },
+          "mesh": {
+            "solidCount": 98,
+            "meshes": 80,
+            "triangles": 648,
+            "geometryBytes": 45360,
+            "geometryKB": 44.3,
+            "meshGenMs": {
+              "min": 1.02,
+              "median": 1.42,
+              "max": 1.48
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.44,
+              "median": 0.49,
+              "max": 0.72
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 98,
+            "worldSolidColliders": 98,
+            "physicsInitMs": 1.15
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 98,
+            "approxVolumeEu3": 2036000000
+          }
+        }
+      }
+    },
+    {
+      "label": "flush-50",
+      "meta": {
+        "roomCount": 56,
+        "cols": 8,
+        "rows": 7,
+        "upperCount": 0,
+        "windowCount": 0,
+        "stairCount": 0,
+        "cutters": 111,
+        "flush": true,
+        "actors": 130
+      },
+      "unconstrainedSolids": 172,
+      "unconstrainedCarveMs": {
+        "min": 0.48,
+        "median": 0.54,
+        "max": 1.37
+      },
+      "fullMesh": {
+        "solidCount": 172,
+        "meshes": 154,
+        "triangles": 1480,
+        "geometryBytes": 103600,
+        "geometryKB": 101.2,
+        "meshGenMs": {
+          "min": 2.44,
+          "median": 2.53,
+          "max": 2.64
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 1,
+        "colliderCount": 172,
+        "worldSolidColliders": 172,
+        "physicsInitMs": 1.08
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 0.87,
+          "median": 0.94,
+          "max": 1.08
+        }
+      },
+      "io": {
+        "actors": 130,
+        "jsonBytes": 78859,
+        "jsonKB": 77,
+        "serializeMs": {
+          "min": 0.13,
+          "median": 0.15,
+          "max": 0.18
+        },
+        "deserializeMs": {
+          "min": 0.18,
+          "median": 0.19,
+          "max": 0.31
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 71,
+          "offendingCutterId": "actor_311287e6-1427-4dd4-852d-10365bc6cb49",
+          "carveMs": {
+            "min": 0.11,
+            "median": 0.12,
+            "max": 0.13
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_a1cae2f4-8eda-4395-ac59-2a24c48487fe",
+          "carveMs": {
+            "min": 0.24,
+            "median": 0.36,
+            "max": 0.55
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 172,
+          "wouldNeed": 172,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.43,
+            "median": 0.47,
+            "max": 0.72
+          },
+          "mesh": {
+            "solidCount": 172,
+            "meshes": 154,
+            "triangles": 1480,
+            "geometryBytes": 103600,
+            "geometryKB": 101.2,
+            "meshGenMs": {
+              "min": 2.97,
+              "median": 3.22,
+              "max": 3.48
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.96,
+              "median": 1.06,
+              "max": 1.21
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 172,
+            "worldSolidColliders": 172,
+            "physicsInitMs": 1.32
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 172,
+            "approxVolumeEu3": 4362000000
+          }
+        },
+        "512": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 172,
+          "wouldNeed": 172,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.41,
+            "median": 0.47,
+            "max": 0.6
+          },
+          "mesh": {
+            "solidCount": 172,
+            "meshes": 154,
+            "triangles": 1480,
+            "geometryBytes": 103600,
+            "geometryKB": 101.2,
+            "meshGenMs": {
+              "min": 2.4,
+              "median": 2.62,
+              "max": 3.07
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.88,
+              "median": 0.98,
+              "max": 1.39
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 172,
+            "worldSolidColliders": 172,
+            "physicsInitMs": 1.73
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 172,
+            "approxVolumeEu3": 4362000000
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 172,
+          "wouldNeed": 172,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.42,
+            "median": 0.45,
+            "max": 0.9
+          },
+          "mesh": {
+            "solidCount": 172,
+            "meshes": 154,
+            "triangles": 1480,
+            "geometryBytes": 103600,
+            "geometryKB": 101.2,
+            "meshGenMs": {
+              "min": 2.52,
+              "median": 2.59,
+              "max": 3.85
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.84,
+              "median": 0.88,
+              "max": 1.02
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 172,
+            "worldSolidColliders": 172,
+            "physicsInitMs": 0.98
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 172,
+            "approxVolumeEu3": 4362000000
+          }
+        }
+      }
+    },
+    {
+      "label": "flush-100",
+      "meta": {
+        "roomCount": 100,
+        "cols": 10,
+        "rows": 10,
+        "upperCount": 0,
+        "windowCount": 0,
+        "stairCount": 0,
+        "cutters": 199,
+        "flush": true,
+        "actors": 227
+      },
+      "unconstrainedSolids": 278,
+      "unconstrainedCarveMs": {
+        "min": 0.97,
+        "median": 1.04,
+        "max": 1.43
+      },
+      "fullMesh": {
+        "solidCount": 278,
+        "meshes": 255,
+        "triangles": 2744,
+        "geometryBytes": 192080,
+        "geometryKB": 187.6,
+        "meshGenMs": {
+          "min": 5.29,
+          "median": 5.91,
+          "max": 5.95
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 1,
+        "colliderCount": 278,
+        "worldSolidColliders": 278,
+        "physicsInitMs": 1.95
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 1.98,
+          "median": 2.1,
+          "max": 2.78
+        }
+      },
+      "io": {
+        "actors": 227,
+        "jsonBytes": 138348,
+        "jsonKB": 135.1,
+        "serializeMs": {
+          "min": 0.24,
+          "median": 0.24,
+          "max": 0.25
+        },
+        "deserializeMs": {
+          "min": 0.16,
+          "median": 0.21,
+          "max": 0.23
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 65,
+          "offendingCutterId": "actor_e47e1f8e-62cb-48da-93e6-090ff0088d07",
+          "carveMs": {
+            "min": 0.07,
+            "median": 0.08,
+            "max": 0.61
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_4ba7a7a0-ba7d-455d-8f55-647a94b9a26c",
+          "carveMs": {
+            "min": 0.2,
+            "median": 0.2,
+            "max": 0.21
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 257,
+          "offendingCutterId": "actor_651c1487-4055-43c5-8502-d5ef6d94c8df",
+          "carveMs": {
+            "min": 0.81,
+            "median": 0.87,
+            "max": 1.39
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 278,
+          "wouldNeed": 278,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.94,
+            "median": 1.05,
+            "max": 1.48
+          },
+          "mesh": {
+            "solidCount": 278,
+            "meshes": 255,
+            "triangles": 2744,
+            "geometryBytes": 192080,
+            "geometryKB": 187.6,
+            "meshGenMs": {
+              "min": 5.88,
+              "median": 5.95,
+              "max": 6.68
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 1.99,
+              "median": 2.15,
+              "max": 2.3
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 278,
+            "worldSolidColliders": 278,
+            "physicsInitMs": 1.71
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 278,
+            "approxVolumeEu3": 7611000000
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 278,
+          "wouldNeed": 278,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.95,
+            "median": 0.97,
+            "max": 1.72
+          },
+          "mesh": {
+            "solidCount": 278,
+            "meshes": 255,
+            "triangles": 2744,
+            "geometryBytes": 192080,
+            "geometryKB": 187.6,
+            "meshGenMs": {
+              "min": 5.24,
+              "median": 5.95,
+              "max": 5.96
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 1.97,
+              "median": 2.06,
+              "max": 2.16
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 278,
+            "worldSolidColliders": 278,
+            "physicsInitMs": 1.7
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 278,
+            "approxVolumeEu3": 7611000000
+          }
+        }
+      }
+    },
+    {
+      "label": "flush-200",
+      "meta": {
+        "roomCount": 210,
+        "cols": 15,
+        "rows": 14,
+        "upperCount": 0,
+        "windowCount": 0,
+        "stairCount": 0,
+        "cutters": 419,
+        "flush": true,
+        "actors": 478
+      },
+      "unconstrainedSolids": 522,
+      "unconstrainedCarveMs": {
+        "min": 3.07,
+        "median": 3.19,
+        "max": 4.02
+      },
+      "fullMesh": {
+        "solidCount": 522,
+        "meshes": 497,
+        "triangles": 5712,
+        "geometryBytes": 399840,
+        "geometryKB": 390.5,
+        "meshGenMs": {
+          "min": 16.65,
+          "median": 16.9,
+          "max": 17.19
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 1,
+        "colliderCount": 522,
+        "worldSolidColliders": 522,
+        "physicsInitMs": 4.4
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 6.43,
+          "median": 6.7,
+          "max": 7.32
+        }
+      },
+      "io": {
+        "actors": 478,
+        "jsonBytes": 291531,
+        "jsonKB": 284.7,
+        "serializeMs": {
+          "min": 0.48,
+          "median": 0.49,
+          "max": 0.58
+        },
+        "deserializeMs": {
+          "min": 0.31,
+          "median": 0.32,
+          "max": 0.38
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 70,
+          "offendingCutterId": "actor_abc6f528-2a8d-443d-b0b1-c8a099f46334",
+          "carveMs": {
+            "min": 0.08,
+            "median": 0.09,
+            "max": 0.1
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_9255a7ef-ff62-48ab-b463-95e657a310a5",
+          "carveMs": {
+            "min": 0.24,
+            "median": 0.25,
+            "max": 0.26
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 257,
+          "offendingCutterId": "actor_be2aef47-105a-4674-8976-b7e0d7e092bd",
+          "carveMs": {
+            "min": 0.74,
+            "median": 0.78,
+            "max": 1.02
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 513,
+          "offendingCutterId": "actor_2d5bb94e-9abc-463c-8741-f83ebeae3564",
+          "carveMs": {
+            "min": 3.04,
+            "median": 3.06,
+            "max": 3.25
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 522,
+          "wouldNeed": 522,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 3.08,
+            "median": 3.36,
+            "max": 4.03
+          },
+          "mesh": {
+            "solidCount": 522,
+            "meshes": 497,
+            "triangles": 5712,
+            "geometryBytes": 399840,
+            "geometryKB": 390.5,
+            "meshGenMs": {
+              "min": 17.37,
+              "median": 18.17,
+              "max": 18.49
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 6.55,
+              "median": 7.04,
+              "max": 7.48
+            }
+          },
+          "physics": {
+            "bodyCount": 1,
+            "colliderCount": 522,
+            "worldSolidColliders": 522,
+            "physicsInitMs": 4.41
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 0,
+            "solidCount": 522,
+            "approxVolumeEu3": 15646000000
+          }
+        }
+      }
+    }
+  ],
+  "representative": [
+    {
+      "label": "rep-25",
+      "meta": {
+        "roomCount": 25,
+        "cols": 5,
+        "rows": 5,
+        "upperCount": 9,
+        "windowCount": 13,
+        "stairCount": 5,
+        "cutters": 81,
+        "actors": 99
+      },
+      "unconstrainedSolids": 277,
+      "unconstrainedCarveMs": {
+        "min": 0.48,
+        "median": 0.76,
+        "max": 2.05
+      },
+      "fullMesh": {
+        "solidCount": 277,
+        "meshes": 222,
+        "triangles": 1024,
+        "geometryBytes": 71680,
+        "geometryKB": 70,
+        "meshGenMs": {
+          "min": 4.01,
+          "median": 4.36,
+          "max": 4.57
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 6,
+        "colliderCount": 352,
+        "worldSolidColliders": 277,
+        "physicsInitMs": 1.4
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 0.72,
+          "median": 0.9,
+          "max": 1.31
+        }
+      },
+      "io": {
+        "actors": 99,
+        "jsonBytes": 59282,
+        "jsonKB": 57.9,
+        "serializeMs": {
+          "min": 0.18,
+          "median": 0.2,
+          "max": 0.23
+        },
+        "deserializeMs": {
+          "min": 0.17,
+          "median": 0.19,
+          "max": 0.4
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 65,
+          "offendingCutterId": "actor_6af1f31e-cb7f-4f06-afda-7652b0eff6cc",
+          "carveMs": {
+            "min": 0.08,
+            "median": 0.08,
+            "max": 0.09
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 134,
+          "offendingCutterId": "actor_7cca5585-ac96-41fd-b599-6124c0780fe0",
+          "carveMs": {
+            "min": 0.25,
+            "median": 0.25,
+            "max": 0.36
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 257,
+          "offendingCutterId": "actor_cddfe8fe-a2b2-49dc-b087-b992939c74fe",
+          "carveMs": {
+            "min": 0.42,
+            "median": 0.43,
+            "max": 0.56
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 277,
+          "wouldNeed": 277,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.44,
+            "median": 0.54,
+            "max": 0.63
+          },
+          "mesh": {
+            "solidCount": 277,
+            "meshes": 222,
+            "triangles": 1024,
+            "geometryBytes": 71680,
+            "geometryKB": 70,
+            "meshGenMs": {
+              "min": 3.99,
+              "median": 4.17,
+              "max": 11.84
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 1.02,
+              "median": 1.04,
+              "max": 1.1
+            }
+          },
+          "physics": {
+            "bodyCount": 6,
+            "colliderCount": 352,
+            "worldSolidColliders": 277,
+            "physicsInitMs": 3.83
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 5,
+            "solidCount": 277,
+            "approxVolumeEu3": 4299250000
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 277,
+          "wouldNeed": 277,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.49,
+            "median": 0.57,
+            "max": 0.99
+          },
+          "mesh": {
+            "solidCount": 277,
+            "meshes": 222,
+            "triangles": 1024,
+            "geometryBytes": 71680,
+            "geometryKB": 70,
+            "meshGenMs": {
+              "min": 4.11,
+              "median": 4.17,
+              "max": 12.03
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 0.99,
+              "median": 1.02,
+              "max": 1.1
+            }
+          },
+          "physics": {
+            "bodyCount": 6,
+            "colliderCount": 352,
+            "worldSolidColliders": 277,
+            "physicsInitMs": 2.96
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 5,
+            "solidCount": 277,
+            "approxVolumeEu3": 4299250000
+          }
+        }
+      }
+    },
+    {
+      "label": "rep-50",
+      "meta": {
+        "roomCount": 56,
+        "cols": 8,
+        "rows": 7,
+        "upperCount": 19,
+        "windowCount": 28,
+        "stairCount": 10,
+        "cutters": 178,
+        "actors": 208
+      },
+      "unconstrainedSolids": 391,
+      "unconstrainedCarveMs": {
+        "min": 0.87,
+        "median": 0.93,
+        "max": 1.38
+      },
+      "fullMesh": {
+        "solidCount": 391,
+        "meshes": 362,
+        "triangles": 2066,
+        "geometryBytes": 144620,
+        "geometryKB": 141.2,
+        "meshGenMs": {
+          "min": 7.21,
+          "median": 7.76,
+          "max": 7.81
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 11,
+        "colliderCount": 541,
+        "worldSolidColliders": 391,
+        "physicsInitMs": 2.54
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 1.8,
+          "median": 1.94,
+          "max": 2.2
+        }
+      },
+      "io": {
+        "actors": 208,
+        "jsonBytes": 125476,
+        "jsonKB": 122.5,
+        "serializeMs": {
+          "min": 0.19,
+          "median": 0.19,
+          "max": 0.22
+        },
+        "deserializeMs": {
+          "min": 0.18,
+          "median": 0.19,
+          "max": 0.29
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 71,
+          "offendingCutterId": "actor_0032c5e4-32ca-4e79-8217-5d2f5eb92cdd",
+          "carveMs": {
+            "min": 0.07,
+            "median": 0.08,
+            "max": 0.48
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_cea48602-6c5e-44ea-b991-3abab6438980",
+          "carveMs": {
+            "min": 0.21,
+            "median": 0.21,
+            "max": 0.23
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 262,
+          "offendingCutterId": "actor_02ec73cb-d49f-4ec9-a908-dbd1777e2778",
+          "carveMs": {
+            "min": 0.6,
+            "median": 0.69,
+            "max": 1.15
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 391,
+          "wouldNeed": 391,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.88,
+            "median": 0.94,
+            "max": 1.1
+          },
+          "mesh": {
+            "solidCount": 391,
+            "meshes": 362,
+            "triangles": 2066,
+            "geometryBytes": 144620,
+            "geometryKB": 141.2,
+            "meshGenMs": {
+              "min": 6.96,
+              "median": 7.41,
+              "max": 8.54
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 1.9,
+              "median": 2.01,
+              "max": 2.37
+            }
+          },
+          "physics": {
+            "bodyCount": 11,
+            "colliderCount": 541,
+            "worldSolidColliders": 391,
+            "physicsInitMs": 2.31
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 10,
+            "solidCount": 391,
+            "approxVolumeEu3": 9343375000
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 391,
+          "wouldNeed": 391,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 0.87,
+            "median": 0.9,
+            "max": 1.09
+          },
+          "mesh": {
+            "solidCount": 391,
+            "meshes": 362,
+            "triangles": 2066,
+            "geometryBytes": 144620,
+            "geometryKB": 141.2,
+            "meshGenMs": {
+              "min": 7.47,
+              "median": 7.7,
+              "max": 7.89
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 1.99,
+              "median": 2.01,
+              "max": 2.44
+            }
+          },
+          "physics": {
+            "bodyCount": 11,
+            "colliderCount": 541,
+            "worldSolidColliders": 391,
+            "physicsInitMs": 2.32
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 10,
+            "solidCount": 391,
+            "approxVolumeEu3": 9343375000
+          }
+        }
+      }
+    },
+    {
+      "label": "rep-100",
+      "meta": {
+        "roomCount": 100,
+        "cols": 10,
+        "rows": 10,
+        "upperCount": 34,
+        "windowCount": 50,
+        "stairCount": 17,
+        "cutters": 318,
+        "actors": 364
+      },
+      "unconstrainedSolids": 646,
+      "unconstrainedCarveMs": {
+        "min": 2.28,
+        "median": 2.48,
+        "max": 3.07
+      },
+      "fullMesh": {
+        "solidCount": 646,
+        "meshes": 609,
+        "triangles": 3852,
+        "geometryBytes": 269640,
+        "geometryKB": 263.3,
+        "meshGenMs": {
+          "min": 16.78,
+          "median": 17.12,
+          "max": 17.52
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 18,
+        "colliderCount": 901,
+        "worldSolidColliders": 646,
+        "physicsInitMs": 4.31
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 4.77,
+          "median": 6.01,
+          "max": 7.54
+        }
+      },
+      "io": {
+        "actors": 364,
+        "jsonBytes": 220309,
+        "jsonKB": 215.1,
+        "serializeMs": {
+          "min": 0.37,
+          "median": 0.37,
+          "max": 0.39
+        },
+        "deserializeMs": {
+          "min": 0.23,
+          "median": 0.27,
+          "max": 0.3
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 65,
+          "offendingCutterId": "actor_837c5252-f0e9-41f0-a0db-9a47a6c74961",
+          "carveMs": {
+            "min": 0.07,
+            "median": 0.12,
+            "max": 0.5
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_44da2cdc-0057-43d4-8a36-613f84bfaef8",
+          "carveMs": {
+            "min": 0.21,
+            "median": 0.21,
+            "max": 0.22
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 257,
+          "offendingCutterId": "actor_b1eb756c-9d9f-430c-97aa-106ae79f3a5e",
+          "carveMs": {
+            "min": 0.81,
+            "median": 0.83,
+            "max": 1.22
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 520,
+          "offendingCutterId": "actor_960b2bbb-e584-4965-8985-7abd693075d5",
+          "carveMs": {
+            "min": 1.58,
+            "median": 1.8,
+            "max": 2.64
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "1024": {
+          "fits": true,
+          "ok": true,
+          "solidCount": 646,
+          "wouldNeed": 646,
+          "offendingCutterId": null,
+          "carveMs": {
+            "min": 2.2,
+            "median": 2.51,
+            "max": 3.35
+          },
+          "mesh": {
+            "solidCount": 646,
+            "meshes": 609,
+            "triangles": 3852,
+            "geometryBytes": 269640,
+            "geometryKB": 263.3,
+            "meshGenMs": {
+              "min": 16.73,
+              "median": 16.84,
+              "max": 17.18
+            }
+          },
+          "edit": {
+            "moveCutterRecarveMs": {
+              "min": 4.78,
+              "median": 4.93,
+              "max": 5.3
+            }
+          },
+          "physics": {
+            "bodyCount": 18,
+            "colliderCount": 901,
+            "worldSolidColliders": 646,
+            "physicsInitMs": 4.57
+          },
+          "correctness": {
+            "ok": true,
+            "issues": [],
+            "sampledRooms": 8,
+            "stairActors": 17,
+            "solidCount": 646,
+            "approxVolumeEu3": 16364250000
+          }
+        }
+      }
+    },
+    {
+      "label": "rep-200",
+      "meta": {
+        "roomCount": 210,
+        "cols": 15,
+        "rows": 14,
+        "upperCount": 70,
+        "windowCount": 105,
+        "stairCount": 35,
+        "cutters": 665,
+        "actors": 760
+      },
+      "unconstrainedSolids": 1387,
+      "unconstrainedCarveMs": {
+        "min": 8.75,
+        "median": 9.44,
+        "max": 15.22
+      },
+      "fullMesh": {
+        "solidCount": 1387,
+        "meshes": 1301,
+        "triangles": 8700,
+        "geometryBytes": 609000,
+        "geometryKB": 594.7,
+        "meshGenMs": {
+          "min": 63.61,
+          "median": 64.4,
+          "max": 65.37
+        }
+      },
+      "fullPhys": {
+        "bodyCount": 36,
+        "colliderCount": 1912,
+        "worldSolidColliders": 1387,
+        "physicsInitMs": 11.9
+      },
+      "fullEdit": {
+        "moveCutterRecarveMs": {
+          "min": 15.88,
+          "median": 16.86,
+          "max": 17.66
+        }
+      },
+      "io": {
+        "actors": 760,
+        "jsonBytes": 460596,
+        "jsonKB": 449.8,
+        "serializeMs": {
+          "min": 0.78,
+          "median": 0.83,
+          "max": 0.84
+        },
+        "deserializeMs": {
+          "min": 0.44,
+          "median": 0.48,
+          "max": 0.6
+        }
+      },
+      "byCap": {
+        "64": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 70,
+          "offendingCutterId": "actor_724ae934-a4ac-4f93-afd4-0c316211ae19",
+          "carveMs": {
+            "min": 0.09,
+            "median": 0.1,
+            "max": 0.15
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "128": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 129,
+          "offendingCutterId": "actor_865c11e8-0376-493d-9d4c-205c96f343c1",
+          "carveMs": {
+            "min": 0.25,
+            "median": 0.26,
+            "max": 0.28
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "256": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 257,
+          "offendingCutterId": "actor_5a12bea5-a043-4b64-b020-9781d49013df",
+          "carveMs": {
+            "min": 0.74,
+            "median": 0.75,
+            "max": 0.78
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "512": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 513,
+          "offendingCutterId": "actor_e56709b2-0487-40eb-9a84-affbf7474ed1",
+          "carveMs": {
+            "min": 2.99,
+            "median": 3.2,
+            "max": 3.9
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        },
+        "1024": {
+          "fits": false,
+          "ok": false,
+          "solidCount": null,
+          "wouldNeed": 1034,
+          "offendingCutterId": "actor_08e39cc6-d8e9-4fe4-8114-8a0c32b256e3",
+          "carveMs": {
+            "min": 5.25,
+            "median": 5.79,
+            "max": 6.2
+          },
+          "mesh": null,
+          "edit": null,
+          "physics": null,
+          "correctness": {
+            "ok": false,
+            "reason": "over cap"
+          }
+        }
+      }
+    }
+  ]
+}

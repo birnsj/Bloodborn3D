@@ -286,10 +286,16 @@ finite transform validation; world-space parented player spawn.
 **Done** (2026-11-25). Audit defects D1 (additive carve invalidation), D2 (subtractive
 complexity validation on load / save / Play) and D3 (geometry payload validation) only.
 **Map generation has not started**; other audit items (carve broadphase, draw calls, floor
-seams, player damping, the 64-solid representation question) remain open.
+seams, player damping) remain open.
 
 - Units: `phase2gPrerequisites.test.js`
 - Report: `docs/ACCEPTANCE_PREREQUISITES.md`
+
+### Phase 2G subtractive scalability evaluation
+
+**Done** (evaluation only). Measured solid capacity at caps 64–1024 and room counts
+25–200. Product limit remains **64**. See `docs/EVAL_SUBTRACTIVE_SCALE.md`.
+**Do not begin map generation** until the designer directs a solid-budget decision.
 
 ### Dependencies
 
