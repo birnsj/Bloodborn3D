@@ -68,4 +68,4 @@
 - `src/prefabs/PrefabDefinition.js` — orphan/dupe cleanup
 - `src/tests/phase2f7eDataIntegrity.test.js` — regression suite
 
-Phase **2F.7F** not started.
+Phase **2F.7F** — see `ACCEPTANCE_PHYSICS.md`.

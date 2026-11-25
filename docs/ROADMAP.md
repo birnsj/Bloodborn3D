@@ -250,13 +250,21 @@ exact-fit for undo; prefab duplicate instanceIds + history-safe auto-overrides.
 - Units: `phase2f7eDataIntegrity.test.js`
 - Report: `docs/ACCEPTANCE_DATA_INTEGRITY.md`
 
+### Phase 2F.7F — Physics and Collision Hardening
+
+**Done** (2026-11-24). Fixed 60 Hz physics with capped catch-up; verified brush/opening/parent-scale
+collision agreement; StaticMesh box colliders use asset `boundingBoxMeters` (M10).
+
+- Units: `phase2f7fPhysics.test.js`
+- Report: `docs/ACCEPTANCE_PHYSICS.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E → 2F.7F
 ```
 
 ### Out of scope for 2F
@@ -270,5 +278,5 @@ exact-fit for undo; prefab duplicate instanceIds + history-safe auto-overrides.
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7E) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7F) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

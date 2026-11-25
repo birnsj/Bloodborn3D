@@ -173,6 +173,17 @@ export function AssetBrowserProvider({ children }) {
     return publicAssetUrl(entry.path);
   }, [registry, revision]);
 
+  const getMeshBoundsMeters = useCallback((id) => {
+    const entry = findAsset(registry, id);
+    const box = entry?.meta?.boundingBoxMeters;
+    if (!box || typeof box !== 'object') return null;
+    const x = Number(box.x);
+    const y = Number(box.y);
+    const z = Number(box.z);
+    if (![x, y, z].every((v) => Number.isFinite(v) && v > 0)) return null;
+    return { x, y, z };
+  }, [registry]);
+
   const getMeshUrl = useCallback((id) => {
     const entry = findAsset(registry, id);
     if (!entry || entry.kind !== 'mesh') return null;
@@ -316,10 +327,18 @@ export function AssetBrowserProvider({ children }) {
   const assetResolver = useMemo(() => ({
     getTextureUrl,
     getMeshUrl,
+    getMeshBoundsMeters,
     getMaterialDefinition,
     getPrefabDefinition,
     getPrefabDefinitionSync,
-  }), [getTextureUrl, getMeshUrl, getMaterialDefinition, getPrefabDefinition, getPrefabDefinitionSync]);
+  }), [
+    getTextureUrl,
+    getMeshUrl,
+    getMeshBoundsMeters,
+    getMaterialDefinition,
+    getPrefabDefinition,
+    getPrefabDefinitionSync,
+  ]);
 
   const value = useMemo(() => ({
     folders: ASSET_FOLDERS,

@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **598 / 598 pass** (2F.7E gate; see `ACCEPTANCE_DATA_INTEGRITY.md`) |
+| `npm test` | **605 / 605 pass** (2F.7F gate; see `ACCEPTANCE_PHYSICS.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
@@ -23,6 +23,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.7A | Subtractive map mode; empty-adjacent face culling; World Solid auto-fit; `acceptance-subtractive.json` |
 | Phase 2F.7B | Asset lifecycle / GPU ownership; actor visualEpoch; shared vs owned dispose; see `ACCEPTANCE_ASSET_LIFECYCLE.md` |
 | Phase 2F.7E | Persistence / data integrity; strict level validate; atomic saves; Play/Stop mapMode+ambient; World Solid exact-fit; prefab duplicate ids; see `ACCEPTANCE_DATA_INTEGRITY.md` |
+| Phase 2F.7F | Physics / collision; fixed 60 Hz timestep; StaticMesh asset-bounds boxes; opening/parent-scale agreement; see `ACCEPTANCE_PHYSICS.md` |
 
 ## 2. Implemented systems
 
@@ -34,7 +35,7 @@ Status is what the code does today, not an intent.
 | Component types | Implemented | Brush, **ConvexBrush**, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
 | Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads 1–3; rejects other versions (see M9). |
 | Rendering (`SceneView`) | Implemented | Full rebuild on every world sync (see M6). ConvexBrush uses grouped per-face mesh + per-actor rebuild path. |
-| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; static meshes use a unit-cube collider (see M10). |
+| Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; **fixed 60 Hz** step; StaticMesh box uses asset bounds (M10 closed in 2F.7F). |
 | ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported. |
 | Geometry Face editing (2F.1) | Implemented | Toolbar Face mode; `geometrySelection`; face overlays; gizmo + normal handle; grid snap; reject invalid; multi-actor atomic undo. |
 | Geometry Edge editing (2F.2) | Implemented | Toolbar Edge mode; derived edge keys; screen-space pick + Alt x-ray; `Line2` highlight; same moveVertices pipeline. |
@@ -92,7 +93,7 @@ These were out of scope for the pass and are unchanged.
 | --- | --- | --- |
 | M6 | Medium | Every edit triggers a full `SceneView.syncFromWorld` (geometry and up to 6 materials per solid rebuilt). Acceptable for current level sizes; will not scale. Incremental sync was explicitly deferred. |
 | M8 | Medium | `SceneView` (runtime) imports editor modules (`runtime/SceneView.js`, imports near the top). Runtime/editor separation was explicitly deferred. |
-| M10 | Medium | Static mesh colliders are a unit cube (`PhysicsWorld.js`, static mesh branch of `buildFromWorld`), not mesh bounds. Collider redesign was explicitly deferred. |
+| M10 | Medium | **Closed in 2F.7F** — StaticMesh `collisionType: 'box'` uses `meta.boundingBoxMeters` via `getMeshBoundsMeters` (fallback 1 m cube). |
 | L | Low | `PlayerController.js` stair-assist hack (~lines 129–139). |
 | L | Low | `GameRuntime.stop()` / `restoreAuthoredSnapshot()` clear the world with an O(n²) loop (`World.clear` → `removeActor` filters the array each time). |
 | L | Low | `Component.js` defines `onStart` / `onUpdate` / `onStop`, which nothing calls (only `onAttach` / `onDetach` are invoked, by `Actor`). |
@@ -114,6 +115,7 @@ These were out of scope for the pass and are unchanged.
 - Incremental scene synchronization (M6) — **done** in Phase **2F.7C** (`ACCEPTANCE_INCREMENTAL_SYNC.md`).
 - Code cleanup pass — **done** in Phase **2F.7D** (`ACCEPTANCE_CODE_CLEANUP.md`); legacy Toolbar/Hierarchy/Inspector removed; `worldSolidFit` in runtime.
 - Persistence / data integrity — **done** in Phase **2F.7E** (`ACCEPTANCE_DATA_INTEGRITY.md`).
+- Physics / collision hardening — **done** in Phase **2F.7F** (`ACCEPTANCE_PHYSICS.md`).
 - Runtime/editor dependency separation (M8) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Static-mesh collider generation (M10).

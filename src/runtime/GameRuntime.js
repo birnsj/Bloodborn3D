@@ -79,6 +79,7 @@ export class GameRuntime {
 
   setAssetResolver(resolver) {
     this.sceneView.setAssetResolver(resolver);
+    this.physics.setAssetResolver(resolver);
     if (this.world) this.sceneView.syncFromWorld(this.world);
   }
 
@@ -208,6 +209,7 @@ export class GameRuntime {
   }
 
   _beginPlaySession() {
+    this.physics.resetAccumulator();
     this.physics.buildFromWorld(this.world);
 
     const spawn = this.world.actors.find((a) => a.getComponent('PlayerSpawn'));
@@ -402,6 +404,7 @@ export class GameRuntime {
     if (!this._running) return;
     // Skip the hidden interval so physics does not see one giant step.
     this._lastTime = performance.now();
+    this.physics.resetAccumulator();
     this._scheduleFrame();
   }
 

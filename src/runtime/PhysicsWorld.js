@@ -20,6 +20,12 @@ import { isWallBrush } from './wallOpenings.js';
 
 let rapierReady = null;
 
+/** Fixed physics rate (Hz). Decoupled from render frame rate (Phase 2F.7F). */
+export const PHYSICS_FIXED_HZ = 60;
+export const PHYSICS_FIXED_DT = 1 / PHYSICS_FIXED_HZ;
+/** Max catch-up substeps per frame to avoid spiral-of-death stalls. */
+export const PHYSICS_MAX_SUBSTEPS = 5;
+
 export function ensureRapier() {
   if (!rapierReady) {
     rapierReady = RAPIER.init();
@@ -36,6 +42,15 @@ export class PhysicsWorld {
     this._bodies = new Map();
     this.playerBody = null;
     this.playerCollider = null;
+    /** Optional asset resolver for StaticMesh bounds (`getMeshBoundsMeters`). */
+    this.assetResolver = null;
+    this._accumulator = 0;
+    this.fixedDt = PHYSICS_FIXED_DT;
+    this.maxSubsteps = PHYSICS_MAX_SUBSTEPS;
+  }
+
+  setAssetResolver(resolver) {
+    this.assetResolver = resolver || null;
   }
 
   async init() {
@@ -44,6 +59,8 @@ export class PhysicsWorld {
     // reference alone leaks its native memory on every Play.
     this.dispose();
     this.world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+    this.world.timestep = this.fixedDt;
+    this.resetAccumulator();
     return this;
   }
 
@@ -113,10 +130,27 @@ export class PhysicsWorld {
         && mesh.collidable
         && mesh.collisionType === 'box'
       ) {
-        // Explicit primitive: 1 m unit cube; world scale applied in _addBoxCollider.
-        this._addBoxCollider(actor, { x: 0.5, y: 0.5, z: 0.5 });
+        // Asset-bounds box (meters); actor world scale applied in _addBoxCollider.
+        // Falls back to 1 m cube when bounds are unavailable (legacy / missing meta).
+        const half = halfExtentsFromMeshBounds(this._resolveMeshBoundsMeters(mesh.assetId));
+        this._addBoxCollider(actor, half);
       }
     }
+  }
+
+  /**
+   * Resolve mesh AABB size in meters from the asset registry / resolver.
+   * @returns {{ x: number, y: number, z: number }|null}
+   */
+  _resolveMeshBoundsMeters(assetId) {
+    if (!assetId) return null;
+    const raw = this.assetResolver?.getMeshBoundsMeters?.(assetId);
+    if (!raw || typeof raw !== 'object') return null;
+    const x = Number(raw.x);
+    const y = Number(raw.y);
+    const z = Number(raw.z);
+    if (![x, y, z].every((v) => Number.isFinite(v) && v > 0)) return null;
+    return { x, y, z };
   }
 
   _addConvexBrushCollider(actor, convex, gameWorld = null) {
@@ -447,10 +481,46 @@ export class PhysicsWorld {
     return this._bodies.get(actorId)?.colliders?.length || 0;
   }
 
-  step(dt) {
-    if (!this.world) return;
-    this.world.timestep = Math.min(dt, 1 / 30);
-    this.world.step();
+  /**
+   * Test helper: cuboid half-extents (meters) for the first collider of an actor.
+   * Returns null when missing or not a cuboid.
+   */
+  getColliderHalfExtents(actorId) {
+    const collider = this._bodies.get(actorId)?.colliders?.[0];
+    if (!collider || typeof collider.halfExtents !== 'function') return null;
+    try {
+      const he = collider.halfExtents();
+      return { x: he.x, y: he.y, z: he.z };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Drop leftover frame time (Play start / tab resume). */
+  resetAccumulator() {
+    this._accumulator = 0;
+  }
+
+  /**
+   * Advance simulation with a fixed timestep and capped catch-up substeps.
+   * Frame `dt` only feeds the accumulator — rendering stays independent.
+   */
+  step(frameDt) {
+    if (!this.world) return 0;
+    const dt = Math.max(0, Number(frameDt) || 0);
+    this._accumulator += dt;
+    const maxAccum = this.fixedDt * this.maxSubsteps;
+    if (this._accumulator > maxAccum) {
+      this._accumulator = maxAccum;
+    }
+    this.world.timestep = this.fixedDt;
+    let steps = 0;
+    while (this._accumulator >= this.fixedDt && steps < this.maxSubsteps) {
+      this.world.step();
+      this._accumulator -= this.fixedDt;
+      steps += 1;
+    }
+    return steps;
   }
 
   /** Free the Rapier world. Safe to call repeatedly or before init(). */
@@ -461,6 +531,7 @@ export class PhysicsWorld {
     this._bodies.clear();
     this.playerBody = null;
     this.playerCollider = null;
+    this.resetAccumulator();
     if (!world) return;
     try {
       world.free();
@@ -468,6 +539,20 @@ export class PhysicsWorld {
       console.warn('PhysicsWorld: failed to free Rapier world', err);
     }
   }
+}
+
+/** Half-extents in meters from a full AABB size; defaults to 0.5³ (1 m cube). */
+export function halfExtentsFromMeshBounds(boundsMeters) {
+  const sizeOr = (v, fallback) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  };
+  if (!boundsMeters) return { x: 0.5, y: 0.5, z: 0.5 };
+  return {
+    x: Math.max(0.01, sizeOr(boundsMeters.x, 1) * 0.5),
+    y: Math.max(0.01, sizeOr(boundsMeters.y, 1) * 0.5),
+    z: Math.max(0.01, sizeOr(boundsMeters.z, 1) * 0.5),
+  };
 }
 
 function eulerDegreesToQuat({ x = 0, y = 0, z = 0 }) {
