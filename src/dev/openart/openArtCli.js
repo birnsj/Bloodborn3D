@@ -192,6 +192,51 @@ export async function getAccount(opts = {}) {
   return runOpenArt(['account'], { timeoutMs: 20_000, ...opts });
 }
 
+/**
+ * Start browser OAuth (`openart login`). Fire-and-forget — the CLI opens a
+ * browser and writes credentials locally. Does not use --no-input / --quiet.
+ * Caller should re-check `account` after the user finishes.
+ */
+export async function startOpenArtLogin({ executable = null } = {}) {
+  const detected = executable
+    ? { ok: true, executable }
+    : await detectOpenArtCli();
+  if (!detected.ok || !detected.executable) {
+    throw new OpenArtCliError(
+      'CLI_MISSING',
+      detected.error || 'OpenArt CLI is not installed',
+    );
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const child = spawn(detected.executable, ['login'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      shell: false,
+      env: process.env,
+    });
+    child.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(started);
+      const code = err.code === 'ENOENT' ? 'CLI_MISSING' : 'SPAWN_FAILED';
+      reject(new OpenArtCliError(code, err.message));
+    });
+    // Brief delay so ENOENT can surface before we report success.
+    const started = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.unref();
+      resolve({
+        ok: true,
+        message: 'Browser login started. Finish signing in, then Refresh.',
+      });
+    }, 100);
+  });
+}
+
 export async function listModels(opts = {}) {
   return runOpenArt(['model', 'list'], { timeoutMs: 30_000, ...opts });
 }

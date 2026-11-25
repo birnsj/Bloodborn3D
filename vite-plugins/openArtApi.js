@@ -14,6 +14,7 @@ import {
 } from '../src/dev/openart/openArtCli.js';
 import {
   approveAndGenerate,
+  beginOpenArtLogin,
   createEstimate,
   downloadJobToStaging,
   getJobStatus,
@@ -75,6 +76,11 @@ export function openArtApiPlugin() {
 
           if (req.method === 'GET' && action === 'status') {
             sendJson(res, 200, await getOpenArtStatus());
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'login') {
+            sendJson(res, 200, await beginOpenArtLogin());
             return;
           }
 

@@ -255,6 +255,11 @@ export const HELP_CONTENT = {
     body: 'When enabled, move / rotate / scale gizmo snaps use Grid, Rot, and Scale steps. When disabled, transforms are freeform (props still stick to support elevation).',
     shortcut: 'Shift+G',
   },
+  'toolbar.resetAllViews': {
+    title: 'Reset All Views',
+    body: 'Restores every viewport pane to its camera-mode home pose and default zoom (same as each pane’s Reset chip, applied to all panes).',
+    tips: 'Different from Focus (F), which frames the current selection in the active pane only.',
+  },
   'creation.toolbar': {
     title: 'Creation Toolbox',
     body: 'Floating Photoshop-style tool rail. Hover a category to roll out tools; click or drag a tool into the viewport to place.',

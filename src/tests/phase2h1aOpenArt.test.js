@@ -9,6 +9,7 @@ import {
   buildGenerateImageArgv,
   detectOpenArtCli,
   downloadUrlToFile,
+  startOpenArtLogin,
 } from '../dev/openart/openArtCli.js';
 import {
   __testGetEstimate,
@@ -55,6 +56,12 @@ describe('Phase 2H.1A — OpenArt argv safety', () => {
 });
 
 describe('Phase 2H.1A — CLI detection / auth failures', () => {
+  it('startOpenArtLogin fails clearly when the CLI is missing', async () => {
+    await expect(startOpenArtLogin({
+      executable: path.join(os.tmpdir(), 'openart-does-not-exist-xyz'),
+    })).rejects.toMatchObject({ code: 'CLI_MISSING' });
+  });
+
   it('detectOpenArtCli returns structured CLI_MISSING when runner cannot run any candidate', async () => {
     // Force runner failure; if no candidates exist on PATH this still returns CLI_MISSING.
     const result = await detectOpenArtCli({

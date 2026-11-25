@@ -279,6 +279,18 @@ export function LevelToolBar() {
         />
         <span>Snap</span>
       </label>
+      <button
+        type="button"
+        className="bb-btn"
+        disabled={isPlay}
+        title="Reset all viewport cameras to home"
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('bb:reset-all-views'));
+        }}
+        {...helpProps('toolbar.resetAllViews', playReason)}
+      >
+        Reset Views
+      </button>
 
       <div className="bb-level-toolbar__end">
         <span className="bb-toolbar-status" title={status}>{status}</span>

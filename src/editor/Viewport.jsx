@@ -847,11 +847,51 @@ export function Viewport() {
     }
   }, [runtimeRef, setViewportPrefs]);
 
+  /** Reset every viewport pane to its camera-mode home pose + default zoom. */
+  const resetAllCameraViews = useCallback(() => {
+    const sceneView = runtimeRef.current?.sceneView;
+    const controls = orbitRef.current;
+    const prefs = viewportPrefsRef.current;
+    const panes = prefs.panes.map((pane) => resetPaneCameraView(pane));
+    const next = { ...prefs, panes };
+
+    flyModeRef.current = false;
+    lookRef.current.active = false;
+    lookRef.current.pointerId = null;
+
+    setViewportPrefs(next);
+    if (sceneView) {
+      for (const pane of panes) {
+        const cam = sceneView.ensurePaneCamera(pane.id, pane.cameraMode, pane);
+        applyPanePose(cam, pane);
+      }
+      syncActivePaneCamera(sceneView, next, controls, {
+        settings: editorSettingsRef.current,
+      });
+      controls?.update?.();
+    }
+
+    const cam = sceneView?.camera;
+    if (cam && controls) {
+      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
+      const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
+      lookRef.current.yaw = lookEuler.y;
+      lookRef.current.pitch = lookEuler.x;
+    }
+  }, [runtimeRef, setViewportPrefs]);
+
   useEffect(() => {
     const onFocusEvent = () => focusSelected();
     window.addEventListener('bb:focus-selection', onFocusEvent);
     return () => window.removeEventListener('bb:focus-selection', onFocusEvent);
   }, [focusSelected]);
+
+  useEffect(() => {
+    const onResetAllViews = () => resetAllCameraViews();
+    window.addEventListener('bb:reset-all-views', onResetAllViews);
+    return () => window.removeEventListener('bb:reset-all-views', onResetAllViews);
+  }, [resetAllCameraViews]);
 
   useEffect(() => {
     const onKeyDown = (e) => {

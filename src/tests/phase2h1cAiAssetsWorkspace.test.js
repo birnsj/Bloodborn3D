@@ -75,8 +75,8 @@ describe('Phase 2H.1C — dynamic schema partitioning', () => {
     expect(humanizeFieldName('negative_prompt')).toBe('Negative prompt');
   });
 
-  it('packs count / ratio / resolution into a compact row without hardcoding models', () => {
-    const { compact, rest, advanced } = partitionPrimaryForLayout({
+  it('keeps image count on its own row and packs ratio / resolution compactly', () => {
+    const { count, compact, rest, advanced } = partitionPrimaryForLayout({
       prompt: { type: 'string' },
       imageCount: { type: 'integer' },
       aspectRatio: { type: 'string', enum: ['1:1'] },
@@ -84,7 +84,8 @@ describe('Phase 2H.1C — dynamic schema partitioning', () => {
       negativePrompt: { type: 'string' },
       seed: { type: 'integer' },
     });
-    expect(compact).toEqual(['imageCount', 'aspectRatio', 'resolution']);
+    expect(count).toEqual(['imageCount']);
+    expect(compact).toEqual(['aspectRatio', 'resolution']);
     expect(rest).toEqual(['negativePrompt']);
     expect(advanced).toEqual(['seed']);
   });

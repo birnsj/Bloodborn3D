@@ -13,8 +13,11 @@ import {
   fetchOpenArtStatus,
   importOpenArtStaging,
   openArtStagingPreviewUrl,
+  startOpenArtCliLogin,
   waitOpenArtJob,
 } from '../../io/openArtClient.js';
+import { getAiAssetsUiState, setGenerationOrigin } from '../aiAssets/aiAssetsUiStore.js';
+import { composeGenerationPrompt } from '../aiAssets/promptComposition.js';
 
 const LISTENERS = new Set();
 
@@ -69,6 +72,22 @@ function setError(err) {
     error: err?.message || String(err),
     errorCode: err?.code || null,
   });
+}
+
+export async function openArtLogin() {
+  setState({ busy: true, error: null, errorCode: null });
+  try {
+    const result = await startOpenArtCliLogin();
+    setState({
+      busy: false,
+      error: result.message || 'Complete browser sign-in, then Refresh.',
+      errorCode: null,
+    });
+    return result;
+  } catch (err) {
+    setError(err);
+    throw err;
+  }
 }
 
 export async function openArtConnect() {
@@ -152,6 +171,35 @@ export function openArtSetPrompt(prompt) {
   setState({ prompt: String(prompt ?? ''), estimate: null, phase: state.phase === 'estimated' ? 'ready' : state.phase });
 }
 
+/** Clear a stale estimate (e.g. tiling options changed after Estimate). */
+export function openArtClearEstimate() {
+  if (!state.estimate && state.phase !== 'estimated') return state;
+  setState({
+    estimate: null,
+    phase: state.phase === 'estimated' ? 'ready' : state.phase,
+  });
+  return state;
+}
+
+/**
+ * Prompt actually submitted to OpenArt (editable prompt + composition options).
+ * Provider-agnostic composition lives in aiAssets/promptComposition.js.
+ */
+export function getOpenArtComposedPrompt() {
+  const composition = getAiAssetsUiState().promptComposition || {};
+  return composeGenerationPrompt({
+    prompt: state.prompt,
+    tileHorizontal: composition.tileHorizontal,
+    tileVertical: composition.tileVertical,
+  });
+}
+
+function syncOriginFinalPrompt(finalPrompt) {
+  const origin = getAiAssetsUiState().generationOrigin;
+  if (!origin) return;
+  setGenerationOrigin({ ...origin, finalPrompt });
+}
+
 /**
  * Seed OpenArt controls from a Concept Library prompt / concept (Generate Asset).
  * Does not spend credits. Caller still must Estimate → approve.
@@ -228,8 +276,9 @@ export async function openArtEstimate() {
   try {
     const aspectRatio = state.formValues.aspectRatio || '1:1';
     const resolution = state.formValues.resolution || '1K';
+    const composedPrompt = getOpenArtComposedPrompt();
     const estimate = await estimateOpenArtGeneration({
-      prompt: state.prompt,
+      prompt: composedPrompt,
       modelId: state.modelId,
       mode: state.mode,
       aspectRatio,
@@ -237,6 +286,7 @@ export async function openArtEstimate() {
       imagePaths: state.referenceStagingPath ? [state.referenceStagingPath] : null,
       formValues: state.formValues,
     });
+    syncOriginFinalPrompt(composedPrompt);
     setState({
       phase: 'estimated',
       busy: false,
@@ -436,6 +486,8 @@ export function __testSetOpenArtUiState(patch) {
 if (typeof window !== 'undefined') {
   window.__bloodboundOpenArtUi = {
     get: getOpenArtUiState,
+    composedPrompt: getOpenArtComposedPrompt,
+    clearEstimate: openArtClearEstimate,
     connect: openArtConnect,
     estimate: openArtEstimate,
     generate: openArtGenerate,

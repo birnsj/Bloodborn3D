@@ -25,6 +25,11 @@ export function fetchOpenArtStatus() {
   return openArtFetch('status');
 }
 
+/** Starts `openart login` (browser OAuth) via the local CLI. */
+export function startOpenArtCliLogin() {
+  return openArtFetch('login', { method: 'POST', body: {} });
+}
+
 export function fetchOpenArtModels() {
   return openArtFetch('models');
 }

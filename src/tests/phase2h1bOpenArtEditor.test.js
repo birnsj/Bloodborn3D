@@ -161,6 +161,47 @@ describe('Phase 2H.1B — UI store (mocked API, no spend)', () => {
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('action=generate'))).toBe(false);
   });
 
+  it('estimates with composed tiling instructions while keeping editable prompt intact', async () => {
+    const { setPromptComposition, __testResetAiAssetsUi } = await import(
+      '../editor/aiAssets/aiAssetsUiStore.js'
+    );
+    const { TILING_INSTRUCTIONS } = await import('../editor/aiAssets/promptComposition.js');
+    __testResetAiAssetsUi();
+    setPromptComposition({ tileHorizontal: true, tileVertical: true });
+
+    fetchMock.mockImplementation(async (url, init) => {
+      const u = String(url);
+      if (u.includes('action=estimate') && init?.method === 'POST') {
+        const body = JSON.parse(init.body);
+        expect(body.prompt).toContain('ashlar');
+        expect(body.prompt).toContain(TILING_INSTRUCTIONS.both);
+        return jsonResponse({
+          ok: true,
+          estimateId: 'est_tile',
+          totalCredits: 20,
+          costConfig: { aspectRatio: '1:1', resolution: '1K', imageCount: 1 },
+          approvalRequired: true,
+        });
+      }
+      return jsonResponse({ ok: false, error: `unexpected ${u}` }, 500);
+    });
+
+    __testSetOpenArtUiState({
+      phase: 'ready',
+      status: { ok: true, account: { credits: 1000 } },
+      busy: false,
+      submitLocked: false,
+      prompt: '',
+      modelId: 'nano-banana-2',
+      mode: 'text2image',
+      formValues: { aspectRatio: '1:1', resolution: '1K' },
+    });
+    openArtSetPrompt('ashlar');
+    await openArtEstimate();
+    expect(getOpenArtUiState().prompt).toBe('ashlar');
+    __testResetAiAssetsUi();
+  });
+
   it('blocks generate without confirmSpend and blocks duplicate submits', async () => {
     __testSetOpenArtUiState({
       phase: 'estimated',

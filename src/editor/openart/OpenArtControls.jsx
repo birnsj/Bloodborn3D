@@ -3,7 +3,15 @@ import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { uploadOpenArtReference } from '../../io/openArtClient.js';
 import {
+  getAiAssetsUiState,
+  setPromptComposition,
+  subscribeAiAssetsUi,
+} from '../aiAssets/aiAssetsUiStore.js';
+import { composeGenerationPrompt } from '../aiAssets/promptComposition.js';
+import {
+  getOpenArtComposedPrompt,
   getOpenArtUiState,
+  openArtClearEstimate,
   openArtConnect,
   openArtEstimate,
   openArtGenerate,
@@ -23,14 +31,15 @@ import { partitionPrimaryForLayout, SchemaField } from './schemaForm.jsx';
  */
 export function OpenArtControls() {
   const [ui, setUi] = useState(() => getOpenArtUiState());
+  const [aiUi, setAiUi] = useState(() => getAiAssetsUiState());
   const { notify, setStatus } = useAssetBrowser();
   const { confirm } = useEditorDialogs();
   const refInput = useRef(null);
   const connectedRef = useRef(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [refPreviewUrl, setRefPreviewUrl] = useState(null);
 
   useEffect(() => subscribeOpenArtUi(setUi), []);
+  useEffect(() => subscribeAiAssetsUi(setAiUi), []);
 
   useEffect(() => {
     if (connectedRef.current) return undefined;
@@ -56,7 +65,7 @@ export function OpenArtControls() {
   }, [ui.imageModels, ui.modelId]);
 
   const schemaProps = ui.form?.jsonSchema?.properties || {};
-  const { compact, rest, advanced } = useMemo(
+  const { count, compact, rest, advanced } = useMemo(
     () => partitionPrimaryForLayout(ui.form?.jsonSchema?.properties || {}),
     [ui.form],
   );
@@ -118,7 +127,7 @@ export function OpenArtControls() {
     }
     const latest = getOpenArtUiState();
     const credits = latest.estimate?.totalCredits;
-    const finalPrompt = String(latest.prompt || '').trim() || '(empty prompt)';
+    const finalPrompt = getOpenArtComposedPrompt() || '(empty prompt)';
     const ok = await confirm(
       `Spend ${credits ?? '?'} OpenArt credits to generate this image?\n\n`
       + `Final submitted prompt:\n${finalPrompt}\n\n`
@@ -151,6 +160,25 @@ export function OpenArtControls() {
     || Boolean(schemaProps.image)
     || Boolean(schemaProps.images)
     || Boolean(schemaProps.referenceImage);
+
+  const tileHorizontal = Boolean(aiUi.promptComposition?.tileHorizontal);
+  const tileVertical = Boolean(aiUi.promptComposition?.tileVertical);
+  const composedPrompt = useMemo(
+    () => composeGenerationPrompt({
+      prompt: ui.prompt,
+      tileHorizontal,
+      tileVertical,
+    }),
+    [ui.prompt, tileHorizontal, tileVertical],
+  );
+  const showFinalPreview = Boolean(ui.prompt?.trim())
+    || tileHorizontal
+    || tileVertical;
+
+  const onTileChange = useCallback((patch) => {
+    setPromptComposition(patch);
+    openArtClearEstimate();
+  }, []);
 
   return (
     <div className="bb-openart-controls">
@@ -237,6 +265,47 @@ export function OpenArtControls() {
           />
         </label>
 
+        <div className="bb-openart__tiling" role="group" aria-label="Tiling options">
+          <label className="bb-field bb-field--row bb-openart__tiling-option">
+            <input
+              type="checkbox"
+              checked={tileHorizontal}
+              disabled={ui.busy}
+              onChange={(e) => onTileChange({ tileHorizontal: e.target.checked })}
+            />
+            <span className="bb-field-caption">Tile Horizontal</span>
+          </label>
+          <label className="bb-field bb-field--row bb-openart__tiling-option">
+            <input
+              type="checkbox"
+              checked={tileVertical}
+              disabled={ui.busy}
+              onChange={(e) => onTileChange({ tileVertical: e.target.checked })}
+            />
+            <span className="bb-field-caption">Tile Vertical</span>
+          </label>
+        </div>
+
+        {showFinalPreview && (
+          <div className="bb-openart__final-prompt">
+            <div className="bb-field-caption">Final submitted prompt</div>
+            <pre className="bb-openart__final-prompt-text">
+              {composedPrompt || '(empty prompt)'}
+            </pre>
+          </div>
+        )}
+
+        {count.map((key) => (
+          <SchemaField
+            key={key}
+            name={key}
+            schema={schemaProps[key]}
+            value={ui.formValues[key]}
+            disabled={ui.busy}
+            onChange={(v) => openArtSetFormValue(key, v)}
+          />
+        ))}
+
         {compact.length > 0 && (
           <div className="bb-openart__compact-row">
             {compact.map((key) => (
@@ -308,31 +377,18 @@ export function OpenArtControls() {
           </div>
         )}
 
-        {advanced.length > 0 && (
-          <details
-            className="bb-openart-advanced"
-            open={advancedOpen}
-            onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
-          >
-            <summary className="bb-openart-advanced__summary">
-              Advanced parameters ({advanced.length})
-            </summary>
-            <div className="bb-openart-advanced__body">
-              {advanced.map((key) => (
-                <SchemaField
-                  key={key}
-                  name={key}
-                  schema={schemaProps[key]}
-                  value={ui.formValues[key]}
-                  disabled={ui.busy}
-                  onChange={(v) => openArtSetFormValue(key, v)}
-                  onPickFile={() => refInput.current?.click()}
-                  fileName={ui.referenceFileName}
-                />
-              ))}
-            </div>
-          </details>
-        )}
+        {advanced.map((key) => (
+          <SchemaField
+            key={key}
+            name={key}
+            schema={schemaProps[key]}
+            value={ui.formValues[key]}
+            disabled={ui.busy}
+            onChange={(v) => openArtSetFormValue(key, v)}
+            onPickFile={() => refInput.current?.click()}
+            fileName={ui.referenceFileName}
+          />
+        ))}
       </div>
 
       <div className="bb-openart-controls__footer">

@@ -21,13 +21,17 @@ const PRIMARY_KEYS = new Set([
 /**
  * Compact single-row primaries when the schema exposes them.
  * Name-based only — never model-specific hardcoding.
+ * Image count stays on its own full-width row (slider needs room).
  */
+const COUNT_ROW_KEYS = new Set([
+  'imageCount',
+  'image_count',
+]);
+
 const COMPACT_ROW_KEYS = new Set([
   'aspectRatio',
   'aspect_ratio',
   'resolution',
-  'imageCount',
-  'image_count',
 ]);
 
 /** Handled by dedicated OpenArt controls (not SchemaField). */
@@ -44,16 +48,18 @@ export function partitionSchemaKeys(properties = {}) {
   return { primary, advanced };
 }
 
-/** Split primary keys into a compact Count/Ratio/Resolution row vs stacked fields. */
+/** Split primary keys: count row, compact ratio/resolution row, then stacked fields. */
 export function partitionPrimaryForLayout(properties = {}) {
   const { primary, advanced } = partitionSchemaKeys(properties);
+  const count = [];
   const compact = [];
   const rest = [];
   for (const key of primary) {
-    if (COMPACT_ROW_KEYS.has(key)) compact.push(key);
+    if (COUNT_ROW_KEYS.has(key)) count.push(key);
+    else if (COMPACT_ROW_KEYS.has(key)) compact.push(key);
     else rest.push(key);
   }
-  return { compact, rest, advanced };
+  return { count, compact, rest, advanced };
 }
 
 export function humanizeFieldName(name) {

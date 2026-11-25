@@ -26,6 +26,7 @@ import {
   getCreation,
   getModelForm,
   listModels,
+  startOpenArtLogin,
   submitGenerateImageAsync,
   waitCreation,
 } from './openArtCli.js';
@@ -88,6 +89,15 @@ export async function getOpenArtStatus() {
 export async function listOpenArtModels() {
   const models = await listModels();
   return { ok: true, models: Array.isArray(models) ? models : models?.items || models };
+}
+
+/** Opens the OpenArt CLI browser login (no credits spent). */
+export async function beginOpenArtLogin() {
+  const cli = await detectOpenArtCli();
+  if (!cli.ok) {
+    throw new OpenArtCliError(cli.code || 'CLI_MISSING', cli.error || 'OpenArt CLI not found');
+  }
+  return startOpenArtLogin({ executable: cli.executable });
 }
 
 export async function getOpenArtModelForm(modelId, mode = DEFAULT_MODE) {

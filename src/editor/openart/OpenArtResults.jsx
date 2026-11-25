@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
+  RESULTS_THUMB_SIZE_DEFAULT,
+  RESULTS_THUMB_SIZE_MAX,
+  RESULTS_THUMB_SIZE_MIN,
   clearGenerationOrigin,
   getAiAssetsUiState,
   setAiAssetsSection,
   setConceptSaveTargetAreaId,
+  setResultsThumbSize,
   subscribeAiAssetsUi,
 } from '../aiAssets/aiAssetsUiStore.js';
+import { GenerationFramePreview } from '../aiAssets/GenerationFramePreview.jsx';
+import { PreviewCanvasViewport } from '../aiAssets/PreviewCanvasViewport.jsx';
 import {
   conceptLibraryAttachGeneratedAsset,
   conceptLibrarySaveFromStaging,
 } from '../conceptLibrary/conceptLibraryStore.js';
 import {
+  getOpenArtComposedPrompt,
   getOpenArtUiState,
   openArtCreateMaterial,
   openArtDiscardResult,
@@ -101,11 +108,12 @@ export function OpenArtResults() {
   const onSaveToConceptLibrary = useCallback(async () => {
     if (!ui.staging?.stagingId || !saveTargetAreaId) return;
     try {
+      const submittedPrompt = getOpenArtComposedPrompt() || ui.prompt;
       await conceptLibrarySaveFromStaging({
         areaId: saveTargetAreaId,
         stagingId: ui.staging.stagingId,
         title: suggestConceptTitle(ui.prompt),
-        generationPrompt: ui.prompt,
+        generationPrompt: submittedPrompt,
         provenance: {
           source: 'openart',
           modelId: ui.modelId,
@@ -114,6 +122,8 @@ export function OpenArtResults() {
           jobId: ui.job?.jobId || null,
           generationId: ui.job?.generationId || null,
           formValues: { ...ui.formValues },
+          tileHorizontal: Boolean(aiUi.promptComposition?.tileHorizontal),
+          tileVertical: Boolean(aiUi.promptComposition?.tileVertical),
           savedAt: new Date().toISOString(),
         },
       });
@@ -125,12 +135,51 @@ export function OpenArtResults() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [notify, saveTargetAreaId, setStatus, ui]);
+  }, [aiUi.promptComposition, notify, saveTargetAreaId, setStatus, ui]);
 
   const phaseLabel = describePhase(ui);
+  const thumbSize = Number(aiUi.resultsThumbSize) || RESULTS_THUMB_SIZE_DEFAULT;
+  const [chromeH, setChromeH] = useState(148);
+  const chromeDrag = useRef(null);
+
+  const onChromeHandleDown = useCallback((e) => {
+    e.preventDefault();
+    chromeDrag.current = {
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      startH: chromeH,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    e.currentTarget.classList.add('is-dragging');
+  }, [chromeH]);
+
+  const onChromeHandleMove = useCallback((e) => {
+    const drag = chromeDrag.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    // Drag handle down → more chrome; up → more canvas.
+    const next = clamp(drag.startH - (e.clientY - drag.startY), 96, 320);
+    setChromeH(next);
+  }, []);
+
+  const onChromeHandleUp = useCallback((e) => {
+    if (!chromeDrag.current) return;
+    chromeDrag.current = null;
+    e.currentTarget.classList.remove('is-dragging');
+    try {
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
-    <div className="bb-openart-results">
+    <div
+      className="bb-openart-results"
+      style={{
+        '--bb-results-thumb-size': `${thumbSize}px`,
+        '--bb-results-chrome-h': `${chromeH}px`,
+      }}
+    >
       <div className="bb-openart-results__toolbar">
         <span className="bb-field-caption">Status</span>
         <span className={`bb-openart-results__phase${ui.phase === 'failed' ? ' is-bad' : ''}`}>
@@ -139,169 +188,221 @@ export function OpenArtResults() {
       </div>
 
       <div className="bb-openart-results__stage">
-        <div className="bb-openart-results__preview-frame">
+        <PreviewCanvasViewport className="bb-openart-results__preview-frame">
           {hasResult ? (
             <img
               className="bb-openart__preview-img"
               src={ui.previewUrl}
               alt="OpenArt generation preview"
+              draggable={false}
             />
           ) : (
-            <div className="bb-openart__preview-empty bb-muted">
-              <span>Generated artwork</span>
-              <span className="bb-openart__preview-hint">Fit to viewport · preserve aspect ratio</span>
-            </div>
+            <GenerationFramePreview
+              className="bb-gen-frame-preview--stage"
+              aspectRatio={ui.formValues?.aspectRatio || ui.formValues?.aspect_ratio || '1:1'}
+              resolution={ui.formValues?.resolution || '1K'}
+              width={ui.formValues?.width}
+              height={ui.formValues?.height}
+              tileHorizontal={Boolean(aiUi.promptComposition?.tileHorizontal)}
+              tileVertical={Boolean(aiUi.promptComposition?.tileVertical)}
+            />
           )}
-        </div>
+        </PreviewCanvasViewport>
       </div>
 
-      <div className="bb-openart-results__thumbs" aria-label="Generation results">
-        {hasResult ? (
-          <button type="button" className="bb-openart-results__thumb is-active" title="Result 1">
-            <img src={ui.previewUrl} alt="" />
-            <span>1</span>
-          </button>
-        ) : (
-          [1, 2, 3, 4].map((n) => (
-            <div key={n} className="bb-openart-results__thumb is-placeholder" aria-hidden>
-              <span>{n}</span>
-            </div>
-          ))
+      <div
+        className="bb-resize-h bb-openart-results__chrome-handle"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize results strip"
+        title="Drag to resize preview vs results strip"
+        onPointerDown={onChromeHandleDown}
+        onPointerMove={onChromeHandleMove}
+        onPointerUp={onChromeHandleUp}
+        onPointerCancel={onChromeHandleUp}
+      />
+
+      <div className="bb-openart-results__chrome">
+        <div className="bb-openart-results__thumbs-wrap">
+          <div className="bb-openart-results__thumbs" aria-label="Generation results">
+            {hasResult ? (
+              <button type="button" className="bb-openart-results__thumb is-active" title="Result 1">
+                <img src={ui.previewUrl} alt="" />
+                <span>1</span>
+              </button>
+            ) : (
+              [1, 2, 3, 4].map((n) => (
+                <div key={n} className="bb-openart-results__thumb is-placeholder" aria-hidden>
+                  <span>{n}</span>
+                </div>
+              ))
+            )}
+            <span className="bb-muted bb-openart-results__thumbs-note">Results</span>
+          </div>
+        </div>
+
+        <div className="bb-openart-results__bar">
+          <div className="bb-openart__result-actions">
+            <button
+              type="button"
+              className="bb-btn bb-btn--primary"
+              disabled={!hasResult || ui.busy}
+              onClick={onImportTexture}
+            >
+              Import Texture
+            </button>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={!hasResult || ui.busy}
+              onClick={onCreateMaterial}
+            >
+              Create Material
+            </button>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={!canSaveConcept}
+              title={saveTargetAreaId
+                ? 'Save into the selected Concept Library area'
+                : 'Start from Concept Library → Generate to enable'}
+              onClick={onSaveToConceptLibrary}
+            >
+              Save Concept
+            </button>
+            <button
+              type="button"
+              className="bb-btn bb-btn--ghost bb-btn--icon"
+              disabled={!hasResult && !ui.estimate}
+              title="Discard result"
+              aria-label="Discard result"
+              onClick={() => {
+                openArtDiscardResult();
+                setStatus('OpenArt result discarded');
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          <label
+            className="bb-openart-results__size"
+            title="Thumbnail size"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="bb-muted">Size</span>
+            <input
+              type="range"
+              className="bb-openart-results__size-slider"
+              min={RESULTS_THUMB_SIZE_MIN}
+              max={RESULTS_THUMB_SIZE_MAX}
+              step={4}
+              value={thumbSize}
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              onWheel={(e) => e.preventDefault()}
+              onChange={(e) => setResultsThumbSize(Number(e.target.value))}
+              aria-label="Thumbnail size"
+            />
+            <span className="bb-openart-results__size-value">{thumbSize}</span>
+          </label>
+        </div>
+
+        {ui.imported?.texture && (
+          <div className="bb-muted bb-openart__imported">
+            Imported {ui.imported.texture.id}
+            {ui.imported.material ? ` → material ${ui.imported.material.id}` : ''}
+          </div>
         )}
-        <span className="bb-muted bb-openart-results__thumbs-note">Results</span>
+
+        {(ui.job || ui.staging || ui.estimate || generationOrigin) && (
+          <details className="bb-openart-results__meta">
+            <summary>Generation details</summary>
+            <dl className="bb-openart-meta">
+              {ui.estimate?.estimateId && (
+                <>
+                  <dt>Estimate</dt>
+                  <dd>{ui.estimate.estimateId}</dd>
+                </>
+              )}
+              {ui.estimate?.totalCredits != null && (
+                <>
+                  <dt>Cost</dt>
+                  <dd>{ui.estimate.totalCredits} credits</dd>
+                </>
+              )}
+              {ui.job?.jobId && (
+                <>
+                  <dt>Job</dt>
+                  <dd>{ui.job.jobId}</dd>
+                </>
+              )}
+              {ui.job?.generationId && (
+                <>
+                  <dt>Generation</dt>
+                  <dd>{ui.job.generationId}</dd>
+                </>
+              )}
+              {ui.staging?.stagingId && (
+                <>
+                  <dt>Staging</dt>
+                  <dd>{ui.staging.stagingId}</dd>
+                </>
+              )}
+              {ui.staging?.fileName && (
+                <>
+                  <dt>File</dt>
+                  <dd>{ui.staging.fileName}</dd>
+                </>
+              )}
+              {ui.modelId && (
+                <>
+                  <dt>Model</dt>
+                  <dd>{ui.modelId}</dd>
+                </>
+              )}
+              {ui.mode && (
+                <>
+                  <dt>Mode</dt>
+                  <dd>{ui.mode}</dd>
+                </>
+              )}
+              {generationOrigin?.conceptId && (
+                <>
+                  <dt>Origin concept</dt>
+                  <dd>{generationOrigin.conceptId}</dd>
+                </>
+              )}
+              {generationOrigin?.promptId && (
+                <>
+                  <dt>Origin prompt</dt>
+                  <dd>{generationOrigin.promptId}</dd>
+                </>
+              )}
+              {generationOrigin?.areaId && (
+                <>
+                  <dt>Origin area</dt>
+                  <dd>{generationOrigin.areaId}</dd>
+                </>
+              )}
+            </dl>
+            {(generationOrigin?.finalPrompt || ui.prompt) && (
+              <div className="bb-openart__final-prompt">
+                <div className="bb-field-caption">Final submitted prompt</div>
+                <pre className="bb-openart__final-prompt-text">
+                  {generationOrigin?.finalPrompt || getOpenArtComposedPrompt()}
+                </pre>
+              </div>
+            )}
+          </details>
+        )}
       </div>
-
-      <div className="bb-openart__result-actions">
-        <button
-          type="button"
-          className="bb-btn bb-btn--primary"
-          disabled={!hasResult || ui.busy}
-          onClick={onImportTexture}
-        >
-          Import Texture
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={!hasResult || ui.busy}
-          onClick={onCreateMaterial}
-        >
-          Create Material
-        </button>
-        <button
-          type="button"
-          className="bb-btn"
-          disabled={!canSaveConcept}
-          title={saveTargetAreaId
-            ? 'Save into the selected Concept Library area'
-            : 'Start from Concept Library → Generate to enable'}
-          onClick={onSaveToConceptLibrary}
-        >
-          Save Concept
-        </button>
-        <button
-          type="button"
-          className="bb-btn bb-btn--ghost bb-btn--icon"
-          disabled={!hasResult && !ui.estimate}
-          title="Discard result"
-          aria-label="Discard result"
-          onClick={() => {
-            openArtDiscardResult();
-            setStatus('OpenArt result discarded');
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      {ui.imported?.texture && (
-        <div className="bb-muted bb-openart__imported">
-          Imported {ui.imported.texture.id}
-          {ui.imported.material ? ` → material ${ui.imported.material.id}` : ''}
-        </div>
-      )}
-
-      {(ui.job || ui.staging || ui.estimate || generationOrigin) && (
-        <details className="bb-openart-results__meta">
-          <summary>Generation details</summary>
-          <dl className="bb-openart-meta">
-            {ui.estimate?.estimateId && (
-              <>
-                <dt>Estimate</dt>
-                <dd>{ui.estimate.estimateId}</dd>
-              </>
-            )}
-            {ui.estimate?.totalCredits != null && (
-              <>
-                <dt>Cost</dt>
-                <dd>{ui.estimate.totalCredits} credits</dd>
-              </>
-            )}
-            {ui.job?.jobId && (
-              <>
-                <dt>Job</dt>
-                <dd>{ui.job.jobId}</dd>
-              </>
-            )}
-            {ui.job?.generationId && (
-              <>
-                <dt>Generation</dt>
-                <dd>{ui.job.generationId}</dd>
-              </>
-            )}
-            {ui.staging?.stagingId && (
-              <>
-                <dt>Staging</dt>
-                <dd>{ui.staging.stagingId}</dd>
-              </>
-            )}
-            {ui.staging?.fileName && (
-              <>
-                <dt>File</dt>
-                <dd>{ui.staging.fileName}</dd>
-              </>
-            )}
-            {ui.modelId && (
-              <>
-                <dt>Model</dt>
-                <dd>{ui.modelId}</dd>
-              </>
-            )}
-            {ui.mode && (
-              <>
-                <dt>Mode</dt>
-                <dd>{ui.mode}</dd>
-              </>
-            )}
-            {generationOrigin?.conceptId && (
-              <>
-                <dt>Origin concept</dt>
-                <dd>{generationOrigin.conceptId}</dd>
-              </>
-            )}
-            {generationOrigin?.promptId && (
-              <>
-                <dt>Origin prompt</dt>
-                <dd>{generationOrigin.promptId}</dd>
-              </>
-            )}
-            {generationOrigin?.areaId && (
-              <>
-                <dt>Origin area</dt>
-                <dd>{generationOrigin.areaId}</dd>
-              </>
-            )}
-          </dl>
-          {generationOrigin?.finalPrompt && (
-            <div className="bb-openart__final-prompt">
-              <div className="bb-field-caption">Final submitted prompt</div>
-              <pre className="bb-openart__final-prompt-text">{generationOrigin.finalPrompt}</pre>
-            </div>
-          )}
-        </details>
-      )}
     </div>
   );
+}
+
+function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
 }
 
 function describePhase(ui) {

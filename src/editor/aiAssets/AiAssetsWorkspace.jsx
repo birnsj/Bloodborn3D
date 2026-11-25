@@ -11,10 +11,11 @@ import {
 import { getAiProvider } from './providers.js';
 import { ProviderNav } from './ProviderNav.jsx';
 
-const NAV_MIN = 180;
-const NAV_MAX = 240;
-const SETTINGS_MIN = 360;
-const SETTINGS_MAX = 480;
+const NAV_MIN = 160;
+const NAV_MAX = 200;
+const SETTINGS_MIN = 260;
+const SETTINGS_MAX = 360;
+const RESULTS_MIN = 360;
 
 /**
  * Phase 2H.1C/D — AI Assets workspace.
@@ -60,11 +61,29 @@ export function AiAssetsWorkspace() {
 }
 
 function GenerationWorkspace({ provider, selectedProviderId, conceptSaveMode }) {
-  const [navW, setNavW] = useState(200);
-  const [settingsW, setSettingsW] = useState(400);
+  const rootRef = useRef(null);
+  const [navW, setNavW] = useState(168);
+  const [settingsW, setSettingsW] = useState(290);
+
+  /** Grow/shrink Results by adjusting Settings (Results is the remaining 1fr). */
+  const resizeResultsBy = useCallback((deltaFromResultsEdge) => {
+    // Dragging the results handle right → shrink results → grow settings.
+    // Dragging left → grow results → shrink settings.
+    setSettingsW((w) => {
+      const root = rootRef.current;
+      const total = root?.clientWidth || 1200;
+      const splitter = 16;
+      const maxSettings = Math.min(
+        SETTINGS_MAX,
+        Math.max(SETTINGS_MIN, total - navW - splitter - RESULTS_MIN),
+      );
+      return clamp(w + deltaFromResultsEdge, SETTINGS_MIN, maxSettings);
+    });
+  }, [navW]);
 
   return (
     <div
+      ref={rootRef}
       className="bb-ai-assets"
       style={{
         '--bb-ai-nav-w': `${navW}px`,
@@ -105,10 +124,9 @@ function GenerationWorkspace({ provider, selectedProviderId, conceptSaveMode }) 
       </section>
 
       <ColumnResizeHandle
-        ariaLabel="Resize generation settings column"
-        onDelta={(delta) => {
-          setSettingsW((w) => clamp(w + delta, SETTINGS_MIN, SETTINGS_MAX));
-        }}
+        ariaLabel="Resize result preview column"
+        title="Drag to resize Result Preview"
+        onDelta={resizeResultsBy}
       />
 
       <section className="bb-panel-chrome bb-ai-assets__results">
@@ -129,7 +147,7 @@ function GenerationWorkspace({ provider, selectedProviderId, conceptSaveMode }) 
   );
 }
 
-function ColumnResizeHandle({ onDelta, ariaLabel }) {
+function ColumnResizeHandle({ onDelta, ariaLabel, title }) {
   const dragging = useRef(false);
 
   const onPointerDown = useCallback((e) => {
@@ -161,6 +179,7 @@ function ColumnResizeHandle({ onDelta, ariaLabel }) {
       role="separator"
       aria-orientation="vertical"
       aria-label={ariaLabel}
+      title={title || ariaLabel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

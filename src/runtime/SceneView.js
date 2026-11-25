@@ -1809,10 +1809,12 @@ export class SceneView {
         const guide = new THREE.Mesh(
           new THREE.SphereGeometry(Math.min(Math.max(radius, 0.3), 2.5), 16, 12),
           new THREE.MeshBasicMaterial({
-            color,
+            color: color.clone(),
             wireframe: true,
             transparent: true,
-            opacity: 0.2,
+            opacity: 0.65,
+            depthWrite: false,
+            toneMapped: false,
           }),
         );
         // Dense latitude/longitude sphere — hide in View→Wireframe (see viewportDisplay).
