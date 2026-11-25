@@ -54,6 +54,7 @@ import {
   ConvertBrushToConvexCommand,
   SetConvexBrushPropertiesCommand,
   SetConvexGeometryCommand,
+  CompositeCommand,
 } from './history/commands.js';
 import {
   emptyGeometrySelection,
@@ -1056,13 +1057,90 @@ export function EditorProvider({ children }) {
     return ids;
   }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
 
+  /**
+   * Sync-only: record prefab overrides for edited actors and return undo commands.
+   * Mutates roots temporarily then restores `before` so callers can execute via history.
+   */
+  const buildPrefabOverrideCommands = useCallback((actorIds) => {
+    if (!world || !actorIds?.length) return [];
+    const roots = new Map();
+    for (const id of actorIds) {
+      const actor = world.getActor(id);
+      if (!actor?.prefab?.instanceId) continue;
+      const root = findInstanceRoot(world, actor.prefab.instanceId);
+      if (!root || roots.has(root.id)) continue;
+      roots.set(root.id, { root, before: getPrefabOverrides(root) });
+    }
+    if (!roots.size) return [];
+
+    for (const id of actorIds) {
+      const actor = world.getActor(id);
+      if (!actor?.prefab?.prefabId) continue;
+      const def = getPrefabDefinitionSync?.(actor.prefab.prefabId);
+      if (!def) continue;
+      recordActorPrefabOverride(world, actor, def);
+    }
+
+    const cmds = [];
+    for (const [rootId, { root, before }] of roots) {
+      const after = getPrefabOverrides(root);
+      if (JSON.stringify(before) === JSON.stringify(after)) continue;
+      root.prefab.overrides = structuredClone(before);
+      cmds.push(new SetPrefabOverridesCommand({
+        world,
+        actorId: rootId,
+        before,
+        after,
+        label: 'Prefab override',
+      }));
+    }
+    return cmds;
+  }, [world, getPrefabDefinitionSync]);
+
   const autoCapturePrefabOverrides = useCallback(async (actorIds) => {
     if (!world || !actorIds?.length) return;
+    // Prefer sync capture into history when definitions are cached.
+    const syncCmds = buildPrefabOverrideCommands(actorIds);
+    if (syncCmds.length) {
+      for (const cmd of syncCmds) executeCommand(cmd, { resync: false });
+      return;
+    }
+    // Async fallback: still wrap mutation in SetPrefabOverridesCommand.
+    const roots = new Map();
+    for (const id of actorIds) {
+      const actor = world.getActor(id);
+      if (!actor?.prefab?.instanceId) continue;
+      const root = findInstanceRoot(world, actor.prefab.instanceId);
+      if (!root || roots.has(root.id)) continue;
+      roots.set(root.id, { root, before: getPrefabOverrides(root) });
+    }
+    if (!roots.size) return;
     await recordPrefabOverridesForActors(world, actorIds, {
       getDefinitionSync: getPrefabDefinitionSync,
       getDefinition: getPrefabDefinition,
     });
-  }, [world, getPrefabDefinitionSync, getPrefabDefinition]);
+    for (const [rootId, { root, before }] of roots) {
+      const after = getPrefabOverrides(root);
+      if (JSON.stringify(before) === JSON.stringify(after)) continue;
+      root.prefab.overrides = structuredClone(before);
+      executeCommand(
+        new SetPrefabOverridesCommand({
+          world,
+          actorId: rootId,
+          before,
+          after,
+          label: 'Prefab override',
+        }),
+        { resync: false },
+      );
+    }
+  }, [
+    world,
+    buildPrefabOverrideCommands,
+    executeCommand,
+    getPrefabDefinitionSync,
+    getPrefabDefinition,
+  ]);
 
   const commitTransforms = useCallback((changes, label = 'Move') => {
     if (!world || mode === 'play' || !changes?.length) return;
@@ -1085,17 +1163,20 @@ export function EditorProvider({ children }) {
       runtimeRef.current?.setSelection(selectedRef.current);
       return;
     }
+    const transformCmd = new SetTransformsCommand({ world, changes: meaningful, label });
+    const overrideCmds = buildPrefabOverrideCommands(meaningful.map((c) => c.actorId));
     executeCommand(
-      new SetTransformsCommand({ world, changes: meaningful, label }),
+      overrideCmds.length
+        ? new CompositeCommand({ commands: [transformCmd, ...overrideCmds], label })
+        : transformCmd,
       { resync: false },
     );
     for (const c of meaningful) {
       const actor = world.getActor(c.actorId);
       if (actor) runtimeRef.current?.refreshBrushCarveDependents(actor);
     }
-    autoCapturePrefabOverrides(meaningful.map((c) => c.actorId));
     runtimeRef.current?.setSelection(selectedRef.current);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
+  }, [world, mode, executeCommand, buildPrefabOverrideCommands, rejectSubtractIfTooComplex]);
 
   const commitBrushGeometry = useCallback((changes, label = 'Resize') => {
     if (!world || mode === 'play' || !changes?.length) return;
@@ -1127,8 +1208,12 @@ export function EditorProvider({ children }) {
       return;
     }
 
+    const geomCmd = new SetBrushGeometryCommand({ world, changes: meaningful, label });
+    const overrideCmds = buildPrefabOverrideCommands(meaningful.map((c) => c.actorId));
     executeCommand(
-      new SetBrushGeometryCommand({ world, changes: meaningful, label }),
+      overrideCmds.length
+        ? new CompositeCommand({ commands: [geomCmd, ...overrideCmds], label })
+        : geomCmd,
       { resync: true },
     );
     // Keep openings inside the new bounds after gizmo / numeric resize.
@@ -1159,8 +1244,7 @@ export function EditorProvider({ children }) {
         executeCommand(openCmd, { resync: true });
       }
     }
-    autoCapturePrefabOverrides(meaningful.map((c) => c.actorId));
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, rejectSubtractIfTooComplex]);
+  }, [world, mode, executeCommand, buildPrefabOverrideCommands, rejectSubtractIfTooComplex]);
 
   /**
    * Live world-position update during gizmo drag (no history until commit).

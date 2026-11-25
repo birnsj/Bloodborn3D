@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateLevelData } from '../src/serialization/LevelDeserializer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -9,6 +10,7 @@ const LEVELS_DIR = path.join(PROJECT_ROOT, 'public', 'levels');
 /**
  * Development-only Vite middleware for reading/writing level JSON under public/levels.
  * Rejects path traversal and non-.json writes. Not available in production builds.
+ * Writes are validated + atomic (temp file then rename) — Phase 2F.7E.
  */
 export function levelFileApiPlugin() {
   return {
@@ -83,8 +85,23 @@ async function handleWrite(req, res) {
 
   const body = await readBody(req);
   const parsed = JSON.parse(body);
+  // Reject malformed levels before touching disk (same rules as editor load).
+  validateLevelData(parsed);
+
   await fs.mkdir(LEVELS_DIR, { recursive: true });
-  await fs.writeFile(filePath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+  const payload = `${JSON.stringify(parsed, null, 2)}\n`;
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(tmpPath, payload, 'utf8');
+    await fs.rename(tmpPath, filePath);
+  } catch (err) {
+    try {
+      await fs.unlink(tmpPath);
+    } catch {
+      // ignore cleanup failures
+    }
+    throw err;
+  }
 
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');

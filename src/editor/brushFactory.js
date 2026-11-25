@@ -134,13 +134,43 @@ export function createBrushFromBounds({
  * Duplicate actors with new persistent IDs.
  * Offset is snapped to grid increments; final position lands on the grid
  * (brush edge snap, otherwise pivot snap).
+ * Remaps parentId among the set and assigns fresh prefab instanceIds so
+ * copies do not alias the source instance (Phase 2F.7E).
  */
 export function duplicateActors(actors, { offset = { x: 25, y: 0, z: 0 }, gridSize = 25 } = {}) {
   const g = Math.max(1, gridSize || 25);
+  const idMap = new Map();
+  for (const actor of actors) {
+    idMap.set(actor.id, createId('actor'));
+  }
+  const instanceRemap = new Map();
+  const ensureInstanceId = (oldId) => {
+    if (!oldId) return null;
+    if (!instanceRemap.has(oldId)) instanceRemap.set(oldId, createId('pinst'));
+    return instanceRemap.get(oldId);
+  };
+  for (const actor of actors) {
+    const p = actor.prefab;
+    if (!p) continue;
+    if (p.instanceId) ensureInstanceId(p.instanceId);
+    if (p.ownerInstanceId) ensureInstanceId(p.ownerInstanceId);
+  }
+
   return actors.map((actor) => {
     const data = structuredClone(actor.toJSON());
-    data.id = createId('actor');
+    data.id = idMap.get(actor.id);
     data.name = `${actor.name} Copy`;
+    if (data.parentId && idMap.has(data.parentId)) {
+      data.parentId = idMap.get(data.parentId);
+    }
+    if (data.prefab) {
+      if (data.prefab.instanceId) {
+        data.prefab.instanceId = ensureInstanceId(data.prefab.instanceId);
+      }
+      if (data.prefab.ownerInstanceId) {
+        data.prefab.ownerInstanceId = ensureInstanceId(data.prefab.ownerInstanceId);
+      }
+    }
     const pos = {
       x: data.transform.position.x + snapToGrid(offset.x, g),
       y: data.transform.position.y + snapToGrid(offset.y, g),
@@ -150,7 +180,7 @@ export function duplicateActors(actors, { offset = { x: 25, y: 0, z: 0 }, gridSi
     data.transform.position = brush?.size
       ? snapCenterByEdges(pos, brush.size, g)
       : snapPivotToGrid(pos, g);
-    for (const comp of data.components) {
+    for (const comp of data.components || []) {
       comp.id = createId('comp');
     }
     return Actor.fromJSON(data, createComponentFromJSON);

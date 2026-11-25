@@ -283,13 +283,7 @@ export class GameRuntime {
 
     // Restore original authored state — discard runtime modifications
     if (this.authoredSnapshot) {
-      const restored = deserializeLevel(this.authoredSnapshot);
-      this.world.clear();
-      this.world.name = restored.name;
-      this.world.schemaVersion = restored.schemaVersion;
-      for (const actor of restored.actors) {
-        this.world.addActor(actor);
-      }
+      this._applyAuthoredSnapshot(this.authoredSnapshot);
       this.authoredSnapshot = null;
     }
 
@@ -341,15 +335,25 @@ export class GameRuntime {
 
   restoreAuthoredSnapshot() {
     if (!this.authoredSnapshot || !this.world) return false;
-    const restored = deserializeLevel(this.authoredSnapshot);
+    this._applyAuthoredSnapshot(this.authoredSnapshot);
+    this.sceneView.syncFromWorld(this.world);
+    return true;
+  }
+
+  /**
+   * Replace the live world's authored fields from a serializeLevel snapshot.
+   * Restores mapMode and ambient as well as actors (Phase 2F.7E).
+   */
+  _applyAuthoredSnapshot(snapshot) {
+    const restored = deserializeLevel(snapshot);
     this.world.clear();
     this.world.name = restored.name;
     this.world.schemaVersion = restored.schemaVersion;
+    this.world.mapMode = restored.mapMode;
+    this.world.ambient = restored.ambient;
     for (const actor of restored.actors) {
       this.world.addActor(actor);
     }
-    this.sceneView.syncFromWorld(this.world);
-    return true;
   }
 
   _startLoop() {

@@ -795,6 +795,7 @@ export class SetConvexGeometryCommand {
 
 /**
  * Run several commands as one undo step.
+ * Failed do() rolls back already-applied sub-commands (Phase 2F.7E).
  */
 export class CompositeCommand {
   constructor({ commands, label = 'Edit' }) {
@@ -803,7 +804,18 @@ export class CompositeCommand {
   }
 
   do() {
-    for (const cmd of this.commands) cmd.do();
+    const applied = [];
+    try {
+      for (const cmd of this.commands) {
+        cmd.do();
+        applied.push(cmd);
+      }
+    } catch (err) {
+      for (let i = applied.length - 1; i >= 0; i -= 1) {
+        applied[i].undo();
+      }
+      throw err;
+    }
   }
 
   undo() {

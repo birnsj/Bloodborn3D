@@ -56,7 +56,8 @@ function snapUp(v, g) {
 }
 
 /**
- * Grow locked World Solid so it always shells all subtract volumes.
+ * Fit locked World Solid so it exactly shells all subtract volumes.
+ * Grows or shrinks to the current cutter union + shell (Phase 2F.7E).
  * Designers should not manually resize World Solid on subtractive maps.
  * @returns {boolean} true if the solid was resized / moved
  */
@@ -95,12 +96,13 @@ export function ensureWorldSolidContainsSubtracts(world, {
 
   const g = Math.max(1, gridSize);
   const s = Math.max(0, Number(shell) || 0);
-  const needMin = {
+  // Exact shell of current cutters — shrinks on undo so World Solid tracks history.
+  const nextMin = {
     x: snapDown(union.min.x - s, g),
     y: snapDown(union.min.y - s, g),
     z: snapDown(union.min.z - s, g),
   };
-  const needMax = {
+  const nextMax = {
     x: snapUp(union.max.x + s, g),
     y: snapUp(union.max.y + s, g),
     z: snapUp(union.max.z + s, g),
@@ -108,17 +110,6 @@ export function ensureWorldSolidContainsSubtracts(world, {
 
   const cur = brushActorWorldAabb(solid);
   if (!cur) return false;
-
-  const nextMin = {
-    x: Math.min(cur.min.x, needMin.x),
-    y: Math.min(cur.min.y, needMin.y),
-    z: Math.min(cur.min.z, needMin.z),
-  };
-  const nextMax = {
-    x: Math.max(cur.max.x, needMax.x),
-    y: Math.max(cur.max.y, needMax.y),
-    z: Math.max(cur.max.z, needMax.z),
-  };
 
   const same = nextMin.x === cur.min.x && nextMin.y === cur.min.y && nextMin.z === cur.min.z
     && nextMax.x === cur.max.x && nextMax.y === cur.max.y && nextMax.z === cur.max.z;

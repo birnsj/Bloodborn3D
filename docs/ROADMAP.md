@@ -241,13 +241,22 @@ and collision solids unchanged.
 
 - Report: `docs/ACCEPTANCE_SUBTRACTIVE_FACE_CLIP.md`
 
+### Phase 2F.7E — Persistence and Data Integrity Hardening
+
+**Done** (2026-11-24). Strict level validation (ids, parents, cycles); atomic validated level writes;
+Play/Stop restores `mapMode`/`ambient`; CompositeCommand/HistoryStack failure integrity; World Solid
+exact-fit for undo; prefab duplicate instanceIds + history-safe auto-overrides.
+
+- Units: `phase2f7eDataIntegrity.test.js`
+- Report: `docs/ACCEPTANCE_DATA_INTEGRITY.md`
+
 ### Dependencies
 
 ```
 2F.0 → 2F.1 → 2F.2
 2F.0 → 2F.1 → 2F.3
 2F.0 → 2F.1 → 2F.4
-2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D
+2F.1–2F.4 → 2F.5 → 2F.6 → 2F.7A → 2F.7B → 2F.7C → 2F.7D → 2F.7E
 ```
 
 ### Out of scope for 2F
@@ -261,5 +270,5 @@ and collision solids unchanged.
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase 2F (including 2F.7D) is complete and the designer
+Reserved. Not started. Do not begin until Phase 2F (including 2F.7E) is complete and the designer
 directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.

@@ -29,14 +29,30 @@ export function normalizePrefabDefinition(raw) {
   const actors = Array.isArray(raw.actors)
     ? raw.actors.filter((a) => a && a.id).map((a) => structuredClone(a))
     : [];
+
+  // Drop duplicate template ids (keep first) and clear orphan parent links.
+  const seen = new Set();
+  const uniqueActors = [];
+  for (const actor of actors) {
+    const tid = String(actor.id);
+    if (seen.has(tid)) continue;
+    seen.add(tid);
+    uniqueActors.push(actor);
+  }
+  for (const actor of uniqueActors) {
+    if (actor.parentId && !seen.has(String(actor.parentId))) {
+      actor.parentId = null;
+    }
+  }
+
   const rootTemplateIds = Array.isArray(raw.rootTemplateIds)
-    ? raw.rootTemplateIds.map(String).filter((tid) => actors.some((a) => a.id === tid))
-    : actors.filter((a) => !a.parentId).map((a) => a.id);
+    ? raw.rootTemplateIds.map(String).filter((tid) => seen.has(tid))
+    : uniqueActors.filter((a) => !a.parentId).map((a) => a.id);
 
   const nested = new Set(
     Array.isArray(raw.nestedPrefabIds) ? raw.nestedPrefabIds.map(String) : [],
   );
-  for (const actor of actors) {
+  for (const actor of uniqueActors) {
     const pid = actor.prefab?.prefabId;
     if (pid) nested.add(String(pid));
   }
@@ -47,7 +63,7 @@ export function normalizePrefabDefinition(raw) {
     name: String(raw.name || id),
     type: 'prefab',
     rootTemplateIds,
-    actors,
+    actors: uniqueActors,
     nestedPrefabIds: [...nested],
     createdAt: Number(raw.createdAt) || Date.now(),
     updatedAt: Number(raw.updatedAt) || Date.now(),

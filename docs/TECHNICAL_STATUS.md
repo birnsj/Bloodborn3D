@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **569 / 569 pass** (2F.7B gate; see `ACCEPTANCE_ASSET_LIFECYCLE.md`) |
+| `npm test` | **598 / 598 pass** (2F.7E gate; see `ACCEPTANCE_DATA_INTEGRITY.md`) |
 | `npm run lint` | exit 0, warnings only (no errors) |
 | `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
@@ -22,6 +22,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.6 | Multi-viewport + ortho + marquee; scissor shared SceneView; browser harness PASS |
 | Phase 2F.7A | Subtractive map mode; empty-adjacent face culling; World Solid auto-fit; `acceptance-subtractive.json` |
 | Phase 2F.7B | Asset lifecycle / GPU ownership; actor visualEpoch; shared vs owned dispose; see `ACCEPTANCE_ASSET_LIFECYCLE.md` |
+| Phase 2F.7E | Persistence / data integrity; strict level validate; atomic saves; Play/Stop mapMode+ambient; World Solid exact-fit; prefab duplicate ids; see `ACCEPTANCE_DATA_INTEGRITY.md` |
 
 ## 2. Implemented systems
 
@@ -43,6 +44,7 @@ Status is what the code does today, not an intent.
 | Multi-viewport (2F.6) | Verified | Shared SceneView scissor panes; ortho + display modes + marquee; see `ACCEPTANCE_MULTI_VIEWPORT.md`. |
 | Subtractive map mode (2F.7A) | Verified | New Map → Subtractive; World Solid empty-adjacent faces only; auto-fit shell; additive pipeline unchanged; see `ACCEPTANCE_SUBTRACTIVE.md`. |
 | Asset / GPU lifecycle (2F.7B) | Verified | Per-actor visual epochs; shared cache vs owned clones; preview abandonment; see `ACCEPTANCE_ASSET_LIFECYCLE.md`. |
+| Data integrity (2F.7E) | Verified | Strict deserialize; atomic level writes; Play/Stop world fields; undo failure integrity; prefab instance duplicate fix; see `ACCEPTANCE_DATA_INTEGRITY.md`. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |
@@ -111,6 +113,7 @@ These were out of scope for the pass and are unchanged.
 
 - Incremental scene synchronization (M6) — **done** in Phase **2F.7C** (`ACCEPTANCE_INCREMENTAL_SYNC.md`).
 - Code cleanup pass — **done** in Phase **2F.7D** (`ACCEPTANCE_CODE_CLEANUP.md`); legacy Toolbar/Hierarchy/Inspector removed; `worldSolidFit` in runtime.
+- Persistence / data integrity — **done** in Phase **2F.7E** (`ACCEPTANCE_DATA_INTEGRITY.md`).
 - Runtime/editor dependency separation (M8) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Static-mesh collider generation (M10).

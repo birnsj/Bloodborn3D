@@ -38,9 +38,20 @@ describe('ensureWorldSolidContainsSubtracts', () => {
     expect(ensureWorldSolidContainsSubtracts(world, { gridSize: 25 })).toBe(false);
 
     // Move cutter far outside current solid.
+    const originPos = { ...solid.transform.position };
     cutter.transform.position = { x: 800, y: 100, z: 0 };
     expect(ensureWorldSolidContainsSubtracts(world, { gridSize: 25 })).toBe(true);
     const brush = solid.getComponent('Brush');
-    expect(brush.size.x).toBeGreaterThan(solidBounds.max.x - solidBounds.min.x);
+    // Same footprint width, but hull shifts to cover the relocated cutter.
+    expect(solid.transform.position.x).toBeGreaterThan(originPos.x);
+    expect(brush.size.x).toBeGreaterThanOrEqual(solidBounds.max.x - solidBounds.min.x);
+
+    // Move cutter back — exact fit recenters World Solid (Phase 2F.7E undo integrity).
+    cutter.transform.position = { x: 0, y: 100, z: 0 };
+    expect(ensureWorldSolidContainsSubtracts(world, { gridSize: 25 })).toBe(true);
+    expect(solid.transform.position.x).toBe(originPos.x);
+    expect(brush.size.x).toBe(solidBounds.max.x - solidBounds.min.x);
+    expect(brush.size.y).toBe(solidBounds.max.y - solidBounds.min.y);
+    expect(brush.size.z).toBe(solidBounds.max.z - solidBounds.min.z);
   });
 });

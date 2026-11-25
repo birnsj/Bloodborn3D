@@ -19,6 +19,7 @@ export class HistoryStack {
   }
 
   execute(command) {
+    // do() runs first; failed commands never enter the stack.
     command.do();
     this.undoStack.push(command);
     if (this.undoStack.length > this.limit) {
@@ -32,7 +33,13 @@ export class HistoryStack {
   undo() {
     const command = this.undoStack.pop();
     if (!command) return null;
-    command.undo();
+    try {
+      command.undo();
+    } catch (err) {
+      // Keep history coherent if undo throws (Phase 2F.7E).
+      this.undoStack.push(command);
+      throw err;
+    }
     this.redoStack.push(command);
     this.onChange(this);
     return command;
@@ -41,7 +48,12 @@ export class HistoryStack {
   redo() {
     const command = this.redoStack.pop();
     if (!command) return null;
-    command.do();
+    try {
+      command.do();
+    } catch (err) {
+      this.redoStack.push(command);
+      throw err;
+    }
     this.undoStack.push(command);
     this.onChange(this);
     return command;
