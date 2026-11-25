@@ -23,7 +23,16 @@ public/assets/.registry.json.*.tmp
 concept-library/images/
 
 # Project Art Library — track .bb-art/library.json + empty dirs (.gitkeep); ignore binaries/thumbs
-project-art/**/*.{png,jpg,jpeg,webp,gif,PNG,JPG,JPEG,WEBP,GIF}
+project-art/**/*.png
+project-art/**/*.jpg
+project-art/**/*.jpeg
+project-art/**/*.webp
+project-art/**/*.gif
+project-art/**/*.PNG
+project-art/**/*.JPG
+project-art/**/*.JPEG
+project-art/**/*.WEBP
+project-art/**/*.GIF
 project-art/.bb-art/thumbs/**
 !project-art/.bb-art/thumbs/.gitkeep
 
