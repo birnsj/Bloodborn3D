@@ -17,6 +17,7 @@ import { getCurvedWallColliderSolids } from './curvedWallGeometry.js';
 import { brushHasMiters, miteredWallPointsToMetersFlat } from './miteredWallGeometry.js';
 import { convexBrushPointsToMetersFlat } from './convexBrushGeometry.js';
 import { isWallBrush } from './wallOpenings.js';
+import { peekLoadedMeshMeta } from './meshLoader.js';
 
 let rapierReady = null;
 
@@ -72,6 +73,7 @@ export class PhysicsWorld {
     this._bodies.clear();
     this.playerBody = null;
     this.playerCollider = null;
+    this._playerCapsule = null;
   }
 
   /**
@@ -130,12 +132,33 @@ export class PhysicsWorld {
         && mesh.collidable
         && mesh.collisionType === 'box'
       ) {
-        // Asset-bounds box (meters); actor world scale applied in _addBoxCollider.
-        // Falls back to 1 m cube when bounds are unavailable (legacy / missing meta).
-        const half = halfExtentsFromMeshBounds(this._resolveMeshBoundsMeters(mesh.assetId));
-        this._addBoxCollider(actor, half);
+        // Asset-bounds box (meters) + local center offset for off-origin glTF AABBs.
+        const box = this._resolveMeshCollisionBox(mesh.assetId);
+        const half = halfExtentsFromMeshBounds(box.size);
+        this._addBoxCollider(actor, half, box.center);
       }
     }
+  }
+
+  /**
+   * Resolve mesh AABB size + local center in meters.
+   * Prefers live glTF cache (includes off-origin center), then registry meta.
+   */
+  _resolveMeshCollisionBox(assetId) {
+    const live = this._peekLiveMeshMeta(assetId);
+    const size = normalizePositiveVec3(live?.boundingBoxMeters)
+      || this._resolveMeshBoundsMeters(assetId)
+      || { x: 1, y: 1, z: 1 };
+    const center = normalizeFiniteVec3(live?.boundingBoxCenterMeters)
+      || this._resolveMeshBoundsCenterMeters(assetId)
+      || { x: 0, y: 0, z: 0 };
+    return { size, center };
+  }
+
+  _peekLiveMeshMeta(assetId) {
+    if (!assetId) return null;
+    const url = this.assetResolver?.getMeshUrl?.(assetId);
+    return peekLoadedMeshMeta(url);
   }
 
   /**
@@ -144,13 +167,12 @@ export class PhysicsWorld {
    */
   _resolveMeshBoundsMeters(assetId) {
     if (!assetId) return null;
-    const raw = this.assetResolver?.getMeshBoundsMeters?.(assetId);
-    if (!raw || typeof raw !== 'object') return null;
-    const x = Number(raw.x);
-    const y = Number(raw.y);
-    const z = Number(raw.z);
-    if (![x, y, z].every((v) => Number.isFinite(v) && v > 0)) return null;
-    return { x, y, z };
+    return normalizePositiveVec3(this.assetResolver?.getMeshBoundsMeters?.(assetId));
+  }
+
+  _resolveMeshBoundsCenterMeters(assetId) {
+    if (!assetId) return null;
+    return normalizeFiniteVec3(this.assetResolver?.getMeshBoundsCenterMeters?.(assetId));
   }
 
   _addConvexBrushCollider(actor, convex, gameWorld = null) {
@@ -419,7 +441,11 @@ export class PhysicsWorld {
     }
   }
 
-  _addBoxCollider(actor, halfMeters) {
+  /**
+   * @param {{ x: number, y: number, z: number }} halfMeters local half-extents before actor scale
+   * @param {{ x: number, y: number, z: number }} [localCenterMeters] mesh-local AABB center offset
+   */
+  _addBoxCollider(actor, halfMeters, localCenterMeters = null) {
     const worldXform = getWorldTransform(actor, actor.world || null);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
@@ -428,11 +454,21 @@ export class PhysicsWorld {
       .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
       .setRotation(eulerDegreesToQuat(rot));
     const body = this.world.createRigidBody(desc);
+    const sx = scale.x || 1;
+    const sy = scale.y || 1;
+    const sz = scale.z || 1;
     const colliderDesc = RAPIER.ColliderDesc.cuboid(
-      Math.max(0.01, halfMeters.x * Math.abs(scale.x || 1)),
-      Math.max(0.01, halfMeters.y * Math.abs(scale.y || 1)),
-      Math.max(0.01, halfMeters.z * Math.abs(scale.z || 1)),
+      Math.max(0.01, halfMeters.x * Math.abs(sx)),
+      Math.max(0.01, halfMeters.y * Math.abs(sy)),
+      Math.max(0.01, halfMeters.z * Math.abs(sz)),
     );
+    if (localCenterMeters) {
+      colliderDesc.setTranslation(
+        localCenterMeters.x * sx,
+        localCenterMeters.y * sy,
+        localCenterMeters.z * sz,
+      );
+    }
     const collider = this.world.createCollider(colliderDesc, body);
     this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
@@ -446,6 +482,7 @@ export class PhysicsWorld {
     const radiusMeters = toMeters(radius);
     // Capsule half-height is distance from sphere centers; total visual ~ eyeHeight
     const halfHeight = Math.max(0.05, (heightMeters - radiusMeters * 2) * 0.5);
+    this._playerCapsule = { halfHeight, radius: radiusMeters, height: heightMeters };
 
     const desc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(
@@ -476,6 +513,70 @@ export class PhysicsWorld {
     return { x: t.x, y: t.y, z: t.z };
   }
 
+  /**
+   * True when a short downward ray from the capsule finds support.
+   * Excludes the player collider. Used for jump + stair-assist gating.
+   */
+  isPlayerGrounded(maxGap = 0.14) {
+    if (!this.world || !this.playerBody || !this.playerCollider || !this._playerCapsule) {
+      return false;
+    }
+    const t = this.playerBody.translation();
+    const { halfHeight, radius } = this._playerCapsule;
+    // Feet are roughly halfHeight + radius below capsule center.
+    const feetY = t.y - halfHeight - radius;
+    const origin = { x: t.x, y: feetY + 0.05, z: t.z };
+    const ray = new RAPIER.Ray(origin, { x: 0, y: -1, z: 0 });
+    const hit = this.world.castRay(
+      ray,
+      maxGap + 0.05,
+      true,
+      undefined,
+      undefined,
+      this.playerCollider,
+    );
+    return Boolean(hit);
+  }
+
+  /**
+   * Stair assist probe: a short forward+down cast must hit a ledge within ~0.28 m
+   * of the feet. Tall walls fail the down-cast and do not assist.
+   */
+  canStairAssist(wishX, wishZ, {
+    forwardDist = 0.35,
+    maxStep = 0.28,
+  } = {}) {
+    if (!this.world || !this.playerBody || !this.playerCollider || !this._playerCapsule) {
+      return false;
+    }
+    const len = Math.hypot(wishX, wishZ);
+    if (len < 1e-4) return false;
+    const nx = wishX / len;
+    const nz = wishZ / len;
+    const t = this.playerBody.translation();
+    const { halfHeight, radius } = this._playerCapsule;
+    const feetY = t.y - halfHeight - radius;
+    // Start slightly ahead and above the feet, cast down onto a possible riser.
+    const origin = {
+      x: t.x + nx * forwardDist,
+      y: feetY + maxStep + 0.05,
+      z: t.z + nz * forwardDist,
+    };
+    const ray = new RAPIER.Ray(origin, { x: 0, y: -1, z: 0 });
+    const hit = this.world.castRay(
+      ray,
+      maxStep + 0.1,
+      true,
+      undefined,
+      undefined,
+      this.playerCollider,
+    );
+    if (!hit) return false;
+    const hitY = origin.y - hit.timeOfImpact;
+    const rise = hitY - feetY;
+    return rise > 0.02 && rise <= maxStep;
+  }
+
   /** Test helper: number of colliders for an actor brush body. */
   getColliderCount(actorId) {
     return this._bodies.get(actorId)?.colliders?.length || 0;
@@ -491,6 +592,21 @@ export class PhysicsWorld {
     try {
       const he = collider.halfExtents();
       return { x: he.x, y: he.y, z: he.z };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Test helper: collider translation relative to its rigid body (local offset).
+   */
+  getColliderLocalTranslation(actorId) {
+    const collider = this._bodies.get(actorId)?.colliders?.[0];
+    if (!collider || typeof collider.translationWrtParent !== 'function') return null;
+    try {
+      const t = collider.translationWrtParent();
+      if (!t) return { x: 0, y: 0, z: 0 };
+      return { x: t.x, y: t.y, z: t.z };
     } catch {
       return null;
     }
@@ -531,6 +647,7 @@ export class PhysicsWorld {
     this._bodies.clear();
     this.playerBody = null;
     this.playerCollider = null;
+    this._playerCapsule = null;
     this.resetAccumulator();
     if (!world) return;
     try {
@@ -553,6 +670,24 @@ export function halfExtentsFromMeshBounds(boundsMeters) {
     y: Math.max(0.01, sizeOr(boundsMeters.y, 1) * 0.5),
     z: Math.max(0.01, sizeOr(boundsMeters.z, 1) * 0.5),
   };
+}
+
+function normalizePositiveVec3(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const z = Number(raw.z);
+  if (![x, y, z].every((v) => Number.isFinite(v) && v > 0)) return null;
+  return { x, y, z };
+}
+
+function normalizeFiniteVec3(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const z = Number(raw.z);
+  if (![x, y, z].every((v) => Number.isFinite(v))) return null;
+  return { x, y, z };
 }
 
 function eulerDegreesToQuat({ x = 0, y = 0, z = 0 }) {

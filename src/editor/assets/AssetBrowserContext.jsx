@@ -184,6 +184,17 @@ export function AssetBrowserProvider({ children }) {
     return { x, y, z };
   }, [registry]);
 
+  const getMeshBoundsCenterMeters = useCallback((id) => {
+    const entry = findAsset(registry, id);
+    const c = entry?.meta?.boundingBoxCenterMeters;
+    if (!c || typeof c !== 'object') return null;
+    const x = Number(c.x);
+    const y = Number(c.y);
+    const z = Number(c.z);
+    if (![x, y, z].every((v) => Number.isFinite(v))) return null;
+    return { x, y, z };
+  }, [registry]);
+
   const getMeshUrl = useCallback((id) => {
     const entry = findAsset(registry, id);
     if (!entry || entry.kind !== 'mesh') return null;
@@ -328,6 +339,7 @@ export function AssetBrowserProvider({ children }) {
     getTextureUrl,
     getMeshUrl,
     getMeshBoundsMeters,
+    getMeshBoundsCenterMeters,
     getMaterialDefinition,
     getPrefabDefinition,
     getPrefabDefinitionSync,
@@ -335,6 +347,7 @@ export function AssetBrowserProvider({ children }) {
     getTextureUrl,
     getMeshUrl,
     getMeshBoundsMeters,
+    getMeshBoundsCenterMeters,
     getMaterialDefinition,
     getPrefabDefinition,
     getPrefabDefinitionSync,

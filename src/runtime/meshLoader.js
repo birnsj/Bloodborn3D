@@ -6,6 +6,8 @@ import { markOwnedGpuResource, markSharedGpuResource, markSharedSubtree } from '
 
 const gltfLoader = new GLTFLoader();
 const meshCache = createRetryableCache();
+/** url → latest successful load meta (bounds + center) for sync physics peek. */
+const meshMetaByUrl = new Map();
 
 /**
  * Load a glTF/GLB asset. Geometry stays in meters (Three.js / Rapier space).
@@ -26,17 +28,22 @@ export function loadGltfScene(url) {
         }
         const box = new THREE.Box3().setFromObject(root);
         const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
         box.getSize(size);
+        box.getCenter(center);
         const meta = {
           unitAssumption: 'meters',
           editorUnitsPerMeter: 100,
           boundingBoxMeters: { x: size.x, y: size.y, z: size.z },
+          // Local AABB center relative to the glTF root (may be off-origin).
+          boundingBoxCenterMeters: { x: center.x, y: center.y, z: center.z },
           boundingBoxEditor: metersToEditorSize({ x: size.x, y: size.y, z: size.z }),
           triangles: countTriangles(root),
         };
         const validation = validateMeshScale(meta);
         // Geometries/materials stay in the cache — mark shared before cloning out.
         markSharedSubtree(root, { materials: true });
+        meshMetaByUrl.set(url, meta);
         resolve({
           scene: root,
           animations: gltf.animations || [],
@@ -74,6 +81,21 @@ export async function cloneLoadedMesh(url) {
 
 export function clearMeshCache() {
   meshCache.clear();
+  meshMetaByUrl.clear();
+}
+
+/**
+ * Synchronous peek at cached glTF meta (bounds + center) if already loaded.
+ */
+export function peekLoadedMeshMeta(url) {
+  if (!url) return null;
+  return meshMetaByUrl.get(url) || null;
+}
+
+/** Test / tooling: seed sync meta without a full glTF fetch. */
+export function seedLoadedMeshMeta(url, meta) {
+  if (!url || !meta) return;
+  meshMetaByUrl.set(url, meta);
 }
 
 function countTriangles(root) {

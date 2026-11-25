@@ -112,6 +112,8 @@ describe('Stage 3 — procedural stairs', () => {
       playerBody: {
         linvel: () => ({ x: 0.05, y: 0, z: 0.02 }),
       },
+      isPlayerGrounded: () => true,
+      canStairAssist: () => true,
       setPlayerVelocity: () => {},
       getPlayerPositionMeters: () => ({ x: 0, y: 1, z: 0 }),
     };

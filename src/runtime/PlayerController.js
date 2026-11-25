@@ -4,6 +4,9 @@ import { toMeters, toEditorUnits } from '../core/units.js';
 /**
  * WASD + mouse-look first-person controller.
  * Movement speed is authored in editor units/sec; converted to m/s for Rapier.
+ *
+ * Jump requires a grounded contact + Space press edge (no bunny-hop / hold-repeat).
+ * Stair assist only runs while grounded so wall collision cannot launch the player.
  */
 export class PlayerController {
   constructor({
@@ -27,6 +30,8 @@ export class PlayerController {
     this.pitch = 0;
     this.enabled = false;
     this._keys = new Set();
+    /** True for one update after Space transitions keydown (edge trigger). */
+    this._jumpQueued = false;
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
@@ -39,6 +44,7 @@ export class PlayerController {
     this.pitch = 0;
     this.enabled = true;
     this._keys.clear();
+    this._jumpQueued = false;
 
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
@@ -53,6 +59,7 @@ export class PlayerController {
   stop() {
     this.enabled = false;
     this._keys.clear();
+    this._jumpQueued = false;
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('keyup', this._onKeyUp);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
@@ -94,6 +101,9 @@ export class PlayerController {
   }
 
   _onKeyDown(e) {
+    if (e.code === 'Space' && !this._keys.has('Space') && !e.repeat) {
+      this._jumpQueued = true;
+    }
     this._keys.add(e.code);
   }
 
@@ -122,19 +132,23 @@ export class PlayerController {
       wish.normalize().multiplyScalar(speedMps);
     }
 
+    const grounded = this.physics.isPlayerGrounded();
     const current = this.physics.playerBody.linvel();
     let vy = current.y;
-    if (this._keys.has('Space') && Math.abs(current.y) < 0.15) {
+
+    const wantsJump = this._jumpQueued;
+    this._jumpQueued = false;
+    if (wantsJump && grounded) {
       vy = 4.5;
     } else if (
-      // Smallest stair/curb assist: when wishing forward but nearly stopped
-      // horizontally while close to grounded, nudge up over ~0.2 m risers.
-      wish.lengthSq() > 0
+      // Stair/curb assist: only while grounded so wall scrapes cannot climb.
+      grounded
+      && wish.lengthSq() > 0
       && current.y > -0.4
       && current.y < 0.08
     ) {
       const horiz = Math.hypot(current.x, current.z);
-      if (horiz < speedMps * 0.4) {
+      if (horiz < speedMps * 0.4 && this.physics.canStairAssist(wish.x, wish.z)) {
         vy = Math.max(vy, 2.35);
       }
     }
