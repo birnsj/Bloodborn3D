@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createSubtractiveMazeLevelData,
   createSubtractiveMazeWorld,
+  createSubtractiveShowcaseWorld,
   generateMazePassages,
 } from '../editor/subtractiveMazeFactory.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
@@ -25,6 +26,7 @@ describe('createSubtractiveMazeWorld', () => {
       doorWidth: 200,
       roomHeight: 300,
       gridSize: 25,
+      showcase: false,
     });
     expect(world.mapMode).toBe('subtractive');
 
@@ -47,7 +49,6 @@ describe('createSubtractiveMazeWorld', () => {
     expect(rooms).toHaveLength(12);
     expect(doorways).toHaveLength(11);
 
-    // Every room is the same size and sits on the construction grid.
     for (const room of rooms) {
       const b = room.getComponent('Brush');
       expect(b.operation).toBe('subtract');
@@ -58,7 +59,6 @@ describe('createSubtractiveMazeWorld', () => {
       expect(Math.abs(room.transform.position.z % 25)).toBe(0);
     }
 
-    // Doorways fill the wall gap exactly (depth = wall thickness) and share room faces.
     for (const door of doorways) {
       const b = door.getComponent('Brush');
       expect(b.operation).toBe('subtract');
@@ -69,7 +69,6 @@ describe('createSubtractiveMazeWorld', () => {
       expect(wide).toBe(200);
     }
 
-    // Spot-check flush abutment: Doorway 0 sits between two rooms with shared X or Z faces.
     const door0 = doorways[0];
     const dPos = door0.transform.position;
     const dSize = door0.getComponent('Brush').size;
@@ -97,9 +96,46 @@ describe('createSubtractiveMazeWorld', () => {
   });
 
   it('serializes to level data with mapMode', () => {
-    const data = createSubtractiveMazeLevelData({ name: 'Subractive' });
+    const data = createSubtractiveMazeLevelData({ name: 'Subractive', showcase: false });
     expect(data.mapMode).toBe('subtractive');
     expect(data.name).toBe('Subractive');
     expect(data.actors.length).toBeGreaterThan(5);
+  });
+});
+
+describe('createSubtractiveShowcaseWorld', () => {
+  it('builds a multi-height hall with windows, pillars, and stairs under the solid cap', () => {
+    const world = createSubtractiveShowcaseWorld();
+    expect(world.mapMode).toBe('subtractive');
+
+    const rooms = world.actors.filter((a) => a.tags?.includes('maze-room'));
+    const names = rooms.map((a) => a.name).sort();
+    expect(names).toEqual(['Atrium', 'Court Hall', 'Dining', 'Entrance', 'West Hall']);
+
+    const atrium = rooms.find((a) => a.name === 'Atrium');
+    const court = rooms.find((a) => a.name === 'Court Hall');
+    expect(atrium.getComponent('Brush').size.y).toBe(550);
+    expect(court.getComponent('Brush').size.y).toBe(450);
+
+    const windows = world.actors.filter((a) => a.tags?.includes('maze-window'));
+    expect(windows.length).toBe(3);
+    expect(windows.every((w) => w.getComponent('Brush').operation === 'subtract')).toBe(true);
+
+    const frames = world.actors.filter((a) => a.tags?.includes('maze-window-frame'));
+    expect(frames.length).toBeGreaterThanOrEqual(6);
+
+    const pillars = world.actors.filter((a) => a.tags?.includes('maze-pillar'));
+    expect(pillars.length).toBe(8);
+    expect(pillars.every((p) => p.getComponent('Brush').operation === 'add')).toBe(true);
+
+    const stairs = world.actors.filter((a) => a.tags?.includes('maze-stair'));
+    expect(stairs.length).toBe(2);
+    expect(stairs.every((s) => s.getComponent('Stair'))).toBe(true);
+
+    const platforms = world.actors.filter((a) => a.tags?.includes('maze-platform'));
+    expect(platforms.length).toBeGreaterThanOrEqual(2);
+
+    const complexity = validateWorldSubtractComplexity(world);
+    expect(complexity.ok).toBe(true);
   });
 });

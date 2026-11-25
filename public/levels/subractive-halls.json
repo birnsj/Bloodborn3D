@@ -1,0 +1,2292 @@
+{
+  "schemaVersion": 2,
+  "name": "Subractive Halls",
+  "mapMode": "subtractive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
+  "actors": [
+    {
+      "id": "actor_52b436e1-b814-475f-8c3e-bc32c511b5a9",
+      "name": "World Solid",
+      "transform": {
+        "position": {
+          "x": -87.5,
+          "y": 275,
+          "z": 25
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "world-solid"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": true,
+      "components": [
+        {
+          "id": "comp_e1b105ac-c08c-4a51-9810-fa278b6387e1",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1275,
+            "y": 750,
+            "z": 1450
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_bcf58cfe-7515-4cc3-8765-9f9d9d027687",
+      "name": "Entrance",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": -325
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_4c20a828-582e-4825-81ce-2fd427f13846",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 300,
+            "y": 300,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_5483e8db-d873-45fe-bf97-44515d83a319",
+      "name": "Atrium",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 275,
+          "z": 75
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_70c6ed36-2db8-4124-96f9-475c379bb014",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 550,
+            "z": 450
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6a24b774-5df9-46b4-9e2a-e5c3f30beddf",
+      "name": "West Hall",
+      "transform": {
+        "position": {
+          "x": -337.5,
+          "y": 150,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cb8034ff-8957-4c87-aebe-932ab0eaed52",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 375,
+            "y": 300,
+            "z": 400
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_4d878b18-92cc-4c58-b49c-bb59b620aebc",
+      "name": "Dining",
+      "transform": {
+        "position": {
+          "x": -312.5,
+          "y": 150,
+          "z": 475
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c9219710-0757-4900-a1f6-e5d39abba50a",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 425,
+            "y": 300,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_2cde8ff7-fbe8-4534-8c11-0b5eded41f0f",
+      "name": "Court Hall",
+      "transform": {
+        "position": {
+          "x": 175,
+          "y": 225,
+          "z": 475
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-room"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e594c944-e814-4dbd-9fbd-70a1d82f5039",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 550,
+            "y": 450,
+            "z": 350
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_bfd81aa0-917d-4d54-ae34-620ad983f44c",
+      "name": "Doorway Entrance",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 125,
+          "z": -125
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e40a3125-ca85-4fc6-b684-b5c584ad394e",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 250,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e0079285-4731-4f8d-b087-041ec4900680",
+      "name": "Doorway West",
+      "transform": {
+        "position": {
+          "x": -125,
+          "y": 125,
+          "z": 75
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fe7ff8c3-06bd-4cd2-82cd-8e7be15f8601",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 250,
+            "z": 150
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_607cdb15-3854-4c4d-9f03-25be3225bc45",
+      "name": "Doorway Dining",
+      "transform": {
+        "position": {
+          "x": -275,
+          "y": 125,
+          "z": 325
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_29779138-c702-48df-9936-5956daadf6b1",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 250,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_657b8915-6075-4e62-9ad9-f0ee03036eb4",
+      "name": "Doorway Court West",
+      "transform": {
+        "position": {
+          "x": -75,
+          "y": 125,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c783da72-0e48-49c9-925d-aa86e7d1554b",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 250,
+            "z": 175
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_956a088b-5b72-4e8a-9a7d-8a44f6c05663",
+      "name": "Doorway Court North",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 125,
+          "z": 325
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-doorway"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_4b5c7c5b-33b7-4b36-b636-eabd21f38ce9",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 200,
+            "y": 250,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_63504c11-5736-4433-80f7-de0d28bc0218",
+      "name": "Window Entrance",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-window"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ed27222d-f9ef-4959-8cdb-536e5023e874",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 300,
+            "z": 100
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_06d063f7-fc2c-4ecb-8498-dc06aeb1d86b",
+      "name": "Window West",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 150,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-window"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_96316eb5-c769-4316-9531-043313a2a00e",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 300,
+            "z": 200
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_9e2edf00-f41d-462c-ac80-eb186eb44b44",
+      "name": "Window Dining",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 150,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract",
+        "maze-window"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fbe1d14d-cb22-44e4-9cc3-e70864acda0d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 300,
+            "z": 175
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_52eab12c-7061-486f-a79a-487ddf0dbc3b",
+      "name": "Sill Entrance",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0ebda199-e390-4e53-821e-74b8ae21313d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 100,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_a5c2b2a6-3ef0-4e84-aa02-de8858fc067a",
+      "name": "Lintel Entrance",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 262.5,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_02c6f28f-256a-4463-8903-b293c750c599",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 150,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_9542e979-94ce-4d9c-b669-41a52d671ae9",
+      "name": "Sill West",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 50,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_10310038-74ab-42bd-8a3c-7a431369d919",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 100,
+            "z": 200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_3c784a65-6336-4b17-8fa1-9daa731924d0",
+      "name": "Lintel West",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 262.5,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_441971b7-6e14-477e-8324-037dee179345",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_fcf7ea48-c548-4f86-9a07-40152168a271",
+      "name": "Sill Dining",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 50,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1ff0309b-30a6-4e44-b79c-cff4853030bf",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 100,
+            "z": 175
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_ba78eaad-b241-48b7-b03e-cc799ac41c28",
+      "name": "Lintel Dining",
+      "transform": {
+        "position": {
+          "x": -575,
+          "y": 262.5,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-window-frame"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fe3b1cfb-7400-4c83-8793-bfccb62e05d6",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 175
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f21fa81c-a1a3-4012-9163-357c659621b2",
+      "name": "Atrium Pillar 0",
+      "transform": {
+        "position": {
+          "x": -25,
+          "y": 275,
+          "z": -25
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_2e17e4d4-825b-441d-901b-a8eb81a058b3",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 550,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_4ca1920e-0e56-4f02-8eec-b015d42bda41",
+      "name": "Atrium Pillar 1",
+      "transform": {
+        "position": {
+          "x": 325,
+          "y": 275,
+          "z": -25
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ce01f8cb-1d90-4f30-9f72-51f0d126e835",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 550,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f3b7e7ea-55af-4917-b7e7-6b2b35f75983",
+      "name": "Atrium Pillar 2",
+      "transform": {
+        "position": {
+          "x": -25,
+          "y": 275,
+          "z": 175
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1c3ee67f-71ad-4e42-94cb-eb5e7e64dc1b",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 550,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_057d1a76-bc6d-4446-9b2c-648bf1e4e3b2",
+      "name": "Atrium Pillar 3",
+      "transform": {
+        "position": {
+          "x": 325,
+          "y": 275,
+          "z": 175
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_87721cc0-fbbe-472c-8095-3c11d3aa0482",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 550,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_ad4a51a7-51fc-4af1-811a-e0da76cae2c8",
+      "name": "Court Pillar 0",
+      "transform": {
+        "position": {
+          "x": 25,
+          "y": 200,
+          "z": 425
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_4a9c5a42-9249-465e-b368-dc774f14e12c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 400,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e9a2ffbc-671f-4a60-b31b-279a1d83fd07",
+      "name": "Court Pillar 1",
+      "transform": {
+        "position": {
+          "x": 325,
+          "y": 200,
+          "z": 425
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7b874538-6de5-4187-b243-f380324ec0ad",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 400,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_3eabdc75-da76-4a68-ad21-20b0d4586b82",
+      "name": "Court Pillar 2",
+      "transform": {
+        "position": {
+          "x": 25,
+          "y": 200,
+          "z": 525
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0ecb7b5c-f866-4ebb-91f0-2c232164c790",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 400,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c0612a17-c8d4-4351-8b24-519593227a71",
+      "name": "Court Pillar 3",
+      "transform": {
+        "position": {
+          "x": 325,
+          "y": 200,
+          "z": 525
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-pillar"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7bb15acf-e551-4723-a630-e760ee0cd19b",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 400,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6bb1db99-dcb3-4957-9275-79da8dc4d026",
+      "name": "Atrium Balcony",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 262.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-platform"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0c3b00b9-3156-47fc-8c95-2096d3348cc0",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 25,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_47cdc56b-f118-42fe-81e6-e66e446c0e8c",
+      "name": "Balcony Rail",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 300,
+          "z": 212.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-platform"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f3ec3079-5c37-4542-acc2-52f99c039614",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 50,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_4d5bb1f1-b7e1-4aed-8f0c-a558ade10f36",
+      "name": "Atrium Stairs",
+      "transform": {
+        "position": {
+          "x": 325,
+          "y": 125,
+          "z": 87.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair",
+        "maze-stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_432c41ca-5f22-43ca-83ca-46fe9e25c8c2",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "straight",
+          "width": 150,
+          "stepCount": 13,
+          "stepHeight": 19.23076923076923,
+          "treadDepth": 30,
+          "direction": "z+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_682f392f-827a-40e5-8b51-f291899f799b",
+      "name": "Court Dais",
+      "transform": {
+        "position": {
+          "x": 275,
+          "y": 37.5,
+          "z": 537.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "maze-platform"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e193ed77-8cc7-464e-a7f9-a196cf42caa7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 250,
+            "y": 75,
+            "z": 175
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_cd1dcd06-c66c-4415-b1e0-88b8d276c410",
+      "name": "Court Steps",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 37.5,
+          "z": 400
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair",
+        "maze-stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ff6575da-aca1-430c-bd1e-b8ec45ae60dc",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "straight",
+          "width": 120,
+          "stepCount": 4,
+          "stepHeight": 18.75,
+          "treadDepth": 37.5,
+          "direction": "x+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_abc6c35c-c810-469a-a5c3-7b9e102e6b43",
+      "name": "Maze Ambient",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 200,
+          "z": 0
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "ambient"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_dafe0d0d-08db-4b43-9d34-a5d70c49cd6c",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "ambient",
+          "color": "#c8d0e0",
+          "intensity": 0.22,
+          "range": 1200,
+          "castShadow": false,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_0be5325a-f34e-4793-ab98-3f05874b5d95",
+      "name": "Entrance Light",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 250,
+          "z": -325
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a7828316-2a08-4f5e-a734-8a3fe7dd138a",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffe6c0",
+          "intensity": 2.4,
+          "range": 900,
+          "castShadow": false,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_82746cc8-99f8-4746-82df-87267f604d8d",
+      "name": "Atrium Light",
+      "transform": {
+        "position": {
+          "x": 150,
+          "y": 420,
+          "z": 75
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_734c7a7e-38d8-4f56-b966-61a944064d13",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#fff0d8",
+          "intensity": 3,
+          "range": 1200,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_71f428a3-6d0a-4852-bfbf-2951cd29e480",
+      "name": "Dining Light",
+      "transform": {
+        "position": {
+          "x": -325,
+          "y": 250,
+          "z": 475
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_911eae8f-fa02-46f4-8721-e2240778e25f",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#dce8ff",
+          "intensity": 2.4,
+          "range": 900,
+          "castShadow": false,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_122bead7-164a-47ce-b060-a0ea2d324867",
+      "name": "Court Light",
+      "transform": {
+        "position": {
+          "x": 175,
+          "y": 350,
+          "z": 475
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_5a3bd987-e674-4808-9dfe-c77d535669e3",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffe6c0",
+          "intensity": 2.4,
+          "range": 900,
+          "castShadow": false,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_67afdb1d-799c-4b27-ad28-9bb21e44238e",
+      "name": "Player Start",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 20,
+          "z": -325
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn",
+        "gameplay"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b128d82e-4b3a-4a87-b189-8eed97e57de2",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}
