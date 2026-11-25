@@ -6,7 +6,7 @@
 
 Scope: audit defects **D1, D2, D3 only**. No map generation, no other audit recommendations
 (carve broadphase, draw-call reduction, floor seams, damping, lint, UI tests, dev-API hardening
-remain open). The 64-solid limit, additive/subtractive workflows, level schema and resource
+remain open). The solid limit (now 512), additive/subtractive workflows, level schema and resource
 ownership are unchanged.
 
 ## D1 — Additive brush carve invalidation

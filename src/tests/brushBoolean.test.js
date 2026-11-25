@@ -408,8 +408,8 @@ describe('brush boolean AABB subtraction', () => {
 });
 
 describe('subtract complexity safety (no truncation)', () => {
-  it('keeps the 64-solid limit constant', () => {
-    expect(MAX_SUBTRACT_SOLIDS).toBe(64);
+  it('keeps the product solid limit constant', () => {
+    expect(MAX_SUBTRACT_SOLIDS).toBe(512);
   });
 
   it('operations at or under the limit succeed', () => {

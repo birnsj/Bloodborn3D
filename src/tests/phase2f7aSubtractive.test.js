@@ -43,7 +43,7 @@ describe('Phase 2F.7A subtractive map mode', () => {
       actor: solid,
     });
     expect(carved.solids.length).toBeGreaterThan(1);
-    expect(carved.solids.length).toBeLessThanOrEqual(64);
+    expect(carved.solids.length).toBeLessThanOrEqual(512);
   });
 
   it('hides internal partitions between sibling solids', () => {

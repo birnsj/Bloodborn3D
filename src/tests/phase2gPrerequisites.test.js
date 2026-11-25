@@ -35,6 +35,7 @@ import {
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { validateGeometryComponentPayload } from '../rules/geometryPayloadRules.js';
 import { levelFileApiPlugin } from '../../vite-plugins/levelFileApi.js';
+import { buildFlushWorld } from '../dev/phase2gSubtractiveScaleWorlds.js';
 
 const { SceneView } = await import('../runtime/SceneView.js');
 const { GameRuntime } = await import('../runtime/GameRuntime.js');
@@ -426,39 +427,18 @@ describe('Phase 2G D1 — editor-direct path (GameRuntime)', () => {
 // D2
 // ---------------------------------------------------------------------------
 
-/** Subtractive world whose World Solid needs more than 64 pieces (seeded, deterministic). */
+/**
+ * Subtractive world whose World Solid needs more than MAX_SUBTRACT_SOLIDS pieces.
+ * Flush maze @ 200 rooms → 522 solids (product cap is 512).
+ */
 function overCapLevelData() {
-  const world = new World({ name: 'OverCap', schemaVersion: 2, mapMode: 'subtractive' });
-  const solid = brushActor('World Solid', {
-    size: { x: 20000, y: 600, z: 20000 },
-    position: { x: 0, y: 300, z: 0 },
-    tags: ['world-solid'],
-  });
-  world.addActor(solid);
-  let seed = 7;
-  const rnd = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
-  for (let i = 0; i < 24; i += 1) {
-    const sx = 300 + Math.floor(rnd() * 6) * 100;
-    const sz = 300 + Math.floor(rnd() * 6) * 100;
-    world.addActor(brushActor(`Room ${i}`, {
-      operation: 'subtract',
-      size: { x: sx, y: 300, z: sz },
-      position: {
-        x: (i % 8 - 4) * 1000 + Math.floor(rnd() * 4) * 100,
-        y: 200,
-        z: (Math.floor(i / 8) - 2) * 1000 + Math.floor(rnd() * 4) * 100,
-      },
-    }));
-  }
+  const world = buildFlushWorld(200);
   return { world, data: serializeLevel(world) };
 }
 
 describe('Phase 2G D2 — subtractive complexity validation', () => {
-  it('keeps the 64-solid limit', () => {
-    expect(MAX_SUBTRACT_SOLIDS).toBe(64);
+  it('keeps the product solid limit', () => {
+    expect(MAX_SUBTRACT_SOLIDS).toBe(512);
   });
 
   it('the over-cap fixture really exceeds the cap (so the tests are meaningful)', () => {
@@ -475,12 +455,12 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
     const [d] = diagnostics;
     expect(d.code).toBe('SUBTRACT_COMPLEXITY_EXCEEDED');
     expect(d.actorName).toBe('World Solid');
-    expect(d.maxSolids).toBe(64);
-    expect(d.solidCount).toBeGreaterThan(64);
+    expect(d.maxSolids).toBe(512);
+    expect(d.solidCount).toBeGreaterThan(512);
     expect(d.offendingCutterId).toBeTruthy();
-    expect(d.offendingCutterName).toMatch(/^Room /);
+    expect(d.offendingCutterName).toBeTruthy();
     expect(d.message).toMatch(/World Solid/);
-    expect(d.message).toMatch(/limit 64/);
+    expect(d.message).toMatch(/limit 512/);
   });
 
   it('loading rejects over-cap geometry instead of silently omitting cutters', () => {
@@ -493,7 +473,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
     }
     expect(error).toBeInstanceOf(LevelGeometryValidationError);
     expect(error.message).toMatch(/World Solid/);
-    expect(error.message).toMatch(/limit 64/);
+    expect(error.message).toMatch(/limit 512/);
     expect(error.diagnostics[0].code).toBe('SUBTRACT_COMPLEXITY_EXCEEDED');
   });
 
@@ -548,7 +528,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
 
     expect(response.statusCode).toBe(422);
     const payload = JSON.parse(response.body);
-    expect(payload.error).toMatch(/limit 64/);
+    expect(payload.error).toMatch(/limit 512/);
     expect(payload.diagnostics[0].code).toBe('SUBTRACT_COMPLEXITY_EXCEEDED');
     expect(existsSync(path.join(LEVELS_DIR, name))).toBe(false);
   });

@@ -15,7 +15,7 @@
  *        GEOMETRY_INVALID_OPENINGS | GEOMETRY_UNSUPPORTED_VALUE |
  *        SUBTRACT_COMPLEXITY_EXCEEDED
  *
- * The 64-solid cap itself lives in `runtime/brushBoolean.js` and is unchanged.
+ * The solid cap itself lives in `runtime/brushBoolean.js` (`MAX_SUBTRACT_SOLIDS`).
  */
 import {
   applyWorldSubtraction,

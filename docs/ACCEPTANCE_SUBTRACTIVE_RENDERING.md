@@ -40,4 +40,4 @@ See `docs/EVAL_SUBTRACTIVE_RENDERING.md`. World Solid materials −99.9%; flush 
 - Stair meshes still allocate 6 materials per step (out of scope).
 - Batched World Solid loses per-solid frustum culling (triangle submit rises; frames still faster at current scales).
 - No spatial chunking.
-- Product solid cap raised in a follow-up commit (512).
+- Product solid cap raised in the follow-up commit (`ACCEPTANCE_SOLID_LIMIT_512.md`).

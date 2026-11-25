@@ -11,7 +11,7 @@
  *  - A field that is present must be a finite number (or a supported enum value)
  *    inside the limits below. Nothing is silently clamped or replaced here.
  *
- * Complexity (the 64-solid cap) is NOT checked here — it needs a World; see
+ * Complexity (the solid cap) is NOT checked here — it needs a World; see
  * `serialization/levelGeometryValidation.js`.
  */
 

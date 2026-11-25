@@ -4,7 +4,7 @@ import { createSubtractiveMazeWorld } from './subtractiveMazeFactory.js';
 
 /**
  * Phase 2F.7A subtractive acceptance world.
- * Starts from a compact 2×2 maze (proven under the 64-solid cap), then adds:
+ * Starts from a compact 2×2 maze (proven under the solid cap), then adds:
  * overlapping cut, raised alcove, and additive pillar/platform.
  */
 export function createSubtractiveAcceptanceWorld({

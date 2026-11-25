@@ -293,9 +293,10 @@ seams, player damping) remain open.
 
 ### Phase 2G subtractive scalability evaluation
 
-**Done** (evaluation only). Measured solid capacity at caps 64–1024 and room counts
-25–200. Product limit remains **64**. See `docs/EVAL_SUBTRACTIVE_SCALE.md`.
-**Do not begin map generation** until the designer directs a solid-budget decision.
+**Done.** Measured solid capacity at caps 64–1024 and room counts 25–200.
+Product limit raised to **512** after rendering integration. See
+`docs/EVAL_SUBTRACTIVE_SCALE.md` and `docs/ACCEPTANCE_SOLID_LIMIT_512.md`.
+**Do not begin map generation** until the designer directs it.
 
 ### Phase 2G subtractive rendering optimization
 
@@ -303,6 +304,11 @@ seams, player damping) remain open.
 Picking, clipped face UVs, indexed UV double-apply, and cutter overlay z-fighting
 corrected. Stairs unbatched by design. See `docs/ACCEPTANCE_SUBTRACTIVE_RENDERING.md`
 and `docs/EVAL_SUBTRACTIVE_RENDERING.md`.
+
+### Phase 2G solid limit
+
+**Done.** `MAX_SUBTRACT_SOLIDS` raised **64 → 512**. Enforcement on load / save / edit /
+Play unchanged aside from the new budget. See `docs/ACCEPTANCE_SOLID_LIMIT_512.md`.
 
 ### Dependencies
 

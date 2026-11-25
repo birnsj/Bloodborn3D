@@ -91,7 +91,7 @@ function addAdditiveBrush(world, {
 /**
  * Hand-authored subtractive hall complex (not a grid maze).
  * Kept under MAX_SUBTRACT_SOLIDS by using few rooms and full-height window slots
- * (partial-height window punches fragment AABB carving past the 64-solid cap).
+ * (partial-height window punches fragment AABB carving heavily).
  * Window sills / lintels, pillars, stairs, and balconies are additive.
  */
 export function createSubtractiveShowcaseWorld({
@@ -381,7 +381,7 @@ export function createSubtractiveShowcaseWorld({
  */
 export function createSubtractiveMazeWorld({
   name = 'Subractive',
-  // Keep cutter count modest so World Solid stays under MAX_SUBTRACT_SOLIDS (64).
+  // Keep cutter count modest so World Solid stays under MAX_SUBTRACT_SOLIDS.
   cols = 4,
   rows = 3,
   roomSize = 400,

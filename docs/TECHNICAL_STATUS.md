@@ -32,7 +32,8 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | **Phase 2F.7** | **Complete** (incl. 2F.7H corrections) |
 | Phase 2G prerequisites | Audit defects D1 (additive carve invalidation), D2 (subtractive complexity validated on load / save / Play), D3 (geometry payload validation); see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
 | Phase 2G scale eval | Evaluation only — solid limit still **64**. Carve fine past 1k solids; draw-call/material-per-solid path is the wall. Practical next budget **512** if raised; larger maps need decomposition/batching. See `EVAL_SUBTRACTIVE_SCALE.md`. |
-| Phase 2G rendering integration | World Solid batching + shared cutter materials **default ON**; picking / clipped UV / indexed UV / cutter z-fight corrected. Cap still 64 until the solid-limit commit. See `ACCEPTANCE_SUBTRACTIVE_RENDERING.md`. |
+| Phase 2G rendering integration | World Solid batching + shared cutter materials **default ON**; picking / clipped UV / indexed UV / cutter z-fight corrected. See `ACCEPTANCE_SUBTRACTIVE_RENDERING.md`. |
+| Phase 2G solid limit | `MAX_SUBTRACT_SOLIDS = 512`. Load / save / edit / Play reject over-cap with structured diagnostics. See `ACCEPTANCE_SOLID_LIMIT_512.md`. |
 
 ## 2. Implemented systems
 
@@ -58,7 +59,7 @@ Status is what the code does today, not an intent.
 | Physics stabilization (2F.7F) | Verified | Grounded jump edge; stair-assist probe; off-center mesh colliders; FPS-stable fixed step; see `ACCEPTANCE_PHYSICS.md`. |
 | Final stabilization (2F.7G) | Verified | Full regression, profiling, lifecycle stress, CI; see `ACCEPTANCE_STABILIZATION.md`. |
 | Audit corrections (2F.7H) | Verified | Carve delete/flip/parent; shared GLB maps; epoch high-water; dispose-once; finite transforms; world-space spawn; see `ACCEPTANCE_AUDIT_CORRECTIONS.md`. |
-| Geometry validation (2G prereq) | Verified | Payload rules before construction; 64-solid cap enforced on load / save (HTTP 422) / Play with structured diagnostics; additive carve re-built on pose / parent / ancestor / undo; generator API `validateLevelGeometry` / `validateWorldGeometry`; see `ACCEPTANCE_PREREQUISITES.md`. |
+| Geometry validation (2G prereq) | Verified | Payload rules before construction; **512-solid** cap enforced on load / save (HTTP 422) / Play with structured diagnostics; additive carve re-built on pose / parent / ancestor / undo; generator API `validateLevelGeometry` / `validateWorldGeometry`; see `ACCEPTANCE_PREREQUISITES.md` / `ACCEPTANCE_SOLID_LIMIT_512.md`. |
 | Level construction | Implemented | Add/subtract brushes, openings, wall joins, ramps, straight and curved stairs, columns, arches, curved walls. Covered by geometry unit tests. |
 | Grid snapping | Implemented | Structural geometry snaps by edges/faces; props, lights and meshes by pivot. |
 | Cells and prefabs | Implemented | Hierarchy, nested prefabs, overrides, source sync; covered by `prefab*.test.js`, `phase2*.test.js`. |
