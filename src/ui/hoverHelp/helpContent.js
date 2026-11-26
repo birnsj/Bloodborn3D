@@ -401,7 +401,23 @@ export const HELP_CONTENT = {
   },
   'creation.geometry': {
     title: 'Geometry',
-    body: 'Structural tools: box, wall, curved wall, floor, ceiling, ramp, stairs, column, arches, and subtract. Click to enter drag-to-size mode, or drag onto a surface for a default footprint.',
+    body: 'Structural brushes (box, wall, curved wall, floor, ceiling, ramp, stairs, column, arches, subtract) plus Batch 5 native/procedural props (sphere, torus, extrude, lathe, tube, text, …). Brushes stay for architecture; primitives are prop meshes.',
+  },
+  'toolbar.primitive': {
+    title: 'Native / Procedural Mesh',
+    body: 'Places a PrimitiveMesh prop (Three.js geometry). Complements brushes — not used for subtractive CSG. Edit type-specific size, segments, material, and collision in Details.',
+  },
+  'details.primitiveMesh': {
+    title: 'Primitive Mesh',
+    body: 'Native or procedural Three.js geometry as a placeable prop. Assign materials, segments, collision, and shadows. Not a subtractive brush.',
+  },
+  'details.primitiveMesh.material': {
+    title: 'Primitive Material',
+    body: 'Project material asset applied to the whole mesh. Use dense Plane/Sphere segments when the material has a displacement map.',
+  },
+  'details.primitiveMesh.segments': {
+    title: 'Segments / Detail',
+    body: 'Controls tessellation density. Displacement segments densify Plane/Sphere for visible height relief. Soft vertex caps block runaway allocations. Existing brush solids are not retessellated.',
   },
   'creation.environment': {
     title: 'Environment',

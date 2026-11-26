@@ -17,6 +17,7 @@ export async function commitCreatePlacement(payload, pose, api) {
     createBrushAtBounds,
     placeLight,
     placeEnvironment,
+    placePrimitiveMesh,
     placePlayerSpawn,
     createCell,
     placeMeshAsset,
@@ -71,6 +72,9 @@ export async function commitCreatePlacement(payload, pose, api) {
       mapId: payload.mapId,
     });
   }
+  if (payload.placeKind === 'primitive') {
+    return placePrimitiveMesh?.(payload.primitive || 'box', pose.position, opts) || null;
+  }
   if (payload.placeKind === 'spawn') {
     return placePlayerSpawn(pose.position, opts);
   }
@@ -115,6 +119,9 @@ export function previewSizeForPayload(payload, gridSize = 25) {
     if (t === 'sprite') return { x: 100, y: 100, z: 4 };
     if (t === 'sky') return { x: 80, y: 80, z: 80 };
     return { x: 200, y: 40, z: 200 };
+  }
+  if (payload?.placeKind === 'primitive') {
+    return { x: 100, y: 100, z: 100 };
   }
   if (payload?.placeKind === 'spawn') return { x: 40, y: 80, z: 40 };
   if (payload?.placeKind === 'cell') return { x: 40, y: 40, z: 40 };

@@ -80,6 +80,7 @@ import {
   rebuildDecalGeometry,
   tickEnvironmentVisuals,
 } from './createThreeEnvironment.js';
+import { createThreePrimitiveVisual } from './createThreePrimitive.js';
 import { normalizeEnvironmentFields } from '../components/EnvironmentComponent.js';
 import {
   BOX_SURFACE_IDS,
@@ -1516,6 +1517,8 @@ export class SceneView {
         this._addEnvironmentVisual(group, actor, comp, syncToken, world);
       } else if (comp.type === 'StaticMesh') {
         this._addStaticMeshVisual(group, actor, comp, syncToken);
+      } else if (comp.type === 'PrimitiveMesh') {
+        this._addPrimitiveMeshVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'PlayerSpawn' && this.editMode) {
         const marker = new THREE.Mesh(
           new THREE.ConeGeometry(0.15, 0.4, 8),
@@ -2199,6 +2202,66 @@ export class SceneView {
     });
     group.add(loaded.root);
 
+    if (this.selectedActorIds.includes(actor.id)) {
+      this.setSelection(this.selectedActorIds);
+    }
+  }
+
+  _addPrimitiveMeshVisual(group, actor, comp, syncToken) {
+    const holder = new THREE.Group();
+    holder.userData.bbPrimitiveHolder = true;
+    holder.userData.actorId = actor.id;
+    group.add(holder);
+    void this._finishPrimitiveMeshVisual(holder, actor, comp, syncToken);
+  }
+
+  async _finishPrimitiveMeshVisual(holder, actor, comp, syncToken) {
+    const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
+    const resolver = this.assetResolver;
+    const mapResolver = (assetId) => {
+      const path = resolver?.getTextureUrl?.(assetId);
+      return path ? (assetUrl(path) || path) : null;
+    };
+    let built;
+    try {
+      built = await createThreePrimitiveVisual(comp, {
+        createMaterial: async (materialId) => {
+          if (!materialId || !resolver?.getMaterialDefinition) return null;
+          const def = await resolver.getMaterialDefinition(materialId);
+          if (!def) return null;
+          return createThreeMaterial(def, mapResolver, {
+            maxAnisotropy: this.maxAnisotropy,
+          });
+        },
+      });
+    } catch (err) {
+      console.warn('[BloodBound] primitive build failed', actor?.id, err);
+      return;
+    }
+    if (!this._isActorVisualCurrent(actor.id, syncToken, visualEpoch)) {
+      built.dispose?.();
+      if (built.root) disposeObject(built.root);
+      return;
+    }
+    while (holder.children.length) {
+      const child = holder.children[0];
+      holder.remove(child);
+      disposeObject(child);
+    }
+    holder.add(built.root);
+    holder.userData.bbPrimitiveDispose = built.dispose;
+    built.root.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.userData.pickable = true;
+        this._stampActorVisual(obj, actor.id);
+      }
+    });
+    // Cache geometry positions (meters) for physics trimesh/convex rebuilds.
+    const entry = this._actorMeshes.get(actor.id);
+    if (entry && built.mesh?.geometry) {
+      entry.primitiveGeometry = built.mesh.geometry;
+      entry.primitiveFields = normalizePrimitiveMeshFields(comp);
+    }
     if (this.selectedActorIds.includes(actor.id)) {
       this.setSelection(this.selectedActorIds);
     }
@@ -3645,6 +3708,10 @@ function disposeObject(obj) {
     if (typeof child.userData?.bbEnvDispose === 'function') {
       try { child.userData.bbEnvDispose(); } catch { /* ignore */ }
       child.userData.bbEnvDispose = null;
+    }
+    if (typeof child.userData?.bbPrimitiveDispose === 'function') {
+      try { child.userData.bbPrimitiveDispose(); } catch { /* ignore */ }
+      child.userData.bbPrimitiveDispose = null;
     }
     // Decal mesh may be parented under a brush/static mesh host.
     if (child.userData?.bbDecalDetached && child.parent) {

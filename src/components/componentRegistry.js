@@ -10,6 +10,7 @@ import { PlayerSpawnComponent } from './PlayerSpawnComponent.js';
 import { RampComponent } from './RampComponent.js';
 import { StairComponent } from './StairComponent.js';
 import { StaticMeshComponent } from './StaticMeshComponent.js';
+import { PrimitiveMeshComponent } from './PrimitiveMeshComponent.js';
 import { Component } from '../core/Component.js';
 
 const REGISTRY = {
@@ -25,6 +26,7 @@ const REGISTRY = {
   [RampComponent.componentType]: RampComponent,
   [StairComponent.componentType]: StairComponent,
   [StaticMeshComponent.componentType]: StaticMeshComponent,
+  [PrimitiveMeshComponent.componentType]: PrimitiveMeshComponent,
 };
 
 export function createComponentFromJSON(data) {

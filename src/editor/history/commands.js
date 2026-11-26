@@ -351,6 +351,35 @@ export class SetLightPropertiesCommand {
 }
 
 /**
+ * Patch PrimitiveMeshComponent properties (Batch 5).
+ */
+export class SetPrimitiveMeshPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit primitive' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const comp = this.world.getActor(this.actorId)?.getComponent('PrimitiveMesh');
+    if (!comp) return;
+    for (const key of Object.keys(state)) {
+      comp[key] = state[key];
+    }
+  }
+}
+
+/**
  * Patch EnvironmentComponent properties (Batch 4).
  */
 export class SetEnvironmentPropertiesCommand {

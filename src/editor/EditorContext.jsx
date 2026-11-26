@@ -42,6 +42,7 @@ import {
   SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
   SetEnvironmentPropertiesCommand,
+  SetPrimitiveMeshPropertiesCommand,
   SetWorldPostProcessingCommand,
   SetWorldSceneCommand,
   SetWorldAmbientCommand,
@@ -117,6 +118,11 @@ import {
 import { createStaticMeshActor } from './meshFactory.js';
 import { createLightActor } from './lightFactory.js';
 import { createEnvironmentActor } from './environmentFactory.js';
+import { createPrimitiveMeshActor } from './primitiveMeshFactory.js';
+import {
+  normalizePrimitiveMeshFields,
+  validatePrimitiveAllocation,
+} from '../components/PrimitiveMeshComponent.js';
 import { createCellActor } from './cellFactory.js';
 import { createPlayerSpawnActor } from './spawnFactory.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
@@ -1988,6 +1994,60 @@ export function EditorProvider({ children }) {
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
+  const updateSelectedPrimitiveMesh = useCallback((partial, options = {}) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const { undoable = true, label = 'Edit primitive' } = options;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const comp = world.getActor(actorId)?.getComponent('PrimitiveMesh');
+    if (!comp) return;
+    const merged = normalizePrimitiveMeshFields({ ...comp, ...partial });
+    const check = validatePrimitiveAllocation(merged);
+    if (!check.ok) {
+      console.warn('[BloodBound]', check.message);
+      return;
+    }
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      before[key] = structuredClone(comp[key]);
+      after[key] = structuredClone(partial[key]);
+    }
+    if (!undoable) {
+      for (const key of Object.keys(after)) {
+        comp[key] = after[key];
+      }
+      const actor = world.getActor(actorId);
+      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
+      bump();
+      return;
+    }
+    executeCommand(
+      new SetPrimitiveMeshPropertiesCommand({ world, actorId, before, after, label }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+
+  const commitPrimitiveMeshGesture = useCallback((beforeSnapshot, label = 'Edit primitive') => {
+    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const comp = world.getActor(actorId)?.getComponent('PrimitiveMesh');
+    if (!comp) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(beforeSnapshot)) {
+      before[key] = structuredClone(beforeSnapshot[key]);
+      after[key] = structuredClone(comp[key]);
+    }
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const check = validatePrimitiveAllocation(normalizePrimitiveMeshFields({ ...comp }));
+    if (!check.ok) return;
+    recordCommand(
+      new SetPrimitiveMeshPropertiesCommand({ world, actorId, before, after, label }),
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
+
   /**
    * Level-authored scene fill (World Settings). Not an actor light.
    * @param {object} partial
@@ -2722,6 +2782,35 @@ export function EditorProvider({ children }) {
         world,
         actorsJson: [actor.toJSON()],
         label: `Place ${envType}`,
+      }),
+      { selectIds: [actor.id] },
+    );
+    return actor;
+  }, [world, mode, executeCommand]);
+
+  const placePrimitiveMesh = useCallback((primitive = 'box', position, options = {}) => {
+    if (!world || mode === 'play') return null;
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
+    let actor;
+    try {
+      actor = createPrimitiveMeshActor({
+        primitive,
+        position: position || { x: 0, y: 0, z: 0 },
+        rotation: options.rotation,
+        gridSize: g,
+        snapY: options.snapY ?? snap,
+        materialId: options.materialId,
+      });
+    } catch (err) {
+      console.warn('[BloodBound] place primitive failed', err);
+      return null;
+    }
+    executeCommand(
+      new AddActorsCommand({
+        world,
+        actorsJson: [actor.toJSON()],
+        label: `Place ${primitive}`,
       }),
       { selectIds: [actor.id] },
     );
@@ -3919,6 +4008,8 @@ export function EditorProvider({ children }) {
     commitLightGesture,
     updateSelectedEnvironment,
     commitEnvironmentGesture,
+    updateSelectedPrimitiveMesh,
+    commitPrimitiveMeshGesture,
     updateWorldAmbient,
     commitWorldAmbientGesture,
     updateWorldScene,
@@ -3938,6 +4029,7 @@ export function EditorProvider({ children }) {
     placeMeshAsset,
     placeLight,
     placeEnvironment,
+    placePrimitiveMesh,
     placePlayerSpawn,
     placePrefabAsset,
     createPrefabFromSelection,

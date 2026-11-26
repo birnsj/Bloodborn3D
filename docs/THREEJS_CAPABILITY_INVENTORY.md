@@ -122,7 +122,7 @@
 | Lighting | Point/Spot/Dir/Ambient/Hemi/RectArea + shadows/targets/flare | — | — (Batch 3 done) |
 | Materials | Full Standard + Physical + Basic/Toon/Matcap + side/alpha | — | — (Batch 2 done) |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
-| Geometry | Constructive brushes + ConvexBrush | — | Native primitives + RoundedBox/Lathe/Tube/Extrude/Shape/Text/Parametric/ConvexGeometry tools |
+| Geometry | Constructive brushes + ConvexBrush + PrimitiveMesh props | — | Batch 5 complete (native + procedural props); brushes unchanged |
 | Static meshes | GLTF + box collision | — | Shadows toggles, overrides, LOD, instance/batch, renderOrder, collision varieties |
 | Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform/compression |
 | Asset tools | Import texture/mesh, thumbs | — | Simplify, BufferGeometryUtils, exporters, DRACO/KTX2/Meshopt, diagnostics |
@@ -192,7 +192,7 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 | MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | — | Materials Workspace | MaterialDefinition | — | H | **Complete** |
 | aoMap / aoMapIntensity | Standard | Y | map id + intensity | — | Materials | fields | S | H | **Complete** |
 | bumpMap / bumpScale | Standard | Y | map + scale | — | Materials | fields | S | M | **Complete** |
-| displacementMap / scale / bias | Standard | Y | map + scale/bias | Tessellation / subdivision for visible relief — see Batch 2 residuals → **Batch 5** | Materials | fields | S | M | **Complete** (maps); relief fidelity **tracked** |
+| displacementMap / scale / bias | Standard | Y | map + scale/bias | Visible relief via Batch 5 PrimitiveMesh segment density (brushes not retessellated) | Materials | fields | S | M | **Complete** (maps + prop tessellation path) |
 | alphaMap | Standard | Y | map id | — | Materials | fields | S | H | **Complete** |
 | lightMap / intensity | Standard | Y | map + intensity on UV0 | Dedicated lightmap UV channel — see Batch 2 residuals (baked lighting) | Materials | fields | S | M | **Complete** (assign); UV2 **Deferred** |
 | alphaTest / alphaHash / alphaToCoverage | Material | Y | cutoff + toggles | A2C × MSAA/PP interaction — see Batch 2 residuals | Materials | fields | S | H | **Complete** (authored); A2C verify **Pending** |
@@ -232,15 +232,15 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 
 | Capability | API | BB | Editor | Schema | Cx | Val | Status |
 |------------|-----|----|--------|--------|----|-----|--------|
-| Box/Sphere/Cylinder/Cone/Plane/Capsule/Torus/Ring/Circle | core geometries | N as actors | Creation → Primitives | PrimitiveMeshComponent `{ primitive, params, materialId }` | S | H | **Missing** |
-| RoundedBoxGeometry | addon | N | Primitives | params | S | M | **Missing** |
-| LatheGeometry | core | N | Primitives / advanced | points profile | M | M | **Missing** |
-| TubeGeometry | core | N | Primitives | path/radius | M | M | **Missing** |
-| ExtrudeGeometry | core | N | Primitives | shape + extrude settings | M | M | **Missing** |
-| ShapeGeometry | core | N | Primitives | shape | M | M | **Missing** |
-| TextGeometry | addon + fonts | N | Primitives | font, text, size | M | M | **Missing** |
-| ParametricGeometry | addon | N | Advanced | fn id / samples | M | L | **Missing** — include; lower priority |
-| ConvexGeometry | addon | N as tool | — | From point cloud | M | L | **Missing** — note overlap with ConvexBrush; tool for props only |
+| Box/Sphere/Cylinder/Cone/Plane/Capsule/Torus/Ring/Circle + polyhedra | core geometries | Y | Creation → Geometry (props) | `PrimitiveMesh` `{ primitive, params, materialId, segments… }` | S | H | **Complete** |
+| RoundedBoxGeometry | addon | Y | Geometry props | params | S | M | **Complete** |
+| LatheGeometry | core | Y | Geometry props | profile points | M | M | **Complete** |
+| TubeGeometry | core | Y | Geometry props | path + radius | M | M | **Complete** |
+| ExtrudeGeometry | core | Y | Geometry props | shape + extrude/bevel | M | M | **Complete** |
+| ShapeGeometry | core | Y | Geometry props | profile | M | M | **Complete** |
+| TextGeometry | addon + local font | Y | Geometry props | fontId, text, size | M | M | **Complete** |
+| ParametricGeometry | addon | Y | Geometry props | fn id / slices | M | L | **Complete** |
+| ConvexGeometry | addon | Y as prop tool | Geometry props | point cloud — not a ConvexBrush replacement | M | L | **Complete** |
 | Architecture brushes | custom | Y | Creation → Geometry | existing | — | H | **Complete** |
 | ConvexBrush edits | custom | Y | Face/Edge/Vertex | existing | — | H | **Complete** / **Redundant** vs ConvexGeometry for architecture — **keep custom** |
 
@@ -404,7 +404,7 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | Item | Status | Dependency | Acceptance criteria | Cross-ref |
 |------|--------|------------|---------------------|-----------|
 | Dedicated lightmap UV channel (`geometry.attributes.uv2` / second UV set for `lightMap`) | **Deferred** | Baked lighting implementation (not in current Batch 1–9 geometry/env milestone until baking lands); texture UV-channel authoring in **Batch 8** may feed sampling UI | Brushes/meshes expose an authored or generated lightmap UV set; `createThreeMaterial` binds `lightMap` to UV2 without stealing UV0 albedo; acceptance level shows non-overlapping lightmap vs base UV | Future baked-lighting work; **Batch 8** (UV channel selection); material assign path already **Complete** |
-| Geometry subdivision for displacement | **Tracked → Batch 5** | **Batch 5** native primitives / procedural geometry (evaluate subdivision or denser tessellation where displacement is authored) | With a displacement map + non-zero scale, subdivided or denser geo shows visible height relief vs low-poly brush boxes; dispose/rebuild stays GPU-safe; no silent change to existing brush density defaults | **Batch 5**; displacement maps remain **Complete** in Batch 2 |
+| Geometry subdivision for displacement | **Done (props)** | Batch 5 `PrimitiveMesh` Plane/Sphere `displacementSegments` (+ width/height segments); brushes **not** retessellated | Dense prop meshes show displacement relief; vertex soft-caps; GPU dispose on rebuild; brush CSG topology unchanged | **Batch 5** complete; brush retessellation **Accepted limitation** |
 | Alpha-to-coverage compatibility with MSAA and post-processing | **Pending** (rendering verification) | Shared WebGL renderer + pmndrs post-processing path (Batch 1 world/renderer + existing PP stack); may need MSAA/RT policy documented or adjusted | Documented pass/fail matrix: `alphaToCoverage` on/off × MSAA on/off × Fog/PP pane toggles; foliage/alpha materials show no unexplained discard or edge artifacts; multi-pane isolation unchanged | Rendering verify (not a new materials feature); Batch 2 A2C authoring **Complete** |
 | Draft-local material undo (Materials Workspace scrub stack, not level `HistoryStack`) | **Accepted** (architectural decision — not a defect) | Materials are project assets edited as drafts until Save; level history owns actor/world commands only | One undo entry per finished numeric scrub in Materials; Cancel restores saved baseline; level Undo does not mutate material JSON; documented in Academy/help | Batch 2 editor design; keep — do not “fix” by wiring materials into `HistoryStack` |
 
@@ -466,21 +466,21 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | GroundedSkybox placeable | **Deferred** | Batch 4 P2 | Remains world setting | Batch 1 |
 | Gameplay water | **Out of scope** | — | No swimming/buoyancy | Batch 4 brief |
 
-### Batch 5 — Geometry (native primitives & procedural)
+### Batch 5 — Geometry (native primitives & procedural) — **Complete**
 
-| Pri | Item | API |
-|-----|------|-----|
-| P0 | Primitive mesh actors: box, sphere, cylinder, cone, plane, capsule, torus | core geometries |
-| P1 | RoundedBoxGeometry | addon |
-| P1 | Lathe / Tube / Extrude / Shape | core |
-| P2 | TextGeometry | addon + font |
-| P2 | ParametricGeometry | addon |
-| P2 | ConvexGeometry prop tool | addon — not a ConvexBrush replacement |
-| P1 | Evaluate / address geometry subdivision (or denser tessellation) for displacement relief | Batch 2 residual — displacement maps already authored |
+| Pri | Item | API | Status |
+|-----|------|-----|--------|
+| P0 | Primitive mesh actors: box, sphere, cylinder, cone, plane, capsule, torus, ring, circle, polyhedra | core | **Done** |
+| P1 | RoundedBoxGeometry | addon | **Done** |
+| P1 | Lathe / Tube / Extrude / Shape | core | **Done** |
+| P2 | TextGeometry | addon + local Helvetiker | **Done** |
+| P2 | ParametricGeometry | addon | **Done** |
+| P2 | ConvexGeometry prop tool | addon — not a ConvexBrush replacement | **Done** |
+| P1 | Displacement tessellation on Plane/Sphere props | segments + soft caps | **Done** (brushes unchanged) |
 
-**Depends on:** Batch 2 for materials; collision via Batch 6 patterns.  
-**Do not** replace Brush/ConvexBrush workflows.  
-**Batch 2 residual:** displacement map fidelity — see Batch 2 residuals table.
+**Acceptance:** `docs/ACCEPTANCE_GEOMETRY.md`, `public/levels/acceptance-geometry.json`, Academy lesson 25.  
+**Depends on:** Batch 2 materials. Collision integrated with Rapier (auto primitives + convex/trimesh).  
+**Do not** replace Brush/ConvexBrush workflows.
 
 ### Batch 6 — Static meshes (render + collision)
 

@@ -18,6 +18,13 @@ import { brushHasMiters, miteredWallPointsToMetersFlat } from './miteredWallGeom
 import { convexBrushPointsToMetersFlat } from './convexBrushGeometry.js';
 import { isWallBrush } from './wallOpenings.js';
 import { peekLoadedMeshMeta } from './meshLoader.js';
+import {
+  normalizePrimitiveMeshFields,
+} from '../components/PrimitiveMeshComponent.js';
+import {
+  buildPrimitiveGeometry,
+  primitiveGeometryPositionsMeters,
+} from './createThreePrimitive.js';
 
 let rapierReady = null;
 
@@ -136,8 +143,112 @@ export class PhysicsWorld {
         const box = this._resolveMeshCollisionBox(mesh.assetId);
         const half = halfExtentsFromMeshBounds(box.size);
         this._addBoxCollider(actor, half, box.center);
+        continue;
+      }
+
+      const primitive = actor.getComponent('PrimitiveMesh');
+      if (primitive && primitive.enabled && primitive.collidable !== false) {
+        this._addPrimitiveMeshCollider(actor, primitive);
       }
     }
+  }
+
+  /**
+   * Batch 5 — native/procedural props. Prefer Rapier primitives; convex/trimesh for complex shapes.
+   * Visual vs collision: cone uses cylinder approx unless collisionType is convex/trimesh;
+   * text uses an AABB box; high-segment displacement meshes may use convex hull of the visual.
+   */
+  _addPrimitiveMeshCollider(actor, comp) {
+    const f = normalizePrimitiveMeshFields(comp);
+    let mode = f.collisionType === 'auto' ? autoCollisionMode(f.primitive) : f.collisionType;
+    if (mode === 'none') return;
+
+    const worldXform = getWorldTransform(actor, actor.world || null);
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const sx = Math.abs(scale.x || 1);
+    const sy = Math.abs(scale.y || 1);
+    const sz = Math.abs(scale.z || 1);
+
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+
+    let colliderDesc = null;
+    try {
+      if (mode === 'box') {
+        const hx = Math.max(0.01, toMeters(f.width || f.radius * 2 || 100) * 0.5 * sx);
+        const hy = Math.max(0.01, toMeters(
+          f.primitive === 'plane' ? 2 : (f.height || f.length || f.radius * 2 || 100),
+        ) * 0.5 * sy);
+        const hz = Math.max(0.01, toMeters(f.depth || f.radius * 2 || 100) * 0.5 * sz);
+        colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz);
+      } else if (mode === 'sphere') {
+        const r = Math.max(0.01, toMeters(f.radius) * Math.max(sx, sy, sz));
+        colliderDesc = RAPIER.ColliderDesc.ball(r);
+      } else if (mode === 'capsule') {
+        const r = Math.max(0.01, toMeters(f.radius) * Math.max(sx, sz));
+        const half = Math.max(0.01, toMeters(f.length) * 0.5 * sy);
+        colliderDesc = RAPIER.ColliderDesc.capsule(half, r);
+      } else if (mode === 'cylinder') {
+        const r = Math.max(0.01, toMeters(Math.max(f.radius, f.radiusTop, f.radiusBottom)) * Math.max(sx, sz));
+        const half = Math.max(0.01, toMeters(f.height) * 0.5 * sy);
+        colliderDesc = RAPIER.ColliderDesc.cylinder(half, r);
+      } else if (mode === 'convex' || mode === 'trimesh') {
+        if (f.primitive === 'text') {
+          const hx = Math.max(0.01, toMeters(f.textSize * Math.max(1, f.text.length) * 0.35) * sx);
+          const hy = Math.max(0.01, toMeters(f.textSize) * 0.5 * sy);
+          const hz = Math.max(0.01, toMeters(f.textHeight || 8) * 0.5 * sz);
+          colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz);
+        } else {
+          let geometry = null;
+          try {
+            geometry = buildPrimitiveGeometry({ ...f, primitive: f.primitive === 'text' ? 'box' : f.primitive });
+          } catch {
+            geometry = null;
+          }
+          if (geometry) {
+            const flat = primitiveGeometryPositionsMeters(geometry);
+            geometry.dispose();
+            // Apply actor scale into local points.
+            const scaled = new Float32Array(flat.length);
+            for (let i = 0; i < flat.length; i += 3) {
+              scaled[i] = flat[i] * (scale.x || 1);
+              scaled[i + 1] = flat[i + 1] * (scale.y || 1);
+              scaled[i + 2] = flat[i + 2] * (scale.z || 1);
+            }
+            if (mode === 'trimesh') {
+              // Build a trivial sequential index for non-indexed buffers.
+              const posAttrCount = scaled.length / 3;
+              const indices = [];
+              for (let i = 0; i + 2 < posAttrCount; i += 3) {
+                indices.push(i, i + 1, i + 2);
+              }
+              colliderDesc = RAPIER.ColliderDesc.trimesh(scaled, new Uint32Array(indices));
+            } else {
+              colliderDesc = RAPIER.ColliderDesc.convexHull(scaled);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[BloodBound] primitive collider failed', actor?.id, err);
+      colliderDesc = null;
+    }
+
+    if (!colliderDesc) {
+      // Fallback AABB so props stay solid in Play.
+      colliderDesc = RAPIER.ColliderDesc.cuboid(
+        Math.max(0.01, toMeters(50) * sx),
+        Math.max(0.01, toMeters(50) * sy),
+        Math.max(0.01, toMeters(50) * sz),
+      );
+    }
+    colliderDesc.setFriction(0.9);
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
 
   /**
@@ -688,6 +799,33 @@ function normalizeFiniteVec3(raw) {
   const z = Number(raw.z);
   if (![x, y, z].every((v) => Number.isFinite(v))) return null;
   return { x, y, z };
+}
+
+function autoCollisionMode(primitive) {
+  switch (primitive) {
+    case 'box':
+    case 'roundedBox':
+    case 'plane':
+    case 'shape':
+    case 'text':
+      return 'box';
+    case 'sphere':
+    case 'icosahedron':
+    case 'octahedron':
+    case 'dodecahedron':
+    case 'tetrahedron':
+      return 'sphere';
+    case 'capsule':
+      return 'capsule';
+    case 'cylinder':
+    case 'cone':
+      return 'cylinder';
+    case 'circle':
+    case 'ring':
+      return 'box';
+    default:
+      return 'convex';
+  }
 }
 
 function eulerDegreesToQuat({ x = 0, y = 0, z = 0 }) {
