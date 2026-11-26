@@ -552,7 +552,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
 
   it('all shipped levels pass geometry validation', () => {
     const files = readdirSync(LEVELS_DIR).filter((f) => f.endsWith('.json'));
-    expect(files).toHaveLength(22);
+    expect(files).toHaveLength(23);
     for (const file of files) {
       const raw = JSON.parse(readFileSync(path.join(LEVELS_DIR, file), 'utf8'));
       const result = validateLevelGeometry(raw);
@@ -673,7 +673,8 @@ describe('Phase 2G D3 — geometry payload validation', () => {
     ['Arch', { archType: 'ogee' }, 'GEOMETRY_UNSUPPORTED_VALUE'],
     ['CurvedWall', { radius: 0 }, 'GEOMETRY_OUT_OF_RANGE'],
     ['CurvedWall', { sweepAngle: 'half' }, 'GEOMETRY_NOT_FINITE'],
-    ['StaticMesh', { collisionType: 'trimesh' }, 'GEOMETRY_UNSUPPORTED_VALUE'],
+    ['StaticMesh', { collisionType: 'meshcollider' }, 'GEOMETRY_UNSUPPORTED_VALUE'],
+    ['StaticMesh', { instancing: 'merge' }, 'GEOMETRY_UNSUPPORTED_VALUE'],
   ];
 
   it.each(badParametric)('rejects %s payload %j', (type, extra, code) => {

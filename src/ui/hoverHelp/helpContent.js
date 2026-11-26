@@ -687,7 +687,23 @@ export const HELP_CONTENT = {
   },
   'details.staticMesh': {
     title: 'Static Mesh',
-    body: 'References an imported mesh asset. Optional box collision uses a 1 m unit cube scaled by the actor’s world scale.',
+    body: 'Imported mesh prop (Batch 6). Groups: Collision (none/auto/box/sphere/capsule/cylinder/convex/trimesh), Materials (per-slot overrides without editing the GLB), LOD (asset + distance thresholds), Rendering (shadows, frustum, opt-in InstancedMesh).',
+  },
+  'details.staticMesh.collision': {
+    title: 'Static Mesh Collision',
+    body: 'Auto uses the asset AABB as a box. Convex/trimesh extract geometry from the loaded GLB (Play preloads). Trimesh requires a fixed body. Show collision draws a wireframe helper in edit mode.',
+  },
+  'details.staticMesh.materials': {
+    title: 'Static Mesh Materials',
+    body: 'Assign BloodBound materials to discovered GLB slots (`meshName:matIndex`). Clear a slot or Restore all to use original imported materials. Source GLB files are never rewritten.',
+  },
+  'details.staticMesh.lod': {
+    title: 'Static Mesh LOD',
+    body: 'Assign mesh assets to LOD levels with distances in editor units (100 eu = 1 m). Preview forces a level; Automatic follows camera distance. Collision is independent of the visible LOD. Mesh simplification is Batch 7.',
+  },
+  'details.staticMesh.rendering': {
+    title: 'Static Mesh Rendering',
+    body: 'Shadows, frustum culling, render order, and opt-in InstancedMesh (off / auto ≥3 / force). Actors stay independent for selection and save. BatchedMesh deferred for multi-material atlases.',
   },
   'details.duplicate': {
     title: 'Duplicate',

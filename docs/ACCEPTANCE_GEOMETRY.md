@@ -105,7 +105,7 @@ Soft caps: `PRIMITIVE_MAX_SEGMENTS = 128`, `PRIMITIVE_MAX_VERTICES = 200_000`.
 | Torus / knot / tube / lathe / parametric | Convex hull of visual verts |
 | Plane / shape / circle / ring | Thin / footprint box |
 
-Improved StaticMesh / richer collision authoring is a **Batch 6** dependency — do not treat auto approximations as final production fidelity.
+Improved StaticMesh / richer collision authoring was a **Batch 6** dependency — **delivered** in Batch 6 (`docs/ACCEPTANCE_STATIC_MESHES.md`). PrimitiveMesh auto approximations remain documented above; explicit collider types are available on both PrimitiveMesh and StaticMesh.
 
 ## Batch 2 displacement residual
 
@@ -118,12 +118,12 @@ Improved StaticMesh / richer collision authoring is a **Batch 6** dependency —
 
 - Full curve / path editor UI — **Deferred**  
 - Procedural meshes as subtractive brushes — **Accepted architectural restriction**  
-- Approximate auto collision shapes — evaluate richer controls in **Batch 6**  
+- Approximate auto collision shapes — explicit overrides available (Batch 5/6); auto heuristics remain approximations  
 - Brush displacement tessellation — **Outstanding** (Batch 2 residual)  
 - Text requires local `public/assets/fonts/helvetiker_regular.typeface.json`  
 - ParametricGeometry is scaled radius authoring, not a full surface tool  
 
 ## Dependencies for later batches
 
-- Batch 6: richer collision / shadow options on StaticMesh (+ optional improved primitive collision controls)  
-- Batch 7: BufferGeometryUtils / Simplify for heavy procedural meshes  
+- Batch 6: **Done** — see `ACCEPTANCE_STATIC_MESHES.md`  
+- Batch 7: BufferGeometryUtils / Simplify for heavy procedural meshes / automatic LOD generation  

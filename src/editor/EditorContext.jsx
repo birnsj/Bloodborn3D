@@ -123,6 +123,7 @@ import {
   normalizePrimitiveMeshFields,
   validatePrimitiveAllocation,
 } from '../components/PrimitiveMeshComponent.js';
+import { normalizeStaticMeshFields } from '../components/StaticMeshComponent.js';
 import { createCellActor } from './cellFactory.js';
 import { createPlayerSpawnActor } from './spawnFactory.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
@@ -2321,23 +2322,58 @@ export function EditorProvider({ children }) {
     });
   }, [mode, updateWorldPostProcessing]);
 
-  const updateSelectedStaticMesh = useCallback((partial) => {
+  const updateSelectedStaticMesh = useCallback((partial, options = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const mesh = world.getActor(actorId)?.getComponent('StaticMesh');
+    if (!mesh) return;
+    const { undoable = true, label = 'Edit static mesh' } = options;
+    const normalized = normalizeStaticMeshFields({ ...mesh, ...partial });
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      before[key] = structuredClone(mesh[key]);
+      after[key] = structuredClone(normalized[key]);
+    }
+    if ('collidable' in partial || 'collisionType' in partial) {
+      before.collidable = structuredClone(mesh.collidable);
+      before.collisionType = structuredClone(mesh.collisionType);
+      after.collidable = normalized.collidable;
+      after.collisionType = normalized.collisionType;
+    }
+    if (!undoable) {
+      for (const key of Object.keys(after)) {
+        mesh[key] = after[key];
+      }
+      const actor = world.getActor(actorId);
+      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
+      bump();
+      return;
+    }
+    executeCommand(
+      new SetStaticMeshPropertiesCommand({ world, actorId, before, after, label }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+
+  const commitStaticMeshGesture = useCallback((beforeSnapshot, label = 'Edit static mesh') => {
+    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const mesh = world.getActor(actorId)?.getComponent('StaticMesh');
     if (!mesh) return;
     const before = {};
     const after = {};
-    for (const key of Object.keys(partial)) {
-      before[key] = mesh[key];
-      after[key] = partial[key];
+    for (const key of Object.keys(beforeSnapshot)) {
+      before[key] = structuredClone(beforeSnapshot[key]);
+      after[key] = structuredClone(mesh[key]);
     }
-    executeCommand(
-      new SetStaticMeshPropertiesCommand({ world, actorId, before, after }),
-      { resync: true },
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    recordCommand(
+      new SetStaticMeshPropertiesCommand({ world, actorId, before, after, label }),
     );
     autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   const updateSelectedRamp = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -4020,6 +4056,13 @@ export function EditorProvider({ children }) {
     resetWorldPostProcessingEffect,
     resetWorldPostProcessingAll,
     updateSelectedStaticMesh,
+    commitStaticMeshGesture,
+    getStaticMeshSlots: (actorId) => (
+      runtimeRef.current?.sceneView?.getStaticMeshSlots?.(actorId) || []
+    ),
+    getStaticMeshTriangleCounts: (actorId) => (
+      runtimeRef.current?.sceneView?.getStaticMeshTriangleCounts?.(actorId) || []
+    ),
     updateSelectedRamp,
     updateSelectedStair,
     updateSelectedColumn,

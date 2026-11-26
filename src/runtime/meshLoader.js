@@ -13,6 +13,8 @@ const gltfLoader = new GLTFLoader();
 const meshCache = createRetryableCache();
 /** url → latest successful load meta (bounds + center) for sync physics peek. */
 const meshMetaByUrl = new Map();
+/** url → cached glTF scene root for sync collider extraction (Batch 6). */
+const meshSceneByUrl = new Map();
 
 /**
  * Load a glTF/GLB asset. Geometry stays in meters (Three.js / Rapier space).
@@ -49,6 +51,7 @@ export function loadGltfScene(url) {
         // Geometries/materials stay in the cache — mark shared before cloning out.
         markSharedSubtree(root, { materials: true });
         meshMetaByUrl.set(url, meta);
+        meshSceneByUrl.set(url, root);
         resolve({
           scene: root,
           animations: gltf.animations || [],
@@ -94,6 +97,7 @@ export async function cloneLoadedMesh(url) {
 export function clearMeshCache() {
   meshCache.clear();
   meshMetaByUrl.clear();
+  meshSceneByUrl.clear();
 }
 
 /**
@@ -104,10 +108,25 @@ export function peekLoadedMeshMeta(url) {
   return meshMetaByUrl.get(url) || null;
 }
 
+/**
+ * Synchronous peek at cached glTF scene root if already loaded (Batch 6 collision).
+ * Returns null when not cached — callers must fall back to AABB.
+ */
+export function peekLoadedMeshScene(url) {
+  if (!url) return null;
+  return meshSceneByUrl.get(url) || null;
+}
+
 /** Test / tooling: seed sync meta without a full glTF fetch. */
 export function seedLoadedMeshMeta(url, meta) {
   if (!url || !meta) return;
   meshMetaByUrl.set(url, meta);
+}
+
+/** Test / tooling: seed cached scene root for sync collider extraction. */
+export function seedLoadedMeshScene(url, sceneRoot) {
+  if (!url || !sceneRoot) return;
+  meshSceneByUrl.set(url, sceneRoot);
 }
 
 function countTriangles(root) {

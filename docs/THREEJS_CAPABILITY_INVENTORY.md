@@ -123,7 +123,7 @@
 | Materials | Full Standard + Physical + Basic/Toon/Matcap + side/alpha | — | — (Batch 2 done) |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush + PrimitiveMesh props | — | Batch 5 complete (native + procedural props); brushes unchanged |
-| Static meshes | GLTF + box collision | — | Shadows toggles, overrides, LOD, instance/batch, renderOrder, collision varieties |
+| Static meshes | GLTF + full collision / LOD / opt-in InstancedMesh | Batch 6 Done | BatchedMesh deferred; Batch 7 compression / Simplify |
 | Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform/compression |
 | Asset tools | Import texture/mesh, thumbs | — | Simplify, BufferGeometryUtils, exporters, DRACO/KTX2/Meshopt, diagnostics |
 | Editor organization | Cells/prefabs/hierarchy | — | Authoring layers + solo/lock/vis |
@@ -252,7 +252,7 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 |------------|-----|----|---------|--------|--------|----|-----|--------|
 | GLTF place | GLTFLoader | Y | DRACO/KTX2/Meshopt | Creation | assetId | — | H | **Partial** |
 | castShadow / receiveShadow | Mesh flags | Hardcoded on | toggles | Details | fields | S | H | **Missing** |
-| Material overrides | swap materials | Face mats on brushes only | per-slot override on GLTF | Details | overrides{} | M | H | **Missing** |
+| Material overrides | swap materials | Face mats on brushes + StaticMesh slots | per-slot override on GLTF | Details | overrides{} | M | H | **Done** (Batch 6) |
 | LOD | `LOD` | N | distances + child meshes | Details | lod levels | M | M | **Missing** |
 | Instancing | `InstancedMesh` | Internal batch only | authorable instance sets | Creation/Details | instance transforms | L | M | **Missing** |
 | Batching | `BatchedMesh` | Experimental solids | expose later | — | — | L | M | **Partial** / Internal |
@@ -351,7 +351,7 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 | PP catalog | Y | Y | Y | Y | N/A | PP controller | Y | Y | Input-gated effects |
 | MeshStandard | Y | Y | Y | Y | Y | materialFactory | Y | Y | Maps/models incomplete |
 | Lights | Y | Y | Y | Y | Y | SceneView | Y | Y | Advanced props |
-| GLTF StaticMesh | Y | Y | Y | Y | Y | meshLoader | Y | Y | Compression / shadows |
+| GLTF StaticMesh | Y | Y | Y | Y | Y | meshLoader | Y | Y | Compression → Batch 7; shadows/LOD/collision/overrides **Done** (Batch 6) |
 
 ---
 
@@ -486,24 +486,28 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 
 | Item | Status | Dependency | Acceptance criteria | Cross-ref |
 |------|--------|------------|---------------------|-----------|
-| Approximate auto collision shapes (cone→cylinder, polyhedra→sphere, text→AABB, complex→convex) | **Accepted** for Batch 5; richer controls → **Batch 6** | Rapier collider authoring on StaticMesh / PrimitiveMesh | Document visual vs collision table; optional explicit collider types remain; Batch 6 may add better defaults/tools | Batch 6 collision |
+| Approximate auto collision shapes (cone→cylinder, polyhedra→sphere, text→AABB, complex→convex) | **Accepted** for Batch 5; **Batch 6 Done** for richer StaticMesh / explicit collider authoring | Rapier collider authoring on StaticMesh / PrimitiveMesh | Visual vs collision table retained; explicit modes + dims/offsets/helpers shipped in Batch 6 | — |
 | Brush displacement tessellation | **Outstanding** (Batch 2 residual) | Future brush-density design that preserves CSG | Brush solids show displacement without rewriting authored topology — **not** claimed Done by Batch 5 | Batch 2 residuals |
 | Full curve / path editor UI | **Deferred** | Dedicated editor UX | Profile/path/hull points editable in a first-class curve UI | Batch 5 schema fields exist |
 | Procedural subtractive geometry | **Accepted restriction** | CSG brush pipeline | Procedural PrimitiveMesh must not silently become valid subtractive brushes | Architecture |
 
-### Batch 6 — Static meshes (render + collision)
+### Batch 6 — Static meshes (render + collision) — **Done** (acceptance `docs/ACCEPTANCE_STATIC_MESHES.md`)
 
-| Pri | Item |
-|-----|------|
-| P0 | castShadow / receiveShadow on StaticMesh (+ optional solids) |
-| P0 | Rapier convex hull collision option |
-| P1 | Trimesh collision option (cost-warn) |
-| P1 | Material slot overrides on GLTF |
-| P1 | renderOrder / frustumCulled |
-| P2 | LOD component |
-| P2 | InstancedMesh authoring (prop scatters) |
+| Pri | Item | Status |
+|-----|------|--------|
+| P0 | castShadow / receiveShadow on StaticMesh (+ optional solids) | **Done** — StaticMesh Rendering group; PrimitiveMesh retained Batch 5 shadows |
+| P0 | Rapier convex hull collision option | **Done** — StaticMesh + PrimitiveMesh; Play preloads GLB for hull extract |
+| P1 | Trimesh collision option (cost-warn) | **Done** — fixed-body only; Details notes cost; AABB fallback if unload |
+| P1 | Material slot overrides on GLTF | **Done** — slot keys `meshName:matIndex`; restore originals; GLB not rewritten |
+| P1 | renderOrder / frustumCulled | **Done** |
+| P2 | LOD component | **Done** — THREE.LOD; distances + hysteresis + editor preview; triangle counts; collision independent |
+| P2 | InstancedMesh authoring (prop scatters) | **Done** (opt-in) — default **off**; `auto` ≥3 / `force`; measure before auto-default; BatchedMesh **deferred** |
 
-**Depends on:** Batch 7 compression for heavy meshes; Batch 2 overrides.
+**Also shipped:** none/auto/box/sphere/capsule/cylinder colliders; editable dims/offsets; collision helpers; Details Collision/Materials/LOD/Rendering; undo gestures; Academy lesson 26; `acceptance-static-meshes.json`.
+
+**Batch 5 residuals updated:** richer StaticMesh / primitive collision authoring delivered here; brush CSG collision unchanged. **Brush displacement tessellation** remains Outstanding (Batch 2).
+
+**Depends on:** Batch 7 compression / SimplifyModifier for heavy meshes and automatic LOD generation; Batch 2 materials.
 
 ### Batch 7 — Asset tools
 
@@ -587,7 +591,7 @@ Batch 9 parallel (Editor layers)
 | New components | `PrimitiveMesh`, `Decal`, `Mirror`/`Reflector`, `Refractor`, `Water`, `Sprite`, optional `Sky` |
 | `MaterialDefinition` | `shadingModel`, ao/bump/disp/alpha/light maps, physical fields, side/alphaTest |
 | Texture asset `meta` | wrap, filter, mip, aniso, colorSpace, channel, transform |
-| `StaticMeshComponent` | cast/receive shadow, renderOrder, frustumCulled, collisionType, materialOverrides, lod |
+| `StaticMeshComponent` | cast/receive shadow, renderOrder, frustumCulled, collisionType (+ dims/offset), materialOverrides, lodLevels, lodPreview, instancing |
 | `Actor` | `editorLayer` / `editorLayers` |
 
 Map to Three **only** in runtime adapters; keep JSON engine-neutral.

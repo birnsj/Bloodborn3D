@@ -259,6 +259,12 @@ export class GameRuntime {
         this.physics.dispose();
         return;
       }
+      // Ensure convex/trimesh StaticMesh geometry is cached before sync build.
+      await this.physics.preloadStaticMeshColliders?.(this.world);
+      if (token !== this._playToken || this._disposed) {
+        this.physics.dispose();
+        return;
+      }
       this.authoredSnapshot = snapshot;
       this._captureEditorCamera();
 

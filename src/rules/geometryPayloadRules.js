@@ -86,7 +86,10 @@ const PARAMETRIC_SPECS = {
     ['miterEnd', 'angle'],
   ],
   StaticMesh: [
-    ['collisionType', 'enum', ['none', 'box']],
+    ['collisionType', 'enum', [
+      'none', 'auto', 'box', 'sphere', 'capsule', 'cylinder', 'convex', 'trimesh',
+    ]],
+    ['instancing', 'enum', ['off', 'auto', 'force']],
   ],
 };
 

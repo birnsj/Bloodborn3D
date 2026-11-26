@@ -17,14 +17,23 @@ import { getCurvedWallColliderSolids } from './curvedWallGeometry.js';
 import { brushHasMiters, miteredWallPointsToMetersFlat } from './miteredWallGeometry.js';
 import { convexBrushPointsToMetersFlat } from './convexBrushGeometry.js';
 import { isWallBrush } from './wallOpenings.js';
-import { peekLoadedMeshMeta } from './meshLoader.js';
+import { peekLoadedMeshMeta, peekLoadedMeshScene, loadGltfScene } from './meshLoader.js';
 import {
   normalizePrimitiveMeshFields,
 } from '../components/PrimitiveMeshComponent.js';
 import {
+  normalizeStaticMeshFields,
+  assertStaticColliderAllowed,
+} from '../components/StaticMeshComponent.js';
+import {
   buildPrimitiveGeometry,
   primitiveGeometryPositionsMeters,
 } from './createThreePrimitive.js';
+import {
+  extractCollisionGeometryMeters,
+  resolveStaticCollisionDims,
+} from './staticMeshGeometry.js';
+import { assetUrl } from './materialFactory.js';
 
 let rapierReady = null;
 
@@ -84,6 +93,29 @@ export class PhysicsWorld {
   }
 
   /**
+   * Preload glTF scenes needed for convex/trimesh StaticMesh colliders so
+   * `buildFromWorld` can extract geometry synchronously.
+   */
+  async preloadStaticMeshColliders(gameWorld) {
+    if (!gameWorld?.actors || !this.assetResolver?.getMeshUrl) return;
+    const urls = new Set();
+    for (const actor of gameWorld.actors) {
+      const mesh = actor.getComponent?.('StaticMesh');
+      if (!mesh?.enabled) continue;
+      const f = normalizeStaticMeshFields(mesh);
+      if (!f.collidable || (f.collisionType !== 'convex' && f.collisionType !== 'trimesh')) {
+        continue;
+      }
+      if (!f.assetId) continue;
+      const path = this.assetResolver.getMeshUrl(f.assetId);
+      if (!path) continue;
+      urls.add(assetUrl(path) || path);
+      urls.add(path);
+    }
+    await Promise.all([...urls].map((url) => loadGltfScene(url)));
+  }
+
+  /**
    * Build static colliders from brush actors and explicit mesh box colliders.
    */
   buildFromWorld(gameWorld) {
@@ -133,16 +165,8 @@ export class PhysicsWorld {
       }
 
       const mesh = actor.getComponent('StaticMesh');
-      if (
-        mesh
-        && mesh.enabled
-        && mesh.collidable
-        && mesh.collisionType === 'box'
-      ) {
-        // Asset-bounds box (meters) + local center offset for off-origin glTF AABBs.
-        const box = this._resolveMeshCollisionBox(mesh.assetId);
-        const half = halfExtentsFromMeshBounds(box.size);
-        this._addBoxCollider(actor, half, box.center);
+      if (mesh && mesh.enabled) {
+        this._addStaticMeshCollider(actor, mesh);
         continue;
       }
 
@@ -151,6 +175,119 @@ export class PhysicsWorld {
         this._addPrimitiveMeshCollider(actor, primitive);
       }
     }
+  }
+
+  /**
+   * Batch 6 — StaticMesh colliders (none/auto/box/sphere/capsule/cylinder/convex/trimesh).
+   * Trimesh/convex require fixed bodies (enforced). Auto prefers box from asset AABB.
+   */
+  _addStaticMeshCollider(actor, comp) {
+    const f = normalizeStaticMeshFields(comp);
+    if (!f.collidable || f.collisionType === 'none') return;
+
+    let mode = f.collisionType === 'auto' ? 'box' : f.collisionType;
+    const allowed = assertStaticColliderAllowed(mode, 'fixed');
+    if (!allowed.ok) {
+      console.warn('[BloodBound]', allowed.message, actor?.id);
+      mode = 'box';
+    }
+
+    const box = this._resolveMeshCollisionBox(f.assetId);
+    const dims = resolveStaticCollisionDims(f, box.size, box.center);
+    const worldXform = getWorldTransform(actor, actor.world || null);
+    const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
+    const sx = Math.abs(scale.x || 1);
+    const sy = Math.abs(scale.y || 1);
+    const sz = Math.abs(scale.z || 1);
+
+    if (mode === 'box') {
+      // _addBoxCollider applies actor scale to half-extents + center.
+      this._addBoxCollider(
+        actor,
+        halfExtentsFromMeshBounds(dims.boxSize),
+        dims.offsetMeters,
+      );
+      return;
+    }
+
+    if (mode === 'sphere' || mode === 'capsule' || mode === 'cylinder') {
+      const center = dims.offsetMeters;
+      const pos = worldXform.position;
+      const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+      const desc = RAPIER.RigidBodyDesc.fixed()
+        .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+        .setRotation(eulerDegreesToQuat(rot));
+      const body = this.world.createRigidBody(desc);
+      let colliderDesc;
+      if (mode === 'sphere') {
+        const r = Math.max(0.01, dims.radius * Math.max(sx, sy, sz));
+        colliderDesc = RAPIER.ColliderDesc.ball(r)
+          .setTranslation(center.x * sx, center.y * sy, center.z * sz);
+      } else if (mode === 'capsule') {
+        const r = Math.max(0.01, dims.radius * Math.max(sx, sz));
+        const halfH = Math.max(0.01, dims.height * 0.5 * sy);
+        colliderDesc = RAPIER.ColliderDesc.capsule(halfH, r)
+          .setTranslation(center.x * sx, center.y * sy, center.z * sz);
+      } else {
+        const r = Math.max(0.01, dims.radius * Math.max(sx, sz));
+        const halfH = Math.max(0.01, dims.height * 0.5 * sy);
+        colliderDesc = RAPIER.ColliderDesc.cylinder(halfH, r)
+          .setTranslation(center.x * sx, center.y * sy, center.z * sz);
+      }
+      colliderDesc.setFriction(0.9);
+      const collider = this.world.createCollider(colliderDesc, body);
+      this._bodies.set(actor.id, { body, colliders: [collider], actor });
+      return;
+    }
+
+    // convex / trimesh — sync build uses cached glTF verts; AABB fallback if not loaded yet.
+    const url = this.assetResolver?.getMeshUrl?.(f.assetId);
+    const resolvedUrl = url ? (assetUrl(url) || url) : null;
+    const geometryRoot = resolvedUrl
+      ? (peekLoadedMeshScene(resolvedUrl) || peekLoadedMeshScene(url))
+      : null;
+
+    if (!geometryRoot) {
+      this._addBoxCollider(
+        actor,
+        halfExtentsFromMeshBounds(box.size),
+        dims.offsetMeters,
+      );
+      return;
+    }
+
+    const { positions, indices } = extractCollisionGeometryMeters(geometryRoot, scale);
+    if (!positions.length) {
+      const half = halfExtentsFromMeshBounds(box.size);
+      this._addBoxCollider(actor, half, dims.offsetMeters);
+      return;
+    }
+
+    const pos = worldXform.position;
+    const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
+    const desc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(toMeters(pos.x), toMeters(pos.y), toMeters(pos.z))
+      .setRotation(eulerDegreesToQuat(rot));
+    const body = this.world.createRigidBody(desc);
+    let colliderDesc = null;
+    try {
+      if (mode === 'trimesh') {
+        colliderDesc = RAPIER.ColliderDesc.trimesh(positions, indices);
+      } else {
+        colliderDesc = RAPIER.ColliderDesc.convexHull(positions);
+      }
+    } catch (err) {
+      console.warn('[BloodBound] static mesh collider failed', actor?.id, err);
+    }
+    if (!colliderDesc) {
+      this.world.removeRigidBody(body);
+      const half = halfExtentsFromMeshBounds(box.size);
+      this._addBoxCollider(actor, half, dims.offsetMeters);
+      return;
+    }
+    colliderDesc.setFriction(0.9);
+    const collider = this.world.createCollider(colliderDesc, body);
+    this._bodies.set(actor.id, { body, colliders: [collider], actor });
   }
 
   /**
@@ -801,6 +938,10 @@ function normalizeFiniteVec3(raw) {
   return { x, y, z };
 }
 
+/**
+ * Batch 6 improvement: prefer convex hull for irregular primitives (cone, polyhedra)
+ * instead of loose sphere/cylinder approximations. Exact primitives keep Rapier shapes.
+ */
 function autoCollisionMode(primitive) {
   switch (primitive) {
     case 'box':
@@ -808,25 +949,25 @@ function autoCollisionMode(primitive) {
     case 'plane':
     case 'shape':
     case 'text':
+    case 'circle':
+    case 'ring':
       return 'box';
     case 'sphere':
-    case 'icosahedron':
-    case 'octahedron':
-    case 'dodecahedron':
-    case 'tetrahedron':
       return 'sphere';
     case 'capsule':
       return 'capsule';
     case 'cylinder':
-    case 'cone':
       return 'cylinder';
-    case 'circle':
-    case 'ring':
-      return 'box';
+    case 'cone':
+    case 'icosahedron':
+    case 'octahedron':
+    case 'dodecahedron':
+    case 'tetrahedron':
     default:
       return 'convex';
   }
 }
+
 
 function eulerDegreesToQuat({ x = 0, y = 0, z = 0 }) {
   const toRad = Math.PI / 180;
