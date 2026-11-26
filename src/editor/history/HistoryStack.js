@@ -30,6 +30,20 @@ export class HistoryStack {
     return command;
   }
 
+  /**
+   * Push a command that was already applied (live scrub preview).
+   * Undo restores `before`; redo re-applies `after` via do().
+   */
+  record(command) {
+    this.undoStack.push(command);
+    if (this.undoStack.length > this.limit) {
+      this.undoStack.shift();
+    }
+    this.redoStack.length = 0;
+    this.onChange(this);
+    return command;
+  }
+
   undo() {
     const command = this.undoStack.pop();
     if (!command) return null;

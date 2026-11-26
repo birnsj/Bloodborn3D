@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
@@ -30,8 +30,86 @@ import {
   WORLD_TONE_MAPPINGS,
   WORLD_SHADOW_MAP_TYPES,
   WORLD_OUTPUT_COLOR_SPACES,
+  normalizeWorldScene,
+  normalizeWorldRenderer,
 } from '../../core/World.js';
 import { PostProcessingSettings } from '../postprocessing/PostProcessingSettings.jsx';
+
+/**
+ * Live-preview scrub with one undo entry per completed gesture.
+ * @param {'scene'|'renderer'} kind
+ */
+function useWorldNumericGesture(kind) {
+  const {
+    world,
+    updateWorldScene,
+    commitWorldSceneGesture,
+    updateWorldRenderer,
+    commitWorldRendererGesture,
+  } = useEditor();
+  const beforeRef = useRef(null);
+
+  const begin = useCallback(() => {
+    if (!world || beforeRef.current) return;
+    beforeRef.current = kind === 'renderer'
+      ? structuredClone(normalizeWorldRenderer(world.renderer))
+      : structuredClone(normalizeWorldScene(world.scene));
+  }, [world, kind]);
+
+  const live = useCallback((partial) => {
+    if (kind === 'renderer') updateWorldRenderer?.(partial, { undoable: false });
+    else updateWorldScene?.(partial, { undoable: false });
+  }, [kind, updateWorldScene, updateWorldRenderer]);
+
+  const commit = useCallback((label) => {
+    const before = beforeRef.current;
+    beforeRef.current = null;
+    if (!before) return;
+    if (kind === 'renderer') commitWorldRendererGesture?.(before, label);
+    else commitWorldSceneGesture?.(before, label);
+  }, [kind, commitWorldSceneGesture, commitWorldRendererGesture]);
+
+  const cancel = useCallback(() => {
+    const before = beforeRef.current;
+    beforeRef.current = null;
+    if (!before) return;
+    if (kind === 'renderer') {
+      updateWorldRenderer?.(before, { undoable: false, replace: true });
+    } else {
+      updateWorldScene?.(before, { undoable: false, replace: true });
+    }
+  }, [kind, updateWorldScene, updateWorldRenderer]);
+
+  return { begin, live, commit, cancel };
+}
+
+function WorldScrubNumber({
+  kind = 'scene',
+  patch,
+  label = 'Edit world setting',
+  value,
+  disabled,
+  step,
+  min,
+  max,
+  className = 'bb-input',
+}) {
+  const gesture = useWorldNumericGesture(kind);
+  return (
+    <ScrubNumberInput
+      className={className}
+      step={step}
+      min={min}
+      max={max}
+      disabled={disabled}
+      value={value}
+      onGestureStart={gesture.begin}
+      onChange={(v) => gesture.live(typeof patch === 'function' ? patch(v) : { [patch]: v })}
+      onCommit={() => gesture.commit(label)}
+      onCancel={gesture.cancel}
+    />
+  );
+}
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
@@ -2142,26 +2220,26 @@ function WorldSettings() {
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Background intensity</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            patch="backgroundIntensity"
+            label="Edit background intensity"
             step={0.05}
             min={0}
             max={4}
             disabled={disabled}
             value={scene.backgroundIntensity}
-            onChange={(v) => updateWorldScene?.({ backgroundIntensity: v }, { undoable: false })}
           />
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Background blurriness</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            patch="backgroundBlurriness"
+            label="Edit background blurriness"
             step={0.05}
             min={0}
             max={1}
             disabled={disabled || scene.backgroundType === 'color' || scene.backgroundType === 'sky'}
             value={scene.backgroundBlurriness}
-            onChange={(v) => updateWorldScene?.({ backgroundBlurriness: v }, { undoable: false })}
           />
         </label>
         <p className="bb-muted">Blurriness applies when background is the environment map.</p>
@@ -2170,14 +2248,12 @@ function WorldSettings() {
           {['x', 'y', 'z'].map((axis) => (
             <label key={axis} className="bb-field">
               <span className="bb-field__label">{axis.toUpperCase()}</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ backgroundRotation: { [axis]: v } })}
+                label="Edit background rotation"
                 step={1}
                 disabled={disabled || scene.backgroundType === 'color' || scene.backgroundType === 'sky'}
                 value={scene.backgroundRotation?.[axis] ?? 0}
-                onChange={(v) => updateWorldScene?.({
-                  backgroundRotation: { [axis]: v },
-                }, { undoable: false })}
               />
             </label>
           ))}
@@ -2227,14 +2303,14 @@ function WorldSettings() {
         </label>
         <label className="bb-field" {...helpProps('world.scene.environmentIntensity')}>
           <span className="bb-field__label">Environment intensity</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            patch="environmentIntensity"
+            label="Edit environment intensity"
             step={0.05}
             min={0}
             max={8}
             disabled={disabled || !scene.environmentAssetId}
             value={scene.environmentIntensity}
-            onChange={(v) => updateWorldScene?.({ environmentIntensity: v }, { undoable: false })}
           />
         </label>
         <div className="bb-axis-row" {...helpProps('world.scene.environmentRotation')}>
@@ -2242,14 +2318,12 @@ function WorldSettings() {
           {['x', 'y', 'z'].map((axis) => (
             <label key={axis} className="bb-field">
               <span className="bb-field__label">{axis.toUpperCase()}</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ environmentRotation: { [axis]: v } })}
+                label="Edit environment rotation"
                 step={1}
                 disabled={disabled || !scene.environmentAssetId}
                 value={scene.environmentRotation?.[axis] ?? 0}
-                onChange={(v) => updateWorldScene?.({
-                  environmentRotation: { [axis]: v },
-                }, { undoable: false })}
               />
             </label>
           ))}
@@ -2266,14 +2340,14 @@ function WorldSettings() {
         {scene.lightProbeEnabled && (
           <label className="bb-field">
             <span className="bb-field__label">Probe intensity</span>
-            <ScrubNumberInput
-              className="bb-input"
+            <WorldScrubNumber
+              patch="lightProbeIntensity"
+              label="Edit light probe intensity"
               step={0.05}
               min={0}
               max={8}
               disabled={disabled}
               value={scene.lightProbeIntensity}
-              onChange={(v) => updateWorldScene?.({ lightProbeIntensity: v }, { undoable: false })}
             />
           </label>
         )}
@@ -2303,74 +2377,74 @@ function WorldSettings() {
           <>
             <label className="bb-field">
               <span className="bb-field__label">Turbidity</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { turbidity: v } })}
+                label="Edit sky turbidity"
                 step={0.1}
                 min={0}
                 max={20}
                 disabled={disabled}
                 value={sky.turbidity}
-                onChange={(v) => updateWorldScene?.({ sky: { turbidity: v } }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Rayleigh</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { rayleigh: v } })}
+                label="Edit sky rayleigh"
                 step={0.05}
                 min={0}
                 max={4}
                 disabled={disabled}
                 value={sky.rayleigh}
-                onChange={(v) => updateWorldScene?.({ sky: { rayleigh: v } }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Mie coefficient</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { mieCoefficient: v } })}
+                label="Edit sky mieCoefficient"
                 step={0.001}
                 min={0}
                 max={0.1}
                 disabled={disabled}
                 value={sky.mieCoefficient}
-                onChange={(v) => updateWorldScene?.({ sky: { mieCoefficient: v } }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Mie directional G</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { mieDirectionalG: v } })}
+                label="Edit sky mieDirectionalG"
                 step={0.01}
                 min={0}
                 max={1}
                 disabled={disabled}
                 value={sky.mieDirectionalG}
-                onChange={(v) => updateWorldScene?.({ sky: { mieDirectionalG: v } }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Sun elevation (°)</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { elevation: v } })}
+                label="Edit sky elevation"
                 step={0.5}
                 min={-90}
                 max={90}
                 disabled={disabled}
                 value={sky.elevation}
-                onChange={(v) => updateWorldScene?.({ sky: { elevation: v } }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Sun azimuth (°)</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ sky: { azimuth: v } })}
+                label="Edit sky azimuth"
                 step={1}
                 min={-360}
                 max={360}
                 disabled={disabled}
                 value={sky.azimuth}
-                onChange={(v) => updateWorldScene?.({ sky: { azimuth: v } }, { undoable: false })}
               />
             </label>
           </>
@@ -2391,30 +2465,26 @@ function WorldSettings() {
           <>
             <label className="bb-field">
               <span className="bb-field__label">Height (m)</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ groundedSkybox: { height: v } })}
+                label="Edit grounded height"
                 step={0.5}
                 min={0.1}
                 max={500}
                 disabled={disabled}
                 value={grounded.height}
-                onChange={(v) => updateWorldScene?.({
-                  groundedSkybox: { height: v },
-                }, { undoable: false })}
               />
             </label>
             <label className="bb-field">
               <span className="bb-field__label">Radius (m)</span>
-              <ScrubNumberInput
-                className="bb-input"
+              <WorldScrubNumber
+                patch={(v) => ({ groundedSkybox: { radius: v } })}
+                label="Edit grounded radius"
                 step={1}
                 min={1}
                 max={5000}
                 disabled={disabled}
                 value={grounded.radius}
-                onChange={(v) => updateWorldScene?.({
-                  groundedSkybox: { radius: v },
-                }, { undoable: false })}
               />
             </label>
           </>
@@ -2462,24 +2532,24 @@ function WorldSettings() {
               <>
                 <label className="bb-field">
                   <span className="bb-field__label">Fog near (eu)</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { near: v } })}
+                    label="Edit fog near"
                     step={25}
                     min={0}
                     disabled={disabled}
                     value={fog.near}
-                    onChange={(v) => updateWorldScene?.({ fog: { near: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Fog far (eu)</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { far: v } })}
+                    label="Edit fog far"
                     step={25}
                     min={0}
                     disabled={disabled}
                     value={fog.far}
-                    onChange={(v) => updateWorldScene?.({ fog: { far: v } })}
                   />
                 </label>
                 <p className="bb-muted">100 editor units = 1 meter. Defaults (~1–15 m) suit interiors.</p>
@@ -2488,14 +2558,14 @@ function WorldSettings() {
             {fog.type === 'exp2' && (
               <label className="bb-field">
                 <span className="bb-field__label">Fog density</span>
-                <ScrubNumberInput
-                  className="bb-input"
+                <WorldScrubNumber
+                  patch={(v) => ({ fog: { density: v } })}
+                  label="Edit fog density"
                   step={0.001}
                   min={0}
                   max={1}
                   disabled={disabled}
                   value={fog.density}
-                  onChange={(v) => updateWorldScene?.({ fog: { density: v } })}
                 />
               </label>
             )}
@@ -2512,26 +2582,26 @@ function WorldSettings() {
               <>
                 <label className="bb-field">
                   <span className="bb-field__label">Drift speed</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { driftSpeed: v } })}
+                    label="Edit fog driftSpeed"
                     step={0.01}
                     min={0}
                     max={2}
                     disabled={disabled}
                     value={fog.driftSpeed}
-                    onChange={(v) => updateWorldScene?.({ fog: { driftSpeed: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Drift amount</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { driftAmount: v } })}
+                    label="Edit fog driftAmount"
                     step={0.01}
                     min={0}
                     max={1}
                     disabled={disabled}
                     value={fog.driftAmount}
-                    onChange={(v) => updateWorldScene?.({ fog: { driftAmount: v } })}
                   />
                 </label>
                 <p className="bb-muted">Slow breathe on fog depth/density.</p>
@@ -2553,50 +2623,50 @@ function WorldSettings() {
               <>
                 <label className="bb-field">
                   <span className="bb-field__label">Mist count</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { mistCount: v } })}
+                    label="Edit fog mistCount"
                     step={50}
                     min={0}
                     max={4000}
                     disabled={disabled}
                     value={fog.mistCount}
-                    onChange={(v) => updateWorldScene?.({ fog: { mistCount: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Mist speed</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { mistSpeed: v } })}
+                    label="Edit fog mistSpeed"
                     step={0.01}
                     min={0}
                     max={2}
                     disabled={disabled}
                     value={fog.mistSpeed}
-                    onChange={(v) => updateWorldScene?.({ fog: { mistSpeed: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Mist opacity</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { mistOpacity: v } })}
+                    label="Edit fog mistOpacity"
                     step={0.01}
                     min={0}
                     max={1}
                     disabled={disabled}
                     value={fog.mistOpacity}
-                    onChange={(v) => updateWorldScene?.({ fog: { mistOpacity: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Mist size (m)</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { mistSize: v } })}
+                    label="Edit fog mistSize"
                     step={0.05}
                     min={0.05}
                     max={4}
                     disabled={disabled}
                     value={fog.mistSize}
-                    onChange={(v) => updateWorldScene?.({ fog: { mistSize: v } })}
                   />
                 </label>
               </>
@@ -2614,38 +2684,38 @@ function WorldSettings() {
               <>
                 <label className="bb-field">
                   <span className="bb-field__label">Noise strength</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { noiseStrength: v } })}
+                    label="Edit fog noiseStrength"
                     step={0.01}
                     min={0}
                     max={1}
                     disabled={disabled}
                     value={fog.noiseStrength}
-                    onChange={(v) => updateWorldScene?.({ fog: { noiseStrength: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Noise scale</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { noiseScale: v } })}
+                    label="Edit fog noiseScale"
                     step={0.01}
                     min={0.05}
                     max={4}
                     disabled={disabled}
                     value={fog.noiseScale}
-                    onChange={(v) => updateWorldScene?.({ fog: { noiseScale: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Noise speed</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { noiseSpeed: v } })}
+                    label="Edit fog noiseSpeed"
                     step={0.01}
                     min={0}
                     max={2}
                     disabled={disabled}
                     value={fog.noiseSpeed}
-                    onChange={(v) => updateWorldScene?.({ fog: { noiseSpeed: v } })}
                   />
                 </label>
               </>
@@ -2663,26 +2733,26 @@ function WorldSettings() {
               <>
                 <label className="bb-field">
                   <span className="bb-field__label">Volume density</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { volumetricDensity: v } })}
+                    label="Edit fog volumetricDensity"
                     step={0.01}
                     min={0}
                     max={2}
                     disabled={disabled}
                     value={fog.volumetricDensity}
-                    onChange={(v) => updateWorldScene?.({ fog: { volumetricDensity: v } })}
                   />
                 </label>
                 <label className="bb-field">
                   <span className="bb-field__label">Volume extent (m)</span>
-                  <ScrubNumberInput
-                    className="bb-input"
+                  <WorldScrubNumber
+                    patch={(v) => ({ fog: { volumetricExtent: v } })}
+                    label="Edit fog volumetricExtent"
                     step={0.5}
                     min={1}
                     max={80}
                     disabled={disabled}
                     value={fog.volumetricExtent}
-                    onChange={(v) => updateWorldScene?.({ fog: { volumetricExtent: v } })}
                   />
                 </label>
                 <label className="bb-field">
@@ -2725,14 +2795,15 @@ function WorldSettings() {
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Exposure</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            kind="renderer"
+            patch="toneMappingExposure"
+            label="Edit exposure"
             step={0.05}
             min={0}
             max={4}
             disabled={disabled}
             value={renderer.toneMappingExposure}
-            onChange={(v) => updateWorldRenderer?.({ toneMappingExposure: v }, { undoable: false })}
           />
         </label>
         <label className="bb-field" {...helpProps('world.renderer.outputColorSpace')}>

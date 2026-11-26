@@ -15,7 +15,7 @@ function clampScrubValue(n, min, max) {
 }
 
 /** Axis / label scrub — always drag-to-nudge (no text caret). */
-function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
+function useHorizontalScrub({ value, step, disabled, onChange, onCommit, onGestureStart, min, max }) {
   const scrubRef = useRef(null);
   const didScrubRef = useRef(false);
 
@@ -39,6 +39,7 @@ function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
       scrub.moved = true;
       didScrubRef.current = true;
       document.body.classList.add('bb-is-scrubbing');
+      onGestureStart?.();
     }
     const steps = Math.round(dx / PX_PER_STEP);
     onChange(clampScrubValue(
@@ -50,6 +51,7 @@ function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
 
   const endScrub = (e) => {
     if (!scrubRef.current) return;
+    const didScrub = scrubRef.current.moved;
     scrubRef.current = null;
     document.body.classList.remove('bb-is-scrubbing');
     try {
@@ -57,6 +59,7 @@ function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
     } catch {
       /* already released */
     }
+    if (didScrub) onCommit?.();
   };
 
   return {
@@ -71,8 +74,23 @@ function useHorizontalScrub({ value, step, disabled, onChange, min, max }) {
 }
 
 /** Axis letter that drags horizontally to nudge a numeric value. */
-export function ScrubAxisLabel({ axis, value, onChange, disabled, step }) {
-  const { scrubHandlers } = useHorizontalScrub({ value, step, disabled, onChange });
+export function ScrubAxisLabel({
+  axis,
+  value,
+  onChange,
+  onCommit,
+  onGestureStart,
+  disabled,
+  step,
+}) {
+  const { scrubHandlers } = useHorizontalScrub({
+    value,
+    step,
+    disabled,
+    onChange,
+    onCommit,
+    onGestureStart,
+  });
 
   return (
     <span
@@ -87,10 +105,19 @@ export function ScrubAxisLabel({ axis, value, onChange, disabled, step }) {
 /**
  * Number field: drag horizontally to scrub when unfocused;
  * click (no drag) focuses for typing. While focused, behaves as a normal input.
+ *
+ * Undo-friendly optional hooks:
+ * - onGestureStart: scrub drag began or field focused for typing
+ * - onChange: every intermediate value (live preview)
+ * - onCommit: scrub ended or field blurred after an edit
+ * - onCancel: Escape while typing — parent should restore the gesture-start value
  */
 export function ScrubNumberInput({
   value,
   onChange,
+  onCommit,
+  onGestureStart,
+  onCancel,
   disabled = false,
   step = 1,
   className = 'bb-input',
@@ -100,12 +127,34 @@ export function ScrubNumberInput({
 }) {
   const inputRef = useRef(null);
   const scrubRef = useRef(null);
+  const gestureActiveRef = useRef(false);
   const [draft, setDraft] = useState(null);
   const [focused, setFocused] = useState(false);
 
   const emitChange = (n) => {
     if (!Number.isFinite(n)) return;
     onChange(clampScrubValue(n, min, max));
+  };
+
+  const beginGesture = () => {
+    if (gestureActiveRef.current) return;
+    gestureActiveRef.current = true;
+    onGestureStart?.();
+  };
+
+  const endGestureCommit = () => {
+    if (!gestureActiveRef.current) return;
+    gestureActiveRef.current = false;
+    onCommit?.();
+  };
+
+  const endGestureCancel = () => {
+    if (!gestureActiveRef.current) {
+      onCancel?.();
+      return;
+    }
+    gestureActiveRef.current = false;
+    onCancel?.();
   };
 
   // Only clear the typing draft when the field is not focused (external value sync).
@@ -124,8 +173,12 @@ export function ScrubNumberInput({
     } catch {
       /* already released */
     }
+    if (didScrub) {
+      endGestureCommit();
+      return;
+    }
     // Clean click (no drag): enter text-edit mode and select for quick retype.
-    if (!didScrub && !disabled) {
+    if (!disabled) {
       const el = inputRef.current;
       if (el) {
         el.focus();
@@ -154,10 +207,27 @@ export function ScrubNumberInput({
         const n = Number(raw);
         if (Number.isFinite(n)) emitChange(n);
       }}
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setFocused(true);
+        beginGesture();
+      }}
       onBlur={() => {
         setFocused(false);
         setDraft(null);
+        endGestureCommit();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          endGestureCancel();
+          setDraft(null);
+          e.currentTarget.blur();
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
       }}
       onPointerDown={(e) => {
         if (disabled || e.button !== 0) return;
@@ -183,6 +253,7 @@ export function ScrubNumberInput({
           if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
           scrub.moved = true;
           document.body.classList.add('bb-is-scrubbing');
+          beginGesture();
           try {
             e.currentTarget.setPointerCapture(e.pointerId);
           } catch {

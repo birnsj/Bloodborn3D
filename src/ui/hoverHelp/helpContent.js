@@ -44,7 +44,7 @@ export const HELP_CONTENT = {
   },
   'world.scene.environment': {
     title: 'Environment Map',
-    body: 'HDR/EXR asset converted through PMREM into scene.environment for PBR reflections. Import via Asset Viewer or the World Settings file picker. Empty = RoomEnvironment fallback.',
+    body: 'HDR/EXR asset converted through PMREM into scene.environment for PBR reflections. Import via Asset Viewer or the World Settings file picker. Empty = RoomEnvironment fallback. Numeric intensity/rotation/blurriness scrub once into Undo (live preview while dragging).',
     tips: 'Assets live under Environments / Textures with .hdr or .exr. Independent of Ambient fill when an authored map is set.',
   },
   'world.scene.environmentIntensity': {

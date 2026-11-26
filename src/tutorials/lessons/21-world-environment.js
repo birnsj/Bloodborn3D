@@ -27,7 +27,7 @@ export const worldEnvironmentLesson = {
     {
       id: 'hdri',
       title: 'HDRI assignment',
-      body: 'This acceptance starter already references Batch1 Studio HDR. Change Environment intensity and rotation. Import another .hdr/.exr from Asset Viewer or the Scene file picker if you have one.',
+      body: 'This acceptance starter already references Poly Haven Studio Small 09 (CC0 HDRI). Change Environment intensity and rotation. Import another .hdr/.exr from Asset Viewer or the Scene file picker if you have one.',
       highlight: ['world.scene.environment', 'world.scene.environmentIntensity'],
       verify: { type: 'manualConfirm', label: 'I adjusted IBL' },
     },
@@ -41,7 +41,7 @@ export const worldEnvironmentLesson = {
     {
       id: 'probe-renderer',
       title: 'Light probe and renderer',
-      body: 'With an env map assigned, enable Light probe. In Renderer, confirm Output color space and that Shadow type lists Basic / PCF / VSM (PCF Soft is migrated to PCF). Undo restores World Scene edits.',
+      body: 'With an env map assigned, enable Light probe. In Renderer, confirm Output color space and that Shadow type lists Basic / PCF / VSM (PCF Soft is migrated to PCF). Scrub numeric World Settings — Undo/Redo restores one completed adjustment (live preview while dragging does not spam the history stack).',
       highlight: ['world.scene.lightProbe', 'world.renderer.outputColorSpace'],
       verify: { type: 'manualConfirm', label: 'Finish' },
     },

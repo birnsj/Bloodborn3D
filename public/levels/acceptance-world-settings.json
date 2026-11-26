@@ -148,6 +148,7 @@
             "z": 20
           },
           "color": "#9aa4b4",
+          "materialId": "mat_batch1_rough",
           "collidable": true
         }
       ]
@@ -187,6 +188,7 @@
             "z": 60
           },
           "color": "#c8d0dc",
+          "materialId": "mat_batch1_metal",
           "collidable": true
         }
       ]

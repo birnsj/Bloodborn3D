@@ -1,0 +1,9 @@
+{
+  "id": "mat_batch1_metal",
+  "name": "Batch1 Chrome",
+  "baseColor": "#cfd6e0",
+  "roughness": 0.12,
+  "metalness": 1,
+  "maps": {},
+  "faceOverrides": {}
+}

@@ -401,6 +401,13 @@ export function EditorProvider({ children }) {
     setStatus(command.label || 'Edited');
   }, [afterWorldMutation]);
 
+  /** Record an already-applied command (scrub live preview → one undo entry). */
+  const recordCommand = useCallback((command, options = {}) => {
+    historyRef.current.record(command);
+    afterWorldMutation({ resync: false, ...options });
+    setStatus(command.label || 'Edited');
+  }, [afterWorldMutation]);
+
   const assetResolverRef = useRef(assetResolver);
   assetResolverRef.current = assetResolver;
 
@@ -1920,39 +1927,42 @@ export function EditorProvider({ children }) {
     if (!current || mode === 'play') return;
     const {
       undoable = true,
+      replace = false,
       label = 'Edit world scene',
     } = options;
-    const before = normalizeWorldScene(current.scene);
-    const after = normalizeWorldScene({
-      ...before,
-      ...partial,
-      fog: normalizeWorldFog({
-        ...before.fog,
-        ...(partial?.fog && typeof partial.fog === 'object' ? partial.fog : {}),
-      }),
-      sky: {
-        ...before.sky,
-        ...(partial?.sky && typeof partial.sky === 'object' ? partial.sky : {}),
-      },
-      groundedSkybox: {
-        ...before.groundedSkybox,
-        ...(partial?.groundedSkybox && typeof partial.groundedSkybox === 'object'
-          ? partial.groundedSkybox
-          : {}),
-      },
-      backgroundRotation: {
-        ...before.backgroundRotation,
-        ...(partial?.backgroundRotation && typeof partial.backgroundRotation === 'object'
-          ? partial.backgroundRotation
-          : {}),
-      },
-      environmentRotation: {
-        ...before.environmentRotation,
-        ...(partial?.environmentRotation && typeof partial.environmentRotation === 'object'
-          ? partial.environmentRotation
-          : {}),
-      },
-    });
+    const base = normalizeWorldScene(current.scene);
+    const after = replace
+      ? normalizeWorldScene(partial)
+      : normalizeWorldScene({
+        ...base,
+        ...partial,
+        fog: normalizeWorldFog({
+          ...base.fog,
+          ...(partial?.fog && typeof partial.fog === 'object' ? partial.fog : {}),
+        }),
+        sky: {
+          ...base.sky,
+          ...(partial?.sky && typeof partial.sky === 'object' ? partial.sky : {}),
+        },
+        groundedSkybox: {
+          ...base.groundedSkybox,
+          ...(partial?.groundedSkybox && typeof partial.groundedSkybox === 'object'
+            ? partial.groundedSkybox
+            : {}),
+        },
+        backgroundRotation: {
+          ...base.backgroundRotation,
+          ...(partial?.backgroundRotation && typeof partial.backgroundRotation === 'object'
+            ? partial.backgroundRotation
+            : {}),
+        },
+        environmentRotation: {
+          ...base.environmentRotation,
+          ...(partial?.environmentRotation && typeof partial.environmentRotation === 'object'
+            ? partial.environmentRotation
+            : {}),
+        },
+      });
 
     const onApply = (scene) => {
       runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
@@ -1962,7 +1972,7 @@ export function EditorProvider({ children }) {
       executeCommand(
         new SetWorldSceneCommand({
           world: current,
-          before,
+          before: base,
           after,
           label,
           onApply,
@@ -1977,19 +1987,46 @@ export function EditorProvider({ children }) {
     bump();
   }, [mode, bump, executeCommand]);
 
+  /**
+   * After a live (non-undoable) scrub/type session, record one undo step from
+   * `beforeSnapshot` → current scene without re-applying.
+   */
+  const commitWorldSceneGesture = useCallback((beforeSnapshot, label = 'Edit world scene') => {
+    const current = worldRef.current;
+    if (!current || mode === 'play' || !beforeSnapshot) return;
+    const before = normalizeWorldScene(beforeSnapshot);
+    const after = normalizeWorldScene(current.scene);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const onApply = (scene) => {
+      runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
+    };
+    recordCommand(
+      new SetWorldSceneCommand({
+        world: current,
+        before,
+        after,
+        label,
+        onApply,
+      }),
+    );
+  }, [mode, recordCommand]);
+
   /** Level-authored WebGLRenderer look (tone mapping + shadows). */
   const updateWorldRenderer = useCallback((partial, options = {}) => {
     const current = worldRef.current;
     if (!current || mode === 'play') return;
     const {
       undoable = true,
+      replace = false,
       label = 'Edit world renderer',
     } = options;
     const before = normalizeWorldRenderer(current.renderer);
-    const after = normalizeWorldRenderer({
-      ...before,
-      ...partial,
-    });
+    const after = replace
+      ? normalizeWorldRenderer(partial)
+      : normalizeWorldRenderer({
+        ...before,
+        ...partial,
+      });
     const onApply = (renderer) => {
       runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
     };
@@ -2010,6 +2047,26 @@ export function EditorProvider({ children }) {
     onApply(after);
     bump();
   }, [mode, bump, executeCommand]);
+
+  const commitWorldRendererGesture = useCallback((beforeSnapshot, label = 'Edit world renderer') => {
+    const current = worldRef.current;
+    if (!current || mode === 'play' || !beforeSnapshot) return;
+    const before = normalizeWorldRenderer(beforeSnapshot);
+    const after = normalizeWorldRenderer(current.renderer);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const onApply = (renderer) => {
+      runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
+    };
+    recordCommand(
+      new SetWorldRendererCommand({
+        world: current,
+        before,
+        after,
+        label,
+        onApply,
+      }),
+    );
+  }, [mode, recordCommand]);
 
   const applyPostProcessingToView = useCallback((settings) => {
     runtimeRef.current?.sceneView?.applyPostProcessing?.(settings);
@@ -3703,7 +3760,9 @@ export function EditorProvider({ children }) {
     updateSelectedLight,
     updateWorldAmbient,
     updateWorldScene,
+    commitWorldSceneGesture,
     updateWorldRenderer,
+    commitWorldRendererGesture,
     updateWorldPostProcessing,
     resetWorldPostProcessingEffect,
     resetWorldPostProcessingAll,

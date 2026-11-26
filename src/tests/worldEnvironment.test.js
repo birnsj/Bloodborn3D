@@ -7,6 +7,7 @@ import {
 import { isEnvironmentMapAsset } from '../assets/AssetRegistry.js';
 import { isEnvironmentMapPath } from '../runtime/environmentMapCache.js';
 import { SetWorldSceneCommand, SetWorldRendererCommand } from '../editor/history/commands.js';
+import { HistoryStack } from '../editor/history/HistoryStack.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
 import { World } from '../core/World.js';
@@ -65,6 +66,40 @@ describe('world scene / renderer undo commands', () => {
     expect(world.renderer.outputColorSpace).toBe('srgb-linear');
     rCmd.undo();
     expect(world.renderer.outputColorSpace).toBe('srgb');
+  });
+
+  it('HistoryStack.record captures one scrub gesture without re-applying do()', () => {
+    const world = new World({ name: 'Scrub' });
+    const history = new HistoryStack();
+    const before = normalizeWorldScene(world.scene);
+    // Live preview already applied (undoable:false path).
+    world.scene = normalizeWorldScene({
+      ...before,
+      environmentIntensity: 2.25,
+      backgroundBlurriness: 0.4,
+    });
+    const after = normalizeWorldScene(world.scene);
+    let applyCount = 0;
+    history.record(new SetWorldSceneCommand({
+      world,
+      before,
+      after,
+      label: 'Edit environment intensity',
+      onApply: () => { applyCount += 1; },
+    }));
+    expect(history.canUndo).toBe(true);
+    expect(applyCount).toBe(0);
+    expect(world.scene.environmentIntensity).toBe(2.25);
+
+    history.undo();
+    expect(world.scene.environmentIntensity).toBe(before.environmentIntensity);
+    expect(world.scene.backgroundBlurriness).toBe(before.backgroundBlurriness);
+    expect(applyCount).toBe(1);
+
+    history.redo();
+    expect(world.scene.environmentIntensity).toBe(2.25);
+    expect(world.scene.backgroundBlurriness).toBe(0.4);
+    expect(applyCount).toBe(2);
   });
 });
 

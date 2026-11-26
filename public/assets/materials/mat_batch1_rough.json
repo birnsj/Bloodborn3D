@@ -1,0 +1,9 @@
+{
+  "id": "mat_batch1_rough",
+  "name": "Batch1 Matte",
+  "baseColor": "#7a8494",
+  "roughness": 0.95,
+  "metalness": 0,
+  "maps": {},
+  "faceOverrides": {}
+}

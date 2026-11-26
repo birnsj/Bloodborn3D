@@ -1134,22 +1134,67 @@
     {
       "id": "tex_batch1_studio",
       "kind": "texture",
-      "name": "Batch1 Studio HDR",
+      "name": "Poly Haven Studio Small 09",
       "folder": "Environments",
       "path": "textures/tex_batch1_studio.hdr",
-      "originalName": "tex_batch1_studio.hdr",
+      "originalName": "studio_small_09_1k.hdr",
       "tags": [
         "environment",
         "hdri",
-        "batch1"
+        "batch1",
+        "polyhaven",
+        "cc0"
       ],
       "meta": {
         "format": "hdr",
-        "bytes": 53,
-        "environmentMap": true
+        "bytes": 1615248,
+        "environmentMap": true,
+        "source": "https://polyhaven.com/a/studio_small_09",
+        "license": "CC0",
+        "attribution": "Poly Haven — studio_small_09 (1k HDR)"
       },
       "createdAt": 1795717842026,
-      "updatedAt": 1795717842026
+      "updatedAt": 1795720000000
+    },
+    {
+      "id": "mat_batch1_metal",
+      "kind": "material",
+      "name": "Batch1 Chrome",
+      "folder": "Materials",
+      "path": "materials/mat_batch1_metal.json",
+      "originalName": "mat_batch1_metal.json",
+      "tags": [
+        "batch1",
+        "metal"
+      ],
+      "meta": {
+        "baseColor": "#cfd6e0",
+        "roughness": 0.12,
+        "metalness": 1,
+        "hasBaseMap": false
+      },
+      "createdAt": 1795718430764,
+      "updatedAt": 1795718430764
+    },
+    {
+      "id": "mat_batch1_rough",
+      "kind": "material",
+      "name": "Batch1 Matte",
+      "folder": "Materials",
+      "path": "materials/mat_batch1_rough.json",
+      "originalName": "mat_batch1_rough.json",
+      "tags": [
+        "batch1",
+        "rough"
+      ],
+      "meta": {
+        "baseColor": "#7a8494",
+        "roughness": 0.95,
+        "metalness": 0,
+        "hasBaseMap": false
+      },
+      "createdAt": 1795718430764,
+      "updatedAt": 1795718430764
     }
   ]
 }

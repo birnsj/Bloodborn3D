@@ -371,6 +371,9 @@ Priorities **P0–P2 within each batch**. Implement batches in order where possi
 | P2 | Shadow type UI: remove Soft deprecation footgun | enum | PCFSoft→PCF | **Done** |
 
 **Acceptance level:** `public/levels/acceptance-world-settings.json`  
+**Acceptance report:** `docs/ACCEPTANCE_WORLD_SETTINGS.md`  
+**HDRI:** Poly Haven `studio_small_09` 1k (CC0) as `tex_batch1_studio`  
+**Corrections (post Batch 1):** numeric World Settings scrub → one `HistoryStack.record` undo entry; real licensed HDRI + browser visual pass.  
 **Unlocks:** Physical materials response to real env; Batch 3 RectArea look.
 
 ### Batch 2 — Materials
