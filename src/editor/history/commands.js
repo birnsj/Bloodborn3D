@@ -384,6 +384,39 @@ export class SetWorldSceneCommand {
 }
 
 /**
+ * Replace map-authored world.ambient settings (scene fill).
+ */
+export class SetWorldAmbientCommand {
+  constructor({
+    world,
+    before,
+    after,
+    label = 'Edit world ambient',
+    onApply = null,
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+    this.onApply = onApply;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    if (!this.world) return;
+    this.world.ambient = structuredClone(state);
+    this.onApply?.(this.world.ambient);
+  }
+}
+
+/**
  * Replace map-authored world.renderer settings.
  */
 export class SetWorldRendererCommand {

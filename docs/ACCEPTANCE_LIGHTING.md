@@ -37,6 +37,8 @@
 | Shadow bias/radius/camera authorable | Pass |
 | Save/reload + legacy light look defaults | Pass |
 | Light scrub → one Undo entry | Pass |
+| World Ambient intensity scrub → live preview + one Undo (HistoryStack) | Pass |
+| World Ambient cancel / undo / redo / dirty / save-reload | Pass |
 | Duplicate / create/delete dispose | Pass |
 | Multi-pane + Fog/PP | Pass |
 | Play/Stop | Pass |
@@ -49,14 +51,19 @@
 2. `02-spot-gobo-flare.png`  
 3. `03-light-details-shadows.png`  
 
-## Native / tracked limits
+## Native / documented limits
 
-See inventory **Batch 3 residuals**: RectArea no shadows; area lighting primarily for Standard/Physical; World Ambient Undo still pre-existing.
+| Item | Note |
+| --- | --- |
+| RectAreaLight shadows | Three.js WebGL: no cast shadows; no shadow UI |
+| RectArea + Basic/Toon/Matcap | Softbox intended for Standard/Physical; other models may not receive area lighting |
+| Lensflare occlusion | Perspective depth test = official Lensflare addon; ortho panes hide flares |
+| World Ambient Undo | **Done** — shared World Settings history (`SetWorldAmbientCommand`), not a separate stack |
 
 ## Gates
 
 | Gate | Result |
 | --- | --- |
-| Unit | `npm test` (includes `batch3Lighting.test.js`) |
+| Unit | `npm test` (includes `batch3Lighting.test.js`, ambient undo in `worldEnvironment.test.js`) |
 | Lint | `npm run lint` |
 | Build | `npm run build` |

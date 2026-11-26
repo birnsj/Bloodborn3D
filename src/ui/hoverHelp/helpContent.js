@@ -24,8 +24,8 @@ export const HELP_CONTENT = {
 
   'world.ambient': {
     title: 'World Ambient',
-    body: 'Scene fill for the whole level (studio IBL, tint, and editor fill lights). Separate from placeable Ambient Light actors. Edit intensity applies in the editor; Play intensity applies when you enter Play.',
-    tips: 'Black color or intensity 0 removes fill light. G = Game View. Ctrl+move = orbit. Alt+Move/Rotate/Scale = duplicate.',
+    body: 'Scene fill for the whole level (studio IBL, tint, and editor fill lights). Separate from placeable Ambient Light actors. Edit intensity applies in the editor; Play intensity applies when you enter Play. Intensity scrub uses the same World Settings HistoryStack as Scene/Renderer: live preview while dragging, one Undo entry on commit; Escape cancels to the pre-scrub values.',
+    tips: 'Black color or intensity 0 removes fill light. G = Game View. Color changes are undoable immediately.',
   },
 
   'world.scene': {
@@ -318,7 +318,7 @@ export const HELP_CONTENT = {
   },
   'toolbar.rectAreaLight': {
     title: 'Rect Area Light',
-    body: 'Places a RectAreaLight panel (width/height). Soft area lighting for MeshStandard/Physical materials. No shadows. Initializes RectAreaLightUniformsLib once.',
+    body: 'Places a RectAreaLight panel (width/height). Soft area lighting for MeshStandardMaterial and MeshPhysicalMaterial. Three.js WebGL does not cast RectAreaLight shadows — there is no shadow toggle. Basic, Toon, and Matcap materials typically do not receive area lighting. Initializes RectAreaLightUniformsLib once.',
   },
   'toolbar.ambientLight': {
     title: 'Ambient Light (actor)',
@@ -599,7 +599,7 @@ export const HELP_CONTENT = {
   },
   'details.light.rectArea': {
     title: 'Rect Area Size',
-    body: 'Width/height in editor units (100 eu = 1 m). RectAreaLight does not cast shadows.',
+    body: 'Width/height in editor units (100 eu = 1 m). Native Three.js RectAreaLight never casts shadows (no UI affordance). Softbox contribution is intended for Standard/Physical; Basic/Toon/Matcap may ignore area lights.',
   },
   'details.light.decay': {
     title: 'Decay',
@@ -623,7 +623,7 @@ export const HELP_CONTENT = {
   },
   'details.light.lensflare': {
     title: 'Lensflare',
-    body: 'Official three/addons Lensflare with local CC0 flare textures. Soft/Bright presets. Hidden in orthographic panes; works with Fog/PP in perspective.',
+    body: 'Official three/addons Lensflare with local CC0 flare textures. Soft/Bright presets. Hidden in orthographic panes (editor policy). In perspective, occlusion follows the addon’s depth test against the scene — deep/edge occlusion cases match Three.js behavior, not a custom BloodBound raycast.',
   },
   'details.light.helper': {
     title: 'Light Helper',

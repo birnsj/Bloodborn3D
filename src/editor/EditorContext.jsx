@@ -43,6 +43,7 @@ import {
   SetLightPropertiesCommand,
   SetWorldPostProcessingCommand,
   SetWorldSceneCommand,
+  SetWorldAmbientCommand,
   SetWorldRendererCommand,
   SetStaticMeshPropertiesCommand,
   SetRampPropertiesCommand,
@@ -1939,19 +1940,72 @@ export function EditorProvider({ children }) {
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
-  /** Level-authored scene fill (World Settings). Not an actor light. */
-  const updateWorldAmbient = useCallback((partial) => {
+  /**
+   * Level-authored scene fill (World Settings). Not an actor light.
+   * @param {object} partial
+   * @param {{ undoable?: boolean, replace?: boolean, label?: string }} [options]
+   *   undoable defaults true; set false while scrubbing, then commitWorldAmbientGesture.
+   */
+  const updateWorldAmbient = useCallback((partial, options = {}) => {
     const current = worldRef.current;
     if (!current || mode === 'play') return;
+    const {
+      undoable = true,
+      replace = false,
+      label = 'Edit world ambient',
+    } = options;
     // Promote legacy AmbientLight-scale defaults once, then apply the edit.
     const base = migrateLegacyWorldAmbient(current.ambient);
-    current.ambient = normalizeWorldAmbient({
-      ...base,
-      ...partial,
-    });
-    runtimeRef.current?.sceneView?.applyWorldAmbient?.(current.ambient);
+    const after = replace
+      ? normalizeWorldAmbient(partial)
+      : normalizeWorldAmbient({
+        ...base,
+        ...partial,
+      });
+    const onApply = (ambient) => {
+      runtimeRef.current?.sceneView?.applyWorldAmbient?.(ambient);
+    };
+    if (undoable) {
+      executeCommand(
+        new SetWorldAmbientCommand({
+          world: current,
+          before: normalizeWorldAmbient(base),
+          after,
+          label,
+          onApply,
+        }),
+      );
+      bump();
+      return;
+    }
+    current.ambient = after;
+    onApply(after);
     bump();
-  }, [mode, bump]);
+  }, [mode, bump, executeCommand]);
+
+  /**
+   * After a live (non-undoable) ambient scrub/type session, record one undo step
+   * from `beforeSnapshot` → current ambient without re-applying.
+   */
+  const commitWorldAmbientGesture = useCallback((beforeSnapshot, label = 'Edit world ambient') => {
+    const current = worldRef.current;
+    if (!current || mode === 'play' || !beforeSnapshot) return;
+    const before = normalizeWorldAmbient(beforeSnapshot);
+    const after = normalizeWorldAmbient(current.ambient);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const onApply = (ambient) => {
+      runtimeRef.current?.sceneView?.applyWorldAmbient?.(ambient);
+    };
+    recordCommand(
+      new SetWorldAmbientCommand({
+        world: current,
+        before,
+        after,
+        label,
+        onApply,
+      }),
+    );
+  }, [mode, recordCommand]);
 
   /** Level-authored Three.js Scene look (background + fog + environment). */
   const updateWorldScene = useCallback((partial, options = {}) => {
@@ -3792,6 +3846,7 @@ export function EditorProvider({ children }) {
     updateSelectedLight,
     commitLightGesture,
     updateWorldAmbient,
+    commitWorldAmbientGesture,
     updateWorldScene,
     commitWorldSceneGesture,
     updateWorldRenderer,

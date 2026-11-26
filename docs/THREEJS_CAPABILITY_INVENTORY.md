@@ -434,7 +434,7 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | RectAreaLight shadows | **N/A (native)** | Three.js WebGL RectAreaLight does not cast shadows | Documented in Details + acceptance; no false UI affordance | Three.js limitation |
 | RectArea + Basic/Toon/Matcap | **Documented** | Batch 2 shading models | Softbox visible on Standard/Physical in acceptance; Basic/Toon/Matcap may not receive area lighting | Batch 2 materials |
 | Lensflare occlusion fidelity | **Accepted** | Official Lensflare depth test vs scene | Perspective visibility + ortho hide verified; deep occlusion edge cases follow Three.js addon | Batch 3 Lensflare |
-| World Ambient Undo | **Tracked (pre-existing)** | World Settings ambient still outside `HistoryStack` | Separate from actor light scrub undo (Batch 3 Complete) | Batch 1 residual note |
+| World Ambient Undo | **Done** | Same World Settings `HistoryStack` as Scene/Renderer (`SetWorldAmbientCommand`) | Live preview while scrubbing; one undo entry per completed intensity gesture; Escape cancels; color changes undoable; dirty + save/reload verified | Batch 3 Acceptance Correction |
 
 ### Batch 4 — Environmental objects
 

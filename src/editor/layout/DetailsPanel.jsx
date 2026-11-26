@@ -32,6 +32,7 @@ import {
   WORLD_OUTPUT_COLOR_SPACES,
   normalizeWorldScene,
   normalizeWorldRenderer,
+  normalizeWorldAmbient,
 } from '../../core/World.js';
 import { PostProcessingSettings } from '../postprocessing/PostProcessingSettings.jsx';
 import {
@@ -43,7 +44,7 @@ import {
 
 /**
  * Live-preview scrub with one undo entry per completed gesture.
- * @param {'scene'|'renderer'} kind
+ * @param {'scene'|'renderer'|'ambient'} kind
  */
 function useWorldNumericGesture(kind) {
   const {
@@ -52,28 +53,36 @@ function useWorldNumericGesture(kind) {
     commitWorldSceneGesture,
     updateWorldRenderer,
     commitWorldRendererGesture,
+    updateWorldAmbient,
+    commitWorldAmbientGesture,
   } = useEditor();
   const beforeRef = useRef(null);
 
   const begin = useCallback(() => {
     if (!world || beforeRef.current) return;
-    beforeRef.current = kind === 'renderer'
-      ? structuredClone(normalizeWorldRenderer(world.renderer))
-      : structuredClone(normalizeWorldScene(world.scene));
+    if (kind === 'renderer') {
+      beforeRef.current = structuredClone(normalizeWorldRenderer(world.renderer));
+    } else if (kind === 'ambient') {
+      beforeRef.current = structuredClone(normalizeWorldAmbient(world.ambient));
+    } else {
+      beforeRef.current = structuredClone(normalizeWorldScene(world.scene));
+    }
   }, [world, kind]);
 
   const live = useCallback((partial) => {
     if (kind === 'renderer') updateWorldRenderer?.(partial, { undoable: false });
+    else if (kind === 'ambient') updateWorldAmbient?.(partial, { undoable: false });
     else updateWorldScene?.(partial, { undoable: false });
-  }, [kind, updateWorldScene, updateWorldRenderer]);
+  }, [kind, updateWorldScene, updateWorldRenderer, updateWorldAmbient]);
 
   const commit = useCallback((label) => {
     const before = beforeRef.current;
     beforeRef.current = null;
     if (!before) return;
     if (kind === 'renderer') commitWorldRendererGesture?.(before, label);
+    else if (kind === 'ambient') commitWorldAmbientGesture?.(before, label);
     else commitWorldSceneGesture?.(before, label);
-  }, [kind, commitWorldSceneGesture, commitWorldRendererGesture]);
+  }, [kind, commitWorldSceneGesture, commitWorldRendererGesture, commitWorldAmbientGesture]);
 
   const cancel = useCallback(() => {
     const before = beforeRef.current;
@@ -81,10 +90,12 @@ function useWorldNumericGesture(kind) {
     if (!before) return;
     if (kind === 'renderer') {
       updateWorldRenderer?.(before, { undoable: false, replace: true });
+    } else if (kind === 'ambient') {
+      updateWorldAmbient?.(before, { undoable: false, replace: true });
     } else {
       updateWorldScene?.(before, { undoable: false, replace: true });
     }
-  }, [kind, updateWorldScene, updateWorldRenderer]);
+  }, [kind, updateWorldScene, updateWorldRenderer, updateWorldAmbient]);
 
   return { begin, live, commit, cancel };
 }
@@ -2522,7 +2533,8 @@ function WorldSettings() {
       <Collapsible title="Ambient Light" storageKey="world.ambient" defaultOpen>
         <p className="bb-muted" {...helpProps('world.ambient')}>
           Scene fill (AmbientLight + editor fills). With RoomEnvironment fallback, also scales IBL.
-          Authored HDRI uses Environment intensity instead. G = Game View.
+          Authored HDRI uses Environment intensity instead. Numeric scrub = live preview + one Undo
+          entry (same World Settings history as Scene/Renderer).
         </p>
         <label className="bb-field">
           <span className="bb-field__label">Color</span>
@@ -2531,31 +2543,33 @@ function WorldSettings() {
             type="color"
             disabled={disabled}
             value={normalizeHex(ambient.color)}
-            onChange={(e) => updateWorldAmbient?.({ color: e.target.value })}
+            onChange={(e) => updateWorldAmbient?.({ color: e.target.value }, { label: 'Edit ambient color' })}
           />
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Edit intensity</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            kind="ambient"
+            patch="intensity"
+            label="Edit ambient intensity"
             step={0.05}
             min={0}
             max={4}
             disabled={disabled}
             value={ambient.intensity}
-            onChange={(v) => updateWorldAmbient?.({ intensity: v })}
           />
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Play intensity</span>
-          <ScrubNumberInput
-            className="bb-input"
+          <WorldScrubNumber
+            kind="ambient"
+            patch="playIntensity"
+            label="Edit ambient play intensity"
             step={0.05}
             min={0}
             max={4}
             disabled={disabled}
             value={ambient.playIntensity}
-            onChange={(v) => updateWorldAmbient?.({ playIntensity: v })}
           />
         </label>
       </Collapsible>
