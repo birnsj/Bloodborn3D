@@ -6,7 +6,7 @@
 **Harness:** `src/dev/integratedEditorAcceptance.js`  
 **CDP entry:** `import('/src/dev/integratedEditorAcceptance.js').then(m => m.runIntegratedEditorAcceptance())`  
 **Screenshots:** `docs/acceptance-integrated-editor/`  
-**Commit:** pending hash  
+**Commit:** `8b4ded6`  
 **Unit tests:** **1,081 passed**
 
 ## Objective
@@ -98,4 +98,4 @@ Automation cannot adequately evaluate:
 | Unit tests | **1,081 passed** |
 | Lint | Pass (warnings only; pre-existing) |
 | Production build | Pass |
-| Commit | Recorded after push |
+| Commit | `8b4ded6` |
