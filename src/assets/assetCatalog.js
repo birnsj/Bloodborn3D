@@ -62,6 +62,17 @@ function buildPreview(entry, materialDef) {
     };
   }
   if (entry.kind === ASSET_KINDS.mesh) {
+    const previewPath = entry.meta?.previewPath;
+    if (previewPath) {
+      const base = publicAssetUrl(previewPath);
+      const v = Number(entry.updatedAt) || 0;
+      const sep = base?.includes('?') ? '&' : '?';
+      return {
+        kind: 'image',
+        url: base && v ? `${base}${sep}v=${v}` : base,
+        note: 'glTF / GLB model',
+      };
+    }
     return {
       kind: 'mesh',
       url: publicAssetUrl(entry.path),

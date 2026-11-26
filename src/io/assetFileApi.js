@@ -75,6 +75,23 @@ export async function importMeshFile(file) {
   return res.json();
 }
 
+/** Upload a browser-baked PNG thumbnail for a mesh asset. */
+export async function uploadMeshPreview(id, blob) {
+  const res = await fetch(
+    `/api/assets?action=mesh-preview&id=${encodeURIComponent(id)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: blob,
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Mesh preview upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function createMaterial(definition) {
   const res = await fetch('/api/assets?action=create-material', {
     method: 'POST',

@@ -108,6 +108,14 @@ describe('Phase 2B asset registry + scale', () => {
     const catalog = toCatalogAsset(entry);
     expect(catalog.id).toBe('mesh_abc');
     expect(catalog.type).toBe('mesh');
+    expect(catalog.preview.kind).toBe('mesh');
+
+    entry.meta = { previewPath: 'previews/mesh_abc_mesh.png' };
+    entry.updatedAt = 42;
+    const withThumb = toCatalogAsset(entry);
+    expect(withThumb.preview.kind).toBe('image');
+    expect(withThumb.preview.url).toContain('previews/mesh_abc_mesh.png');
+    expect(withThumb.preview.url).toContain('v=42');
 
     // Path change must not change ID
     entry.path = 'meshes/relocated/mesh_abc.glb';

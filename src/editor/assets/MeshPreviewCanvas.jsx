@@ -1,16 +1,28 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { cloneLoadedMesh } from '../../runtime/meshLoader.js';
 import { createThreeMaterial, assetUrl } from '../../runtime/materialFactory.js';
 import { disposeObjectTree, disposeOwnedMaterial } from '../../runtime/gpuResources.js';
 import { installStudioEnvironment } from '../../runtime/studioEnvironment.js';
+import { MESH_THUMB_SIZE } from './meshThumbnailBake.js';
 
 /**
  * Independent Three.js preview for Asset Viewer — not a GameRuntime.
+ * Imperative API: `captureIconPngBlob({ size })` for Generate Icon from the current camera.
  */
-export function MeshPreviewCanvas({ url }) {
+export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, ref) {
   const canvasRef = useRef(null);
+  const apiRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    captureIconPngBlob: (opts) => {
+      if (!apiRef.current?.captureIconPngBlob) {
+        return Promise.reject(new Error('Mesh preview is not ready'));
+      }
+      return apiRef.current.captureIconPngBlob(opts);
+    },
+  }), []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -81,6 +93,51 @@ export function MeshPreviewCanvas({ url }) {
       fit(root);
     });
 
+    apiRef.current = {
+      async captureIconPngBlob({ size = MESH_THUMB_SIZE } = {}) {
+        if (disposed) throw new Error('Mesh preview was closed');
+        if (!root) throw new Error('Mesh is still loading');
+
+        controls.update();
+        const prevGrid = grid.visible;
+        grid.visible = false;
+
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = size;
+        thumbCanvas.height = size;
+        const thumbRenderer = new THREE.WebGLRenderer({
+          canvas: thumbCanvas,
+          antialias: true,
+          alpha: true,
+          preserveDrawingBuffer: true,
+          powerPreference: 'low-power',
+        });
+        thumbRenderer.setPixelRatio(1);
+        thumbRenderer.setSize(size, size, false);
+        thumbRenderer.outputColorSpace = THREE.SRGBColorSpace;
+        thumbRenderer.setClearColor(0x141820, 1);
+
+        const prevAspect = camera.aspect;
+        camera.aspect = 1;
+        camera.updateProjectionMatrix();
+        try {
+          thumbRenderer.render(scene, camera);
+          const blob = await new Promise((resolve, reject) => {
+            thumbCanvas.toBlob(
+              (b) => (b ? resolve(b) : reject(new Error('Failed to encode mesh icon PNG'))),
+              'image/png',
+            );
+          });
+          return blob;
+        } finally {
+          camera.aspect = prevAspect;
+          camera.updateProjectionMatrix();
+          grid.visible = prevGrid;
+          thumbRenderer.dispose();
+        }
+      },
+    };
+
     const tick = () => {
       if (disposed) return;
       controls.update();
@@ -91,6 +148,7 @@ export function MeshPreviewCanvas({ url }) {
 
     return () => {
       disposed = true;
+      apiRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
@@ -104,7 +162,7 @@ export function MeshPreviewCanvas({ url }) {
   }, [url]);
 
   return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
-}
+});
 
 /**
  * Lit PBR material preview for Asset Viewer / Materials workspace.

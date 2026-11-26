@@ -43,8 +43,14 @@ export const HELP_CONTENT = {
   'toolbar.save': {
     title: 'Save Level',
     body: 'Writes the current level JSON to disk under public/levels using the filename in the level field.',
-    tips: 'Stop Play before saving. Play mode blocks save so runtime changes cannot overwrite authored data.',
+    tips: 'Stop Play before saving. Play mode blocks save so runtime changes cannot overwrite authored data. Use Save All (Ctrl+Shift+S) for level + dirty materials.',
     shortcut: 'Ctrl+S',
+  },
+  'menu.saveAll': {
+    title: 'Save All',
+    body: 'Saves dirty content modules (level and open material drafts). Does not save workspace layout — use Window → Layout for that.',
+    tips: 'Same idea as Unreal Save All: flush authored content, not editor UI layout.',
+    shortcut: 'Ctrl+Shift+S',
   },
   'toolbar.undo': {
     title: 'Undo',
@@ -600,7 +606,7 @@ export const HELP_CONTENT = {
   },
   'meshy.import': {
     title: 'Import Meshy model',
-    body: 'Downloads the staged GLB into project Meshes via the existing mesh pipeline. Repositions the pivot to bottom-center (feet on the origin) and, for upright character-like meshes, bakes scale to ~1.75 m tall. Preserves embedded materials/textures. Does not create expensive colliders.',
+    body: 'Downloads the staged GLB into project Meshes via the existing mesh pipeline. Repositions the pivot to bottom-center (feet on the origin) and, for upright character-like meshes, bakes scale to ~1.75 m tall. A browser WebGL pass writes an Asset Viewer thumbnail afterward. Preserves embedded materials/textures. Does not create expensive colliders.',
   },
   'meshy.discard': {
     title: 'Discard Meshy result',
@@ -739,7 +745,7 @@ export const HELP_CONTENT = {
   },
   'content.importMesh': {
     title: 'Import Mesh',
-    body: 'Imports a glTF/GLB mesh. BloodBound assumes meters in the file and 100 editor units per meter—no automatic rescale.',
+    body: 'Imports a glTF/GLB mesh. BloodBound assumes meters in the file and 100 editor units per meter—no automatic rescale. After import, the editor bakes a small WebGL thumbnail for the Asset Viewer grid.',
     tips: 'Drag a mesh from the Asset Viewer into the viewport to place a Static Mesh actor.',
   },
   'content.newMaterial': {
@@ -772,6 +778,10 @@ export const HELP_CONTENT = {
   'assetViewer.preview': {
     title: 'Asset Preview',
     body: 'Temporary window with a texture, material, or mesh preview. Open with double-click; close with Esc or Close. Separate from the level viewport.',
+  },
+  'assetViewer.generateMeshIcon': {
+    title: 'Generate Icon',
+    body: 'Saves the current mesh preview camera view as the Asset Viewer thumbnail (square PNG). Orbit/pan/zoom first to frame the shot you want.',
   },
   'assetViewer.thumbSize': {
     title: 'Thumbnail Size',

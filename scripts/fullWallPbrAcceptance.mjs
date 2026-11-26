@@ -249,10 +249,10 @@ async function main() {
 
   const tiling = { tileHorizontal: true, tileVertical: false };
   const normal = {
-    strength: 1.15,
-    fineDetail: 0.6,
-    largeScale: 0.7,
-    smoothing: 0.3,
+    strength: 2.85,
+    fineDetail: 0.9,
+    largeScale: 0.85,
+    smoothing: 0.22,
     invertHeight: false,
     invertY: false,
   };
@@ -311,7 +311,9 @@ async function main() {
     ...matBefore,
     normalMapId: normalId,
     roughnessMapId: roughnessId,
-    normalScale: matBefore.normalScale ?? 1,
+    normalScale: Number.isFinite(Number(matBefore.normalScale)) && Number(matBefore.normalScale) > 1
+      ? Number(matBefore.normalScale)
+      : 4,
     roughness: 1,
     metalness: 0,
     uvScale,

@@ -36,10 +36,12 @@
           "x": 1,
           "y": 1,
           "z": 1
-        }
+        },
+        "previewPath": "previews/mesh_verify_cube_mesh.png",
+        "previewBytes": 5753
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795405329387
+      "updatedAt": 1795673996689
     },
     {
       "id": "mat_verify_wall",
@@ -568,10 +570,11 @@
         "previewPath": "previews/mat_0807fae227e1_sphere.png",
         "pbrSourceTextureId": "tex_c62b419b178b",
         "tileHorizontal": true,
-        "tileVertical": false
+        "tileVertical": false,
+        "normalScale": 4
       },
       "createdAt": 1795665630908,
-      "updatedAt": 1795667739818
+      "updatedAt": 1795674630263
     },
     {
       "id": "tex_b24283819269",
@@ -611,10 +614,11 @@
         "previewPath": "previews/mat_f54dab845869_sphere.png",
         "pbrSourceTextureId": "tex_b24283819269",
         "tileHorizontal": true,
-        "tileVertical": false
+        "tileVertical": false,
+        "normalScale": 5.5
       },
       "createdAt": 1795665950910,
-      "updatedAt": 1795668429308
+      "updatedAt": 1795674630891
     },
     {
       "id": "tex_7e918f2f33af",
@@ -646,11 +650,11 @@
       ],
       "meta": {
         "format": "png",
-        "bytes": 1670279,
+        "bytes": 2150365,
         "magic": "png"
       },
       "createdAt": 1795666572009,
-      "updatedAt": 1795667739609
+      "updatedAt": 1795674630263
     },
     {
       "id": "tex_3c7e68009065",
@@ -666,11 +670,11 @@
       ],
       "meta": {
         "format": "png",
-        "bytes": 1040927,
+        "bytes": 848158,
         "magic": "png"
       },
       "createdAt": 1795666572032,
-      "updatedAt": 1795667739641
+      "updatedAt": 1795674630263
     },
     {
       "id": "tex_172bf9f49ab4",
@@ -686,11 +690,11 @@
       ],
       "meta": {
         "format": "png",
-        "bytes": 1559003,
+        "bytes": 1534007,
         "magic": "png"
       },
       "createdAt": 1795667258172,
-      "updatedAt": 1795667258172
+      "updatedAt": 1795674630891
     },
     {
       "id": "tex_1041f5851be0",
@@ -706,11 +710,11 @@
       ],
       "meta": {
         "format": "png",
-        "bytes": 943181,
+        "bytes": 701408,
         "magic": "png"
       },
       "createdAt": 1795667258219,
-      "updatedAt": 1795667258219
+      "updatedAt": 1795674630891
     },
     {
       "id": "mesh_c34066cb0284",
@@ -809,10 +813,12 @@
         },
         "importScale": 1.8408,
         "sourceHeightMeters": 0.951,
-        "targetHeightMeters": 1.75
+        "targetHeightMeters": 1.75,
+        "previewPath": "previews/mesh_c34066cb0284_mesh.png",
+        "previewBytes": 68686
       },
       "createdAt": 1795672805859,
-      "updatedAt": 1795673585849
+      "updatedAt": 1795674243104
     },
     {
       "id": "mesh_169ce4c7d120",
@@ -908,10 +914,12 @@
           "x": 0,
           "y": 0.4753420054912567,
           "z": 0
-        }
+        },
+        "previewPath": "previews/mesh_169ce4c7d120_mesh.png",
+        "previewBytes": 13027
       },
       "createdAt": 1795673380114,
-      "updatedAt": 1795673380114
+      "updatedAt": 1795673997075
     }
   ]
 }

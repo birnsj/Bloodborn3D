@@ -138,6 +138,14 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'mesh-preview') {
+            const id = url.searchParams.get('id');
+            const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
+            const result = await saveMeshPreviewPng(id, buffer);
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'POST' && action === 'create-material') {
             const body = JSON.parse(await readBody(req));
             const result = await createMaterialAsset(body);
@@ -171,8 +179,9 @@ export function assetFileApiPlugin() {
           sendJson(res, 405, { error: 'Method or action not allowed' });
         } catch (err) {
           const status = err?.code === 'BODY_TOO_LARGE' ? 413
-            : err?.code === 'INVALID_IMAGE' || err?.code === 'PATH_TRAVERSAL' ? 400
-              : 500;
+            : err?.code === 'NOT_FOUND' ? 404
+              : err?.code === 'INVALID_IMAGE' || err?.code === 'PATH_TRAVERSAL' ? 400
+                : 500;
           sendJson(res, status, { error: String(err.message || err), code: err.code || null });
         }
       });
@@ -375,6 +384,39 @@ async function importBinaryAsset(req, kind, allowedExts) {
   return importMeshBuffer(buffer, {
     originalName: base,
     name: stripExt(base),
+  });
+}
+
+/** Save a browser-baked mesh thumbnail PNG and attach meta.previewPath. */
+export async function saveMeshPreviewPng(id, buffer) {
+  if (!id) throw new Error('Missing mesh id');
+  if (!buffer?.length) throw new Error('Empty mesh preview upload');
+  const magic = detectImageMagic(buffer);
+  if (magic !== 'png') {
+    const err = new Error('Mesh preview must be a PNG');
+    err.code = 'INVALID_IMAGE';
+    throw err;
+  }
+
+  const previewRel = `previews/${id}_mesh.png`;
+  const previewFull = resolveSafeAssetPath(previewRel);
+  await fs.mkdir(path.dirname(previewFull), { recursive: true });
+  await fs.writeFile(previewFull, buffer);
+
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'mesh');
+    if (!entry) {
+      const err = new Error('Mesh not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    entry.meta = {
+      ...(entry.meta || {}),
+      previewPath: previewRel,
+      previewBytes: buffer.length,
+    };
+    entry.updatedAt = Date.now();
+    return { ok: true, asset: entry, registry, previewPath: previewRel };
   });
 }
 

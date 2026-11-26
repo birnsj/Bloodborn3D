@@ -23,6 +23,7 @@ import {
   materialDraftForDuplicate,
   materialDraftToSavePayload,
 } from './materialDraft.js';
+import { registerSaveAllModule } from '../saveAllRegistry.js';
 
 const PREVIEW_SHAPES = [
   { id: 'sphere', label: 'Sphere' },
@@ -185,10 +186,24 @@ export function MaterialsWorkspace() {
       setStatus(`Saved material ${saved.name}.`);
     } catch (err) {
       notify(err.message || 'Save failed');
+      throw err;
     } finally {
       setSaving(false);
     }
   }, [draft, dirty, saveMaterialDefinition, notify, setStatus]);
+
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+
+  // Content module for File → Save All (layout is excluded).
+  useEffect(() => registerSaveAllModule({
+    id: 'material-draft',
+    label: 'Material',
+    isDirty: () => dirtyRef.current,
+    save: async () => {
+      await onSaveRef.current?.();
+    },
+  }), []);
 
   const getTextureUrl = assetResolver?.getTextureUrl;
   const canGeneratePbr = Boolean(baseline?.baseColorMapId);

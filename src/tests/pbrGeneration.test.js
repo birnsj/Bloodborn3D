@@ -50,7 +50,7 @@ function rampImage(w, h) {
 
 describe('pbrGeneratorState', () => {
   it('normalizes and clamps params', () => {
-    expect(normalizeNormalParams({ strength: 99 }).strength).toBe(4);
+    expect(normalizeNormalParams({ strength: 99 }).strength).toBe(6);
     expect(normalizeRoughnessParams({ mode: 'uniform', uniformValue: 2 }).uniformValue).toBe(1);
     expect(normalizeRoughnessParams({ min: 0.9, max: 0.1 }).min).toBeLessThanOrEqual(
       normalizeRoughnessParams({ min: 0.9, max: 0.1 }).max,

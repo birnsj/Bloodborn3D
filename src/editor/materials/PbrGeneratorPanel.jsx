@@ -332,7 +332,7 @@ export function PbrGeneratorPanel({
             label="Surface detail strength"
             value={session.normal.strength}
             min={0}
-            max={4}
+            max={6}
             step={0.05}
             onChange={(v) => patchNormal({ strength: v })}
           />

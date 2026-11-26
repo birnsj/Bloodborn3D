@@ -109,6 +109,7 @@ export function AppMenuBar() {
     selectedActorIds,
     saveLevel,
     saveLevelAs,
+    saveAll,
     createNewMap,
     loadLevel,
     isDirty,
@@ -257,6 +258,7 @@ export function AppMenuBar() {
             <Sep />
             <Item label="Save Level" shortcut="Ctrl+S" disabled={isPlay} close={close} onClick={() => saveLevel()} />
             <Item label="Save Level As…" disabled={isPlay} close={close} onClick={() => saveLevelAs()} />
+            <Item label="Save All" shortcut="Ctrl+Shift+S" disabled={isPlay} close={close} onClick={() => saveAll()} helpId="menu.saveAll" />
             <Item label="Reload Level" disabled={isPlay} close={close} onClick={() => loadLevel(levelName)} />
             <Sep />
             {levels.map((name) => {

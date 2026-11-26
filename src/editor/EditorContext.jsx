@@ -11,6 +11,7 @@ import { deserializeLevel } from '../serialization/LevelDeserializer.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { loadLevelFile, saveLevelFile, listLevels } from '../io/levelFileApi.js';
 import { SavedStateTracker, levelFingerprint } from './dirtyTracking.js';
+import { runSaveAll } from './saveAllRegistry.js';
 import {
   createNewMapLevelData,
   normalizeLevelFileName as normalizeNewMapFileName,
@@ -697,6 +698,31 @@ export function EditorProvider({ children }) {
     }
     await writeLevelFile(levelName);
   }, [world, levelName, notify, levelSession, dialogs, saveTutorialWorkAs, writeLevelFile]);
+
+  /** Unreal-style Save All: dirty content modules only (level + registered assets). Not layout. */
+  const saveAll = useCallback(async () => {
+    if (runtimeRef.current?.mode === 'play') {
+      notify('Stop Play before saving');
+      return { saved: [], skipped: [], errors: [] };
+    }
+    const levelMod = {
+      id: 'level',
+      label: levelName || 'Level',
+      isDirty: () => savedStateRef.current.isDirty(worldRef.current),
+      save: async () => {
+        await saveLevel();
+      },
+    };
+    const result = await runSaveAll([levelMod]);
+    if (result.errors.length) {
+      notify(`Save All: ${result.errors.map((e) => `${e.label} (${e.error})`).join('; ')}`);
+    } else if (result.saved.length) {
+      notify(`Saved ${result.saved.join(', ')}`);
+    } else {
+      notify('Nothing to save');
+    }
+    return result;
+  }, [levelName, notify, saveLevel]);
 
   const saveLevelAs = useCallback(async () => {
     if (!world) return;
@@ -3372,6 +3398,7 @@ export function EditorProvider({ children }) {
     loadLevel,
     saveLevel,
     saveLevelAs,
+    saveAll,
     createNewMap,
     isDirty: dirty,
     confirmDiscardChanges,

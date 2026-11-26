@@ -2058,6 +2058,19 @@ select {
   height: 100%;
 }
 
+.bb-asset-preview__surface--live {
+  position: relative;
+}
+
+.bb-asset-preview__mesh-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
 .bb-asset-preview__surface--live canvas {
   width: 100% !important;
   height: 100% !important;

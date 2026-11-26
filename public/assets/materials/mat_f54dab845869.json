@@ -6,7 +6,7 @@
   "baseColor": "#ffffff",
   "baseColorMapId": "tex_b24283819269",
   "normalMapId": "tex_172bf9f49ab4",
-  "normalScale": 5,
+  "normalScale": 5.5,
   "roughness": 1,
   "metalness": 0,
   "roughnessMapId": "tex_1041f5851be0",
@@ -28,31 +28,31 @@
   "uvRotation": 0,
   "previewPath": "previews/mat_f54dab845869_sphere.png",
   "createdAt": 1795665950910,
-  "updatedAt": 1795668429308,
+  "updatedAt": 1795674630767,
   "pbrGenerator": {
     "sourceTextureId": "tex_b24283819269",
     "tileHorizontal": true,
     "tileVertical": false,
     "normal": {
-      "strength": 1.15,
-      "fineDetail": 0.85,
-      "largeScale": 0.65,
-      "smoothing": 0.35,
+      "strength": 2.6,
+      "fineDetail": 0.88,
+      "largeScale": 0.8,
+      "smoothing": 0.22,
       "invertHeight": false,
       "invertY": false
     },
     "roughness": {
       "mode": "derived",
-      "overall": 0.55,
-      "contrast": 1.15,
-      "detail": 0.65,
+      "overall": 0.58,
+      "contrast": 1.25,
+      "detail": 0.75,
       "invert": false,
-      "min": 0.08,
+      "min": 0.1,
       "max": 0.92,
       "uniformValue": 0.72
     },
     "generatedNormalMapId": "tex_172bf9f49ab4",
     "generatedRoughnessMapId": "tex_1041f5851be0",
-    "updatedAt": 1795667258425
+    "updatedAt": 1795674630767
   }
 }

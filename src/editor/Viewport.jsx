@@ -143,6 +143,7 @@ export function Viewport() {
     redo,
     stop,
     saveLevel,
+    saveAll,
     placeMeshAsset,
     placePrefabAsset,
     placeLight,
@@ -1045,7 +1046,8 @@ export function Viewport() {
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        saveLevel();
+        if (e.shiftKey) saveAll();
+        else saveLevel();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
@@ -1090,6 +1092,7 @@ export function Viewport() {
     cancelClipSession,
     commitClipSession,
     saveLevel,
+    saveAll,
     stop,
     clearPlacementSession,
     resolveSurfacePose,

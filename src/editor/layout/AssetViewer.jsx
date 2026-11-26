@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconFolder, IconGrid, IconList, IconSearch } from '../../ui/icons.jsx';
 import { AssetThumbnail } from '../assets/AssetThumbnail.jsx';
@@ -7,6 +7,7 @@ import { useLayout } from './LayoutContext.jsx';
 import { useEditor } from '../EditorContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
+import { uploadMeshPreview } from '../../io/assetFileApi.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import {
@@ -457,11 +458,7 @@ function AssetPreviewDialog({ asset, onClose }) {
 
 function PreviewSurface({ asset }) {
   if (asset.type === 'mesh' && asset.url) {
-    return (
-      <div className="bb-asset-preview__surface bb-asset-preview__surface--live">
-        <MeshPreviewCanvas url={asset.url} />
-      </div>
-    );
+    return <MeshPreviewWithIcon asset={asset} />;
   }
 
   if (asset.type === 'texture' && asset.url) {
@@ -494,6 +491,45 @@ function PreviewSurface({ asset }) {
   );
 }
 
+function MeshPreviewWithIcon({ asset }) {
+  const previewRef = useRef(null);
+  const { notify, refreshRegistry } = useAssetBrowser();
+  const [busy, setBusy] = useState(false);
+
+  const onGenerateIcon = useCallback(async () => {
+    if (!asset?.id || busy) return;
+    setBusy(true);
+    try {
+      const blob = await previewRef.current?.captureIconPngBlob?.();
+      if (!blob) throw new Error('Could not capture mesh icon');
+      await uploadMeshPreview(asset.id, blob);
+      await refreshRegistry?.();
+      notify('Mesh icon saved');
+    } catch (err) {
+      notify(err?.message || String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [asset?.id, busy, notify, refreshRegistry]);
+
+  return (
+    <div className="bb-asset-preview__surface bb-asset-preview__surface--live">
+      <div className="bb-asset-preview__mesh-toolbar">
+        <button
+          type="button"
+          className="bb-btn bb-btn--primary"
+          disabled={busy}
+          onClick={() => { void onGenerateIcon(); }}
+          {...helpProps('assetViewer.generateMeshIcon')}
+        >
+          {busy ? 'Saving…' : 'Generate Icon'}
+        </button>
+      </div>
+      <MeshPreviewCanvas ref={previewRef} url={asset.url} />
+    </div>
+  );
+}
+
 function MaterialPreviewWithMap({ asset }) {
   const { assetResolver } = useAssetBrowser();
   const getTextureUrl = assetResolver?.getTextureUrl;
@@ -514,7 +550,7 @@ function MaterialPreviewWithMap({ asset }) {
 function previewHint(asset) {
   switch (asset.type) {
     case 'mesh':
-      return 'Orbit to inspect. Models load in meters (100 editor units = 1 m). Not the Level Viewport runtime.';
+      return 'Orbit to frame the model, then Generate Icon to save that view as the Asset Viewer thumbnail. Models load in meters (100 editor units = 1 m).';
     case 'material':
       return 'PBR material preview. Assign to brushes from the Details panel.';
     case 'texture':

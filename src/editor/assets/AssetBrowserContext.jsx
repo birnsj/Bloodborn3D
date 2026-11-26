@@ -29,11 +29,16 @@ import {
   replaceTextureFile,
   updateMaterial,
   updatePrefab,
+  uploadMeshPreview,
 } from '../../io/assetFileApi.js';
 import { clearTextureCache } from '../../runtime/materialFactory.js';
 import { normalizePrefabDefinition } from '../../prefabs/PrefabDefinition.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../../ui/dialogs/reportEditorMessage.js';
+import {
+  enqueueMeshThumbnailBake,
+  enqueueMissingMeshThumbnails,
+} from './meshThumbnailBake.js';
 
 const AssetBrowserContext = createContext(null);
 
@@ -122,6 +127,22 @@ export function AssetBrowserProvider({ children }) {
 
       setRegistry(next);
       setRevision((r) => r + 1);
+      // Browser-only: bake PNG thumbs for meshes that still show the glyph.
+      const missingThumbs = next.assets.some(
+        (a) => a.kind === 'mesh' && !a.meta?.previewPath,
+      );
+      if (missingThumbs) {
+        void enqueueMissingMeshThumbnails(next, uploadMeshPreview, publicAssetUrl)
+          .then(async () => {
+            try {
+              const data = await fetchAssetRegistry();
+              setRegistry(normalizeRegistry(data));
+              setRevision((r) => r + 1);
+            } catch {
+              /* ignore — glyph thumbs remain until next refresh */
+            }
+          });
+      }
       return next;
     } catch (err) {
       notify(`Asset registry: ${err.message}`);
@@ -281,6 +302,21 @@ export function AssetBrowserProvider({ children }) {
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
     notify(`Imported mesh ${result.asset.name}`);
+    void enqueueMeshThumbnailBake(result.asset, uploadMeshPreview, publicAssetUrl)
+      .then(async (baked) => {
+        if (!baked) return;
+        if (baked.registry) {
+          setRegistry(normalizeRegistry(baked.registry));
+        } else {
+          try {
+            const data = await fetchAssetRegistry();
+            setRegistry(normalizeRegistry(data));
+          } catch {
+            /* ignore */
+          }
+        }
+        setRevision((r) => r + 1);
+      });
     return result.asset;
   }, [notify, setStatus]);
 

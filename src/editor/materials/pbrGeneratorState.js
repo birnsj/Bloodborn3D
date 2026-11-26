@@ -5,13 +5,13 @@
 
 export const DEFAULT_NORMAL_PARAMS = Object.freeze({
   /** Overall height → normal strength. */
-  strength: 1,
+  strength: 1.75,
   /** High-frequency detail contribution (0–1). */
-  fineDetail: 0.55,
+  fineDetail: 0.7,
   /** Low-frequency / large relief contribution (0–1). */
-  largeScale: 0.65,
+  largeScale: 0.75,
   /** Pre-blur amount on the height field (0–1). */
-  smoothing: 0.35,
+  smoothing: 0.28,
   /** Treat dark pixels as high (instead of light = high). */
   invertHeight: false,
   /** Flip green channel for DirectX-style normals (Three.js uses OpenGL / +Y). */
@@ -45,7 +45,7 @@ export const DEFAULT_TILING = Object.freeze({
  */
 export function normalizeNormalParams(raw = {}) {
   return {
-    strength: clamp(Number(raw.strength), 0, 4, DEFAULT_NORMAL_PARAMS.strength),
+    strength: clamp(Number(raw.strength), 0, 6, DEFAULT_NORMAL_PARAMS.strength),
     fineDetail: clamp(Number(raw.fineDetail), 0, 1, DEFAULT_NORMAL_PARAMS.fineDetail),
     largeScale: clamp(Number(raw.largeScale), 0, 1, DEFAULT_NORMAL_PARAMS.largeScale),
     smoothing: clamp(Number(raw.smoothing), 0, 1, DEFAULT_NORMAL_PARAMS.smoothing),
