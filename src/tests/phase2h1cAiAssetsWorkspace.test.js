@@ -1,6 +1,9 @@
 /**
  * Phase 2H.1C — AI Assets workspace (mocked; never spends credits).
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   AI_PROVIDER_CATEGORIES,
@@ -22,6 +25,11 @@ import { WORKSPACES } from '../editor/layout/layoutPrefs.js';
 import { DOCK_PANELS } from '../editor/layout/dockLayout.js';
 import { ASSET_FOLDERS } from '../data/sampleAssets.js';
 
+const controlsSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '../editor/openart/OpenArtControls.jsx'),
+  'utf8',
+);
+
 describe('Phase 2H.1C — AI Assets workspace catalog', () => {
   it('registers the AI Assets workspace id', () => {
     expect(WORKSPACES.find((w) => w.id === 'ai')?.label).toBe('AI Assets');
@@ -31,7 +39,7 @@ describe('Phase 2H.1C — AI Assets workspace catalog', () => {
     expect(AI_PROVIDER_CATEGORIES.map((c) => c.id)).toEqual(['image', 'mesh']);
     expect(getAiProvider('openart')?.status).toBe('available');
     expect(getAiProvider('comfyui')?.status).toBe('coming_soon');
-    expect(getAiProvider('meshy')?.status).toBe('coming_soon');
+    expect(getAiProvider('meshy')?.status).toBe('available');
     expect(AI_PROVIDERS).toHaveLength(3);
   });
 
@@ -88,5 +96,15 @@ describe('Phase 2H.1C — dynamic schema partitioning', () => {
     expect(compact).toEqual(['aspectRatio', 'resolution']);
     expect(rest).toEqual(['negativePrompt']);
     expect(advanced).toEqual(['seed']);
+  });
+});
+
+describe('Phase 2H.1C — selected region visual', () => {
+  it('renders a RegionPreview thumb beside the selected-region summary', () => {
+    expect(controlsSource).toContain('function RegionPreview');
+    expect(controlsSource).toContain('bb-openart__region-thumb');
+    expect(controlsSource).toContain('regionCropSrc');
+    expect(controlsSource).toContain('regionSourceSrc');
+    expect(controlsSource).toContain('Selected region:');
   });
 });

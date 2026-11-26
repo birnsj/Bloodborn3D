@@ -214,7 +214,8 @@ describe('Phase 2B backward compatibility', () => {
 
     const light = world.getActor('actor_light_main').getComponent('Light');
     expect(light.lightType).toBe('point');
-    expect(light.castShadow).toBe(false);
+    // Fixture public/levels/test-room.json persists castShadow:true on the main point light.
+    expect(light.castShadow).toBe(true);
 
     // Round-trip still valid after loading legacy level
     const again = serializeLevel(world);

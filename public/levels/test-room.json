@@ -1,6 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "name": "Test Room",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#111b2c",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
   "actors": [
     {
       "id": "actor_floor",
@@ -25,6 +31,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_floor_brush",
@@ -36,7 +45,26 @@
             "z": 600
           },
           "color": "#5a6270",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "py": "mat_hall_floor"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -63,6 +91,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_ceiling_brush",
@@ -74,7 +105,26 @@
             "z": 600
           },
           "color": "#4a5160",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "ny": "mat_hall_ceiling"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -101,6 +151,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_wall_north",
@@ -112,7 +165,26 @@
             "z": 20
           },
           "color": "#8a9099",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "pz": "mat_0807fae227e1"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -139,6 +211,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_wall_south",
@@ -150,7 +225,26 @@
             "z": 20
           },
           "color": "#8a9099",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "nz": "mat_0807fae227e1"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -177,6 +271,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_wall_west",
@@ -188,7 +285,26 @@
             "z": 600
           },
           "color": "#7e858f",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "px": "mat_0807fae227e1"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -215,6 +331,9 @@
       "tags": [
         "structure"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_wall_east",
@@ -226,7 +345,26 @@
             "z": 600
           },
           "color": "#7e858f",
-          "collidable": true
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "nx": "mat_0807fae227e1"
+          },
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
         }
       ]
     },
@@ -235,9 +373,9 @@
       "name": "Room Light",
       "transform": {
         "position": {
-          "x": 0,
-          "y": 250,
-          "z": 0
+          "x": -200,
+          "y": 200,
+          "z": 150
         },
         "rotation": {
           "x": 0,
@@ -253,16 +391,22 @@
       "tags": [
         "light"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_light_main",
           "type": "Light",
           "enabled": true,
           "lightType": "point",
-          "color": "#fff4e0",
+          "color": "#3f3e93",
           "intensity": 2.5,
-          "range": 1200,
-          "castShadow": false
+          "range": 500,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
         }
       ]
     },
@@ -289,6 +433,9 @@
       "tags": [
         "spawn"
       ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
       "components": [
         {
           "id": "comp_player_spawn",
@@ -296,6 +443,322 @@
           "enabled": true,
           "eyeHeight": 160,
           "moveSpeed": 450
+        }
+      ]
+    },
+    {
+      "id": "actor_d2b76d23-ee51-4ce4-8202-3df775a59a5c",
+      "name": "Wall West Copy",
+      "transform": {
+        "position": {
+          "x": -2.5,
+          "y": 225,
+          "z": 112.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_21c1a89c-8b76-4461-af79-f949ce686498",
+          "type": "ConvexBrush",
+          "enabled": true,
+          "color": "#7e858f",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": {
+            "px": "mat_f54dab845869",
+            "pz": "mat_0807fae227e1",
+            "nx": "mat_f54dab845869",
+            "nz": "mat_f54dab845869"
+          },
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          },
+          "geometry": {
+            "version": 1,
+            "vertices": [
+              {
+                "id": "v0",
+                "p": [
+                  -47.5,
+                  -250,
+                  -37.5
+                ]
+              },
+              {
+                "id": "v1",
+                "p": [
+                  47.5,
+                  -250,
+                  -37.5
+                ]
+              },
+              {
+                "id": "v2",
+                "p": [
+                  47.5,
+                  75,
+                  -37.5
+                ]
+              },
+              {
+                "id": "v3",
+                "p": [
+                  -47.5,
+                  75,
+                  -37.5
+                ]
+              },
+              {
+                "id": "v4",
+                "p": [
+                  -47.5,
+                  -250,
+                  37.5
+                ]
+              },
+              {
+                "id": "v5",
+                "p": [
+                  47.5,
+                  -250,
+                  37.5
+                ]
+              },
+              {
+                "id": "v6",
+                "p": [
+                  47.5,
+                  75,
+                  37.5
+                ]
+              },
+              {
+                "id": "v7",
+                "p": [
+                  -47.5,
+                  75,
+                  37.5
+                ]
+              }
+            ],
+            "faces": [
+              {
+                "id": "px",
+                "loop": [
+                  "v1",
+                  "v2",
+                  "v6",
+                  "v5"
+                ],
+                "proj": "px"
+              },
+              {
+                "id": "nx",
+                "loop": [
+                  "v0",
+                  "v4",
+                  "v7",
+                  "v3"
+                ],
+                "proj": "nx"
+              },
+              {
+                "id": "py",
+                "loop": [
+                  "v3",
+                  "v7",
+                  "v6",
+                  "v2"
+                ],
+                "proj": "py"
+              },
+              {
+                "id": "ny",
+                "loop": [
+                  "v0",
+                  "v1",
+                  "v5",
+                  "v4"
+                ],
+                "proj": "ny"
+              },
+              {
+                "id": "pz",
+                "loop": [
+                  "v4",
+                  "v5",
+                  "v6",
+                  "v7"
+                ],
+                "proj": "pz"
+              },
+              {
+                "id": "nz",
+                "loop": [
+                  "v0",
+                  "v3",
+                  "v2",
+                  "v1"
+                ],
+                "proj": "nz"
+              }
+            ],
+            "uvOrigin": [
+              0,
+              0,
+              0
+            ],
+            "nextVertex": 8,
+            "nextFace": 0
+          },
+          "provenance": {
+            "kind": "brush"
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_15faf7cc-a83c-4518-9957-ee33b55647fe",
+      "name": "Room Light Copy",
+      "transform": {
+        "position": {
+          "x": -200,
+          "y": 200,
+          "z": -150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f978c49a-a72c-4050-90e5-8c7b4dd7a5a9",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#93673e",
+          "intensity": 3.4,
+          "range": 800,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_5421089a-ed23-4fa1-8d62-950e56ac8c50",
+      "name": "PRINCIPAL BUGGELSBY.jpg",
+      "transform": {
+        "position": {
+          "x": -175,
+          "y": 20,
+          "z": -25
+        },
+        "rotation": {
+          "x": 0,
+          "y": 85,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop",
+        "character"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ba98bd2c-64c5-4a09-abab-791151b137da",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_589251cb-4dc1-4eeb-a597-d4937377835d",
+      "name": "PRINCIPAL BUGGELSBY.jpg Copy",
+      "transform": {
+        "position": {
+          "x": -175,
+          "y": 20,
+          "z": -125
+        },
+        "rotation": {
+          "x": 0,
+          "y": 45,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop",
+        "character"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fb866475-d4b7-4e34-a638-6e04bfe36e65",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none"
         }
       ]
     }

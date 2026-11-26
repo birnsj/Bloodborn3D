@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-25T23:40:00.914Z",
+  "updatedAt": "2026-11-26T04:00:30.862Z",
   "migratedFrom": null,
   "items": [
     {
@@ -510,6 +510,102 @@
       },
       "createdAt": "2026-11-25T21:15:01.160Z",
       "updatedAt": "2026-11-25T21:15:16.776Z"
+    },
+    {
+      "id": "art_bb2a7c87fc0c",
+      "relativePath": "Environments/Mansion/Textures/full_wall_master_bedroom.png",
+      "title": "full_wall_master_bedroom",
+      "description": "Full floor-to-ceiling wall texture from Master Bedroom region crop.",
+      "tags": [
+        "mansion",
+        "wall",
+        "full-wall-texture",
+        "tiling-h"
+      ],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "Recreate the complete wall shown in the selected reference image as a production-ready game environment texture. Preserve the architectural style, materials, colors, decorative details, proportions and weathering of the reference. Include the entire vertical wall structure from floor to ceiling, including baseboards, lower decorative paneling, main wall surface, ornamental trim and crown molding. The attached reference image is a cropped region from \"Master Bedroom\". Crop bounds: x 2%, y 8%, 22% × 78%. Perfectly straight-on orthographic view. No perspective distortion. Flat, uniform lighting suitable for a base-color texture. No baked shadows, reflections or highlights. No furniture, doors, windows, floor or ceiling surfaces. Wall texture fills the entire image, edge to edge. Consistent architectural proportions across the full width.",
+      "originalGenerationPrompt": "Recreate the complete wall shown in the selected reference image as a production-ready game environment texture. Preserve the architectural style, materials, colors, decorative details, proportions and weathering of the reference. Include the entire vertical wall structure from floor to ceiling, including baseboards, lower decorative paneling, main wall surface, ornamental trim and crown molding. The attached reference image is a cropped region from \"Master Bedroom\". Crop bounds: x 2%, y 8%, 22% × 78%. Perfectly straight-on orthographic view. No perspective distortion. Flat, uniform lighting suitable for a base-color texture. No baked shadows, reflections or highlights. No furniture, doors, windows, floor or ceiling surfaces. Wall texture fills the entire image, edge to edge. Consistent architectural proportions across the full width.",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "openart",
+        "provider": "openart",
+        "modelId": "nano-banana-2",
+        "mode": "image2image",
+        "stagingId": "stg_67ca818a208c",
+        "jobId": "job_8403e3af6b93",
+        "generationId": "XIeTmZ78gRb2Bm6OYMY3",
+        "formValues": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "imageCount": 1,
+          "autoEnhancePrompt": false
+        },
+        "tileHorizontal": true,
+        "tileVertical": false,
+        "promptTemplateId": "full_wall_texture",
+        "assetCategory": "full_wall_texture",
+        "sourceRegion": {
+          "itemId": "art_master_bedroom_wall",
+          "relativePath": "Environments/Mansion/Concepts/Interiors/master_bedroom.png",
+          "title": "Master Bedroom",
+          "x": 0.02,
+          "y": 0.08,
+          "width": 0.22,
+          "height": 0.78,
+          "naturalWidth": 1024,
+          "naturalHeight": 1024
+        },
+        "sourceItemId": null,
+        "croppedReference": {
+          "stagingId": "ref_mwx0xw6u",
+          "fileName": "ref_mwx0xw6u.png",
+          "originalName": "full-wall-master-bedroom-crop.png",
+          "absolutePath": "D:\\BloodBound3D\\.openart-staging\\ref_mwx0xw6u.png"
+        },
+        "finalPrompt": "Recreate the complete wall shown in the selected reference image as a production-ready game environment texture. Preserve the architectural style, materials, colors, decorative details, proportions and weathering of the reference. Include the entire vertical wall structure from floor to ceiling, including baseboards, lower decorative paneling, main wall surface, ornamental trim and crown molding. The attached reference image is a cropped region from \"Master Bedroom\". Crop bounds: x 2%, y 8%, 22% × 78%. Perfectly straight-on orthographic view. No perspective distortion. Flat, uniform lighting suitable for a base-color texture. No baked shadows, reflections or highlights. No furniture, doors, windows, floor or ceiling surfaces. Wall texture fills the entire image, edge to edge. Consistent architectural proportions across the full width.\n\nSeamless horizontal tiling, with matching left and right edges. Vertical tiling is not required.",
+        "savedAt": "2026-11-26T04:00:30.831Z"
+      },
+      "createdAt": "2026-11-26T04:00:30.862Z",
+      "updatedAt": "2026-11-26T04:00:30.862Z"
+    },
+    {
+      "id": "art_756b7c31ae01",
+      "relativePath": "Environments/Shared Assets/BLOODBORN - GAME LEVEL ROUGH-A.jpg",
+      "title": "BLOODBORN - GAME LEVEL ROUGH-A.jpg",
+      "description": "",
+      "tags": [],
+      "rating": 0,
+      "favorite": false,
+      "generationPrompt": "",
+      "originalGenerationPrompt": "",
+      "architecturalStyle": "",
+      "materials": "",
+      "colorPalette": "",
+      "lighting": "",
+      "atmosphere": "",
+      "distinctiveElements": "",
+      "associatedPromptIds": [],
+      "generatedAssetRefs": [],
+      "provenance": {
+        "source": "google-drive",
+        "driveFileId": "1RPS5Im3h0_sXAUE-raAG3j-fSuZTWcMe",
+        "driveFileName": "BLOODBORN - GAME LEVEL ROUGH-A.jpg",
+        "driveFolderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+        "driveLibraryId": "ext_84d7bfb00a09",
+        "driveLibraryName": "14 - BLOODBOUND",
+        "copiedFromGoogleDrive": true,
+        "copiedAt": "2026-11-26T05:39:13.321Z"
+      },
+      "createdAt": "2026-11-26T05:39:13.321Z",
+      "updatedAt": "2026-11-26T05:39:13.321Z"
     }
   ],
   "prompts": [],

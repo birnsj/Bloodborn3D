@@ -15,6 +15,18 @@ dist-ssr
 # OpenArt staging — track generation images + staging sidecar JSON; ignore job poll cache
 .openart-staging/jobs/
 
+# Meshy credentials + staging (API key must never be committed)
+.meshy-credentials.json
+.meshy-staging/
+
+# Google Drive OAuth client + tokens (never commit)
+.google-drive-oauth.json
+.google-drive-tokens.json
+.google-drive-oauth-pending-url.txt
+
+# Google Drive image cache under Project Art
+project-art/.bb-art/gdrive-cache/
+
 # Atomic write temps from asset/concept middleware
 **/.*.tmp
 public/assets/.registry.json.*.tmp

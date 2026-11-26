@@ -280,5 +280,24 @@ describe('Project Art Library — inspector responsibilities', () => {
     expect(panelSource).not.toMatch(/Compose Prompt/);
     expect(panelSource).not.toMatch(/Tile Horizontal/);
     expect(panelSource).not.toMatch(/Asset Category/);
+    // Send to Generation is selection-gated, not prompt-gated.
+    expect(panelSource).toMatch(/disabled=\{busy \|\| !refTargets\.length\}/);
+    expect(panelSource).not.toMatch(/disabled=\{busy \|\| !promptForSend\}/);
+  });
+
+  it('exposes organize actions on folder / collection / tray / gallery image RMB', () => {
+    expect(panelSource).toContain('buildImageMenuItems');
+    expect(panelSource).toContain('onItemContextMenu');
+    expect(panelSource).toContain('Use as Reference');
+    expect(panelSource).toContain('Send to Generation');
+    expect(panelSource).toContain('Move to Folder…');
+    expect(panelSource).toContain('Copy to Folder…');
+    expect(panelSource).toContain('Move Folder…');
+    expect(panelSource).toContain('Copy Folder…');
+    expect(panelSource).toContain('Add Selection');
+    expect(panelSource).toContain('Open in Library');
+    expect(panelSource).toContain('Clear All');
+    expect(panelSource).toContain('buildCollectionMenuItems');
+    expect(panelSource).toContain('buildTrayThumbMenuItems');
   });
 });

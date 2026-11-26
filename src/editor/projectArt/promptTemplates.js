@@ -53,6 +53,32 @@ export const PROMPT_TEMPLATES = Object.freeze([
     suggestedDefaults: { tileHorizontal: true, tileVertical: false },
   }),
   template({
+    id: 'full_wall_texture',
+    label: 'Full Wall Texture',
+    description:
+      'Complete floor-to-ceiling wall elevation for production: baseboards, paneling, main surface, trim and crown. Orthographic albedo suitable for horizontal tiling in-engine.',
+    framing:
+      'Recreate the complete wall shown in the selected reference image as a production-ready game environment texture. '
+      + 'Preserve the architectural style, materials, colors, decorative details, proportions and weathering of the reference. '
+      + 'Include the entire vertical wall structure from floor to ceiling, including baseboards, lower decorative paneling, main wall surface, ornamental trim and crown molding.',
+    technicalConstraints: [
+      'Perfectly straight-on orthographic view.',
+      'No perspective distortion.',
+      'Flat, uniform lighting suitable for a base-color texture.',
+      'No baked shadows, reflections or highlights.',
+      'No furniture, doors, windows, floor or ceiling surfaces.',
+      'Wall texture fills the entire image, edge to edge.',
+      'Consistent architectural proportions across the full width.',
+    ],
+    outputType: 'texture',
+    tilingRelevant: true,
+    // Orthographic / lighting / isolation are listed in technicalConstraints above
+    // to match the approved Full Wall Texture wording exactly (avoid duplicate ORTHOGRAPHIC_CONSTRAINT).
+    orthographicRequired: false,
+    isolatedObject: false,
+    suggestedDefaults: { tileHorizontal: true, tileVertical: false },
+  }),
+  template({
     id: 'floor_texture',
     label: 'Floor Texture',
     description: 'Top-down floor surface texture, suitable for tiling in-engine.',
@@ -152,14 +178,25 @@ export const PROMPT_TEMPLATES = Object.freeze([
   template({
     id: 'model_3d_reference',
     label: '3D Model Reference',
-    description: 'Clean orthographic reference of one object to guide 3D modeling.',
-    framing: '3D model reference sheet.',
+    description:
+      'Isolated three-quarter game-prop reference for Image-to-3D (Meshy). Project-editable.',
+    framing:
+      'Recreate the selected object as a complete, isolated three-dimensional game prop. '
+      + 'Preserve its design, proportions, construction, materials, colors and ornamental details. '
+      + 'Present the entire object in a three-quarter view against a plain neutral background. '
+      + 'Use even lighting, clear silhouettes and minimal shadows. '
+      + 'Exclude surrounding architecture, unrelated objects, floor surfaces and environmental scenery. '
+      + 'Do not crop any portion of the object.',
     technicalConstraints: [
-      'Flat neutral lighting, no dramatic shadows, all major forms and materials clearly readable.',
+      'Entire object visible edge-to-edge with clear silhouette.',
+      'Even studio lighting, minimal shadows, no dramatic rim light.',
+      'Plain neutral background only.',
     ],
     outputType: 'model_reference',
-    orthographicRequired: true,
+    // Three-quarter presentation is intentional for Meshy — not orthographic.
+    orthographicRequired: false,
     isolatedObject: true,
+    suggestedDefaults: { tileHorizontal: false, tileVertical: false },
   }),
   template({
     id: 'sprite',

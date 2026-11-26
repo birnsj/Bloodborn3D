@@ -148,6 +148,9 @@ export function Viewport() {
     placeLight,
     placePlayerSpawn,
     createCell,
+    reparentSelected,
+    createPrefabFromSelection,
+    unpackSelectedPrefab,
     assignSelectedSurfaceMaterial,
     applySelectedMaterialToBrush,
     convertActorToConvexBrush,
@@ -1158,6 +1161,7 @@ export function Viewport() {
       : (primary ? 1 : 0);
     const hasSelection = Boolean(primary);
 
+    const isPrefabInstance = Boolean(primary?.prefab?.instanceId);
     openContextMenu({
       clientX,
       clientY,
@@ -1204,6 +1208,45 @@ export function Viewport() {
             setSelectedActorFlags({ visible: primary.visible === false });
           },
         },
+        {
+          id: 'lock',
+          label: primary?.locked ? 'Unlock' : 'Lock',
+          disabled: !hasSelection,
+          onSelect: () => {
+            if (!primary) return;
+            setSelectedActorFlags({ locked: !primary.locked });
+          },
+        },
+        {
+          id: 'unparent',
+          label: 'Unparent',
+          disabled: !hasSelection,
+          onSelect: () => reparentSelected(null),
+        },
+        { id: 'sep-create', separator: true },
+        {
+          id: 'create-cell',
+          label: 'Create Cell',
+          onSelect: () => createCell(),
+        },
+        {
+          id: 'create-prefab',
+          label: 'Create Prefab From Selection',
+          disabled: !hasSelection,
+          onSelect: async () => {
+            const name = await prompt('Prefab name', {
+              title: 'Create Prefab',
+              initialValue: 'Prefab',
+            });
+            if (!name) return;
+            await createPrefabFromSelection(name.trim());
+          },
+        },
+        isPrefabInstance ? {
+          id: 'unpack-prefab',
+          label: 'Unpack Prefab',
+          onSelect: () => unpackSelectedPrefab(),
+        } : null,
         { id: 'sep-del', separator: true },
         {
           id: 'delete',

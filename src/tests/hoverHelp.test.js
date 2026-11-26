@@ -104,6 +104,11 @@ describe('hover help content', () => {
       'openart.tiling',
       'openart.generate',
       'openart.createMaterial',
+      'materials.pbrGenerator',
+      'materials.pbrParams',
+      'materials.pbrTiling',
+      'materials.pbrPreview',
+      'materials.pbrApply',
     ];
     for (const id of required) {
       expect(content[id], id).toBeTruthy();

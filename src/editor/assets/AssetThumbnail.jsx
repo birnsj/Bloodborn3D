@@ -1,12 +1,29 @@
+import { suppressNativeImageMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
+
 /** Lightweight thumbnail for Content Browser tiles / Asset Viewer. */
-export function AssetThumbnail({ asset, size = 48 }) {
+export function AssetThumbnail({ asset, size = 48, onContextMenu }) {
   const preview = asset?.preview || {};
   const style = { width: size, height: size };
 
+  const handleImageMenu = (event) => {
+    suppressNativeImageMenu(event);
+    onContextMenu?.(event);
+  };
+
   if (preview.kind === 'image' && preview.url) {
     return (
-      <div className="bb-asset-thumb bb-asset-thumb--image" style={style} aria-hidden>
-        <img src={preview.url} alt="" />
+      <div
+        className="bb-asset-thumb bb-asset-thumb--image"
+        style={style}
+        aria-hidden
+        onContextMenu={onContextMenu ? handleImageMenu : suppressNativeImageMenu}
+      >
+        <img
+          src={preview.url}
+          alt=""
+          draggable={false}
+          onContextMenu={onContextMenu ? handleImageMenu : suppressNativeImageMenu}
+        />
       </div>
     );
   }
@@ -20,6 +37,7 @@ export function AssetThumbnail({ asset, size = 48 }) {
           background: `linear-gradient(135deg, ${preview.color || '#666'} 0 50%, ${preview.secondary || '#333'} 50% 100%)`,
         }}
         aria-hidden
+        onContextMenu={onContextMenu}
       />
     );
   }
@@ -38,6 +56,7 @@ export function AssetThumbnail({ asset, size = 48 }) {
           backgroundColor: b,
         }}
         aria-hidden
+        onContextMenu={onContextMenu}
       />
     );
   }
@@ -47,6 +66,7 @@ export function AssetThumbnail({ asset, size = 48 }) {
       className={`bb-asset-thumb bb-asset-thumb--${asset?.type || 'unknown'}`}
       style={style}
       aria-hidden
+      onContextMenu={onContextMenu}
     >
       <span>{typeGlyph(asset?.type)}</span>
     </div>

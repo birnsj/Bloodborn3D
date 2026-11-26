@@ -452,7 +452,10 @@ describe('Phase 2E.5 — surface/material persistence audit', () => {
     const wall = world.actors.find((a) => a.getComponent('Brush'));
     expect(wall.getComponent('Brush').faceUVs).toBeNull();
     const saved = serializeLevel(world);
-    expect(saved.schemaVersion).toBe(2);
+    // test-room includes ConvexBrush → serializer emits schemaVersion 3 (Phase 2F.0).
+    // Levels without ConvexBrush still write 2 (LEVEL_SCHEMA_VERSION_WITHOUT_CONVEX).
+    const hasConvex = world.actors.some((a) => a.getComponent('ConvexBrush'));
+    expect(saved.schemaVersion).toBe(hasConvex ? 3 : 2);
     const again = deserializeLevel(saved);
     expect(again.actors.length).toBe(world.actors.length);
   });

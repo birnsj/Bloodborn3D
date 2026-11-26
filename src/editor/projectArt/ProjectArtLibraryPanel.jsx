@@ -8,6 +8,7 @@ import {
   LIBRARY_THUMB_SIZE_MAX,
   LIBRARY_THUMB_SIZE_MIN,
   addGenerationReferences,
+  clearGenerationReferences,
   clearGenerationReferencesWarning,
   clearSelectedRegion,
   getAiAssetsUiState,
@@ -19,6 +20,7 @@ import {
 import {
   addItemsAsGenerationReferences,
   sendProjectArtToGeneration,
+  sendProjectArtToMeshy,
   sendRegionToGeneration,
 } from './generationHandoff.js';
 import { describeRegionCoords, getPromptTemplate } from './promptTemplates.js';
@@ -28,19 +30,25 @@ import {
   getSelectedItems,
   getLibraryTagCounts,
   getVisibleEntries,
+  copyExternalItemToProjectArt,
   openCollection,
+  openExternalLibrary,
   openFolder,
   projectArtBootstrap,
+  projectArtCopy,
   projectArtCreateCollection,
   projectArtCreatePrompt,
   projectArtCreateReferenceSet,
   projectArtDelete,
   projectArtDeleteCollection,
+  projectArtFullImageUrl,
   projectArtImportImage,
   projectArtMkdir,
+  projectArtMove,
   projectArtOpenInExplorer,
   projectArtPreviewUrl,
   projectArtRename,
+  projectArtUpdateCollection,
   projectArtUpdateItem,
   rangeShift,
   selectAll,
@@ -57,6 +65,14 @@ import {
   toggleCtrl,
   toggleExpandedPath,
   search as projectArtSearch,
+  searchExternal as projectArtSearchExternal,
+  googleDriveAddLibrary,
+  googleDriveConnect,
+  googleDriveDisconnect,
+  googleDriveRefreshLibrary,
+  googleDriveRemoveLibrary,
+  loadMoreExternalFolder,
+  refreshExternalLibraries,
 } from './projectArtStore.js';
 
 const LEFT_MIN = 180;
@@ -89,6 +105,15 @@ export function ProjectArtLibraryPanel() {
     projectArtBootstrap().catch((err) => notify(err.message));
     return undefined;
   }, [notify]);
+  // Re-sync Drive auth/libraries when returning to the panel (tokens may change out-of-band).
+  useEffect(() => {
+    refreshExternalLibraries().catch(() => {});
+    const onFocus = () => {
+      refreshExternalLibraries().catch(() => {});
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   useEffect(() => {
     if (aiUi.generationReferencesWarning) {
@@ -111,6 +136,11 @@ export function ProjectArtLibraryPanel() {
   );
   const selectedCount = store.selectedIds.length;
 
+  const activeExternalLib = useMemo(
+    () => (store.externalLibraries || []).find((l) => l.id === store.activeExternalLibraryId) || null,
+    [store.externalLibraries, store.activeExternalLibraryId],
+  );
+
   const breadcrumb = useMemo(() => {
     if (store.viewMode === 'favorites') return [{ label: 'Favorites', path: null }];
     if (store.viewMode === 'all') return [{ label: 'All Assets', path: null }];
@@ -122,6 +152,16 @@ export function ProjectArtLibraryPanel() {
       const col = collections.find((c) => c.id === store.activeCollectionId);
       return [{ label: col?.name || 'Collection', path: null }];
     }
+    if (store.librarySource === 'gdrive' && activeExternalLib) {
+      const parts = String(store.currentFolder || '').split('/').filter(Boolean);
+      const crumbs = [{ label: activeExternalLib.name || 'Google Drive', path: '' }];
+      let acc = '';
+      for (const part of parts) {
+        acc = acc ? `${acc}/${part}` : part;
+        crumbs.push({ label: part, path: acc });
+      }
+      return crumbs;
+    }
     const parts = String(store.currentFolder || '').split('/').filter(Boolean);
     const crumbs = [{ label: 'Project Art', path: '' }];
     let acc = '';
@@ -131,13 +171,24 @@ export function ProjectArtLibraryPanel() {
     }
     return crumbs;
   }, [
-    store.viewMode, store.currentFolder, store.activeCollectionId, store.tagFilter, collections,
+    store.viewMode, store.currentFolder, store.activeCollectionId, store.tagFilter,
+    store.librarySource, collections, activeExternalLib,
   ]);
 
   const runFolderAction = useCallback(async (action, node) => {
     try {
       if (action === 'open') {
-        await openFolder(node?.path || '');
+        if (store.librarySource === 'gdrive' && store.activeExternalLibraryId) {
+          await openExternalLibrary(store.activeExternalLibraryId, node?.path || '');
+        } else {
+          await openFolder(node?.path || '');
+        }
+        return;
+      }
+      if (store.librarySource === 'gdrive'
+        && (action === 'new' || action === 'rename' || action === 'move'
+          || action === 'copy' || action === 'delete' || action === 'explorer')) {
+        notify('Google Drive libraries are read-only');
         return;
       }
       if (action === 'new') {
@@ -168,6 +219,25 @@ export function ProjectArtLibraryPanel() {
         setStatus(`Renamed to “${name}”`);
         return;
       }
+      if (action === 'move' || action === 'copy') {
+        if (!node?.path) return;
+        const toDir = await prompt('Destination folder path (blank = root)', {
+          title: action === 'move' ? 'Move Folder' : 'Copy Folder',
+          initialValue: '',
+        });
+        if (toDir == null) return;
+        const dest = String(toDir).trim();
+        if (action === 'move') {
+          await projectArtMove({ from: node.path, toDir: dest });
+          await openFolder(dest ? `${dest}/${node.name}` : node.name);
+          setStatus(`Moved “${node.name}”`);
+        } else {
+          await projectArtCopy({ from: node.path, toDir: dest });
+          await openFolder(dest);
+          setStatus(`Copied “${node.name}”`);
+        }
+        return;
+      }
       if (action === 'delete') {
         if (!node?.path) return;
         const ok = await confirm(`Delete folder “${node.name}” and its contents?`, {
@@ -185,23 +255,75 @@ export function ProjectArtLibraryPanel() {
         await projectArtOpenInExplorer({ path: node?.path || '' });
       }
       if (action === 'refresh') {
-        await openFolder(store.currentFolder || '');
+        if (store.librarySource === 'gdrive' && store.activeExternalLibraryId) {
+          await googleDriveRefreshLibrary(store.activeExternalLibraryId);
+        } else {
+          await openFolder(store.currentFolder || '');
+        }
       }
       if (action === 'import') {
+        if (store.librarySource === 'gdrive') {
+          notify('Google Drive libraries are read-only');
+          return;
+        }
         fileRef.current?.click();
       }
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [confirm, prompt, notify, setStatus, store.currentFolder]);
+  }, [
+    confirm, prompt, notify, setStatus, store.currentFolder,
+    store.librarySource, store.activeExternalLibraryId,
+  ]);
 
-  const runItemAction = useCallback(async (action, item) => {
+  const runCollectionAction = useCallback(async (action, col) => {
+    if (!col) return;
+    try {
+      if (action === 'open') {
+        openCollection(col.id);
+        return;
+      }
+      if (action === 'rename') {
+        const name = await prompt('Rename collection', {
+          title: 'Rename Collection',
+          initialValue: col.name,
+        });
+        if (!name || name === col.name) return;
+        await projectArtUpdateCollection({ id: col.id, patch: { name } });
+        setStatus(`Renamed collection to “${name}”`);
+        return;
+      }
+      if (action === 'add-selection') {
+        if (!selectedItems.length) return;
+        const merged = [...new Set([...(col.itemIds || []), ...selectedItems.map((t) => t.id)])];
+        await projectArtUpdateCollection({ id: col.id, patch: { itemIds: merged } });
+        setStatus(`Added ${selectedItems.length} item(s) to “${col.name}”`);
+        return;
+      }
+      if (action === 'delete') {
+        const ok = await confirm(`Delete collection “${col.name}”?`, {
+          title: 'Delete collection',
+          confirmLabel: 'Delete',
+          tone: 'warning',
+        });
+        if (!ok) return;
+        await projectArtDeleteCollection({ id: col.id });
+        setStatus(`Deleted collection “${col.name}”`);
+      }
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [confirm, prompt, notify, setStatus, selectedItems]);
+
+  const selectionTargetsFor = useCallback((item) => (
+    selectedItems.some((s) => s.id === item.id) ? selectedItems : [item]
+  ), [selectedItems]);
+
+  const runItemAction = useCallback(async (action, item, extra = null) => {
     if (!item) return;
     try {
       if (action === 'add-refs') {
-        const targets = selectedItems.some((s) => s.id === item.id)
-          ? selectedItems
-          : [item];
+        const targets = selectionTargetsFor(item);
         addItemsAsGenerationReferences(targets);
         setStatus(
           targets.length === 1
@@ -210,8 +332,121 @@ export function ProjectArtLibraryPanel() {
         );
         return;
       }
+      if (action === 'send-generation') {
+        const targets = selectionTargetsFor(item);
+        const promptText = (
+          item.generationPrompt
+          || item.originalGenerationPrompt
+          || targets.find((t) => t.generationPrompt || t.originalGenerationPrompt)?.generationPrompt
+          || targets.find((t) => t.originalGenerationPrompt)?.originalGenerationPrompt
+          || ''
+        ).trim();
+        const res = await sendProjectArtToGeneration({
+          promptText,
+          items: targets,
+          trayRefs: aiUi.generationReferences,
+          folderPath: store.currentFolder || '',
+          promptId: item.associatedPromptIds?.[0] || null,
+          assetCategory: item.provenance?.assetCategory || null,
+          tileHorizontal: Boolean(item.provenance?.tileHorizontal),
+          tileVertical: Boolean(item.provenance?.tileVertical),
+        });
+        if (res?.message) setStatus(res.message);
+        return;
+      }
+      if (action === 'send-meshy') {
+        const targets = selectionTargetsFor(item);
+        const res = await sendProjectArtToMeshy({
+          item: targets[0],
+          items: targets,
+          folderPath: store.currentFolder || '',
+        });
+        if (res?.message) setStatus(res.message);
+        return;
+      }
+      if (action === 'copy-to-project-art') {
+        const targets = selectionTargetsFor(item).filter((t) => t.source === 'gdrive');
+        if (!targets.length) {
+          notify('Select a Google Drive image to copy');
+          return;
+        }
+        const folder = await prompt('Destination Project Art folder (blank = root)', {
+          title: 'Copy to Project Art Library',
+          initialValue: '',
+        });
+        if (folder == null) return;
+        for (const t of targets) {
+          await copyExternalItemToProjectArt(t, String(folder).trim());
+        }
+        setStatus(`Copied ${targets.length} image(s) into Project Art`);
+        return;
+      }
       if (action === 'favorite') {
+        if (item.source === 'gdrive' || item.readOnly) {
+          notify('Google Drive libraries are read-only — Copy to Project Art first');
+          return;
+        }
         await projectArtUpdateItem(item.id, { favorite: !item.favorite });
+        return;
+      }
+      if (action === 'move' || action === 'copy') {
+        if (item.source === 'gdrive' || item.readOnly) {
+          notify('Google Drive libraries are read-only — use Copy to Project Art Library');
+          return;
+        }
+        const targets = selectionTargetsFor(item);
+        const toDir = await prompt('Destination folder path (blank = root)', {
+          title: action === 'move' ? 'Move to Folder' : 'Copy to Folder',
+          initialValue: store.currentFolder || '',
+        });
+        if (toDir == null) return;
+        const dest = String(toDir).trim();
+        for (const t of targets) {
+          if (action === 'move') {
+            await projectArtMove({ from: t.relativePath, toDir: dest });
+          } else {
+            await projectArtCopy({ from: t.relativePath, toDir: dest });
+          }
+        }
+        await openFolder(dest);
+        setStatus(
+          action === 'move'
+            ? `Moved ${targets.length} image(s)`
+            : `Copied ${targets.length} image(s)`,
+        );
+        return;
+      }
+      if (action === 'add-to-collection' || action === 'new-collection'
+        || action === 'rename' || action === 'delete' || action === 'explorer') {
+        if (item.source === 'gdrive' || item.readOnly) {
+          notify('Google Drive libraries are read-only — Copy to Project Art Library first');
+          return;
+        }
+      }
+      if (action === 'add-to-collection') {
+        const collectionId = extra;
+        if (!collectionId) return;
+        const col = (store.library.collections || []).find((c) => c.id === collectionId);
+        if (!col) return;
+        const targets = selectionTargetsFor(item);
+        const merged = [...new Set([...(col.itemIds || []), ...targets.map((t) => t.id)])];
+        await projectArtUpdateCollection({ id: collectionId, patch: { itemIds: merged } });
+        setStatus(`Added to “${col.name}”`);
+        return;
+      }
+      if (action === 'new-collection') {
+        const targets = selectionTargetsFor(item);
+        const name = await prompt('Collection name', {
+          title: 'New Collection',
+          initialValue: 'New Collection',
+        });
+        if (!name) return;
+        const res = await projectArtCreateCollection({
+          name,
+          itemIds: targets.map((t) => t.id),
+        });
+        if (res.id) openCollection(res.id);
+        setStatus(`Created collection “${name}”`);
         return;
       }
       if (action === 'rename') {
@@ -226,9 +461,7 @@ export function ProjectArtLibraryPanel() {
         return;
       }
       if (action === 'delete') {
-        const targets = selectedItems.some((s) => s.id === item.id)
-          ? selectedItems
-          : [item];
+        const targets = selectionTargetsFor(item);
         const label = targets.length === 1
           ? `Delete “${targets[0].title}”?`
           : `Delete ${targets.length} images?`;
@@ -251,7 +484,10 @@ export function ProjectArtLibraryPanel() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [confirm, prompt, notify, setStatus, selectedItems, store.currentFolder]);
+  }, [
+    confirm, prompt, notify, setStatus, selectionTargetsFor,
+    store.currentFolder, store.library.collections, aiUi.generationReferences,
+  ]);
 
   return (
     <div
@@ -327,7 +563,7 @@ export function ProjectArtLibraryPanel() {
             <span className="bb-project-art__nav-section-title">Projects</span>
             <FolderTree
               nodes={store.tree}
-              currentFolder={store.currentFolder}
+              currentFolder={store.librarySource === 'local' ? store.currentFolder : null}
               expandedPaths={store.expandedPaths}
               viewMode={store.viewMode}
               onOpen={(path) => openFolder(path).catch((err) => notify(err.message))}
@@ -340,6 +576,165 @@ export function ProjectArtLibraryPanel() {
                 }));
               }}
             />
+          </div>
+
+          <div
+            className="bb-project-art__nav-section"
+            {...helpProps('projectArt.nav.externalLibraries')}
+          >
+            <div className="bb-project-art__collections-head">
+              <span className="bb-project-art__nav-section-title">External Libraries</span>
+              <button
+                type="button"
+                className="bb-btn bb-btn--ghost"
+                onClick={async () => {
+                  const url = await prompt('Google Drive folder URL', {
+                    title: 'Add Google Drive Folder',
+                    initialValue: '',
+                    placeholder: 'https://drive.google.com/drive/folders/…',
+                  });
+                  if (!url) return;
+                  try {
+                    setStatus('Adding Google Drive folder…');
+                    const res = await googleDriveAddLibrary(url);
+                    setStatus(`Connected “${res.library?.name || 'Google Drive'}”`);
+                    if (res.library?.id) {
+                      await openExternalLibrary(res.library.id, '');
+                    }
+                  } catch (err) {
+                    notify(err.message || String(err));
+                  }
+                }}
+              >
+                Add
+              </button>
+            </div>
+            <div className="bb-project-art__ext-auth bb-muted">
+              {store.externalAuth?.authenticated
+                ? 'Google: connected (read-only)'
+                : store.externalAuth?.configured
+                  ? 'Google: not signed in'
+                  : 'Google: OAuth not configured'}
+              {!store.externalAuth?.authenticated && store.externalAuth?.configured && (
+                <button
+                  type="button"
+                  className="bb-btn bb-btn--ghost"
+                  disabled={store.busy}
+                  onClick={async () => {
+                    try {
+                      setStatus('Checking Google Drive sign-in…');
+                      // Tokens may already exist from a prior sign-in; sync UI before opening OAuth.
+                      const status = await refreshExternalLibraries();
+                      if (status?.authenticated) {
+                        notify('Google account is already connected');
+                        setStatus('Google: connected (read-only)');
+                        return;
+                      }
+                      setStatus('Opening Google sign-in…');
+                      const res = await googleDriveConnect();
+                      if (res?.alreadyAuthenticated) {
+                        notify('Google account is already connected');
+                      } else {
+                        notify(res.message || 'Finish Google sign-in in the browser, then return here.');
+                      }
+                      setStatus(res?.alreadyAuthenticated
+                        ? 'Google: connected (read-only)'
+                        : 'Waiting for Google sign-in…');
+                    } catch (err) {
+                      notify(err.message || String(err));
+                      setStatus('Google sign-in failed');
+                    }
+                  }}
+                >
+                  Connect Google Account
+                </button>
+              )}
+              {store.externalAuth?.authenticated && (
+                <button
+                  type="button"
+                  className="bb-btn bb-btn--ghost"
+                  onClick={() => {
+                    googleDriveDisconnect()
+                      .then(() => setStatus('Google account disconnected'))
+                      .catch((err) => notify(err.message));
+                  }}
+                >
+                  Disconnect
+                </button>
+              )}
+              {!store.externalAuth?.configured && (
+                <span title={store.externalAuth?.setupHint || ''}>
+                  {store.externalAuth?.setupHint
+                    || 'Create a Desktop OAuth client, enable Drive API, save .google-drive-oauth.json'}
+                </span>
+              )}
+            </div>
+            <ul className="bb-project-art__collection-list">
+              {(store.externalLibraries || []).map((lib) => {
+                const active = store.librarySource === 'gdrive'
+                  && store.activeExternalLibraryId === lib.id;
+                return (
+                  <li key={lib.id}>
+                    <button
+                      type="button"
+                      className={`bb-project-art__collection${active ? ' is-active' : ''}`}
+                      onClick={async () => {
+                        try {
+                          if (!store.externalAuth?.authenticated) {
+                            await refreshExternalLibraries();
+                          }
+                          await openExternalLibrary(lib.id, '');
+                        } catch (err) {
+                          notify(err.message);
+                        }
+                      }}
+                      onContextMenu={(event) => {
+                        openFromEvent(event, [
+                          {
+                            id: 'open',
+                            label: 'Open Library',
+                            onSelect: () => openExternalLibrary(lib.id, '')
+                              .catch((err) => notify(err.message)),
+                          },
+                          {
+                            id: 'refresh',
+                            label: 'Refresh Folder',
+                            onSelect: () => googleDriveRefreshLibrary(lib.id)
+                              .then(() => setStatus(`Refreshed “${lib.name}”`))
+                              .catch((err) => notify(err.message)),
+                          },
+                          {
+                            id: 'browser',
+                            label: 'Open in Google Drive',
+                            onSelect: () => {
+                              const href = lib.webViewLink || lib.sourceUrl;
+                              if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                            },
+                          },
+                          { id: 'sep', separator: true },
+                          {
+                            id: 'remove',
+                            label: 'Remove Library',
+                            danger: true,
+                            onSelect: () => googleDriveRemoveLibrary(lib.id)
+                              .then(() => setStatus(`Removed “${lib.name}”`))
+                              .catch((err) => notify(err.message)),
+                          },
+                        ]);
+                      }}
+                      title={lib.sourceUrl || lib.folderId}
+                    >
+                      {lib.name || 'Google Drive'}
+                    </button>
+                  </li>
+                );
+              })}
+              {!(store.externalLibraries || []).length && (
+                <li className="bb-muted" style={{ padding: '4px 8px', fontSize: 12 }}>
+                  Add a Google Drive folder URL to browse shared concept art.
+                </li>
+              )}
+            </ul>
           </div>
 
           <div className="bb-project-art__nav-section" {...helpProps('projectArt.nav.collections')}>
@@ -381,6 +776,13 @@ export function ProjectArtLibraryPanel() {
                         : ''
                     }`}
                     onClick={() => openCollection(col.id)}
+                    onContextMenu={(event) => {
+                      openFromEvent(event, buildCollectionMenuItems({
+                        col,
+                        hasSelection: selectedItems.length > 0,
+                        run: (action) => runCollectionAction(action, col),
+                      }));
+                    }}
                   >
                     <span>{col.name}</span>
                     <span className="bb-muted">{(col.itemIds || []).length}</span>
@@ -391,14 +793,7 @@ export function ProjectArtLibraryPanel() {
                         type="button"
                         className="bb-btn bb-btn--ghost"
                         onClick={async () => {
-                          const ok = await confirm(`Delete collection “${col.name}”?`, {
-                            title: 'Delete collection',
-                            confirmLabel: 'Delete',
-                            tone: 'warning',
-                          });
-                          if (!ok) return;
-                          await projectArtDeleteCollection({ id: col.id })
-                            .catch((err) => notify(err.message));
+                          await runCollectionAction('delete', col);
                         }}
                       >
                         Delete
@@ -451,7 +846,14 @@ export function ProjectArtLibraryPanel() {
                   <button
                     type="button"
                     className="bb-project-art__crumb-btn"
-                    onClick={() => openFolder(crumb.path).catch((err) => notify(err.message))}
+                    onClick={() => {
+                      if (store.librarySource === 'gdrive' && store.activeExternalLibraryId) {
+                        openExternalLibrary(store.activeExternalLibraryId, crumb.path)
+                          .catch((err) => notify(err.message));
+                      } else {
+                        openFolder(crumb.path).catch((err) => notify(err.message));
+                      }
+                    }}
                   >
                     {crumb.label}
                   </button>
@@ -468,7 +870,12 @@ export function ProjectArtLibraryPanel() {
               value={store.searchQuery}
               onChange={(e) => {
                 const q = e.target.value;
-                projectArtSearch(q).catch((err) => notify(err.message));
+                if (store.librarySource === 'gdrive') {
+                  // Client-side filter of the currently loaded Drive folder page.
+                  projectArtSearchExternal(q);
+                } else {
+                  projectArtSearch(q).catch((err) => notify(err.message));
+                }
               }}
             />
             <select
@@ -484,14 +891,27 @@ export function ProjectArtLibraryPanel() {
             <button
               type="button"
               className="bb-btn"
-              disabled={store.busy || store.viewMode !== 'folder' || !store.currentFolder}
-              title={store.currentFolder ? 'Import images into this folder' : 'Open a folder before importing'}
+              disabled={
+                store.busy
+                || store.librarySource === 'gdrive'
+                || store.viewMode !== 'folder'
+                || !store.currentFolder
+              }
+              title={
+                store.librarySource === 'gdrive'
+                  ? 'Google Drive folders are read-only — Copy to Project Art Library first'
+                  : store.currentFolder
+                    ? 'Import images into this folder'
+                    : 'Open a folder before importing'
+              }
               onClick={() => fileRef.current?.click()}
               {...helpProps(
                 'projectArt.import',
-                store.viewMode !== 'folder' || !store.currentFolder
-                  ? 'Open a folder before importing.'
-                  : null,
+                store.librarySource === 'gdrive'
+                  ? 'External Drive folders are read-only.'
+                  : store.viewMode !== 'folder' || !store.currentFolder
+                    ? 'Open a folder before importing.'
+                    : null,
               )}
             >
               Import
@@ -510,22 +930,32 @@ export function ProjectArtLibraryPanel() {
             onSelectAll={selectAll}
             onDeselectAll={deselectAll}
             onSetSelection={setSelection}
-            onOpenFolder={(path) => openFolder(path).catch((err) => notify(err.message))}
+            onOpenFolder={(path) => {
+              if (store.librarySource === 'gdrive' && store.activeExternalLibraryId) {
+                openExternalLibrary(store.activeExternalLibraryId, path)
+                  .catch((err) => notify(err.message));
+              } else {
+                openFolder(path).catch((err) => notify(err.message));
+              }
+            }}
             onFolderContextMenu={(event, entry) => {
               openFromEvent(event, buildFolderMenuItems({
                 node: { path: entry.path, name: entry.name },
                 isRoot: false,
+                readOnly: store.librarySource === 'gdrive' || entry.source === 'gdrive',
                 run: (action) => runFolderAction(action, { path: entry.path, name: entry.name }),
               }));
             }}
             onItemContextMenu={(event, item) => {
+              // Preserve multi-select: only replace selection when RMB target is outside it.
               if (!store.selectedIds.includes(item.id)) selectOnly(item.id);
               openFromEvent(event, buildImageMenuItems({
                 item,
                 multiCount: store.selectedIds.includes(item.id)
                   ? Math.max(1, store.selectedIds.length)
                   : 1,
-                run: (action) => runItemAction(action, item),
+                collections,
+                run: (action, extra) => runItemAction(action, item, extra),
               }));
             }}
             onBackgroundContextMenu={(event) => {
@@ -538,6 +968,10 @@ export function ProjectArtLibraryPanel() {
               }));
             }}
             onImportFiles={async (files) => {
+              if (store.librarySource === 'gdrive') {
+                notify('Google Drive libraries are read-only — Copy to Project Art Library first');
+                return;
+              }
               if (store.viewMode !== 'folder') {
                 notify('Switch to a folder to import files');
                 return;
@@ -557,6 +991,22 @@ export function ProjectArtLibraryPanel() {
             }}
             notify={notify}
           />
+          {store.librarySource === 'gdrive' && store.externalNextPageToken && (
+            <div className="bb-project-art__load-more">
+              <button
+                type="button"
+                className="bb-btn"
+                disabled={store.busy}
+                onClick={() => {
+                  loadMoreExternalFolder()
+                    .then(() => setStatus('Loaded more Google Drive items'))
+                    .catch((err) => notify(err.message));
+                }}
+              >
+                Load more
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="bb-project-art__status">
@@ -590,6 +1040,8 @@ export function ProjectArtLibraryPanel() {
           notify={notify}
           setStatus={setStatus}
           prompt={prompt}
+          confirm={confirm}
+          openFromEvent={openFromEvent}
         />
 
         <input
@@ -636,9 +1088,12 @@ export function ProjectArtLibraryPanel() {
             trayRefs={aiUi.generationReferences}
             selectedTemplateId={aiUi.selectedPromptTemplateId}
             currentFolder={store.currentFolder}
+            collections={collections}
             busy={store.busy}
             notify={notify}
             setStatus={setStatus}
+            openFromEvent={openFromEvent}
+            runItemAction={runItemAction}
           />
         </div>
       </section>
@@ -920,7 +1375,13 @@ function ArtGallery({
             onContextMenu={(e) => onItemContextMenu?.(e, item)}
           >
             {url ? (
-              <img src={url} alt={item.title} className="bb-project-art__tile-img" draggable={false} />
+              <img
+                src={url}
+                alt={item.title}
+                className="bb-project-art__tile-img"
+                draggable={false}
+                onContextMenu={(e) => onItemContextMenu?.(e, item)}
+              />
             ) : (
               <div className="bb-project-art__tile-empty bb-muted">No image</div>
             )}
@@ -947,7 +1408,53 @@ function ArtGallery({
   );
 }
 
-function GenerationReferencesTray({ refs, selectedItems, notify, setStatus, prompt }) {
+function GenerationReferencesTray({
+  refs, selectedItems, notify, setStatus, prompt, confirm, openFromEvent,
+}) {
+  const saveReferenceSet = useCallback(async () => {
+    if (!refs.length) return;
+    const name = await prompt('Reference set name', {
+      title: 'Save Reference Set',
+      initialValue: 'Reference Set',
+    });
+    if (!name) return;
+    try {
+      await projectArtCreateReferenceSet({
+        name,
+        itemIds: refs.map((r) => r.id),
+      });
+      setStatus(`Saved reference set “${name}”`);
+    } catch (err) {
+      notify(err.message);
+    }
+  }, [refs, prompt, setStatus, notify]);
+
+  const clearAll = useCallback(async () => {
+    if (!refs.length) return;
+    const ok = await confirm(`Clear ${refs.length} generation reference(s)?`, {
+      title: 'Clear References',
+      confirmLabel: 'Clear',
+      tone: 'warning',
+    });
+    if (!ok) return;
+    clearGenerationReferences();
+    setStatus('Cleared generation references');
+  }, [refs.length, confirm, setStatus]);
+
+  const openRefInLibrary = useCallback(async (ref) => {
+    if (!ref?.relativePath) return;
+    const folder = ref.relativePath.includes('/')
+      ? ref.relativePath.slice(0, ref.relativePath.lastIndexOf('/'))
+      : '';
+    try {
+      await openFolder(folder);
+      selectOnly(ref.id);
+      setStatus(`Opened “${ref.title || ref.id}” in library`);
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [notify, setStatus]);
+
   return (
     <div className="bb-project-art__tray" {...helpProps('projectArt.tray')}>
       <div className="bb-project-art__tray-head">
@@ -975,33 +1482,67 @@ function GenerationReferencesTray({ refs, selectedItems, notify, setStatus, prom
             type="button"
             className="bb-btn bb-btn--ghost"
             disabled={!refs.length}
-            onClick={async () => {
-              const name = await prompt('Reference set name', {
-                title: 'Save Reference Set',
-                initialValue: 'Reference Set',
-              });
-              if (!name) return;
-              try {
-                await projectArtCreateReferenceSet({
-                  name,
-                  itemIds: refs.map((r) => r.id),
-                });
-                setStatus(`Saved reference set “${name}”`);
-              } catch (err) {
-                notify(err.message);
-              }
-            }}
+            onClick={saveReferenceSet}
           >
             Save Reference Set
           </button>
         </div>
       </div>
-      <div className="bb-project-art__tray-strip">
+      <div
+        className="bb-project-art__tray-strip"
+        onContextMenu={(event) => {
+          if (event.target !== event.currentTarget
+            && !event.target?.classList?.contains('bb-project-art__tray-empty')) {
+            return;
+          }
+          openFromEvent(event, buildTrayBackgroundMenuItems({
+            hasRefs: refs.length > 0,
+            run: (action) => {
+              if (action === 'clear') clearAll();
+              if (action === 'save-set') saveReferenceSet();
+            },
+          }));
+        }}
+      >
         {refs.map((ref) => {
           const url = projectArtPreviewUrl(ref.relativePath);
           return (
-            <div key={ref.id} className="bb-project-art__tray-thumb" title={ref.title}>
-              {url ? <img src={url} alt="" /> : <span className="bb-muted">?</span>}
+            <div
+              key={ref.id}
+              className="bb-project-art__tray-thumb"
+              title={ref.title}
+              onContextMenu={(event) => {
+                openFromEvent(event, buildTrayThumbMenuItems({
+                  ref,
+                  run: (action) => {
+                    if (action === 'remove') {
+                      removeGenerationReference(ref.id);
+                      setStatus(`Removed “${ref.title || ref.id}” from tray`);
+                    }
+                    if (action === 'open') openRefInLibrary(ref);
+                  },
+                }));
+              }}
+            >
+              {url ? (
+                <img
+                  src={url}
+                  alt=""
+                  draggable={false}
+                  onContextMenu={(event) => {
+                    openFromEvent(event, buildTrayThumbMenuItems({
+                      ref,
+                      run: (action) => {
+                        if (action === 'remove') {
+                          removeGenerationReference(ref.id);
+                          setStatus(`Removed “${ref.title || ref.id}” from tray`);
+                        }
+                        if (action === 'open') openRefInLibrary(ref);
+                      },
+                    }));
+                  }}
+                />
+              ) : <span className="bb-muted">?</span>}
               <button
                 type="button"
                 className="bb-project-art__tray-remove"
@@ -1024,7 +1565,17 @@ function GenerationReferencesTray({ refs, selectedItems, notify, setStatus, prom
 }
 
 function ArtPreviewDetail({
-  item, selectedItems, trayRefs, selectedTemplateId, currentFolder, busy, notify, setStatus,
+  item,
+  selectedItems,
+  trayRefs,
+  selectedTemplateId,
+  currentFolder,
+  collections = [],
+  busy,
+  notify,
+  setStatus,
+  openFromEvent,
+  runItemAction,
 }) {
   const [draft, setDraft] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
@@ -1187,7 +1738,9 @@ function ArtPreviewDetail({
   const folderLocation = item?.relativePath?.includes('/')
     ? item.relativePath.slice(0, item.relativePath.lastIndexOf('/'))
     : '(root)';
-  const url = item ? projectArtPreviewUrl(item) : null;
+  const url = item
+    ? (projectArtFullImageUrl(item) || projectArtPreviewUrl(item))
+    : null;
   const refTargets = selectedItems.length ? selectedItems : (item ? [item] : []);
 
   const onSavePrompt = useCallback(async () => {
@@ -1240,17 +1793,15 @@ function ArtPreviewDetail({
   const onSendRegion = useCallback(async () => {
     if (!item || !region) return;
     try {
-      // Template: item's saved category, else the shared selection, else a safe default.
-      const templateId = [prov.assetCategory, selectedTemplateId, 'environment_concept']
+      // Prefer the Asset Generation template selection — never the source
+      // concept's provenance category (that describes the old bedroom scene).
+      const templateId = [selectedTemplateId, 'wall_texture']
         .find((id) => id && getPromptTemplate(id));
       const res = await sendRegionToGeneration({
         item,
         region,
-        promptText: promptForSend,
         templateId,
-        // Only carry tiling that provenance actually recorded.
-        tileHorizontal: typeof prov.tileHorizontal === 'boolean' ? prov.tileHorizontal : undefined,
-        tileVertical: typeof prov.tileVertical === 'boolean' ? prov.tileVertical : undefined,
+        // Tiling comes from template suggestedDefaults / Asset Generation checkboxes.
         folderPath: currentFolder || '',
         promptId: savedPromptId || item.associatedPromptIds?.[0] || null,
       });
@@ -1261,8 +1812,7 @@ function ArtPreviewDetail({
       notify(err.message || String(err));
     }
   }, [
-    item, region, prov.assetCategory, prov.tileHorizontal, prov.tileVertical,
-    selectedTemplateId, promptForSend, currentFolder, savedPromptId, notify, setStatus,
+    item, region, selectedTemplateId, currentFolder, savedPromptId, notify, setStatus,
   ]);
 
   const onUseAsReference = useCallback(() => {
@@ -1271,6 +1821,22 @@ function ArtPreviewDetail({
       setStatus(res.added === 1 ? 'Added to Generation References' : `Added ${res.added} references`);
     }
   }, [refTargets, setStatus]);
+
+  const onSendToMeshy = useCallback(async () => {
+    if (!item) return;
+    try {
+      const res = await sendProjectArtToMeshy({
+        item,
+        region: region || null,
+        folderPath: currentFolder || '',
+      });
+      const message = res?.message || 'Sent to Meshy';
+      setStatus(message);
+      notify(message);
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [item, region, currentFolder, notify, setStatus]);
 
   if (!item || !draft) {
     return <div className="bb-muted">Select an image to preview.</div>;
@@ -1296,6 +1862,21 @@ function ArtPreviewDetail({
               alt={item.title}
               draggable={false}
               onLoad={bumpLayout}
+              onContextMenu={(event) => {
+                // RMB opens the image menu; region select stays LMB-only.
+                if (!openFromEvent || !runItemAction) {
+                  event.preventDefault();
+                  return;
+                }
+                openFromEvent(event, buildImageMenuItems({
+                  item,
+                  multiCount: selectedItems.some((s) => s.id === item.id)
+                    ? Math.max(1, selectedItems.length)
+                    : 1,
+                  collections,
+                  run: (action, extra) => runItemAction(action, item, extra),
+                }));
+              }}
             />
             {[['drag', dragRegion], ['region', dragRegion ? null : region]].map(([key, r]) => {
               const style = r ? overlayStyle(r) : null;
@@ -1455,7 +2036,7 @@ function ArtPreviewDetail({
         {activeTab === 'prompt' && (
           <div className="bb-project-art-detail__prompt">
             <p className="bb-muted bb-project-art-detail__hint">
-              Edit and reuse via Send to Generation. New prompt construction lives in Asset Generation.
+              Optional. Send to Generation transfers a saved prompt when present; otherwise compose in Asset Generation.
             </p>
             <label className="bb-field">
               <span className="bb-field-caption">Working generation prompt</span>
@@ -1559,11 +2140,15 @@ function ArtPreviewDetail({
           <button
             type="button"
             className="bb-btn bb-btn--primary"
-            disabled={busy || !promptForSend}
+            disabled={busy || !refTargets.length}
             onClick={onSendToGeneration}
             {...helpProps(
               'projectArt.action.sendToGeneration',
-              !promptForSend ? 'Select an image with a prompt (or enter one on the Prompt tab).' : null,
+              !refTargets.length
+                ? 'Select an image first.'
+                : !promptForSend
+                  ? 'No saved prompt — Asset Generation will open so you can pick a template or enter one.'
+                  : null,
             )}
           >
             Send to Generation
@@ -1580,6 +2165,18 @@ function ArtPreviewDetail({
             )}
           >
             Send Region to Generation
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={busy || !item}
+            onClick={onSendToMeshy}
+            {...helpProps(
+              'projectArt.action.sendToMeshy',
+              !item ? 'Select an image first.' : null,
+            )}
+          >
+            {region ? 'Send Region to Meshy' : 'Send to Meshy'}
           </button>
         </div>
       </footer>
@@ -1670,15 +2267,24 @@ function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
-function buildFolderMenuItems({ node, isRoot = false, run }) {
+function buildFolderMenuItems({ node, isRoot = false, readOnly = false, run }) {
   const items = [
     { id: 'open', label: 'Open', onSelect: () => run('open') },
-    { id: 'new', label: 'New Folder', onSelect: () => run('new') },
   ];
+  if (readOnly) {
+    items.push(
+      { id: 'sep-sys', separator: true },
+      { id: 'refresh', label: 'Refresh', onSelect: () => run('refresh') },
+    );
+    return items;
+  }
+  items.push({ id: 'new', label: 'New Folder', onSelect: () => run('new') });
   if (!isRoot && node?.path) {
     items.push(
       { id: 'sep-edit', separator: true },
       { id: 'rename', label: 'Rename', onSelect: () => run('rename') },
+      { id: 'move', label: 'Move Folder…', onSelect: () => run('move') },
+      { id: 'copy', label: 'Copy Folder…', onSelect: () => run('copy') },
       { id: 'delete', label: 'Delete', danger: true, onSelect: () => run('delete') },
     );
   }
@@ -1690,21 +2296,119 @@ function buildFolderMenuItems({ node, isRoot = false, run }) {
   return items;
 }
 
-function buildImageMenuItems({ item, multiCount = 1, run }) {
+function buildCollectionMenuItems({ hasSelection = false, run }) {
+  return [
+    { id: 'open', label: 'Open', onSelect: () => run('open') },
+    { id: 'rename', label: 'Rename', onSelect: () => run('rename') },
+    {
+      id: 'add-selection',
+      label: 'Add Selection',
+      disabled: !hasSelection,
+      onSelect: () => run('add-selection'),
+    },
+    { id: 'sep', separator: true },
+    {
+      id: 'delete',
+      label: 'Delete',
+      danger: true,
+      onSelect: () => run('delete'),
+    },
+  ];
+}
+
+function buildImageMenuItems({ item, multiCount = 1, collections = [], run }) {
   const deleteLabel = multiCount > 1 ? `Delete ${multiCount} Images` : 'Delete';
   const addLabel = multiCount > 1 ? `Use ${multiCount} as References` : 'Use as Reference';
-  return [
+  const readOnly = item?.source === 'gdrive' || item?.readOnly;
+  const items = [
     { id: 'add-refs', label: addLabel, onSelect: () => run('add-refs') },
+    { id: 'send-generation', label: 'Send to Generation', onSelect: () => run('send-generation') },
+    {
+      id: 'send-meshy',
+      label: 'Send to Meshy',
+      disabled: multiCount > 1,
+      onSelect: () => run('send-meshy'),
+    },
+  ];
+  if (readOnly) {
+    items.push(
+      { id: 'sep-ext', separator: true },
+      {
+        id: 'copy-to-project-art',
+        label: multiCount > 1
+          ? `Copy ${multiCount} to Project Art…`
+          : 'Copy to Project Art Library…',
+        onSelect: () => run('copy-to-project-art'),
+      },
+      {
+        id: 'open-drive',
+        label: 'Open in Google Drive',
+        disabled: multiCount > 1 || !item?.provenance?.webViewLink,
+        onSelect: () => {
+          const href = item?.provenance?.webViewLink;
+          if (href) window.open(href, '_blank', 'noopener,noreferrer');
+        },
+      },
+    );
+    return items;
+  }
+  items.push(
     {
       id: 'favorite',
       label: item?.favorite ? 'Remove Favorite' : 'Add to Favorites',
       onSelect: () => run('favorite'),
+    },
+    { id: 'sep-org', separator: true },
+    { id: 'move', label: 'Move to Folder…', onSelect: () => run('move') },
+    { id: 'copy', label: 'Copy to Folder…', onSelect: () => run('copy') },
+  );
+  if (collections.length) {
+    items.push({ id: 'sep-col', separator: true });
+    for (const col of collections) {
+      items.push({
+        id: `add-col-${col.id}`,
+        label: `Add to “${col.name}”`,
+        onSelect: () => run('add-to-collection', col.id),
+      });
+    }
+  }
+  items.push(
+    {
+      id: 'new-collection',
+      label: 'New Collection…',
+      onSelect: () => run('new-collection'),
     },
     { id: 'sep-edit', separator: true },
     { id: 'rename', label: 'Rename', disabled: multiCount > 1, onSelect: () => run('rename') },
     { id: 'delete', label: deleteLabel, danger: true, onSelect: () => run('delete') },
     { id: 'sep-sys', separator: true },
     { id: 'explorer', label: 'Open in Explorer', onSelect: () => run('explorer') },
+  );
+  return items;
+}
+
+function buildTrayThumbMenuItems({ run }) {
+  return [
+    { id: 'open', label: 'Open in Library', onSelect: () => run('open') },
+    { id: 'remove', label: 'Remove', onSelect: () => run('remove') },
+  ];
+}
+
+function buildTrayBackgroundMenuItems({ hasRefs = false, run }) {
+  return [
+    {
+      id: 'save-set',
+      label: 'Save Reference Set',
+      disabled: !hasRefs,
+      onSelect: () => run('save-set'),
+    },
+    {
+      id: 'clear',
+      label: 'Clear All',
+      disabled: !hasRefs,
+      danger: true,
+      onSelect: () => run('clear'),
+    },
   ];
 }
 

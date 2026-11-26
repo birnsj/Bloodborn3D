@@ -23,7 +23,7 @@ Project Art columns (resizable):
 
 | Column | Contents |
 | --- | --- |
-| Left | Project Library filters (All / Recent / Favorites), Projects folder tree, Collections, Tags |
+| Left | Project Library filters (All / Recent / Favorites), Projects folder tree, **External Libraries** (Google Drive), Collections, Tags |
 | Center | Breadcrumb, search/sort/import, thumbnail grid, status bar, Generation References tray |
 | Right | Large preview + Details / Prompt / Generation tabs + Send to Generation / Use as Reference |
 
@@ -47,7 +47,11 @@ Project Art columns (resizable):
 | Artwork files | `project-art/**` (gitignored binaries) |
 | Metadata DB | `project-art/.bb-art/library.json` (tracked) |
 | Thumb cache dir | `project-art/.bb-art/thumbs/` (gitignored; optional) |
+| External Drive libs | `project-art/.bb-art/external-libraries.json` |
+| Drive materialize cache | `project-art/.bb-art/gdrive-cache/` (gitignored) |
 | Gameplay assets | unchanged under `public/assets/` |
+
+See also `ACCEPTANCE_GOOGLE_DRIVE_EXTERNAL_LIBRARY.md` for OAuth setup and Drive browse acceptance.
 
 Legacy `concept-library/` remains readable for one-shot migration when the project-art library is empty.
 
@@ -60,8 +64,8 @@ Legacy `concept-library/` remains readable for one-shot migration when the proje
 ## Prompt Templates + selected region
 
 - **Templates** (`promptTemplates.js`, `PROMPT_TEMPLATES`) are data-driven definitions (framing, technical constraints, orthographic / isolated / tiling-relevant flags, output type). Includes **3D Model Reference** and **Sprite**. `ASSET_CATEGORIES` is derived for dropdown labels.
-- **Asset Generation → Prompt Templates**: pick a template (e.g. Wall Texture), optional instructions, then **Compose Prompt**. Output is template-based; the cropped reference supplies visual detail. The generated body has **no tiling sentences** — tiling is appended once from the existing Tile Horizontal / Vertical checkboxes (and `composeGenerationPrompt` skips the append if the body already says "seamless … tiling"). **Save Prompt** writes a Project Art prompt and, when the origin has `sourceItemId`, updates that item's `generationPrompt`.
-- **Region workflow**: in the Project Art preview, **Select Region** → drag a rectangle (stored normalized 0..1 against the image's natural size in `aiAssetsUiStore.selectedRegion`) → **Send Region to Generation**. The rectangle is **cropped** and uploaded into `.openart-staging` as the OpenArt `--image` reference (image2image). Source image, region coordinates, cropped staging metadata, template id, and source item travel in `generationOrigin` (`sourceRegion`, `croppedReference`, `promptTemplateId`, `sourceItemId`). No separate vision analysis step.
+- **Asset Generation → Prompt Templates**: picking a template **auto-composes** the Prompt field (confirms before replacing intentional manual edits). **Compose Prompt** is optional explicit recomposition. Output is template-based; the cropped reference supplies visual detail. The composed body has **no tiling sentences** — tiling is appended once from the existing Tile Horizontal / Vertical checkboxes (and `composeGenerationPrompt` skips the append if the body already says "seamless … tiling"). The **Final submitted prompt** preview matches Estimate / Generate. **Save Prompt** writes a Project Art prompt and, when the origin has `sourceItemId`, updates that item's `generationPrompt`.
+- **Region workflow**: in the Project Art preview, **Select Region** → drag a rectangle (stored normalized 0..1 against the image's natural size in `aiAssetsUiStore.selectedRegion`) → **Send Region to Generation**. The rectangle is **cropped** and uploaded into `.openart-staging` as the **sole** OpenArt `--image` reference (image2image) — never the full concept image. The handoff **auto-composes** a template prompt (default Wall Texture / current selection) and **does not** carry the source concept's original generation prompt. Source image, region coordinates, cropped staging metadata, template id, and source item travel in `generationOrigin` (`sourceRegion`, `croppedReference`, `promptTemplateId`, `sourceItemId`). No separate vision analysis step.
 - **Provenance**: saving a result to Project Art records `promptTemplateId`, `assetCategory`, `sourceRegion`, `sourceItemId`, `croppedReference` alongside the existing prompt and tiling fields.
 
 ## Acceptance checklist

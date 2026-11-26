@@ -26,9 +26,11 @@ import {
   importMeshFile,
   importTextureFile,
   publicAssetUrl,
+  replaceTextureFile,
   updateMaterial,
   updatePrefab,
 } from '../../io/assetFileApi.js';
+import { clearTextureCache } from '../../runtime/materialFactory.js';
 import { normalizePrefabDefinition } from '../../prefabs/PrefabDefinition.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../../ui/dialogs/reportEditorMessage.js';
@@ -71,14 +73,15 @@ export function AssetBrowserProvider({ children }) {
         data = await res.json();
       }
       const next = normalizeRegistry(data);
-      setRegistry(next);
-      setRevision((r) => r + 1);
 
-      // Prefetch material definitions for browser previews
+      // Prefetch material definitions before bumping revision so SceneView
+      // resync (driven by assetRevision) reads the updated cache. Re-fetch when
+      // the registry entry is newer than the cached definition (external API edits).
       const mats = next.assets.filter((a) => a.kind === 'material');
       const defs = { ...materialCacheRef.current };
       await Promise.all(mats.map(async (m) => {
-        if (defs[m.id]) return;
+        const cached = defs[m.id];
+        if (cached && Number(cached.updatedAt) >= Number(m.updatedAt || 0)) return;
         try {
           let def;
           try {
@@ -116,6 +119,9 @@ export function AssetBrowserProvider({ children }) {
       }));
       prefabCacheRef.current = pdefs;
       setPrefabDefs({ ...pdefs });
+
+      setRegistry(next);
+      setRevision((r) => r + 1);
       return next;
     } catch (err) {
       notify(`Asset registry: ${err.message}`);
@@ -125,6 +131,24 @@ export function AssetBrowserProvider({ children }) {
 
   useEffect(() => {
     refreshRegistry();
+  }, [refreshRegistry]);
+
+  // External tooling (scripts /api/assets import) writes registry on disk while the
+  // editor is open. Refresh when the window regains focus so new textures/materials
+  // resolve without requiring a full restart.
+  useEffect(() => {
+    const onFocus = () => {
+      void refreshRegistry();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') onFocus();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [refreshRegistry]);
 
   const selectedAsset = useMemo(
@@ -170,7 +194,12 @@ export function AssetBrowserProvider({ children }) {
   const getTextureUrl = useCallback((id) => {
     const entry = findAsset(registry, id);
     if (!entry || entry.kind !== 'texture') return null;
-    return publicAssetUrl(entry.path);
+    const base = publicAssetUrl(entry.path);
+    if (!base) return null;
+    // Cache-bust when texture bytes are replaced in-place (same path).
+    const v = Number(entry.updatedAt) || 0;
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}v=${v}`;
   }, [registry, revision]);
 
   const getMeshBoundsMeters = useCallback((id) => {
@@ -225,16 +254,25 @@ export function AssetBrowserProvider({ children }) {
     }
   }, [registry]);
 
-  const importTexture = useCallback(async (file) => {
+  const importTexture = useCallback(async (file, options = {}) => {
     setStatus(`Importing texture ${file.name}…`);
-    const result = await importTextureFile(file);
+    const result = await importTextureFile(file, options);
     materialCacheRef.current = { ...materialCacheRef.current };
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
-    setSelectedAssetId(result.asset.id);
-    notify(`Imported texture ${result.asset.name}`);
+    if (options.select !== false) setSelectedAssetId(result.asset.id);
+    if (options.notify !== false) notify(`Imported texture ${result.asset.name}`);
     return result.asset;
   }, [notify, setStatus]);
+
+  const replaceTexture = useCallback(async (id, file) => {
+    setStatus(`Updating texture ${id}…`);
+    const result = await replaceTextureFile(id, file);
+    clearTextureCache();
+    setRegistry(normalizeRegistry(result.registry));
+    setRevision((r) => r + 1);
+    return result.asset;
+  }, [setStatus]);
 
   const importMesh = useCallback(async (file) => {
     setStatus(`Importing mesh ${file.name}…`);
@@ -369,6 +407,7 @@ export function AssetBrowserProvider({ children }) {
     dragMime: ASSET_DRAG_MIME,
     refreshRegistry,
     importTexture,
+    replaceTexture,
     importMesh,
     createNewMaterial,
     duplicateMaterial,
@@ -395,6 +434,7 @@ export function AssetBrowserProvider({ children }) {
     beginAssetDrag,
     refreshRegistry,
     importTexture,
+    replaceTexture,
     importMesh,
     createNewMaterial,
     duplicateMaterial,

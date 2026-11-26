@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_0807fae227e1",
+  "name": "Full Wall Master Bedroom",
+  "type": "material",
+  "baseColor": "#ffffff",
+  "baseColorMapId": "tex_c62b419b178b",
+  "normalMapId": "tex_c99ddcca74e2",
+  "normalScale": 1,
+  "roughness": 1,
+  "metalness": 0,
+  "roughnessMapId": "tex_3c7e68009065",
+  "metalnessMapId": null,
+  "envMapIntensity": 1,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 0.16666666666666666,
+    "y": 0.16666666666666666
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_0807fae227e1_sphere.png",
+  "createdAt": 1795665630908,
+  "updatedAt": 1795667739818,
+  "pbrGenerator": {
+    "sourceTextureId": "tex_c62b419b178b",
+    "tileHorizontal": true,
+    "tileVertical": false,
+    "normal": {
+      "strength": 1.15,
+      "fineDetail": 0.6,
+      "largeScale": 0.7,
+      "smoothing": 0.3,
+      "invertHeight": false,
+      "invertY": false
+    },
+    "roughness": {
+      "mode": "derived",
+      "overall": 0.62,
+      "contrast": 1.2,
+      "detail": 0.7,
+      "invert": false,
+      "min": 0.12,
+      "max": 0.9,
+      "uniformValue": 0.72
+    },
+    "generatedNormalMapId": "tex_c99ddcca74e2",
+    "generatedRoughnessMapId": "tex_3c7e68009065",
+    "updatedAt": 1795667739811
+  }
+}

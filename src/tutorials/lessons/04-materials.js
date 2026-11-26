@@ -63,9 +63,27 @@ export const materialsLesson = {
       verify: { type: 'manualConfirm', label: 'Got it' },
     },
     {
+      id: 'generate-pbr',
+      title: 'Generate PBR Maps',
+      body: 'In Materials, select a material that has a base-color texture and click Generate PBR Maps. Adjust normal/roughness controls and tiling wrap, preview under lighting, then Apply & Save — or Cancel to leave the material unchanged. Maps are generated locally (no AI credits).',
+      highlight: ['workspace.materials', 'materials.pbrGenerator'],
+      terms: [
+        {
+          term: 'Normal map',
+          def: 'Tangent-space texture that fakes surface relief under lighting. BloodBound uses the OpenGL / Three.js +Y convention.',
+        },
+        {
+          term: 'Roughness map',
+          def: 'Controls how sharp or soft reflections appear. Generated maps store absolute roughness; the material roughness scalar is set to 1 on Apply.',
+        },
+      ],
+      verify: { type: 'manualConfirm', label: 'Understood' },
+      explain: 'Brightness in a base-color image is only a proxy for height. Invert Height and Fine vs Large-scale controls compensate when carved detail looks inverted or flat. Preserve material UV scale (e.g. Full Wall 1/6) — Apply does not reset UVs.',
+    },
+    {
       id: 'from-generation',
       title: 'Textures from Asset Generation',
-      body: 'AI Assets → Asset Generation can Import Texture and Create Material from an OpenArt result. Those assets then appear in Content Browser / Asset Viewer like any other material.',
+      body: 'AI Assets → Asset Generation can Import Texture and Create Material from an OpenArt result. Those assets then appear in Content Browser / Asset Viewer like any other material. You can then Generate PBR Maps on that material locally.',
       highlight: ['workspace.ai', 'openart.createMaterial'],
       verify: { type: 'manualConfirm', label: 'Understood' },
       explain: 'Project Art Library holds concept references; imported textures/materials live in the normal asset folders used by the level editor.',

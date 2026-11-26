@@ -169,6 +169,17 @@ export function openArtApiPlugin() {
 
           if (req.method === 'GET' && action === 'staging-file') {
             const stagingId = url.searchParams.get('stagingId');
+            // Reference uploads use ref_* ids (image file only, no job meta JSON).
+            // Generation results use stg_* ids with accompanying .json meta.
+            if (typeof stagingId === 'string' && /^ref_[a-z0-9]+$/i.test(stagingId)) {
+              const absolutePath = await resolveReferenceStagingFile(stagingId);
+              const buf = await fs.readFile(absolutePath);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', contentTypeFor(path.basename(absolutePath)));
+              res.setHeader('Cache-Control', 'no-store');
+              res.end(buf);
+              return;
+            }
             const { meta, absolutePath } = await readStagingFile(stagingId, {
               stagingRoot: STAGING_ROOT,
             });
@@ -257,6 +268,23 @@ function mapErrorStatus(code) {
     default:
       return 500;
   }
+}
+
+async function resolveReferenceStagingFile(stagingId) {
+  const root = path.resolve(STAGING_ROOT);
+  const exts = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+  for (const ext of exts) {
+    const abs = path.resolve(root, `${stagingId}${ext}`);
+    if (!abs.startsWith(root + path.sep) && abs !== root) continue;
+    try {
+      await fs.access(abs);
+      return abs;
+    } catch {
+      // try next extension
+    }
+  }
+  const err = new OpenArtCliError('NOT_FOUND', `Reference staging file not found: ${stagingId}`);
+  throw err;
 }
 
 function contentTypeFor(name = '') {

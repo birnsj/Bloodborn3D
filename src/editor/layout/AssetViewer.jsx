@@ -9,6 +9,10 @@ import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewC
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import {
+  suppressNativeImageMenu,
+  useEditorContextMenu,
+} from '../../ui/contextMenu/EditorContextMenu.jsx';
 /**
  * Bottom Asset Viewer — lists assets from the Content Browser folder.
  * Double-click opens a temporary preview window (not embedded in the panel).
@@ -37,6 +41,7 @@ export function AssetViewer({ docked = false } = {}) {
     notify: notifyEditor,
   } = useEditor();
   const { prompt } = useEditorDialogs();
+  const { openFromEvent } = useEditorContextMenu();
 
   const folder = layout.contentFolder || 'Materials';
   const viewMode = layout.contentViewMode || 'grid';
@@ -302,6 +307,21 @@ export function AssetViewer({ docked = false } = {}) {
                     onDragStart={(e) => beginAssetDrag(e, asset)}
                     onClick={() => selectAsset(asset.id)}
                     onDoubleClick={() => openPreview(asset)}
+                    onContextMenu={(event) => {
+                      if (!selected) selectAsset(asset.id);
+                      openFromEvent(event, [
+                        {
+                          id: 'preview',
+                          label: 'Open Preview',
+                          onSelect: () => openPreview(asset),
+                        },
+                        {
+                          id: 'select',
+                          label: 'Select',
+                          onSelect: () => selectAsset(asset.id),
+                        },
+                      ]);
+                    }}
                     title={`${asset.name} (${asset.type}) — double-click to preview`}
                     {...helpProps('content.asset')}
                   >
@@ -447,7 +467,13 @@ function PreviewSurface({ asset }) {
   if (asset.type === 'texture' && asset.url) {
     return (
       <div className="bb-asset-preview__surface bb-asset-preview__surface--image">
-        <img src={asset.url} alt={asset.name} className="bb-asset-preview__image" />
+        <img
+          src={asset.url}
+          alt={asset.name}
+          className="bb-asset-preview__image"
+          draggable={false}
+          onContextMenu={suppressNativeImageMenu}
+        />
       </div>
     );
   }

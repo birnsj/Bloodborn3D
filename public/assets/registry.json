@@ -529,6 +529,389 @@
       },
       "createdAt": 1795650000888,
       "updatedAt": 1795650848548
+    },
+    {
+      "id": "tex_c62b419b178b",
+      "kind": "texture",
+      "name": "Full Wall Master Bedroom",
+      "folder": "Textures",
+      "path": "textures/tex_c62b419b178b.png",
+      "originalName": "stg_67ca818a208c.png",
+      "tags": [
+        "openart",
+        "generated",
+        "phase2h1a"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1627224,
+        "magic": "png"
+      },
+      "createdAt": 1795665630899,
+      "updatedAt": 1795665630899
+    },
+    {
+      "id": "mat_0807fae227e1",
+      "kind": "material",
+      "name": "Full Wall Master Bedroom",
+      "folder": "Materials",
+      "path": "materials/mat_0807fae227e1.json",
+      "originalName": "mat_0807fae227e1.json",
+      "tags": [],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 1,
+        "metalness": 0,
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_0807fae227e1_sphere.png",
+        "pbrSourceTextureId": "tex_c62b419b178b",
+        "tileHorizontal": true,
+        "tileVertical": false
+      },
+      "createdAt": 1795665630908,
+      "updatedAt": 1795667739818
+    },
+    {
+      "id": "tex_b24283819269",
+      "kind": "texture",
+      "name": "OpenArt Recreate the complete wall",
+      "folder": "Textures",
+      "path": "textures/tex_b24283819269.png",
+      "originalName": "stg_7fa7775cad04.png",
+      "tags": [
+        "openart",
+        "generated",
+        "phase2h1a"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1315194,
+        "magic": "png"
+      },
+      "createdAt": 1795665950898,
+      "updatedAt": 1795665950898
+    },
+    {
+      "id": "mat_f54dab845869",
+      "kind": "material",
+      "name": "OpenArt Recreate the complete wall",
+      "folder": "Materials",
+      "path": "materials/mat_f54dab845869.json",
+      "originalName": "mat_f54dab845869.json",
+      "tags": [],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 1,
+        "metalness": 0,
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_f54dab845869_sphere.png",
+        "pbrSourceTextureId": "tex_b24283819269",
+        "tileHorizontal": true,
+        "tileVertical": false
+      },
+      "createdAt": 1795665950910,
+      "updatedAt": 1795668429308
+    },
+    {
+      "id": "tex_7e918f2f33af",
+      "kind": "texture",
+      "name": "mat_f54dab845869_sphere",
+      "folder": "Textures",
+      "path": "textures/tex_7e918f2f33af.png",
+      "originalName": "mat_f54dab845869_sphere.png",
+      "tags": [],
+      "meta": {
+        "format": "png",
+        "bytes": 104217,
+        "magic": "png"
+      },
+      "createdAt": 1795666397116,
+      "updatedAt": 1795666397116
+    },
+    {
+      "id": "tex_c99ddcca74e2",
+      "kind": "texture",
+      "name": "Full Wall Master Bedroom Normal",
+      "folder": "Textures",
+      "path": "textures/tex_c99ddcca74e2.png",
+      "originalName": "full-wall-normal.png",
+      "tags": [
+        "pbr-generated",
+        "normal",
+        "non-color"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1670279,
+        "magic": "png"
+      },
+      "createdAt": 1795666572009,
+      "updatedAt": 1795667739609
+    },
+    {
+      "id": "tex_3c7e68009065",
+      "kind": "texture",
+      "name": "Full Wall Master Bedroom Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_3c7e68009065.png",
+      "originalName": "full-wall-roughness.png",
+      "tags": [
+        "pbr-generated",
+        "roughness",
+        "non-color"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1040927,
+        "magic": "png"
+      },
+      "createdAt": 1795666572032,
+      "updatedAt": 1795667739641
+    },
+    {
+      "id": "tex_172bf9f49ab4",
+      "kind": "texture",
+      "name": "OpenArt Recreate the complete wall Normal",
+      "folder": "Textures",
+      "path": "textures/tex_172bf9f49ab4.png",
+      "originalName": "openart_recreate_the_complete_wall_normal.png",
+      "tags": [
+        "pbr-generated",
+        "normal",
+        "non-color"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1559003,
+        "magic": "png"
+      },
+      "createdAt": 1795667258172,
+      "updatedAt": 1795667258172
+    },
+    {
+      "id": "tex_1041f5851be0",
+      "kind": "texture",
+      "name": "OpenArt Recreate the complete wall Roughness",
+      "folder": "Textures",
+      "path": "textures/tex_1041f5851be0.png",
+      "originalName": "openart_recreate_the_complete_wall_roughness.png",
+      "tags": [
+        "pbr-generated",
+        "roughness",
+        "non-color"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 943181,
+        "magic": "png"
+      },
+      "createdAt": 1795667258219,
+      "updatedAt": 1795667258219
+    },
+    {
+      "id": "mesh_c34066cb0284",
+      "kind": "mesh",
+      "name": "PRINCIPAL BUGGELSBY.jpg",
+      "folder": "Meshes",
+      "path": "meshes/mesh_c34066cb0284.glb",
+      "originalName": "PRINCIPAL BUGGELSBY.jpg.glb",
+      "tags": [
+        "meshy",
+        "ai-generated"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 9118292,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "boundingBoxMeters": {
+          "x": 0.899,
+          "y": 1.75,
+          "z": 0.547
+        },
+        "authoredHeightMeters": 1.75,
+        "meshyTaskId": "01a2166f-8302-7268-9294-791fd048bd23",
+        "meshyJobId": "msj_01a2166f-8302-7268-9294-",
+        "meshySettings": {
+          "model_type": "smart-topology",
+          "ai_model": "meshy-t2.5",
+          "target_polycount": 5000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_model": "meshy-7",
+          "texture_resolution": "2k",
+          "target_formats": [
+            "glb"
+          ],
+          "should_remesh": false,
+          "geometry_resolution": "standard"
+        },
+        "meshyCliArgv": [
+          "image-to-3d",
+          "create",
+          "--image-url",
+          "D:\\BloodBound3D\\.meshy-staging\\refs\\ref_a6b1cdf361b9_PRINCIPAL_BUGGELSBY.jpg.png",
+          "--model-type",
+          "smart-topology",
+          "--should-texture",
+          "true",
+          "--target-formats",
+          "glb",
+          "--ai-model",
+          "meshy-t2.5",
+          "--target-polycount",
+          "5000",
+          "--texture-model",
+          "meshy-7",
+          "--texture-resolution",
+          "2k",
+          "--enable-pbr",
+          "true",
+          "--async",
+          "--operation-id",
+          "op_52fa04df00d34a05"
+        ],
+        "provenance": {
+          "projectArtItemId": "gdrive:ext_84d7bfb00a09:1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ",
+          "relativePath": ".bb-art/gdrive-cache/1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ/PRINCIPAL_BUGGELSBY.jpg",
+          "title": "PRINCIPAL BUGGELSBY.jpg",
+          "folderPath": "CHARACTER DESIGNS",
+          "openArtAssociation": null,
+          "source": "google-drive",
+          "driveFileId": "1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ",
+          "driveFileName": "PRINCIPAL BUGGELSBY.jpg",
+          "driveFolderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+          "driveLibraryId": "ext_84d7bfb00a09",
+          "driveLibraryName": "14 - BLOODBOUND",
+          "webViewLink": "https://drive.google.com/file/d/1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ/view?usp=drivesdk",
+          "materializedAt": "2026-11-26T05:57:49.669Z",
+          "referenceTitle": "PRINCIPAL BUGGELSBY.jpg",
+          "referenceSource": "project-art"
+        },
+        "creditsEstimated": 15,
+        "creditsConsumed": 15,
+        "generatedAt": 1795672742608,
+        "pivot": "bottom-center",
+        "pivotOffsetMeters": {
+          "x": 0.002,
+          "y": 0.475,
+          "z": -0.003
+        },
+        "boundingBoxCenterMeters": {
+          "x": 0,
+          "y": 0.875,
+          "z": 0
+        },
+        "importScale": 1.8408,
+        "sourceHeightMeters": 0.951,
+        "targetHeightMeters": 1.75
+      },
+      "createdAt": 1795672805859,
+      "updatedAt": 1795673585849
+    },
+    {
+      "id": "mesh_169ce4c7d120",
+      "kind": "mesh",
+      "name": "P-test",
+      "folder": "Meshes",
+      "path": "meshes/mesh_169ce4c7d120.glb",
+      "originalName": "P-test.glb",
+      "tags": [
+        "meshy",
+        "ai-generated"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 9118252,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "meshyTaskId": "01a2166f-8302-7268-9294-791fd048bd23",
+        "meshyJobId": "msj_01a2166f-8302-7268-9294-",
+        "meshySettings": {
+          "model_type": "smart-topology",
+          "ai_model": "meshy-t2.5",
+          "target_polycount": 5000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_model": "meshy-7",
+          "texture_resolution": "2k",
+          "target_formats": [
+            "glb"
+          ],
+          "should_remesh": false,
+          "geometry_resolution": "standard"
+        },
+        "meshyCliArgv": [
+          "image-to-3d",
+          "create",
+          "--image-url",
+          "D:\\BloodBound3D\\.meshy-staging\\refs\\ref_a6b1cdf361b9_PRINCIPAL_BUGGELSBY.jpg.png",
+          "--model-type",
+          "smart-topology",
+          "--should-texture",
+          "true",
+          "--target-formats",
+          "glb",
+          "--ai-model",
+          "meshy-t2.5",
+          "--target-polycount",
+          "5000",
+          "--texture-model",
+          "meshy-7",
+          "--texture-resolution",
+          "2k",
+          "--enable-pbr",
+          "true",
+          "--async",
+          "--operation-id",
+          "op_52fa04df00d34a05"
+        ],
+        "provenance": {
+          "projectArtItemId": "gdrive:ext_84d7bfb00a09:1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ",
+          "relativePath": ".bb-art/gdrive-cache/1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ/PRINCIPAL_BUGGELSBY.jpg",
+          "title": "PRINCIPAL BUGGELSBY.jpg",
+          "folderPath": "CHARACTER DESIGNS",
+          "openArtAssociation": null,
+          "source": "google-drive",
+          "driveFileId": "1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ",
+          "driveFileName": "PRINCIPAL BUGGELSBY.jpg",
+          "driveFolderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+          "driveLibraryId": "ext_84d7bfb00a09",
+          "driveLibraryName": "14 - BLOODBOUND",
+          "webViewLink": "https://drive.google.com/file/d/1j2X2lc32emj2Ep1xyX_rTczOtASyBFMJ/view?usp=drivesdk",
+          "materializedAt": "2026-11-26T05:57:49.669Z",
+          "referenceTitle": "PRINCIPAL BUGGELSBY.jpg",
+          "referenceSource": "project-art"
+        },
+        "creditsEstimated": 15,
+        "creditsConsumed": 15,
+        "generatedAt": 1795672742608,
+        "pivot": "bottom-center",
+        "pivotOffsetMeters": {
+          "x": 0.0021974965929985046,
+          "y": 0.4753420054912567,
+          "z": -0.002929501235485077
+        },
+        "boundingBoxMeters": {
+          "x": 0.4882809966802597,
+          "y": 0.9506840109825134,
+          "z": 0.2973629981279373
+        },
+        "boundingBoxCenterMeters": {
+          "x": 0,
+          "y": 0.4753420054912567,
+          "z": 0
+        }
+      },
+      "createdAt": 1795673380114,
+      "updatedAt": 1795673380114
     }
   ]
 }

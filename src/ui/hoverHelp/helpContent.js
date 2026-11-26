@@ -505,8 +505,8 @@ export const HELP_CONTENT = {
   },
   'workspace.ai': {
     title: 'AI Assets',
-    body: 'Workspace for Project Art Library (browse and organize concept art) and Asset Generation (OpenArt). Switch sections with the tabs under the workspace title.',
-    tips: 'OpenArt needs the CLI and login. ComfyUI and Meshy are Coming Soon placeholders.',
+    body: 'Workspace for Project Art Library and Asset Generation (OpenArt images + Meshy Image-to-3D). Switch sections with the tabs under the workspace title.',
+    tips: 'OpenArt and Meshy both use their official CLIs with browser sign-in. Both require explicit spend approval.',
   },
   'workspace.level': {
     title: 'Level Editor',
@@ -514,7 +514,28 @@ export const HELP_CONTENT = {
   },
   'workspace.materials': {
     title: 'Materials',
-    body: 'Edit material definitions (base color, maps, preview). Switch back to Level Editor to assign materials to brushes and faces.',
+    body: 'Edit material definitions (base color, maps, preview). Use Generate PBR Maps to derive local normal and roughness from a base-color texture. Switch back to Level Editor to assign materials to brushes and faces.',
+  },
+  'materials.pbrGenerator': {
+    title: 'Generate PBR Maps',
+    body: 'Builds normal and roughness maps locally from the material’s base-color texture — no AI credits. Adjust strength, smoothing, tiling wrap, and roughness response, preview under lighting, then Apply & Save. Cancel leaves the saved material unchanged.',
+    tips: 'Brightness is only a height proxy. Use Invert Height / Fine vs Large-scale controls when relief looks wrong. Full-wall textures usually wrap horizontally but not vertically.',
+  },
+  'materials.pbrParams': {
+    title: 'PBR generation parameters',
+    body: 'Normal controls shape an intermediate height field then tangent-space normals (OpenGL / Three.js +Y). Roughness can be derived from the image or written as a uniform value. Generated roughness maps use absolute values — Apply sets the material roughness scalar to 1 so Three.js does not multiply twice.',
+  },
+  'materials.pbrTiling': {
+    title: 'PBR tiling / edge sampling',
+    body: 'Wrapped sampling on tiled axes keeps seams continuous when deriving normals. Non-tiled axes clamp at the edge (important for floor-to-ceiling walls that only tile horizontally). Does not bake world UV density into the textures.',
+  },
+  'materials.pbrPreview': {
+    title: 'PBR preview',
+    body: 'Lit sphere/flat preview with interactive light direction, plus Base / Normal / Roughness inspections and optional horizontal tile strips. Before/After compares base-color-only vs drafted maps without writing the asset until Apply.',
+  },
+  'materials.pbrApply': {
+    title: 'Apply & Save PBR maps',
+    body: 'Writes PNG normal and roughness textures into the asset registry, assigns normalMapId / roughnessMapId on the same material id, preserves UV scale/offset/rotation and base color, sets metalness to 0, and stores generator parameters for later reopening.',
   },
   'workspace.placeholder': {
     title: 'Extension workspace',
@@ -528,21 +549,73 @@ export const HELP_CONTENT = {
   },
   'ai.section.generation': {
     title: 'Asset Generation',
-    body: 'Compose prompts (templates + references + tiling), estimate cost, approve spend, and generate with OpenArt. Import textures or create materials from results.',
+    body: 'OpenArt for images/textures and Meshy for Image-to-3D props. Estimate cost, approve spend, then import results into the project asset pipeline.',
   },
   'ai.provider.openart': {
     title: 'OpenArt provider',
     body: 'Live image provider driven by the OpenArt CLI. Connect/log in from Generation Settings before estimating or generating.',
+  },
+  'ai.provider.meshy': {
+    title: 'Meshy provider',
+    body: 'Image-to-3D for static environment props via the official Meshy CLI. Use Log in for browser OAuth. Estimate and approve credits before each paid task.',
+    tips: 'Install: npm install -g meshy-cli (Node 22.12+). Game Prop preset: Smart Topology T2.5, 5k triangles, meshy-7 PBR @ 2K.',
   },
   'ai.provider.soon': {
     title: 'Coming soon provider',
     body: 'Layout placeholder only. Selecting it shows a Coming Soon panel — no jobs run.',
   },
 
+  'meshy.controls': {
+    title: 'Meshy settings',
+    body: 'Configure Image-to-3D: Smart Topology vs Standard, polycount, textures, PBR, and credit estimate. Generation never starts from a handoff alone.',
+  },
+  'meshy.connect': {
+    title: 'Log in to Meshy',
+    body: 'Runs `meshy auth login` so you can sign in with your Meshy account in the browser. Finish signing in, then Refresh. The CLI stores credentials — BloodBound never reads the token.',
+    tips: 'If the browser does not open, use device sign-in from a terminal: meshy auth login --device.',
+  },
+  'meshy.reference': {
+    title: 'Meshy reference',
+    body: 'Source image for Image-to-3D. Import a file, pick a Project Art tray reference, or use Send to Meshy / Send Region to Meshy from the library.',
+  },
+  'meshy.preset': {
+    title: 'Game Prop preset',
+    body: 'Applies Smart Topology (meshy-t2.5), 5,000 triangles, textures on, PBR on with meshy-7 at 2K, GLB output. N1 cannot enable PBR.',
+  },
+  'meshy.settings': {
+    title: 'Meshy generation settings',
+    body: 'Only valid model/parameter combinations are offered. Smart Topology is triangle-only. PBR requires a PBR-capable texture model (meshy-7 or meshy-6-lite). Settings are forwarded to `meshy image-to-3d create`.',
+  },
+  'meshy.estimate': {
+    title: 'Estimate Meshy cost',
+    body: 'Validates settings, binds the exact CLI argv, runs `meshy make --dry-run` when possible, and quotes documented credits for the approved request. Does not create a paid task.',
+  },
+  'meshy.generate': {
+    title: 'Generate with Meshy',
+    body: 'Asks for explicit spend approval, then submits one `image-to-3d create --async` via the CLI. Exit code 10 / ambiguous submits are not auto-retried — recover the task first.',
+  },
+  'meshy.results': {
+    title: 'Meshy result preview',
+    body: 'Orbit/pan/zoom the staged GLB. Inspect triangle counts and embedded maps. Import Model writes a local mesh asset before provider URLs expire.',
+  },
+  'meshy.import': {
+    title: 'Import Meshy model',
+    body: 'Downloads the staged GLB into project Meshes via the existing mesh pipeline. Repositions the pivot to bottom-center (feet on the origin) and, for upright character-like meshes, bakes scale to ~1.75 m tall. Preserves embedded materials/textures. Does not create expensive colliders.',
+  },
+  'meshy.discard': {
+    title: 'Discard Meshy result',
+    body: 'Clears the staged generation result. Already-imported production mesh assets are kept.',
+  },
+
   // —— Project Art Library ——
   'projectArt.nav.filters': {
     title: 'Library filters',
     body: 'All Assets, Recent, and Favorites list across the library. Projects tree and gallery folders navigate the on-disk folder hierarchy.',
+  },
+  'projectArt.nav.externalLibraries': {
+    title: 'External Libraries',
+    body: 'Connect shared Google Drive folders as read-only art sources. Add a folder URL, Connect Google Account when private access is required, then browse with the same gallery, tray, and region tools as Project Art.',
+    tips: 'External folders never modify Drive files. Copy to Project Art Library before rename/move/delete. Generation downloads a local copy first so OpenArt/Meshy do not depend on temporary Drive URLs. OAuth credentials stay on the Vite server (.google-drive-oauth.json / tokens) — never in Git.',
   },
   'projectArt.nav.collections': {
     title: 'Collections',
@@ -554,13 +627,13 @@ export const HELP_CONTENT = {
   },
   'projectArt.gallery': {
     title: 'Art gallery',
-    body: 'Folder tiles open subfolders. Image tiles select assets (Ctrl/Cmd multi-select, Shift range, Ctrl+A all visible files). Drag images onto the gallery to import into the current folder.',
+    body: 'Folder tiles open subfolders. Image tiles select assets (Ctrl/Cmd multi-select, Shift range, Ctrl+A all visible files). Drag images onto the gallery to import into the current folder. Google Drive galleries load thumbnails on demand.',
     shortcut: 'Ctrl+A',
-    tips: 'Import requires an open folder view — not All Assets / Favorites / tag views.',
+    tips: 'Import requires an open local Project Art folder — not All Assets / Favorites / tag views / External Drive.',
   },
   'projectArt.import': {
     title: 'Import images',
-    body: 'Import image files into the currently open Project Art folder. Disabled until a folder is open.',
+    body: 'Import image files into the currently open Project Art folder. Disabled for Google Drive libraries (read-only) and until a local folder is open.',
   },
   'projectArt.tray': {
     title: 'Generation References tray',
@@ -568,8 +641,8 @@ export const HELP_CONTENT = {
   },
   'projectArt.region.select': {
     title: 'Select Region',
-    body: 'Toggle region drawing on the preview, then drag a rectangle. The crop of that region becomes the OpenArt image reference — not a new Project Art asset file.',
-    tips: 'Clear Region removes the selection. Re-draw to update.',
+    body: 'Toggle region drawing on the preview, then drag a rectangle. The crop of that region becomes the OpenArt --image reference — not the full concept image, and not a new Project Art asset file.',
+    tips: 'Send Region auto-composes a Wall Texture (or selected) template prompt. It does not reuse the concept’s original generation prompt. Clear Region removes the selection.',
   },
   'projectArt.region.clear': {
     title: 'Clear Region',
@@ -585,12 +658,18 @@ export const HELP_CONTENT = {
   },
   'projectArt.action.sendToGeneration': {
     title: 'Send to Generation',
-    body: 'Opens Asset Generation with this image as a reference, any saved prompt, and the current folder as the Project Art save target.',
+    body: 'Opens Asset Generation with this image as a reference and the current folder as the Project Art save target. A saved prompt is transferred when present; otherwise you choose a template or enter a prompt in Asset Generation. Prompt/credit checks happen at Estimate / Generate — not here.',
+    tips: 'Works for local Project Art and Google Drive images. Drive files are downloaded into project storage before OpenArt runs.',
   },
   'projectArt.action.sendRegion': {
     title: 'Send Region to Generation',
-    body: 'Crops the selected rectangle and stages it as the OpenArt image reference (Nano Banana 2 --image), preserving source image, region coordinates, and associations. Does not spend credits.',
-    tips: 'Requires an active region. Use Compose Prompt in Asset Generation for the Wall Texture (or other) template, then Estimate / Generate with spend approval.',
+    body: 'Crops the selected rectangle and stages that crop as the sole OpenArt --image reference (image2image). Auto-composes a template prompt (default Wall Texture). Does not carry the concept’s original generation prompt. Does not spend credits.',
+    tips: 'Requires an active region. Changing the template in Asset Generation recomposes the prompt (asks before replacing manual edits). Compose Prompt is optional recomposition. Then Estimate / Generate with spend approval.',
+  },
+  'projectArt.action.sendToMeshy': {
+    title: 'Send to Meshy',
+    body: 'Opens Meshy Image-to-3D with this image (or the selected region crop) as the reference and the Game Prop preset applied. No text prompt is required. Does not estimate or spend credits.',
+    tips: 'For mansion furniture, crop the object or prepare an isolated reference with OpenArt’s 3D Model Reference template first, then Send to Meshy from the OpenArt result.',
   },
 
   // —— OpenArt / Asset Generation ——
@@ -604,16 +683,16 @@ export const HELP_CONTENT = {
   },
   'openart.promptTemplate': {
     title: 'Prompt template',
-    body: 'Project-level template (Wall Texture, Prop, Character, …) that defines framing, technical constraints, suggested output type, and whether tiling language applies.',
-    tips: 'Templates scaffold wording. Attached reference crops supply visual material — there is no separate vision-analysis step.',
+    body: 'Project-level template (Wall Texture, Full Wall Texture, Prop, Character, …) that defines framing, technical constraints, suggested output type, and whether tiling language applies. Selecting a template auto-composes the Prompt field. Full Wall Texture targets floor-to-ceiling elevations (baseboard through crown); tiling still comes only from the Tile checkboxes.',
+    tips: 'If you edited the prompt manually, you will be asked before it is replaced. Attached reference crops supply visual material — there is no separate vision-analysis step.',
   },
   'openart.generatePrompt': {
     title: 'Compose Prompt',
-    body: 'Fills the editable Prompt field from the selected template, optional instructions, and region/crop context. Tiling sentences come from the Tile checkboxes when you submit. The cropped reference image is submitted with the job so the model can read material detail directly.',
+    body: 'Explicitly recomposes the editable Prompt from the selected template, optional instructions, and region/crop context. Not required after Send Region or after changing the template (those already compose). Tiling sentences come from the Tile checkboxes when you submit.',
   },
   'openart.prompt': {
     title: 'Prompt',
-    body: 'Editable working prompt sent to OpenArt (after composition with tiling). Edit freely after Compose Prompt.',
+    body: 'Editable working prompt. Final submitted text is the Prompt plus tiling from the checkboxes (see Final submitted prompt). Manual edits are preserved until you change template (with confirm) or click Compose Prompt.',
   },
   'openart.savePrompt': {
     title: 'Save Prompt',

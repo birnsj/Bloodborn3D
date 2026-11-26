@@ -110,8 +110,24 @@ export function assetFileApiPlugin() {
           if (req.method === 'POST' && action === 'import-texture') {
             const url = new URL(req.url || '/', 'http://localhost');
             const originalName = url.searchParams.get('name') || 'import.png';
+            const name = url.searchParams.get('assetName') || null;
+            const tagsRaw = url.searchParams.get('tags') || '';
+            const tags = tagsRaw
+              ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
+              : [];
             const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
-            const result = await importTextureBuffer(buffer, originalName);
+            const result = await importTextureBuffer(buffer, originalName, {
+              name: name || undefined,
+              tags,
+            });
+            sendJson(res, 200, result);
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'replace-texture') {
+            const id = url.searchParams.get('id');
+            const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
+            const result = await replaceTextureBuffer(id, buffer);
             sendJson(res, 200, result);
             return;
           }
@@ -293,6 +309,53 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
   }
 }
 
+/** Overwrite an existing texture's bytes while preserving id / path / registry entry. */
+export async function replaceTextureBuffer(id, buffer) {
+  if (!id) throw new Error('Missing texture id');
+  if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) {
+    throw new Error('Texture replace requires a binary buffer');
+  }
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  if (!bytes.length) throw new Error('Empty upload');
+  if (bytes.length > DEFAULT_UPLOAD_LIMIT) {
+    const err = new Error(`Texture exceeds ${DEFAULT_UPLOAD_LIMIT} bytes`);
+    err.code = 'BODY_TOO_LARGE';
+    throw err;
+  }
+  const magic = detectImageMagic(bytes);
+  if (!magic) {
+    throw Object.assign(new Error('Texture rejected: unrecognized image signature'), {
+      code: 'INVALID_IMAGE',
+    });
+  }
+
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'texture');
+    if (!entry) throw new Error('Texture not found');
+    const full = resolveSafeAssetPath(entry.path);
+    await fs.writeFile(full, bytes);
+    const originalRel = entry.path.replace(
+      `${KIND_DIRS.texture}/`,
+      `${KIND_DIRS.texture}/originals/`,
+    );
+    try {
+      const originalFull = resolveSafeAssetPath(originalRel);
+      await fs.mkdir(path.dirname(originalFull), { recursive: true });
+      await fs.copyFile(full, originalFull);
+    } catch {
+      /* originals are best-effort */
+    }
+    entry.meta = {
+      ...(entry.meta || {}),
+      format: extensionForImageMagic(magic)?.replace('.', '') || entry.meta?.format,
+      bytes: bytes.length,
+      magic,
+    };
+    entry.updatedAt = Date.now();
+    return { ok: true, asset: entry, registry };
+  });
+}
+
 async function importBinaryAsset(req, kind, allowedExts) {
   const url = new URL(req.url || '/', 'http://localhost');
   const originalName = url.searchParams.get('name') || `import${kind === 'mesh' ? '.glb' : '.png'}`;
@@ -309,11 +372,31 @@ async function importBinaryAsset(req, kind, allowedExts) {
     return importTextureBuffer(buffer, base);
   }
 
+  return importMeshBuffer(buffer, {
+    originalName: base,
+    name: stripExt(base),
+  });
+}
+
+/** Public helper — import a GLB/GLTF buffer into the mesh registry. */
+export async function importMeshBuffer(buffer, {
+  originalName = 'import.glb',
+  name = null,
+  tags = [],
+  meta = {},
+} = {}) {
+  if (!buffer?.length) throw new Error('Empty mesh upload');
+  const base = path.basename(originalName);
+  const ext = path.extname(base).toLowerCase() || '.glb';
+  if (!MESH_EXTS.has(ext)) {
+    throw new Error(`Unsupported mesh extension: ${ext}`);
+  }
+
   const id = `mesh_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const storedName = `${id}${ext}`;
-  const relPath = `${KIND_DIRS[kind]}/${storedName}`;
+  const relPath = `${KIND_DIRS.mesh}/${storedName}`;
   const full = resolveSafeAssetPath(relPath);
-  const originalRel = `${KIND_DIRS[kind]}/originals/${storedName}`;
+  const originalRel = `${KIND_DIRS.mesh}/originals/${storedName}`;
   const originalFull = resolveSafeAssetPath(originalRel);
 
   await fs.mkdir(path.dirname(full), { recursive: true });
@@ -324,18 +407,19 @@ async function importBinaryAsset(req, kind, allowedExts) {
 
     const entry = {
       id,
-      kind,
-      name: stripExt(base),
+      kind: 'mesh',
+      name: name || stripExt(base),
       folder: 'Meshes',
       path: relPath,
       originalName: base,
-      tags: [],
+      tags: Array.isArray(tags) ? [...tags] : [],
       meta: {
         format: ext === '.gltf' ? 'gltf' : 'glb',
         bytes: buffer.length,
         unitAssumption: 'meters',
         editorUnitsPerMeter: 100,
         scaleWarning: null,
+        ...meta,
       },
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -390,7 +474,16 @@ function materialRegistryMeta(definition) {
     roughness: definition.roughness,
     metalness: definition.metalness,
     hasBaseMap: Boolean(definition.baseColorMapId),
+    hasNormalMap: Boolean(definition.normalMapId),
+    hasRoughnessMap: Boolean(definition.roughnessMapId),
     ...(definition.previewPath ? { previewPath: definition.previewPath } : {}),
+    ...(definition.pbrGenerator
+      ? {
+        pbrSourceTextureId: definition.pbrGenerator.sourceTextureId || null,
+        tileHorizontal: Boolean(definition.pbrGenerator.tileHorizontal),
+        tileVertical: Boolean(definition.pbrGenerator.tileVertical),
+      }
+      : {}),
   };
 }
 
@@ -423,6 +516,7 @@ async function createMaterialAsset(body) {
     uvOffset: body.uvOffset || { x: 0, y: 0 },
     uvRotation: body.uvRotation ?? 0,
     previewPath: body.previewPath || null,
+    pbrGenerator: body.pbrGenerator || null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -483,9 +577,12 @@ async function updateMaterialAsset(id, body) {
       'baseColor',
       'baseColorMapId',
       'normalMapId',
+      'normalScale',
       'roughness',
       'roughnessMapId',
       'metalness',
+      'metalnessMapId',
+      'pbrGenerator',
     ].some((key) => Object.prototype.hasOwnProperty.call(body, key));
     if (mapsChanged || !definition.previewPath) {
       definition.previewPath = bakeMaterialSpherePreview(definition, registry) || definition.previewPath;

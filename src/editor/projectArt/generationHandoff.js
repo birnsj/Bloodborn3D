@@ -5,6 +5,10 @@
 import { uploadOpenArtReference } from '../../io/openArtClient.js';
 import { projectArtImageUrl } from '../../io/projectArtClient.js';
 import {
+  materializeSelectedGoogleDriveItem,
+  projectArtFullImageUrl,
+} from './projectArtStore.js';
+import {
   addGenerationReferences,
   selectAiProvider,
   setAiAssetsSection,
@@ -30,8 +34,15 @@ import {
   preferReferenceMode,
   resolveOpenArtMaxRefs,
 } from './generation.js';
-import { getPromptTemplate } from './promptTemplates.js';
+import {
+  assembleRegionTemplatePrompt,
+  describeRegionCoords,
+  getPromptTemplate,
+} from './promptTemplates.js';
 import { projectArtStageReferences } from './projectArtStore.js';
+
+/** Default template for region → asset handoffs when none is selected. */
+export const DEFAULT_REGION_TEMPLATE_ID = 'wall_texture';
 
 /**
  * Add selected library items to the persistent generation reference tray.
@@ -39,15 +50,74 @@ import { projectArtStageReferences } from './projectArtStore.js';
  */
 export function addItemsAsGenerationReferences(items = []) {
   const list = (Array.isArray(items) ? items : [])
-    .filter((i) => i?.id && i?.relativePath)
+    .filter((i) => i?.id && (i?.relativePath || i?.source === 'gdrive'))
     .map((i) => ({
       id: i.id,
-      relativePath: i.relativePath,
-      title: i.title || i.relativePath,
+      relativePath: i.relativePath || null,
+      title: i.title || i.relativePath || i.driveFileId || i.id,
+      source: i.source || 'project-art',
+      driveFileId: i.driveFileId || null,
+      driveLibraryId: i.driveLibraryId || null,
+      provenance: i.provenance || null,
     }));
   if (!list.length) return { added: 0 };
   addGenerationReferences(list);
   return { added: list.length };
+}
+
+/** Ensure Drive images are on local disk before OpenArt/Meshy staging. */
+async function ensureLocalFileForItem(item) {
+  if (!item) return null;
+  if (item.source === 'gdrive' || (!item.relativePath && item.driveFileId)) {
+    const { item: localItem, materialize } = await materializeSelectedGoogleDriveItem(item);
+    return { item: localItem, materialize };
+  }
+  return { item, materialize: null };
+}
+
+/**
+ * Resolve which prompt template drives a region handoff.
+ * Prefer an explicit id, then the Asset Generation selection — never the
+ * source concept's provenance category (that describes the old image).
+ */
+export function resolveRegionTemplateId(templateId = null) {
+  const selected = getAiAssetsUiState().selectedPromptTemplateId;
+  const tid = [templateId, selected, DEFAULT_REGION_TEMPLATE_ID]
+    .find((id) => id && getPromptTemplate(id));
+  return tid || DEFAULT_REGION_TEMPLATE_ID;
+}
+
+/**
+ * Build the OpenArt prompt body for a region handoff.
+ * Tiling language is intentionally omitted here — checkbox composition
+ * appends it at estimate/generate time via composeGenerationPrompt.
+ */
+export function composeRegionHandoffPrompt({
+  templateId,
+  region,
+  itemTitle = '',
+  instruction = '',
+} = {}) {
+  const tid = resolveRegionTemplateId(templateId);
+  const regionDescription = [
+    region?.description,
+    region ? describeRegionCoords(region) : '',
+  ].filter(Boolean).join('; ');
+  const assembled = assembleRegionTemplatePrompt({
+    templateId: tid,
+    regionDescription,
+    instruction,
+    itemTitle,
+    tileHorizontal: false,
+    tileVertical: false,
+    includeTiling: false,
+    referenceTitles: [],
+  });
+  return {
+    templateId: tid,
+    promptText: String(assembled.promptText || '').trim(),
+    notes: assembled.notes || [],
+  };
 }
 
 /**
@@ -66,28 +136,33 @@ export async function sendProjectArtToGeneration({
   tileHorizontal = false,
   tileVertical = false,
 } = {}) {
+  // Prompt is optional here — Asset Generation / OpenArt validate at estimate/generate.
+  // Transfer any saved prompt when present; otherwise seed an empty prompt so the
+  // designer can pick a template or type one in Asset Generation.
   const text = String(promptText || '').trim();
-  if (!text) {
-    const err = new Error('Create or enter a prompt before sending to Asset Generation');
-    err.code = 'EMPTY_PROMPT';
-    throw err;
-  }
+
+  const toRef = (r) => ({
+    id: r.id,
+    relativePath: r.relativePath || null,
+    title: r.title || r.relativePath || r.driveFileId || r.id,
+    source: r.source || null,
+    driveFileId: r.driveFileId || null,
+    driveLibraryId: r.driveLibraryId || null,
+    provenance: r.provenance || null,
+  });
 
   let refs = Array.isArray(trayRefs)
-    ? trayRefs.map((r) => ({
-      id: r.id,
-      relativePath: r.relativePath,
-      title: r.title || r.relativePath,
-    }))
+    ? trayRefs.map(toRef).filter((r) => r.id)
     : [...(getAiAssetsUiState().generationReferences || [])];
 
   if (!refs.length && items.length) {
     addItemsAsGenerationReferences(items);
-    refs = items.map((i) => ({
-      id: i.id,
-      relativePath: i.relativePath,
-      title: i.title || i.relativePath,
-    }));
+    refs = items.map(toRef).filter((r) => r.id);
+  }
+  if (!refs.length) {
+    const err = new Error('Select an image before sending to Asset Generation');
+    err.code = 'NO_ITEM';
+    throw err;
   }
   setGenerationReferences(refs);
 
@@ -99,7 +174,7 @@ export async function sendProjectArtToGeneration({
   const origin = createArtGenerationOrigin({
     itemIds: refs.map((r) => r.id),
     promptId,
-    finalPrompt: text,
+    finalPrompt: text || null,
     assetCategory: assetCategory || null,
     tileHorizontal,
     tileVertical,
@@ -111,15 +186,18 @@ export async function sendProjectArtToGeneration({
 /**
  * Shared tail of both handoffs: set origin, switch to Asset Generation, seed
  * OpenArt, and stage the first reference when the model supports it.
+ *
+ * When `stagedReference` is provided (region crop), that file is the only
+ * OpenArt --image path. Tray items stay library pins and are not re-staged.
  */
-async function seedGenerationWorkspace({
+export async function seedGenerationWorkspace({
   text,
   refs,
   origin,
   folderPath,
   stageIds = null,
   stagedReference = null,
-}) {
+} = {}) {
   setGenerationOrigin(origin);
   setConceptSaveTargetAreaId(null);
   setArtSaveTargetFolder(folderPath || '');
@@ -158,21 +236,46 @@ async function seedGenerationWorkspace({
     });
   } else if (supportsRefs && refs.length) {
     const maxRefs = resolveOpenArtMaxRefs({ schemaProperties });
+    const firstRef = refs[0];
+    const isDrive = firstRef?.source === 'gdrive' || Boolean(firstRef?.driveFileId);
     try {
-      const staged = await projectArtStageReferences({
-        itemIds: stageIds || refs.map((r) => r.id),
-        maxRefs,
-      });
-      const first = staged.staged?.[0];
-      if (first) {
-        referenceFileName = first.originalName || first.fileName || 'art-reference';
-        referenceStagingPath = first.absolutePath;
-        referenceStagingId = first.stagingId || null;
+      if (isDrive) {
+        const ensured = await ensureLocalFileForItem(firstRef);
+        // Prefer project-art cache path after materialize (never ephemeral Drive URLs).
+        const url = projectArtImageUrl(ensured.item.relativePath)
+          || projectArtFullImageUrl(ensured.item);
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const file = new File(
+          [blob],
+          `${firstRef.title || 'drive-reference'}.png`,
+          { type: blob.type || 'image/png' },
+        );
+        const uploaded = await uploadOpenArtReference(file);
+        referenceFileName = uploaded.originalName || file.name;
+        referenceStagingPath = uploaded.absolutePath;
+        referenceStagingId = uploaded.stagingId || null;
         mode = preferReferenceMode({
           availableModes,
           currentMode: oa.mode,
           hasReference: true,
         });
+      } else {
+        const staged = await projectArtStageReferences({
+          itemIds: stageIds || refs.map((r) => r.id),
+          maxRefs,
+        });
+        const first = staged.staged?.[0];
+        if (first) {
+          referenceFileName = first.originalName || first.fileName || 'art-reference';
+          referenceStagingPath = first.absolutePath;
+          referenceStagingId = first.stagingId || null;
+          mode = preferReferenceMode({
+            availableModes,
+            currentMode: oa.mode,
+            hasReference: true,
+          });
+        }
       }
     } catch (err) {
       if (err.code === 'REF_LIMIT') {
@@ -201,35 +304,48 @@ async function seedGenerationWorkspace({
 
   setAiAssetsSection('generation');
 
+  const hasPrompt = Boolean(String(text || '').trim());
   return {
     ok: true,
     stagedRefs: Boolean(referenceStagingPath),
+    mode: mode || getOpenArtUiState().mode,
+    prompt: text,
+    referenceStagingPath,
+    referenceStagingId,
+    referenceFileName,
     message: referenceStagingPath
-      ? 'OpenArt seeded with Project Art references — estimate before spending'
-      : 'OpenArt seeded from Project Art — estimate before spending',
+      ? (hasPrompt
+        ? 'OpenArt seeded with Project Art references — estimate before spending'
+        : 'Reference staged — choose a template or enter a prompt, then estimate')
+      : (hasPrompt
+        ? 'OpenArt seeded from Project Art — estimate before spending'
+        : 'Opened Asset Generation — choose a template or enter a prompt, then estimate'),
   };
 }
 
 /**
  * Send a selected region of a Project Art item to Asset Generation.
- * Crops the region and stages it as the OpenArt --image reference so Nano Banana 2
- * can interpret material / surface details directly (no separate vision analysis).
- * Region coordinates, source image, template and crop staging metadata travel in
- * generationOrigin. Does not estimate or spend credits.
  *
- * @returns {Promise<{ ok: boolean, stagedRefs: boolean, message?: string }>}
+ * - Crops the region and stages it as the sole OpenArt --image reference.
+ * - Does NOT carry the source concept's generation prompt.
+ * - Auto-composes a template prompt (default Wall Texture) so Compose Prompt
+ *   is optional recomposition, not a mandatory pre-generate step.
+ * - Tiling comes from template suggestedDefaults / checkboxes — not concept provenance.
+ * - Does not estimate or spend credits.
+ *
+ * @returns {Promise<object>}
  */
 export async function sendRegionToGeneration({
   item,
   region,
-  promptText = '',
   templateId = null,
+  instruction = '',
   tileHorizontal,
   tileVertical,
   folderPath = '',
   promptId = null,
 } = {}) {
-  if (!item?.id || !item?.relativePath) {
+  if (!item?.id || (!item?.relativePath && item?.source !== 'gdrive')) {
     const err = new Error('Select an image before sending a region');
     err.code = 'NO_ITEM';
     throw err;
@@ -242,17 +358,17 @@ export async function sendRegionToGeneration({
     throw err;
   }
 
+  // Tray provenance only — OpenArt --image uses the crop below, not these full images.
   addItemsAsGenerationReferences([item]);
-  // The region's source image goes first in the tray (provenance of the crop).
   const tray = getAiAssetsUiState().generationReferences || [];
   const source = tray.find((r) => r.id === item.id);
   const refs = [source, ...tray.filter((r) => r.id !== item.id)].filter(Boolean);
   setGenerationReferences(refs);
 
-  const tid = templateId && getPromptTemplate(templateId) ? templateId : null;
-  if (tid) setSelectedPromptTemplateId(tid);
+  const tid = resolveRegionTemplateId(templateId);
+  setSelectedPromptTemplateId(tid);
+  const tpl = getPromptTemplate(tid);
 
-  const tpl = tid ? getPromptTemplate(tid) : null;
   const tilingPatch = {};
   if (typeof tileHorizontal === 'boolean') tilingPatch.tileHorizontal = tileHorizontal;
   else if (typeof tpl?.suggestedDefaults?.tileHorizontal === 'boolean') {
@@ -265,11 +381,25 @@ export async function sendRegionToGeneration({
   if (Object.keys(tilingPatch).length) setPromptComposition(tilingPatch);
   const composition = getAiAssetsUiState().promptComposition || {};
 
-  // Keep any prompt already in OpenArt when the item has none; Asset Generation
-  // composes a template prompt on demand via Compose Prompt.
-  const text = String(promptText || '').trim() || getOpenArtUiState().prompt || '';
+  // Never seed the concept's original generation prompt into a region asset request.
+  const composed = composeRegionHandoffPrompt({
+    templateId: tid,
+    region: stored,
+    itemTitle: item.title || '',
+    instruction,
+  });
+  const text = composed.promptText;
+  if (!text) {
+    const err = new Error('Could not compose a template prompt for the selected region');
+    err.code = 'EMPTY_PROMPT';
+    throw err;
+  }
 
-  const imageUrl = projectArtImageUrl(item.relativePath);
+  const ensured = await ensureLocalFileForItem(item);
+  const localItem = ensured?.item || item;
+  const imageUrl = projectArtImageUrl(localItem.relativePath)
+    || projectArtFullImageUrl(localItem)
+    || projectArtImageUrl(item.relativePath);
   const cropFile = await cropImageRegionToFile({
     imageUrl,
     region: stored,
@@ -282,6 +412,8 @@ export async function sendRegionToGeneration({
     originalName: uploaded.originalName || cropFile.name,
     absolutePath: uploaded.absolutePath || null,
     sourceItemId: item.id,
+    driveFileId: item.driveFileId || null,
+    sourceFolder: item.provenance?.driveLibraryName || item.provenance?.driveFolderId || null,
   };
 
   const origin = createArtGenerationOrigin({
@@ -306,8 +438,171 @@ export async function sendRegionToGeneration({
   });
   return {
     ...res,
+    templateId: tid,
+    croppedReference,
+    promptSource: 'template',
     message: res.stagedRefs
-      ? 'Cropped region staged as image reference — Compose Prompt, then estimate before spending'
-      : 'Region sent to Asset Generation — Compose Prompt, then estimate before spending',
+      ? `Cropped region staged with ${tpl?.label || tid} prompt — estimate before spending`
+      : `Region sent with ${tpl?.label || tid} prompt — estimate before spending`,
+  };
+}
+
+/**
+ * Send a Project Art image (or crop file) to Meshy without starting generation.
+ * Does not estimate or spend credits.
+ */
+export async function sendProjectArtToMeshy({
+  item = null,
+  items = [],
+  region = null,
+  folderPath = '',
+  openArtAssociation = null,
+} = {}) {
+  const primary = item || items[0];
+  if (!primary?.relativePath && !primary?.id) {
+    const err = new Error('Select an image to send to Meshy');
+    err.code = 'NO_ITEM';
+    throw err;
+  }
+
+  const { uploadMeshyReference } = await import('../../io/meshyClient.js');
+  const {
+    meshyApplySeed,
+    meshyConnect,
+    meshyApplyPreset,
+  } = await import('../meshy/meshyUiStore.js');
+  const { GAME_PROP_PRESET } = await import('../../dev/meshy/meshyModels.js');
+
+  let file;
+  let provenance = {
+    projectArtItemId: primary.id,
+    relativePath: primary.relativePath,
+    title: primary.title || primary.relativePath,
+    folderPath: folderPath || '',
+    openArtAssociation: openArtAssociation || null,
+  };
+
+  if (region && primary) {
+    const ensured = await ensureLocalFileForItem(primary);
+    const localItem = ensured?.item || primary;
+    const imageUrl = projectArtImageUrl(localItem.relativePath)
+      || projectArtFullImageUrl(localItem)
+      || projectArtImageUrl(primary.relativePath);
+    const cropFile = await cropImageRegionToFile({
+      imageUrl,
+      region,
+      fileName: `${(primary.title || 'region').replace(/[^\w.-]+/g, '_').slice(0, 48)}-meshy.png`,
+    });
+    file = cropFile;
+    provenance = {
+      ...provenance,
+      ...(localItem.provenance || primary.provenance || {}),
+      region: {
+        x: region.x,
+        y: region.y,
+        width: region.width,
+        height: region.height,
+      },
+      sourceConceptPath: localItem.relativePath || primary.relativePath || null,
+      driveFileId: primary.driveFileId || null,
+    };
+  } else {
+    const ensured = await ensureLocalFileForItem(primary);
+    const url = projectArtImageUrl(ensured.item.relativePath)
+      || projectArtFullImageUrl(ensured.item);
+    const res = await fetch(url);
+    const blob = await res.blob();
+    file = new File(
+      [blob],
+      `${primary.title || 'reference'}.png`,
+      { type: blob.type || 'image/png' },
+    );
+    provenance = {
+      ...provenance,
+      ...(ensured.item.provenance || {}),
+      driveFileId: primary.driveFileId || null,
+      relativePath: ensured.item.relativePath || primary.relativePath,
+    };
+  }
+
+  selectAiProvider('meshy');
+  setAiAssetsSection('generation');
+  setArtSaveTargetFolder(folderPath || '');
+  setConceptSaveTargetAreaId(null);
+
+  await meshyConnect().catch(() => {});
+  meshyApplyPreset(GAME_PROP_PRESET);
+  const uploaded = await uploadMeshyReference(file);
+  meshyApplySeed({
+    reference: {
+      stagingPath: uploaded.relativePath,
+      previewUrl: uploaded.previewUrl,
+      title: primary.title || file.name,
+      source: region ? 'project-art-region' : 'project-art',
+      provenance,
+    },
+    settings: { ...GAME_PROP_PRESET },
+    provenance,
+  });
+
+  return {
+    ok: true,
+    message: 'Sent to Meshy — configure settings and estimate before spending',
+    stagingPath: uploaded.relativePath,
+  };
+}
+
+/**
+ * Send an approved OpenArt result (or its staging preview) to Meshy.
+ * Does not start Meshy generation.
+ */
+export async function sendOpenArtResultToMeshy({
+  previewUrl,
+  title = 'OpenArt reference',
+  provenance = null,
+} = {}) {
+  if (!previewUrl) {
+    const err = new Error('No OpenArt result image to send to Meshy');
+    err.code = 'NO_RESULT';
+    throw err;
+  }
+  const { uploadMeshyReference } = await import('../../io/meshyClient.js');
+  const {
+    meshyApplySeed,
+    meshyConnect,
+    meshyApplyPreset,
+  } = await import('../meshy/meshyUiStore.js');
+  const { GAME_PROP_PRESET } = await import('../../dev/meshy/meshyModels.js');
+
+  const res = await fetch(previewUrl);
+  const blob = await res.blob();
+  const file = new File([blob], `${title}.png`, { type: blob.type || 'image/png' });
+
+  selectAiProvider('meshy');
+  setAiAssetsSection('generation');
+
+  await meshyConnect().catch(() => {});
+  meshyApplyPreset(GAME_PROP_PRESET);
+  const uploaded = await uploadMeshyReference(file);
+  const prov = {
+    ...(provenance || {}),
+    openArtPreviewUrl: previewUrl,
+    title,
+  };
+  meshyApplySeed({
+    reference: {
+      stagingPath: uploaded.relativePath,
+      previewUrl: uploaded.previewUrl,
+      title,
+      source: 'openart-result',
+      provenance: prov,
+    },
+    settings: { ...GAME_PROP_PRESET },
+    provenance: prov,
+  });
+
+  return {
+    ok: true,
+    message: 'OpenArt result sent to Meshy — estimate before spending',
   };
 }

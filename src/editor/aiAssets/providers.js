@@ -1,6 +1,6 @@
 /**
  * Phase 2H.1C — AI Assets provider catalog.
- * Room for future providers without layout redesign. Only OpenArt is implemented.
+ * OpenArt (image) and Meshy (Image-to-3D) are implemented. ComfyUI remains stubbed.
  */
 
 export const AI_PROVIDER_CATEGORIES = [
@@ -32,8 +32,8 @@ export const AI_PROVIDER_CATEGORIES = [
         id: 'meshy',
         name: 'Meshy',
         category: 'mesh',
-        status: 'coming_soon',
-        blurb: 'Text-to-3D and image-to-3D — coming soon',
+        status: 'available',
+        blurb: 'Image-to-3D via the Meshy CLI (Smart Topology + PBR)',
       },
     ],
   },

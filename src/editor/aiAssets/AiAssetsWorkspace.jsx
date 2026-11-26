@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProjectArtLibraryPanel } from '../projectArt/ProjectArtLibraryPanel.jsx';
 import { OpenArtControls } from '../openart/OpenArtControls.jsx';
 import { OpenArtResults } from '../openart/OpenArtResults.jsx';
+import { MeshyControls } from '../meshy/MeshyControls.jsx';
+import { MeshyResults } from '../meshy/MeshyResults.jsx';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import {
   getAiAssetsUiState,
@@ -131,6 +133,8 @@ function GenerationWorkspace({
         <div className="bb-panel-chrome__body bb-ai-assets__controls-body">
           {provider?.id === 'openart' ? (
             <OpenArtControls />
+          ) : provider?.id === 'meshy' ? (
+            <MeshyControls />
           ) : (
             <ComingSoonPanel provider={provider} />
           )}
@@ -150,6 +154,8 @@ function GenerationWorkspace({
         <div className="bb-panel-chrome__body bb-ai-assets__results-body">
           {provider?.id === 'openart' ? (
             <OpenArtResults />
+          ) : provider?.id === 'meshy' ? (
+            <MeshyResults />
           ) : (
             <div className="bb-muted bb-ai-assets__empty-results">
               Select an available provider to generate assets.

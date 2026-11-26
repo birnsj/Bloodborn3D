@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "libraries": [
+    {
+      "id": "ext_84d7bfb00a09",
+      "provider": "google-drive",
+      "name": "14 - BLOODBOUND",
+      "folderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+      "resourceKey": null,
+      "sourceUrl": "https://drive.google.com/drive/folders/1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p?usp=drive_link",
+      "webViewLink": "https://drive.google.com/drive/folders/1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+      "createdAt": "2026-11-26T05:38:31.625Z",
+      "updatedAt": "2026-11-26T05:38:31.625Z"
+    }
+  ]
+}

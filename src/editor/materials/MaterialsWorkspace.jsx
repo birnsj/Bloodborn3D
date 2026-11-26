@@ -8,12 +8,15 @@ import {
 import { IconSearch } from '../../ui/icons.jsx';
 import { ASSET_KINDS, listByKind } from '../../assets/AssetRegistry.js';
 import { toCatalogAsset } from '../../assets/assetCatalog.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { AssetThumbnail } from '../assets/AssetThumbnail.jsx';
 import { MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
 import { MaterialDefinitionForm } from './MaterialDefinitionForm.jsx';
+import { PbrGeneratorPanel } from './PbrGeneratorPanel.jsx';
 import {
   cloneMaterialDraft,
   isMaterialDraftDirty,
@@ -49,6 +52,7 @@ export function MaterialsWorkspace() {
   } = useAssetBrowser();
   const { setWorkspaceLeaveGuard } = useLayout();
   const { confirm } = useEditorDialogs();
+  const { openFromEvent } = useEditorContextMenu();
 
   const [baseline, setBaseline] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -56,6 +60,7 @@ export function MaterialsWorkspace() {
   const [saving, setSaving] = useState(false);
   const [previewShape, setPreviewShape] = useState('sphere');
   const [libraryQuery, setLibraryQuery] = useState('');
+  const [pbrOpen, setPbrOpen] = useState(false);
   const loadTokenRef = useRef(0);
 
   const dirty = isMaterialDraftDirty(baseline, draft);
@@ -186,6 +191,34 @@ export function MaterialsWorkspace() {
   }, [draft, dirty, saveMaterialDefinition, notify, setStatus]);
 
   const getTextureUrl = assetResolver?.getTextureUrl;
+  const canGeneratePbr = Boolean(baseline?.baseColorMapId);
+
+  const openPbrGenerator = useCallback(async () => {
+    if (!canGeneratePbr) return;
+    if (!(await confirmDiscardDraft('Open PBR generator'))) return;
+    // Ensure draft matches saved baseline so Apply reads stable UV / maps.
+    if (baseline) setDraft(cloneMaterialDraft(baseline));
+    setPbrOpen(true);
+  }, [canGeneratePbr, confirmDiscardDraft, baseline]);
+
+  const onPbrApplied = useCallback((saved) => {
+    const cloned = cloneMaterialDraft(saved);
+    setBaseline(cloned);
+    setDraft(cloneMaterialDraft(saved));
+    setPbrOpen(false);
+  }, []);
+
+  if (pbrOpen && baseline) {
+    return (
+      <div className="bb-workspace bb-materials-workspace bb-materials-workspace--pbr">
+        <PbrGeneratorPanel
+          material={baseline}
+          onClose={() => setPbrOpen(false)}
+          onApplied={onPbrApplied}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bb-workspace bb-materials-workspace">
@@ -230,6 +263,29 @@ export function MaterialsWorkspace() {
                 role="listitem"
                 className={`bb-materials-workspace__tile${active ? ' is-active' : ''}`}
                 onClick={() => { void selectMaterial(asset.id); }}
+                onContextMenu={(event) => {
+                  openFromEvent(event, [
+                    {
+                      id: 'open',
+                      label: 'Open',
+                      onSelect: () => { void selectMaterial(asset.id); },
+                    },
+                    {
+                      id: 'duplicate',
+                      label: 'Duplicate',
+                      onSelect: async () => {
+                        if (!(await confirmDiscardDraft('Duplicate this material'))) return;
+                        try {
+                          setStatus('Duplicating material…');
+                          const result = await duplicateMaterial(asset.id);
+                          selectAsset(result.asset.id);
+                        } catch (err) {
+                          notify(err.message || 'Duplicate failed');
+                        }
+                      },
+                    },
+                  ]);
+                }}
               >
                 <AssetThumbnail asset={asset} size={40} />
                 <span className="bb-materials-workspace__tile-meta">
@@ -249,6 +305,18 @@ export function MaterialsWorkspace() {
             {dirty ? ' •' : ''}
           </span>
           <div className="bb-field-row" style={{ gap: 6 }}>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={!canGeneratePbr || saving || loading}
+              onClick={() => { void openPbrGenerator(); }}
+              {...helpProps('materials.pbrGenerator', canGeneratePbr ? null : 'Requires a base-color texture')}
+              title={canGeneratePbr
+                ? 'Generate normal and roughness maps from the base-color texture'
+                : 'Requires a base-color texture'}
+            >
+              Generate PBR Maps
+            </button>
             <button
               type="button"
               className="bb-btn"

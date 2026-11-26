@@ -81,11 +81,18 @@ function clampLibraryThumbSize(n) {
 
 function normalizeRefItem(raw) {
   if (!raw || typeof raw !== 'object' || !raw.id) return null;
-  return {
+  const item = {
     id: String(raw.id),
-    relativePath: String(raw.relativePath || ''),
-    title: String(raw.title || raw.relativePath || raw.id),
+    relativePath: raw.relativePath != null ? String(raw.relativePath) : '',
+    title: String(raw.title || raw.relativePath || raw.driveFileId || raw.id),
   };
+  if (raw.source) item.source = String(raw.source);
+  if (raw.driveFileId) item.driveFileId = String(raw.driveFileId);
+  if (raw.driveLibraryId) item.driveLibraryId = String(raw.driveLibraryId);
+  if (raw.provenance && typeof raw.provenance === 'object') {
+    item.provenance = raw.provenance;
+  }
+  return item;
 }
 
 const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0));

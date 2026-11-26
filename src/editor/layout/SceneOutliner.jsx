@@ -33,6 +33,7 @@ export function SceneOutliner({ docked = false } = {}) {
     world,
     selectedActorIds,
     selectActor,
+    deselectAllActors,
     mode,
     revision,
     reparentSelected,
@@ -41,6 +42,8 @@ export function SceneOutliner({ docked = false } = {}) {
     renameSelected,
     duplicateSelected,
     deleteSelected,
+    createPrefabFromSelection,
+    unpackSelectedPrefab,
     setStatus,
   } = useEditor();
   const { prompt, confirm } = useEditorDialogs();
@@ -105,6 +108,7 @@ export function SceneOutliner({ docked = false } = {}) {
     const count = selectedActorIds.includes(actor.id)
       ? Math.max(1, selectedActorIds.length)
       : 1;
+    const isPrefabInstance = Boolean(actor.prefab?.instanceId);
     openFromEvent(event, [
       {
         id: 'focus',
@@ -135,11 +139,46 @@ export function SceneOutliner({ docked = false } = {}) {
         id: 'hide',
         label: actor.visible === false ? 'Show' : 'Hide',
         onSelect: () => {
-          selectActor(actor.id);
           setSelectedActorFlags({ visible: actor.visible === false });
         },
       },
-      { id: 'sep', separator: true },
+      {
+        id: 'lock',
+        label: actor.locked ? 'Unlock' : 'Lock',
+        onSelect: () => {
+          setSelectedActorFlags({ locked: !actor.locked });
+        },
+      },
+      {
+        id: 'unparent',
+        label: 'Unparent',
+        disabled: count < 1,
+        onSelect: () => reparentSelected(null),
+      },
+      { id: 'sep-create', separator: true },
+      {
+        id: 'create-cell',
+        label: 'Create Cell',
+        onSelect: () => createCell(),
+      },
+      {
+        id: 'create-prefab',
+        label: 'Create Prefab From Selection',
+        onSelect: async () => {
+          const name = await prompt('Prefab name', {
+            title: 'Create Prefab',
+            initialValue: 'Prefab',
+          });
+          if (!name) return;
+          await createPrefabFromSelection(name.trim());
+        },
+      },
+      isPrefabInstance ? {
+        id: 'unpack-prefab',
+        label: 'Unpack Prefab',
+        onSelect: () => unpackSelectedPrefab(),
+      } : null,
+      { id: 'sep-del', separator: true },
       {
         id: 'delete',
         label: count > 1 ? `Delete ${count} Actors` : 'Delete',
@@ -154,6 +193,13 @@ export function SceneOutliner({ docked = false } = {}) {
           if (!ok) return;
           deleteSelected();
         },
+      },
+      { id: 'sep-sel', separator: true },
+      {
+        id: 'deselect',
+        label: 'Deselect All',
+        disabled: selectedActorIds.length === 0,
+        onSelect: () => deselectAllActors(),
       },
     ]);
   };

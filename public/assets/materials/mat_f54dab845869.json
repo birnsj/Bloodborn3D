@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_f54dab845869",
+  "name": "OpenArt Recreate the complete wall",
+  "type": "material",
+  "baseColor": "#ffffff",
+  "baseColorMapId": "tex_b24283819269",
+  "normalMapId": "tex_172bf9f49ab4",
+  "normalScale": 5,
+  "roughness": 1,
+  "metalness": 0,
+  "roughnessMapId": "tex_1041f5851be0",
+  "metalnessMapId": null,
+  "envMapIntensity": 1,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 1,
+    "y": 1
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_f54dab845869_sphere.png",
+  "createdAt": 1795665950910,
+  "updatedAt": 1795668429308,
+  "pbrGenerator": {
+    "sourceTextureId": "tex_b24283819269",
+    "tileHorizontal": true,
+    "tileVertical": false,
+    "normal": {
+      "strength": 1.15,
+      "fineDetail": 0.85,
+      "largeScale": 0.65,
+      "smoothing": 0.35,
+      "invertHeight": false,
+      "invertY": false
+    },
+    "roughness": {
+      "mode": "derived",
+      "overall": 0.55,
+      "contrast": 1.15,
+      "detail": 0.65,
+      "invert": false,
+      "min": 0.08,
+      "max": 0.92,
+      "uniformValue": 0.72
+    },
+    "generatedNormalMapId": "tex_172bf9f49ab4",
+    "generatedRoughnessMapId": "tex_1041f5851be0",
+    "updatedAt": 1795667258425
+  }
+}

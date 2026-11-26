@@ -185,12 +185,16 @@
         steps.push({ step: 'advanced-params-present', ok: true, skipped: true });
       }
 
-      // Provider switch must keep OpenArt store (selection only).
+      // Provider switch must keep OpenArt store (selection only) and mount Meshy UI.
       ai?.select('meshy');
       await new Promise((r) => setTimeout(r, 40));
       steps.push({
-        step: 'coming-soon-panel',
-        ok: Boolean(document.querySelector('.bb-ai-assets__coming-soon')),
+        step: 'meshy-controls',
+        ok: Boolean(document.querySelector('.bb-meshy-controls')),
+      });
+      steps.push({
+        step: 'meshy-results',
+        ok: Boolean(document.querySelector('.bb-meshy-results')),
       });
       ai?.select('openart');
       await new Promise((r) => setTimeout(r, 40));

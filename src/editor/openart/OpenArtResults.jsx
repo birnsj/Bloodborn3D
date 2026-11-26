@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import {
+  suppressNativeImageMenu,
+  useEditorContextMenu,
+} from '../../ui/contextMenu/EditorContextMenu.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
@@ -42,6 +46,7 @@ export function OpenArtResults() {
   const [aiUi, setAiUi] = useState(() => getAiAssetsUiState());
   const { refreshRegistry, selectAsset, notify, setStatus } = useAssetBrowser();
   const { patch } = useLayout();
+  const { openFromEvent } = useEditorContextMenu();
 
   useEffect(() => subscribeOpenArtUi(setUi), []);
   useEffect(() => subscribeAiAssetsUi(setAiUi), []);
@@ -136,6 +141,10 @@ export function OpenArtResults() {
   const projectArtSaveMode = artSaveFolder != null;
   const canSaveConcept = Boolean(hasResult && saveTargetAreaId && !ui.busy && !projectArtSaveMode);
   const canSaveProjectArt = Boolean(hasResult && projectArtSaveMode && ui.staging?.stagingId && !ui.busy);
+  const tileHorizontal = Boolean(aiUi.promptComposition?.tileHorizontal);
+  const tileVertical = Boolean(aiUi.promptComposition?.tileVertical);
+  const [previewMode, setPreviewMode] = useState('single'); // single | tile3x1
+  const showTilePreview = hasResult && tileHorizontal && !tileVertical;
 
   const onSaveToConceptLibrary = useCallback(async () => {
     if (!ui.staging?.stagingId || !saveTargetAreaId) return;
@@ -252,6 +261,79 @@ export function OpenArtResults() {
     }
   }, []);
 
+  const onSendToMeshy = useCallback(async () => {
+    if (!hasResult || !ui.previewUrl) return;
+    try {
+      const { sendOpenArtResultToMeshy } = await import('../projectArt/generationHandoff.js');
+      const res = await sendOpenArtResultToMeshy({
+        previewUrl: ui.previewUrl,
+        title: 'OpenArt 3D reference',
+        provenance: {
+          openArtJobId: ui.job?.id || ui.job?.jobId || null,
+          prompt: getOpenArtComposedPrompt() || ui.prompt,
+          generationOrigin: aiUi.generationOrigin || null,
+        },
+      });
+      if (res?.message) {
+        setStatus(res.message);
+        notify(res.message);
+      }
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [hasResult, ui.previewUrl, ui.job, ui.prompt, aiUi.generationOrigin, setStatus, notify]);
+
+  const openResultsContextMenu = useCallback((event) => {
+    openFromEvent(event, [
+      {
+        id: 'import-texture',
+        label: 'Import Texture',
+        disabled: !hasResult || ui.busy,
+        onSelect: () => { onImportTexture(); },
+      },
+      {
+        id: 'create-material',
+        label: 'Create Material',
+        disabled: !hasResult || ui.busy,
+        onSelect: () => { onCreateMaterial(); },
+      },
+      projectArtSaveMode
+        ? {
+          id: 'save-project-art',
+          label: 'Save to Project Art',
+          disabled: !canSaveProjectArt,
+          onSelect: () => { onSaveToProjectArt(); },
+        }
+        : {
+          id: 'save-concept',
+          label: 'Save Concept',
+          disabled: !canSaveConcept,
+          onSelect: () => { onSaveToConceptLibrary(); },
+        },
+      {
+        id: 'send-meshy',
+        label: 'Send to Meshy',
+        disabled: !hasResult || ui.busy,
+        onSelect: () => { onSendToMeshy(); },
+      },
+      { id: 'sep-discard', separator: true },
+      {
+        id: 'discard',
+        label: 'Discard',
+        danger: true,
+        disabled: !hasResult && !ui.estimate,
+        onSelect: () => {
+          openArtDiscardResult();
+          setStatus('OpenArt result discarded');
+        },
+      },
+    ]);
+  }, [
+    openFromEvent, hasResult, ui.busy, ui.estimate, projectArtSaveMode,
+    canSaveProjectArt, canSaveConcept, onImportTexture, onCreateMaterial,
+    onSaveToProjectArt, onSaveToConceptLibrary, onSendToMeshy, setStatus,
+  ]);
+
   return (
     <div
       className="bb-openart-results"
@@ -265,16 +347,58 @@ export function OpenArtResults() {
         <span className={`bb-openart-results__phase${ui.phase === 'failed' ? ' is-bad' : ''}`}>
           {phaseLabel}
         </span>
+        {showTilePreview && (
+          <div className="bb-openart-results__preview-modes" role="group" aria-label="Result preview mode">
+            <button
+              type="button"
+              className={`bb-btn bb-btn--ghost${previewMode === 'single' ? ' is-active' : ''}`}
+              aria-pressed={previewMode === 'single'}
+              onClick={() => setPreviewMode('single')}
+              title="Show single generated texture"
+            >
+              Single
+            </button>
+            <button
+              type="button"
+              className={`bb-btn bb-btn--ghost${previewMode === 'tile3x1' ? ' is-active' : ''}`}
+              aria-pressed={previewMode === 'tile3x1'}
+              onClick={() => setPreviewMode('tile3x1')}
+              title="Show 3×1 horizontal tiling preview"
+            >
+              3×1 Tile
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="bb-openart-results__stage">
+      <div
+        className="bb-openart-results__stage"
+        onContextMenu={openResultsContextMenu}
+      >
         <PreviewCanvasViewport className="bb-openart-results__preview-frame">
-          {hasResult ? (
+          {hasResult && previewMode === 'tile3x1' && showTilePreview ? (
+            <div
+              className="bb-openart__tile-preview is-3x1"
+              aria-label="3 by 1 horizontal tiling preview"
+            >
+              {[0, 1, 2].map((i) => (
+                <img
+                  key={i}
+                  className="bb-openart__tile-preview-cell"
+                  src={ui.previewUrl}
+                  alt=""
+                  draggable={false}
+                  onContextMenu={openResultsContextMenu}
+                />
+              ))}
+            </div>
+          ) : hasResult ? (
             <img
               className="bb-openart__preview-img"
               src={ui.previewUrl}
               alt="OpenArt generation preview"
               draggable={false}
+              onContextMenu={openResultsContextMenu}
             />
           ) : (
             <GenerationFramePreview
@@ -283,8 +407,8 @@ export function OpenArtResults() {
               resolution={ui.formValues?.resolution || '1K'}
               width={ui.formValues?.width}
               height={ui.formValues?.height}
-              tileHorizontal={Boolean(aiUi.promptComposition?.tileHorizontal)}
-              tileVertical={Boolean(aiUi.promptComposition?.tileVertical)}
+              tileHorizontal={tileHorizontal}
+              tileVertical={tileVertical}
             />
           )}
         </PreviewCanvasViewport>
@@ -306,8 +430,22 @@ export function OpenArtResults() {
         <div className="bb-openart-results__thumbs-wrap">
           <div className="bb-openart-results__thumbs" aria-label="Generation results">
             {hasResult ? (
-              <button type="button" className="bb-openart-results__thumb is-active" title="Result 1">
-                <img src={ui.previewUrl} alt="" />
+              <button
+                type="button"
+                className="bb-openart-results__thumb is-active"
+                title="Result 1"
+                onContextMenu={openResultsContextMenu}
+              >
+                <img
+                  src={ui.previewUrl}
+                  alt=""
+                  draggable={false}
+                  onContextMenu={(e) => {
+                    // Ensure nested img never shows the browser image menu.
+                    suppressNativeImageMenu(e);
+                    openResultsContextMenu(e);
+                  }}
+                />
                 <span>1</span>
               </button>
             ) : (

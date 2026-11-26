@@ -141,6 +141,7 @@ describe('Project Art — ASSET_CATEGORIES + templates', () => {
     expect(ids).toEqual(expect.arrayContaining([
       'environment_concept',
       'wall_texture',
+      'full_wall_texture',
       'floor_texture',
       'ceiling_texture',
       'architectural_element',
@@ -154,6 +155,24 @@ describe('Project Art — ASSET_CATEGORIES + templates', () => {
       'other',
     ]));
     expect(ASSET_CATEGORIES.find((c) => c.id === 'door_window')?.label).toBe('Door / Window');
+    expect(ASSET_CATEGORIES.find((c) => c.id === 'full_wall_texture')?.label).toBe('Full Wall Texture');
+  });
+
+  it('Full Wall Texture composes floor-to-ceiling orthographic wording without hardcoded tiling', () => {
+    const result = composeTemplateAssetPrompt({
+      templateId: 'full_wall_texture',
+      includeTiling: false,
+      tileHorizontal: true,
+      tileVertical: false,
+    });
+    expect(result.templateId).toBe('full_wall_texture');
+    expect(result.promptText.toLowerCase()).toMatch(/floor to ceiling|baseboard|crown molding/);
+    expect(result.promptText.toLowerCase()).toMatch(/orthographic/);
+    expect(result.promptText.toLowerCase()).not.toMatch(/seamless/);
+    expect(getPromptTemplate('full_wall_texture')?.suggestedDefaults).toEqual({
+      tileHorizontal: true,
+      tileVertical: false,
+    });
   });
 
   it('composeTemplateAssetPrompt wall_texture recreates reference material + tiling', () => {

@@ -14,9 +14,11 @@ import {
   fetchProjectArtMeta,
   fetchProjectArtTree,
   fetchProjectArtVisionCapability,
+  copyProjectArt,
   importProjectArtImage,
   listProjectArtFolder,
   mkdirProjectArt,
+  moveProjectArt,
   openProjectArtFolder,
   projectArtImageUrl,
   renameProjectArt,
@@ -26,6 +28,18 @@ import {
   updateProjectArtCollection,
   updateProjectArtItem,
 } from '../../io/projectArtClient.js';
+import {
+  addGoogleDriveLibrary,
+  copyGoogleDriveToProjectArt,
+  fetchGoogleDriveStatus,
+  googleDriveImageUrl,
+  listGoogleDriveFolder,
+  materializeGoogleDriveFile,
+  refreshGoogleDriveLibrary,
+  removeGoogleDriveLibrary,
+  startGoogleDriveLogin,
+  startGoogleDriveLogout,
+} from '../../io/googleDriveClient.js';
 import { createEmptyLibrary } from './schema.js';
 
 const LISTENERS = new Set();
@@ -50,6 +64,14 @@ const initialState = () => ({
   anchorId: null,
   expandedPaths: {},
   vision: null,
+  // External Libraries (Google Drive)
+  librarySource: 'local', // local | gdrive
+  externalLibraries: [],
+  externalAuth: null,
+  activeExternalLibraryId: null,
+  externalFolderPath: '',
+  externalNextPageToken: null,
+  externalItemsById: {},
 });
 
 let state = initialState();
@@ -121,6 +143,11 @@ export async function openFolder(folderPath = '') {
     tagFilter: null,
     searchQuery: '',
     searchResults: null,
+    librarySource: 'local',
+    activeExternalLibraryId: null,
+    externalFolderPath: '',
+    externalNextPageToken: null,
+    externalItemsById: {},
   });
   try {
     const res = await listProjectArtFolder(path);
@@ -138,6 +165,204 @@ export async function openFolder(folderPath = '') {
     setState({ busy: false, error: err.message });
     throw err;
   }
+}
+
+export async function refreshExternalLibraries() {
+  try {
+    const status = await fetchGoogleDriveStatus();
+    setState({
+      externalLibraries: status.libraries || [],
+      externalAuth: {
+        authenticated: Boolean(status.authenticated),
+        configured: Boolean(status.configured),
+        hasApiKey: Boolean(status.hasApiKey),
+        configError: status.configError || null,
+        setupHint: status.setupHint || null,
+      },
+    });
+    return status;
+  } catch (err) {
+    setState({
+      externalAuth: {
+        authenticated: false,
+        configured: false,
+        error: err.message,
+        code: err.code,
+      },
+    });
+    throw err;
+  }
+}
+
+export async function openExternalLibrary(libraryId, folderPath = '') {
+  const path = String(folderPath || '');
+  const seq = ++openFolderSeq;
+  setState({
+    busy: true,
+    error: null,
+    librarySource: 'gdrive',
+    activeExternalLibraryId: libraryId,
+    externalFolderPath: path,
+    currentFolder: path,
+    viewMode: 'folder',
+    activeCollectionId: null,
+    tagFilter: null,
+    searchQuery: '',
+    searchResults: null,
+    selectedIds: [],
+    anchorId: null,
+  });
+  try {
+    const res = await listGoogleDriveFolder(libraryId, path);
+    if (seq !== openFolderSeq) return res;
+    const externalItemsById = {};
+    for (const entry of res.entries || []) {
+      if (entry.type === 'file' && entry.item?.id) {
+        externalItemsById[entry.item.id] = entry.item;
+      }
+    }
+    setState({
+      busy: false,
+      folderEntries: res.entries || [],
+      externalFolderPath: res.path != null ? res.path : path,
+      currentFolder: res.path != null ? res.path : path,
+      externalNextPageToken: res.nextPageToken || null,
+      externalItemsById,
+    });
+    return res;
+  } catch (err) {
+    if (seq !== openFolderSeq) throw err;
+    setState({ busy: false, error: err.message });
+    throw err;
+  }
+}
+
+/** Append the next page of the current Google Drive folder listing. */
+export async function loadMoreExternalFolder() {
+  if (state.librarySource !== 'gdrive' || !state.activeExternalLibraryId || !state.externalNextPageToken) {
+    return null;
+  }
+  const libraryId = state.activeExternalLibraryId;
+  const path = state.externalFolderPath || state.currentFolder || '';
+  const pageToken = state.externalNextPageToken;
+  const seq = openFolderSeq;
+  setState({ busy: true, error: null });
+  try {
+    const res = await listGoogleDriveFolder(libraryId, path, pageToken);
+    if (seq !== openFolderSeq) return res;
+    const externalItemsById = { ...(state.externalItemsById || {}) };
+    const appended = [];
+    for (const entry of res.entries || []) {
+      if (entry.type === 'file' && entry.item?.id) {
+        externalItemsById[entry.item.id] = entry.item;
+      }
+      appended.push(entry);
+    }
+    setState({
+      busy: false,
+      folderEntries: [...(state.folderEntries || []), ...appended],
+      externalNextPageToken: res.nextPageToken || null,
+      externalItemsById,
+    });
+    return res;
+  } catch (err) {
+    if (seq !== openFolderSeq) throw err;
+    setState({ busy: false, error: err.message });
+    throw err;
+  }
+}
+
+export async function googleDriveConnect() {
+  // Prefer an existing session before launching another OAuth browser window.
+  const existing = await refreshExternalLibraries().catch(() => null);
+  if (existing?.authenticated) {
+    return { ok: true, message: 'Google Drive already connected.', alreadyAuthenticated: true };
+  }
+  const res = await startGoogleDriveLogin();
+  await refreshExternalLibraries().catch(() => {});
+  return res;
+}
+
+export async function googleDriveDisconnect() {
+  const res = await startGoogleDriveLogout();
+  await refreshExternalLibraries().catch(() => {});
+  return res;
+}
+
+export async function googleDriveAddLibrary(url) {
+  const res = await addGoogleDriveLibrary(url);
+  setState({ externalLibraries: res.libraries || state.externalLibraries });
+  return res;
+}
+
+export async function googleDriveRemoveLibrary(libraryId) {
+  const res = await removeGoogleDriveLibrary(libraryId);
+  const patch = { externalLibraries: res.libraries || [] };
+  if (state.activeExternalLibraryId === libraryId) {
+    patch.librarySource = 'local';
+    patch.activeExternalLibraryId = null;
+    patch.externalFolderPath = '';
+    patch.folderEntries = [];
+    patch.externalItemsById = {};
+  }
+  setState(patch);
+  if (state.librarySource === 'local' || patch.librarySource === 'local') {
+    await openFolder(state.currentFolder || '').catch(() => {});
+  }
+  return res;
+}
+
+export async function googleDriveRefreshLibrary(libraryId) {
+  const res = await refreshGoogleDriveLibrary(libraryId);
+  setState({ externalLibraries: res.libraries || state.externalLibraries });
+  if (state.librarySource === 'gdrive' && state.activeExternalLibraryId === libraryId) {
+    await openExternalLibrary(libraryId, state.externalFolderPath || '');
+  }
+  return res;
+}
+
+export async function materializeSelectedGoogleDriveItem(item) {
+  if (!item || item.source !== 'gdrive' || !item.driveFileId) {
+    return { ok: true, item };
+  }
+  const res = await materializeGoogleDriveFile({
+    fileId: item.driveFileId,
+    libraryId: item.driveLibraryId || state.activeExternalLibraryId,
+    resourceKey: item.driveResourceKey || null,
+    filename: item.title,
+  });
+  return {
+    ok: true,
+    item: {
+      ...item,
+      // Local project-art cache path — generation uses this, not Drive URLs.
+      relativePath: res.projectArtRelativePath || item.relativePath,
+      absolutePath: res.absolutePath,
+      projectArtRelativePath: res.projectArtRelativePath,
+      materialized: res,
+      provenance: {
+        ...(item.provenance || {}),
+        ...(res.provenance || {}),
+        materializedAt: new Date().toISOString(),
+      },
+    },
+    materialize: res,
+  };
+}
+
+export async function copyExternalItemToProjectArt(item, folder = '') {
+  if (!item?.driveFileId) {
+    throw Object.assign(new Error('Not a Google Drive item'), { code: 'NOT_GDRIVE' });
+  }
+  const res = await copyGoogleDriveToProjectArt({
+    fileId: item.driveFileId,
+    libraryId: item.driveLibraryId || state.activeExternalLibraryId,
+    resourceKey: item.driveResourceKey || null,
+    folder,
+    title: item.title,
+  });
+  await loadMeta().catch(() => {});
+  return res;
 }
 
 export async function search(query) {
@@ -161,6 +386,22 @@ export async function search(query) {
     setState({ busy: false, error: err.message });
     throw err;
   }
+}
+
+/** Filter currently loaded Google Drive folder entries by name (no full-Drive crawl). */
+export function searchExternal(query) {
+  const q = String(query || '').trim().toLowerCase();
+  setState({ searchQuery: String(query || '') });
+  if (!q) {
+    setState({ searchResults: null });
+    return [];
+  }
+  const matches = (state.folderEntries || [])
+    .filter((e) => e.type === 'file' && e.item)
+    .map((e) => e.item)
+    .filter((item) => String(item.title || '').toLowerCase().includes(q));
+  setState({ searchResults: matches });
+  return matches;
 }
 
 export function setSortMode(mode) {
@@ -334,15 +575,20 @@ function sortEntries(entries, sortMode) {
   return [...dirs, ...files];
 }
 
+function findItemById(id) {
+  if (!id) return null;
+  return (state.library.items || []).find((i) => i.id === id)
+    || state.externalItemsById?.[id]
+    || null;
+}
+
 export function getPrimarySelectedItem() {
   const id = state.selectedIds[state.selectedIds.length - 1] || null;
-  if (!id) return null;
-  return (state.library.items || []).find((i) => i.id === id) || null;
+  return findItemById(id);
 }
 
 export function getSelectedItems() {
-  const byId = new Map((state.library.items || []).map((i) => [i.id, i]));
-  return state.selectedIds.map((id) => byId.get(id)).filter(Boolean);
+  return state.selectedIds.map((id) => findItemById(id)).filter(Boolean);
 }
 
 export function selectOnly(id) {
@@ -440,6 +686,22 @@ export function projectArtRename(payload) {
   });
 }
 
+export function projectArtMove(payload) {
+  return mutate(async () => {
+    const result = await moveProjectArt(payload);
+    await refreshTree().catch(() => {});
+    return result;
+  });
+}
+
+export function projectArtCopy(payload) {
+  return mutate(async () => {
+    const result = await copyProjectArt(payload);
+    await refreshTree().catch(() => {});
+    return result;
+  });
+}
+
 export function projectArtDelete(payload) {
   return mutate(async () => {
     const result = await deleteProjectArt(payload);
@@ -530,13 +792,33 @@ export function projectArtOpenInExplorer(payload) {
 
 export function projectArtPreviewUrl(itemOrPath) {
   if (!itemOrPath) return null;
+  if (typeof itemOrPath === 'object' && itemOrPath.source === 'gdrive' && itemOrPath.driveFileId) {
+    return googleDriveImageUrl(itemOrPath.driveFileId, {
+      libraryId: itemOrPath.driveLibraryId || state.activeExternalLibraryId,
+      thumb: true,
+    });
+  }
   if (typeof itemOrPath === 'string') return projectArtImageUrl(itemOrPath);
-  return projectArtImageUrl(itemOrPath.relativePath);
+  if (itemOrPath.relativePath) return projectArtImageUrl(itemOrPath.relativePath);
+  return null;
+}
+
+/** Full-resolution same-origin URL for crop / detail preview. */
+export function projectArtFullImageUrl(itemOrPath) {
+  if (!itemOrPath) return null;
+  if (typeof itemOrPath === 'object' && itemOrPath.source === 'gdrive' && itemOrPath.driveFileId) {
+    return googleDriveImageUrl(itemOrPath.driveFileId, {
+      libraryId: itemOrPath.driveLibraryId || state.activeExternalLibraryId,
+      thumb: false,
+    });
+  }
+  return projectArtPreviewUrl(itemOrPath);
 }
 
 export async function projectArtBootstrap() {
   await loadMeta();
   await refreshTree();
+  await refreshExternalLibraries().catch(() => {});
   await openFolder(state.currentFolder || '');
 }
 

@@ -116,8 +116,11 @@ export function MaterialPreviewCanvas({
   mapUrl = null,
   getTextureUrl = null,
   shape = 'sphere',
+  /** Degrees around Y — moves the key light for interactive lighting previews. */
+  lightAzimuth = null,
 }) {
   const canvasRef = useRef(null);
+  const lightRef = useRef(null);
   const previewShape = shape === 'cube' || shape === 'plane' ? shape : 'sphere';
   const defKey = definition
     ? [
@@ -142,6 +145,13 @@ export function MaterialPreviewCanvas({
         definition.uvOffset?.y,
         definition.uvRotation,
         previewShape,
+        // Include map URL strings so live PBR preview blobs invalidate the effect.
+        typeof getTextureUrl === 'function' && definition.normalMapId
+          ? getTextureUrl(definition.normalMapId)
+          : '',
+        typeof getTextureUrl === 'function' && definition.roughnessMapId
+          ? getTextureUrl(definition.roughnessMapId)
+          : '',
       ].join('|')
     : `${color}|${mapUrl || ''}|${previewShape}`;
 
@@ -173,6 +183,7 @@ export function MaterialPreviewCanvas({
     const key = new THREE.DirectionalLight(0xfff2e0, 1.55);
     key.position.set(2.4, 3.2, 2.0);
     scene.add(key);
+    lightRef.current = key;
     const fill = new THREE.DirectionalLight(0x8aa0c0, 0.4);
     fill.position.set(-2.2, 1.4, -1.8);
     scene.add(fill);
@@ -290,6 +301,13 @@ export function MaterialPreviewCanvas({
       renderer.dispose();
     };
   }, [defKey, color, mapUrl, getTextureUrl, previewShape]);
+
+  useEffect(() => {
+    if (lightAzimuth == null || !lightRef.current) return;
+    const rad = (Number(lightAzimuth) * Math.PI) / 180;
+    const r = 3.2;
+    lightRef.current.position.set(Math.cos(rad) * r, 3.2, Math.sin(rad) * r);
+  }, [lightAzimuth, defKey]);
 
   return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
 }

@@ -45,8 +45,26 @@ export function createMaterialDefinition(partial = {}) {
     },
     uvRotation: Number(partial.uvRotation) || 0,
     previewPath: partial.previewPath || null,
+    /** Local PBR generator authoring state (params + generated map ids). */
+    pbrGenerator: normalizePbrGeneratorField(partial.pbrGenerator),
     createdAt: partial.createdAt || now,
     updatedAt: partial.updatedAt || now,
+  };
+}
+
+function normalizePbrGeneratorField(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    sourceTextureId: raw.sourceTextureId ? String(raw.sourceTextureId) : null,
+    tileHorizontal: Boolean(raw.tileHorizontal),
+    tileVertical: Boolean(raw.tileVertical),
+    normal: raw.normal && typeof raw.normal === 'object' ? { ...raw.normal } : null,
+    roughness: raw.roughness && typeof raw.roughness === 'object' ? { ...raw.roughness } : null,
+    generatedNormalMapId: raw.generatedNormalMapId ? String(raw.generatedNormalMapId) : null,
+    generatedRoughnessMapId: raw.generatedRoughnessMapId
+      ? String(raw.generatedRoughnessMapId)
+      : null,
+    updatedAt: Number(raw.updatedAt) || Date.now(),
   };
 }
 

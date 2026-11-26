@@ -133,7 +133,7 @@
           },
           "color": "#8a9099",
           "collidable": true,
-          "materialId": "mat_hall_stone",
+          "materialId": "mat_0807fae227e1",
           "faceMaterials": null,
           "operation": "add",
           "openings": [

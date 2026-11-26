@@ -24,7 +24,7 @@ export const projectArtLibraryLesson = {
       highlight: ['workspace.ai', 'ai.section.library'],
       verify: { type: 'manualConfirm', label: 'I opened Project Art Library' },
       explain:
-        'ComfyUI and Meshy appear as Coming Soon in Asset Generation. Do not expect them to generate yet.',
+        'From here you can Send to Meshy / Send Region to Meshy for Image-to-3D, or Use as Reference / Send Region for OpenArt. ComfyUI remains Coming Soon.',
     },
     {
       id: 'browse',
@@ -36,6 +36,26 @@ export const projectArtLibraryLesson = {
       failHint: 'Click a folder in the left tree or a folder tile in the center gallery.',
     },
     {
+      id: 'external',
+      title: 'External Google Drive libraries',
+      body:
+        'Under External Libraries, Add a Google Drive folder URL. Connect Google Account when the folder needs private access (read-only Drive scope). Browse subfolders and thumbnails on demand — BloodBound does not download the whole Drive folder. Use as Reference / Send to Generation / Meshy / Copy to Project Art work here; remote rename/delete/move are blocked.',
+      highlight: ['projectArt.nav.externalLibraries', 'projectArt.gallery'],
+      verify: { type: 'manualConfirm', label: 'I understand External Libraries' },
+      explain:
+        'Before OpenArt or Meshy runs, Drive images are materialized into project-controlled storage so generation never depends on temporary Drive URLs. Copy to Project Art Library to manage files locally.',
+      terms: [
+        {
+          term: 'External Library',
+          def: 'A connected Google Drive folder browsed read-only inside Project Art Library.',
+        },
+        {
+          term: 'Materialize',
+          def: 'Download a Drive file into project staging before using it as a generation reference.',
+        },
+      ],
+    },
+    {
       id: 'organize',
       title: 'Organize concept art',
       body:
@@ -43,7 +63,7 @@ export const projectArtLibraryLesson = {
       highlight: ['projectArt.detail.tabs'],
       verify: { type: 'manualConfirm', label: 'I checked organization tools' },
       explain:
-        'Import needs an open folder (not All Assets / Favorites). Drop images onto the gallery or use Import.',
+        'Import needs an open local folder (not All Assets / Favorites / External Drive). Drop images onto the gallery or use Import.',
     },
     {
       id: 'select-image',
@@ -71,14 +91,14 @@ export const projectArtLibraryLesson = {
       highlight: ['projectArt.region.select', 'projectArt.action.sendRegion'],
       verify: { type: 'manualConfirm', label: 'I drew a region' },
       explain:
-        'Send Region to Generation crops that rectangle and stages it as the OpenArt image reference so Nano Banana 2 can read material detail directly. No separate vision-analysis step.',
+        'Send Region to Generation crops that rectangle and stages the crop as the sole OpenArt --image reference (not the full concept). It auto-composes a Wall Texture / selected template prompt and does not reuse the concept’s original generation prompt. No separate vision-analysis step.',
     },
     {
       id: 'send',
       title: 'Send to Asset Generation',
       body:
-        'Send to Generation carries the full image and any saved prompt. Send Region to Generation crops the selection into an image reference and preserves source image, coordinates, and associations. Both switch you to Asset Generation without spending credits.',
-      highlight: ['projectArt.action.sendToGeneration', 'projectArt.action.sendRegion'],
+        'Send to Generation stages the full image as a reference. If a saved prompt exists it is transferred; if not, Asset Generation opens so you can pick a template or type a prompt. Send Region to Generation crops the selection into the OpenArt image reference and auto-composes a template prompt (not the concept prompt). Send to Meshy needs only the image — no prompt. Prompt and credit checks happen at Estimate / Generate, not in the library. No credits are spent by these handoffs.',
+      highlight: ['projectArt.action.sendToGeneration', 'projectArt.action.sendRegion', 'projectArt.action.sendToMeshy'],
       verify: { type: 'manualConfirm', label: 'I understand handoff' },
     },
   ],

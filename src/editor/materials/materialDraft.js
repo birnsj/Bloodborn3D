@@ -25,6 +25,7 @@ const DRAFT_KEYS = [
   'uvOffset',
   'uvRotation',
   'previewPath',
+  'pbrGenerator',
 ];
 
 /** Deep-clone a normalized material definition for editing. */

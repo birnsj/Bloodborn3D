@@ -20,9 +20,32 @@ export async function fetchMaterialDefinition(id) {
   return res.json();
 }
 
-export async function importTextureFile(file) {
+export async function importTextureFile(file, {
+  name = null,
+  tags = [],
+} = {}) {
+  const qs = new URLSearchParams({
+    action: 'import-texture',
+    name: file.name || 'import.png',
+  });
+  if (name) qs.set('assetName', name);
+  if (tags?.length) qs.set('tags', tags.join(','));
+  const res = await fetch(`/api/assets?${qs}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Texture import failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Overwrite an existing registered texture's bytes (keeps id/path). */
+export async function replaceTextureFile(id, file) {
   const res = await fetch(
-    `/api/assets?action=import-texture&name=${encodeURIComponent(file.name)}`,
+    `/api/assets?action=replace-texture&id=${encodeURIComponent(id)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/octet-stream' },
@@ -31,7 +54,7 @@ export async function importTextureFile(file) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Texture import failed: ${res.status}`);
+    throw new Error(err.error || `Texture replace failed: ${res.status}`);
   }
   return res.json();
 }

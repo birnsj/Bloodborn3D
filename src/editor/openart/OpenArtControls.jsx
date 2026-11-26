@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import {
+  suppressNativeImageMenu,
+  useEditorContextMenu,
+} from '../../ui/contextMenu/EditorContextMenu.jsx';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { openArtStagingPreviewUrl, uploadOpenArtReference } from '../../io/openArtClient.js';
 import {
+  clearSelectedRegion,
   getAiAssetsUiState,
+  removeGenerationReference,
+  setAiAssetsSection,
   setPromptComposition,
   setSelectedPromptTemplateId,
   setSelectedRegion,
@@ -20,9 +27,11 @@ import {
   summarizeTemplateConstraints,
 } from '../projectArt/promptTemplates.js';
 import {
+  openFolder,
   projectArtCreatePrompt,
   projectArtPreviewUrl,
   projectArtUpdateItem,
+  selectOnly,
 } from '../projectArt/projectArtStore.js';
 import {
   getOpenArtComposedPrompt,
@@ -50,6 +59,7 @@ export function OpenArtControls() {
   const [aiUi, setAiUi] = useState(() => getAiAssetsUiState());
   const { notify, setStatus } = useAssetBrowser();
   const { confirm } = useEditorDialogs();
+  const { openFromEvent } = useEditorContextMenu();
   const refInput = useRef(null);
   const connectedRef = useRef(false);
   const [refPreviewUrl, setRefPreviewUrl] = useState(null);
@@ -76,6 +86,18 @@ export function OpenArtControls() {
       setRefPreviewUrl(null);
     }
   }, [ui.referenceFileName, refPreviewUrl]);
+
+  // Region handoff seeds a template-composed prompt — mark it so template
+  // changes can confirm before overwriting intentional edits.
+  useEffect(() => {
+    if (aiUi.generationOrigin?.croppedReference?.stagingId
+      && aiUi.generationOrigin?.promptTemplateId) {
+      setPromptSource('template');
+    }
+  }, [
+    aiUi.generationOrigin?.croppedReference?.stagingId,
+    aiUi.generationOrigin?.promptTemplateId,
+  ]);
 
   const modes = useMemo(() => {
     const model = ui.imageModels.find((m) => m.id === ui.modelId);
@@ -214,49 +236,124 @@ export function OpenArtControls() {
   const constraintSummary = summarizeTemplateConstraints(template);
   // Fall back to the origin's region so the summary survives Project Art selection changes.
   const activeRegion = aiUi.selectedRegion || aiUi.generationOrigin?.sourceRegion || null;
+  const regionCropSrc = aiUi.generationOrigin?.croppedReference?.stagingId
+    ? openArtStagingPreviewUrl(aiUi.generationOrigin.croppedReference.stagingId)
+    : null;
+  const regionSourceSrc = activeRegion?.relativePath
+    ? projectArtPreviewUrl(activeRegion.relativePath)
+    : null;
 
-  const onComposePrompt = useCallback(() => {
-    try {
-      const referenceTitles = trayRefs.map((r) => r.title).filter(Boolean);
-      const hasCroppedRef = Boolean(
-        aiUi.generationOrigin?.croppedReference?.absolutePath
-        || ui.referenceStagingPath,
-      );
-      // Tiling is left to the checkboxes: composeGenerationPrompt appends it at submit time.
-      const common = {
-        instruction,
-        tileHorizontal,
-        tileVertical,
-        referenceTitles,
-        includeTiling: false,
-      };
-      const result = (activeRegion || hasCroppedRef)
-        ? assembleRegionTemplatePrompt({
-          ...common,
-          templateId,
-          itemTitle: activeRegion?.title || referenceTitles[0] || '',
-          regionDescription: activeRegion
-            ? [activeRegion.description, describeRegionCoords(activeRegion)]
-              .filter(Boolean)
-              .join('; ')
-            : '',
-        })
-        : composeTemplateAssetPrompt({ ...common, templateId });
-      openArtSetPrompt(result.promptText || '');
-      openArtClearEstimate();
-      setPromptSource('template');
-      notify(
-        hasCroppedRef || activeRegion
-          ? 'Prompt composed — reference image supplies visual detail'
-          : 'Prompt composed from template',
-      );
-    } catch (err) {
-      notify(err.message || String(err));
-    }
+  const buildTemplatePromptText = useCallback((nextTemplateId = templateId) => {
+    const referenceTitles = trayRefs.map((r) => r.title).filter(Boolean);
+    const hasCroppedRef = Boolean(
+      aiUi.generationOrigin?.croppedReference?.absolutePath
+      || ui.referenceStagingPath,
+    );
+    // Tiling is left to the checkboxes: composeGenerationPrompt appends it at submit time.
+    const common = {
+      instruction,
+      tileHorizontal,
+      tileVertical,
+      referenceTitles,
+      includeTiling: false,
+    };
+    const result = (activeRegion || hasCroppedRef)
+      ? assembleRegionTemplatePrompt({
+        ...common,
+        templateId: nextTemplateId,
+        itemTitle: activeRegion?.title || referenceTitles[0] || '',
+        regionDescription: activeRegion
+          ? [activeRegion.description, describeRegionCoords(activeRegion)]
+            .filter(Boolean)
+            .join('; ')
+          : '',
+      })
+      : composeTemplateAssetPrompt({ ...common, templateId: nextTemplateId });
+    return {
+      promptText: String(result.promptText || '').trim(),
+      usedRegion: Boolean(activeRegion || hasCroppedRef),
+    };
   }, [
     trayRefs, templateId, instruction, tileHorizontal, tileVertical, activeRegion,
-    aiUi.generationOrigin, ui.referenceStagingPath, notify,
+    aiUi.generationOrigin, ui.referenceStagingPath,
   ]);
+
+  const applyTemplatePrompt = useCallback(async ({
+    nextTemplateId = templateId,
+    confirmIfEdited = false,
+    quiet = false,
+  } = {}) => {
+    try {
+      const { promptText, usedRegion } = buildTemplatePromptText(nextTemplateId);
+      if (!promptText) {
+        notify('Could not compose a prompt from this template');
+        return false;
+      }
+      const current = String(ui.prompt || '').trim();
+      if (
+        confirmIfEdited
+        && promptSource === 'edited'
+        && current
+        && current !== promptText
+      ) {
+        const ok = await confirm(
+          'Replace your edited prompt with the template composition?',
+          {
+            title: 'Replace prompt',
+            confirmLabel: 'Replace',
+            cancelLabel: 'Keep edits',
+            tone: 'warning',
+          },
+        );
+        if (!ok) return false;
+      }
+      openArtSetPrompt(promptText);
+      openArtClearEstimate();
+      setPromptSource('template');
+      if (!quiet) {
+        notify(
+          usedRegion
+            ? 'Prompt composed — reference image supplies visual detail'
+            : 'Prompt composed from template',
+        );
+      }
+      return true;
+    } catch (err) {
+      notify(err.message || String(err));
+      return false;
+    }
+  }, [
+    buildTemplatePromptText, templateId, ui.prompt, promptSource,
+    confirm, notify,
+  ]);
+
+  const onComposePrompt = useCallback(() => {
+    applyTemplatePrompt({ confirmIfEdited: false });
+  }, [applyTemplatePrompt]);
+
+  const onTemplateChange = useCallback(async (event) => {
+    const id = event.target.value;
+    setSelectedPromptTemplateId(id);
+    const next = getPromptTemplate(id);
+    if (next?.suggestedDefaults
+      && (typeof next.suggestedDefaults.tileHorizontal === 'boolean'
+        || typeof next.suggestedDefaults.tileVertical === 'boolean')) {
+      setPromptComposition({
+        ...(typeof next.suggestedDefaults.tileHorizontal === 'boolean'
+          ? { tileHorizontal: next.suggestedDefaults.tileHorizontal }
+          : {}),
+        ...(typeof next.suggestedDefaults.tileVertical === 'boolean'
+          ? { tileVertical: next.suggestedDefaults.tileVertical }
+          : {}),
+      });
+      openArtClearEstimate();
+    }
+    await applyTemplatePrompt({
+      nextTemplateId: id,
+      confirmIfEdited: true,
+      quiet: false,
+    });
+  }, [applyTemplatePrompt]);
 
   const onSavePrompt = useCallback(async () => {
     const promptText = String(ui.prompt || '').trim();
@@ -371,25 +468,7 @@ export function OpenArtControls() {
               className="bb-select"
               value={templateId}
               disabled={ui.busy}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedPromptTemplateId(id);
-                const next = getPromptTemplate(id);
-                if (next?.suggestedDefaults
-                  && (typeof next.suggestedDefaults.tileHorizontal === 'boolean'
-                    || typeof next.suggestedDefaults.tileVertical === 'boolean')) {
-                  setPromptComposition({
-                    ...(typeof next.suggestedDefaults.tileHorizontal === 'boolean'
-                      ? { tileHorizontal: next.suggestedDefaults.tileHorizontal }
-                      : {}),
-                    ...(typeof next.suggestedDefaults.tileVertical === 'boolean'
-                      ? { tileVertical: next.suggestedDefaults.tileVertical }
-                      : {}),
-                  });
-                  openArtClearEstimate();
-                }
-                setPromptSource(null);
-              }}
+              onChange={onTemplateChange}
             >
               {ASSET_CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
@@ -405,28 +484,50 @@ export function OpenArtControls() {
 
           {activeRegion && (
             <div className="bb-openart__template-region">
-              <div>
-                <strong>Selected region:</strong>
-                {' '}
-                {activeRegion.title}
-                {' — '}
-                {describeRegionCoords(activeRegion)}
-                {aiUi.generationOrigin?.croppedReference?.stagingId
-                  ? ' (cropped reference staged for OpenArt)'
-                  : ''}
-              </div>
-              {aiUi.selectedRegion && (
-                <input
-                  className="bb-input"
-                  value={activeRegion.description || ''}
-                  disabled={ui.busy}
-                  placeholder="Optional note about the region (e.g. carved stone frieze)…"
-                  onChange={(e) => setSelectedRegion({
-                    ...aiUi.selectedRegion,
-                    description: e.target.value,
-                  })}
+              <div className="bb-openart__template-region-body">
+                <RegionPreview
+                  cropSrc={regionCropSrc}
+                  sourceSrc={regionSourceSrc}
+                  region={activeRegion}
+                  staged={Boolean(aiUi.generationOrigin?.croppedReference?.stagingId)}
+                  onContextMenu={(event) => {
+                    openFromEvent(event, [
+                      {
+                        id: 'clear-region',
+                        label: 'Clear Region',
+                        onSelect: () => {
+                          clearSelectedRegion();
+                          setStatus('Cleared selected region');
+                        },
+                      },
+                    ]);
+                  }}
                 />
-              )}
+                <div className="bb-openart__template-region-meta">
+                  <div>
+                    <strong>Selected region:</strong>
+                    {' '}
+                    {activeRegion.title}
+                    {' — '}
+                    {describeRegionCoords(activeRegion)}
+                    {aiUi.generationOrigin?.croppedReference?.stagingId
+                      ? ' (cropped reference staged for OpenArt)'
+                      : ''}
+                  </div>
+                  {aiUi.selectedRegion && (
+                    <input
+                      className="bb-input"
+                      value={activeRegion.description || ''}
+                      disabled={ui.busy}
+                      placeholder="Optional note about the region (e.g. carved stone frieze)…"
+                      onChange={(e) => setSelectedRegion({
+                        ...aiUi.selectedRegion,
+                        description: e.target.value,
+                      })}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -470,9 +571,50 @@ export function OpenArtControls() {
           <div className="bb-openart__library-refs-strip">
             {trayRefs.map((ref) => {
               const rurl = projectArtPreviewUrl(ref.relativePath);
+              const openRefMenu = (event) => {
+                openFromEvent(event, [
+                  {
+                    id: 'open',
+                    label: 'Open in Library',
+                    onSelect: async () => {
+                      const folder = ref.relativePath?.includes('/')
+                        ? ref.relativePath.slice(0, ref.relativePath.lastIndexOf('/'))
+                        : '';
+                      try {
+                        setAiAssetsSection('concepts');
+                        await openFolder(folder);
+                        selectOnly(ref.id);
+                        setStatus(`Opened “${ref.title || ref.id}” in library`);
+                      } catch (err) {
+                        notify(err.message || String(err));
+                      }
+                    },
+                  },
+                  {
+                    id: 'remove',
+                    label: 'Remove',
+                    onSelect: () => {
+                      removeGenerationReference(ref.id);
+                      setStatus(`Removed “${ref.title || ref.id}” from tray`);
+                    },
+                  },
+                ]);
+              };
               return (
-                <div key={ref.id} className="bb-openart__library-ref-thumb" title={ref.title}>
-                  {rurl ? <img src={rurl} alt="" /> : <span className="bb-muted">?</span>}
+                <div
+                  key={ref.id}
+                  className="bb-openart__library-ref-thumb"
+                  title={ref.title}
+                  onContextMenu={openRefMenu}
+                >
+                  {rurl ? (
+                    <img
+                      src={rurl}
+                      alt=""
+                      draggable={false}
+                      onContextMenu={openRefMenu}
+                    />
+                  ) : <span className="bb-muted">?</span>}
                 </div>
               );
             })}
@@ -590,9 +732,35 @@ export function OpenArtControls() {
             <span className="bb-field-caption">Reference images</span>
             <div className="bb-openart__ref-thumbs">
               {ui.referenceFileName ? (
-                <div className="bb-openart__ref-thumb is-filled">
+                <div
+                  className="bb-openart__ref-thumb is-filled"
+                  onContextMenu={(event) => {
+                    openFromEvent(event, [
+                      {
+                        id: 'clear-ref',
+                        label: 'Clear Reference',
+                        disabled: ui.busy,
+                        onSelect: () => clearReference(),
+                      },
+                    ]);
+                  }}
+                >
                   {referencePreviewSrc ? (
-                    <img src={referencePreviewSrc} alt={ui.referenceFileName} />
+                    <img
+                      src={referencePreviewSrc}
+                      alt={ui.referenceFileName}
+                      draggable={false}
+                      onContextMenu={(event) => {
+                        openFromEvent(event, [
+                          {
+                            id: 'clear-ref',
+                            label: 'Clear Reference',
+                            disabled: ui.busy,
+                            onSelect: () => clearReference(),
+                          },
+                        ]);
+                      }}
+                    />
                   ) : (
                     <span className="bb-muted">{ui.referenceFileName}</span>
                   )}
@@ -685,6 +853,76 @@ export function OpenArtControls() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Visual for the Project Art selected region in Asset Generation.
+ * Prefers the staged crop file; on failure / missing crop, CSS-crops the source.
+ */
+function RegionPreview({
+  cropSrc, sourceSrc, region, staged = false, onContextMenu,
+}) {
+  const [cropFailed, setCropFailed] = useState(false);
+  const w = Math.max(0.001, Number(region?.width) || 0);
+  const h = Math.max(0.001, Number(region?.height) || 0);
+  const x = Number(region?.x) || 0;
+  const y = Number(region?.y) || 0;
+  const title = region?.title || 'Selected region';
+  const useCrop = Boolean(cropSrc) && !cropFailed;
+  const handleMenu = onContextMenu || suppressNativeImageMenu;
+
+  useEffect(() => {
+    setCropFailed(false);
+  }, [cropSrc]);
+
+  if (useCrop) {
+    return (
+      <div
+        className={`bb-openart__region-thumb${staged ? ' is-staged' : ''}`}
+        title={staged ? `${title} (cropped reference)` : title}
+        onContextMenu={handleMenu}
+      >
+        <img
+          src={cropSrc}
+          alt={title}
+          draggable={false}
+          onError={() => setCropFailed(true)}
+          onContextMenu={handleMenu}
+        />
+      </div>
+    );
+  }
+
+  if (!sourceSrc) {
+    return (
+      <div className="bb-openart__region-thumb is-empty" title="No region preview">
+        <span className="bb-muted">No preview</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`bb-openart__region-thumb${staged ? ' is-staged' : ''}`}
+      title={title}
+      style={{ aspectRatio: `${w} / ${h}` }}
+      onContextMenu={handleMenu}
+    >
+      <img
+        className="bb-openart__region-thumb-crop"
+        src={sourceSrc}
+        alt={title}
+        draggable={false}
+        onContextMenu={handleMenu}
+        style={{
+          width: `${100 / w}%`,
+          height: `${100 / h}%`,
+          left: `${(-x / w) * 100}%`,
+          top: `${(-y / h) * 100}%`,
+        }}
+      />
     </div>
   );
 }

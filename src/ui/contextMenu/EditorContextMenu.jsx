@@ -167,3 +167,12 @@ export function useEditorContextMenu() {
 export function useOptionalEditorContextMenu() {
   return useContext(EditorContextMenuContext);
 }
+
+/**
+ * Suppress the browser native image / media context menu on a surface.
+ * Prefer calling this from `<img>` / canvas `onContextMenu` (or via openFromEvent).
+ * Does not attach globally — leave text inputs alone.
+ */
+export function suppressNativeImageMenu(event) {
+  event?.preventDefault?.();
+}
