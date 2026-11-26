@@ -1889,23 +1889,55 @@ export function EditorProvider({ children }) {
     );
   }, [world, mode, setSelectedBrushOpenings]);
 
-  const updateSelectedLight = useCallback((partial) => {
+  const updateSelectedLight = useCallback((partial, options = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const { undoable = true, label = 'Edit light' } = options;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const light = world.getActor(actorId)?.getComponent('Light');
     if (!light) return;
     const before = {};
     const after = {};
     for (const key of Object.keys(partial)) {
-      before[key] = light[key];
-      after[key] = partial[key];
+      before[key] = structuredClone(light[key]);
+      after[key] = structuredClone(partial[key]);
+    }
+    if (!undoable) {
+      for (const key of Object.keys(after)) {
+        light[key] = after[key];
+      }
+      const actor = world.getActor(actorId);
+      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
+      bump();
+      return;
     }
     executeCommand(
-      new SetLightPropertiesCommand({ world, actorId, before, after }),
+      new SetLightPropertiesCommand({ world, actorId, before, after, label }),
       { resync: true },
     );
     autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+
+  /**
+   * After a live (non-undoable) light scrub, record one undo entry from
+   * `beforeSnapshot` → current light fields without re-applying.
+   */
+  const commitLightGesture = useCallback((beforeSnapshot, label = 'Edit light') => {
+    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const light = world.getActor(actorId)?.getComponent('Light');
+    if (!light) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(beforeSnapshot)) {
+      before[key] = structuredClone(beforeSnapshot[key]);
+      after[key] = structuredClone(light[key]);
+    }
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    recordCommand(
+      new SetLightPropertiesCommand({ world, actorId, before, after, label }),
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   /** Level-authored scene fill (World Settings). Not an actor light. */
   const updateWorldAmbient = useCallback((partial) => {
@@ -3758,6 +3790,7 @@ export function EditorProvider({ children }) {
     updateBrushOpening,
     removeBrushOpening,
     updateSelectedLight,
+    commitLightGesture,
     updateWorldAmbient,
     updateWorldScene,
     commitWorldSceneGesture,

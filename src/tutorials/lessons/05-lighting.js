@@ -8,7 +8,7 @@ export const lightingLesson = {
     {
       id: 'intro',
       title: 'Lights',
-      body: 'Lights illuminate your room in the editor preview. Place Point, Spot, or Directional lights from the toolbar. World Ambient (Details → World Settings) is separate scene fill; fog and post-processing are later look layers.',
+      body: 'Lights illuminate your room in the editor preview. Place Point, Spot, Directional, Hemisphere, Rect Area, or Ambient lights from the toolbar. World Ambient (Details → World Settings) is separate scene fill; fog and post-processing are later look layers. See Academy lesson Advanced Lighting for shadows, targets, gobos, and lens flares.',
       terms: [
         { term: 'Point light', def: 'Glows outward in all directions from a point.' },
         { term: 'Spot light', def: 'A cone of light, like a flashlight.' },

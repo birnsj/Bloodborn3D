@@ -6,7 +6,8 @@
 **Document type:** Capability inventory + implementation status.  
 **Milestone:** Complete the base **geometry and environment authoring** layer.  
 **Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).  
-**Batch 2 status:** **Implemented** (Materials Workspace shading models + full Standard/Physical maps/flags; Basic/Toon/Matcap).
+**Batch 2 status:** **Implemented** (Materials Workspace shading models + full Standard/Physical maps/flags; Basic/Toon/Matcap).  
+**Batch 3 status:** **Implemented** (Hemisphere/RectArea/Ambient toolbar, shadow bias/camera, targets, spot map, Lensflare, helpers).
 
 ### Principles
 
@@ -117,7 +118,7 @@
 | Category | Complete | Partial | Missing (milestone-relevant) |
 |----------|----------|---------|------------------------------|
 | Map / World | BG modes, fog, tone, shadows, ambient, atmosphere, HDRI/EXR env, Sky, GroundedSkybox, LightProbe, outputColorSpace | — | — (Batch 1 done) |
-| Lighting | Point/Spot/Dir/Ambient | Shadow/decay hardcoded | Hemisphere, RectArea, Lensflare, shadow props, targets, spot map, helpers |
+| Lighting | Point/Spot/Dir/Ambient/Hemi/RectArea + shadows/targets/flare | — | — (Batch 3 done) |
 | Materials | Full Standard + Physical + Basic/Toon/Matcap + side/alpha | — | — (Batch 2 done) |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush | — | Native primitives + RoundedBox/Lathe/Tube/Extrude/Shape/Text/Parametric/ConvexGeometry tools |
@@ -164,19 +165,19 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 
 | Capability | API | BB | Exposed | Missing | Editor | Schema | Ser/RT | Multi-view | GPU | Cx | Val | Status |
 |------------|-----|----|---------|---------|--------|--------|--------|------------|-----|----|-----|--------|
-| PointLight | core | Y | color, intensity, range, castShadow, mapSize | decay, power, shadow bias/cam | Details / create | LightComponent | Y/Y | OK | light dispose w/ actor | S | H | **Partial** |
-| SpotLight | core | Y | + angle, penumbra | targetActorId, map (proj tex), decay, shadow* | Details | extend | Y/Y | OK | +tex | M | H | **Partial** |
-| DirectionalLight | core | Y | color, intensity, shadow | target, shadow cam size/near/far, bias* | Details | extend | Y/Y | OK | — | M | H | **Partial** |
-| AmbientLight actor | core | Y | color, intensity | toolbar create | Details | exists | Y/Y | OK | — | S | M | **Partial** |
-| HemisphereLight | core | N | — | sky/ground color, intensity | Creation → Lights | `lightType: hemisphere` | — | OK | — | S | H | **Missing** |
-| RectAreaLight | core + `RectAreaLightUniformsLib` | N | — | width, height, intensity; init once | Creation → Lights | `lightType: rectArea` | — | OK | uniforms lib | M | H | **Missing** |
-| Lensflare | `Lensflare` + elements | N | — | textures, distances, sizes; attach to light | Light Details / child | Lensflare elements[] | — | May disable ortho | textures | M | H | **Missing** |
-| Shadow bias / normalBias / radius / blurSamples | `LightShadow` | Hardcoded | — | authorable | Details → Light | fields | N/Y today | OK | — | S | H | **Missing** |
-| Shadow camera | `shadow.camera` | Dir ±20 fixed | — | near/far/ortho size | Details | fields | N/Y | OK | — | S | M | **Missing** |
-| Light decay / power | Point/Spot | decay=2 fixed | — | decay, power helpers | Details | fields | — | OK | — | S | M | **Missing** |
-| Light target | Object3D target | No | — | targetActorId | Details | ref | — | OK | — | S | H | **Missing** |
-| Spot projection map | `SpotLight.map` | No | — | textureAssetId | Details | ref | — | OK | tex | M | M | **Missing** |
-| Light helpers | Point/Spot/Dir/Hemi/RectArea helpers | Range spheres only | — | opt-in helpers | Viewport overlay | editor pref | — | Pane OK | helper dispose | S | M | **Missing** |
+| PointLight | core | Y | color, intensity, range, decay, power, castShadow, mapSize, shadow*, lensflare | — | Details / create | LightComponent | Y/Y | OK | light dispose w/ actor | S | H | **Complete** |
+| SpotLight | core | Y | + angle, penumbra, targetActorId, spotMapId, decay, shadow* | — | Details | LightComponent | Y/Y | OK | +tex | M | H | **Complete** |
+| DirectionalLight | core | Y | color, intensity, shadow cam/bias, targetActorId | — | Details | LightComponent | Y/Y | OK | — | M | H | **Complete** |
+| AmbientLight actor | core | Y | color, intensity + toolbar | — | Details / create | exists | Y/Y | OK | — | S | M | **Complete** |
+| HemisphereLight | core | Y | sky/ground color, intensity | — | Creation → Lights | `lightType: hemisphere` | Y/Y | OK | — | S | H | **Complete** |
+| RectAreaLight | core + `RectAreaLightUniformsLib` | Y | width, height, intensity; init once | No shadows (native) | Creation → Lights | `lightType: rectArea` | Y/Y | OK | uniforms lib | M | H | **Complete** |
+| Lensflare | `Lensflare` + elements | Y | presets, textures, sizes, distances | — | Light Details | lensflareElements[] | Y/Y | Hidden in ortho | textures | M | H | **Complete** |
+| Shadow bias / normalBias / radius / blurSamples | `LightShadow` | Y | authorable; radius UI for PCF/VSM; blur for VSM | — | Details → Light | fields | Y/Y | OK | — | S | H | **Complete** |
+| Shadow camera | `shadow.camera` | Y | near/far; dir ortho size | — | Details | fields | Y/Y | OK | — | S | M | **Complete** |
+| Light decay / power | Point/Spot | Y | decay + power helper | — | Details | fields | Y/Y | OK | — | S | M | **Complete** |
+| Light target | Object3D target | Y | targetActorId | — | Details | ref | Y/Y | OK | — | S | H | **Complete** |
+| Spot projection map | `SpotLight.map` | Y | spotMapId | — | Details | ref | Y/Y | OK | tex | M | M | **Complete** |
+| Light helpers | Point/Spot/Dir/Hemi/RectArea helpers | Y | per-light `showHelper` | — | Details | showHelper | Y/Y | Pane OK | helper dispose | S | M | **Complete** |
 | LightProbe actor | LightProbe | N | — | SH from generator | Advanced | — | — | OK | — | M | M | **Missing** |
 | CSM / IES | addons | N | — | — | — | — | — | — | — | L | L | **Deferred** (cost / niche) — *excluded with reason: outdoor CSM and IES are post-mansion-scale; not required for base env authoring* |
 | Edit fill Directionals | custom | Y | — | non-authored | — | — | — | — | — | — | — | **Internal** |
@@ -406,23 +407,34 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | Alpha-to-coverage compatibility with MSAA and post-processing | **Pending** (rendering verification) | Shared WebGL renderer + pmndrs post-processing path (Batch 1 world/renderer + existing PP stack); may need MSAA/RT policy documented or adjusted | Documented pass/fail matrix: `alphaToCoverage` on/off × MSAA on/off × Fog/PP pane toggles; foliage/alpha materials show no unexplained discard or edge artifacts; multi-pane isolation unchanged | Rendering verify (not a new materials feature); Batch 2 A2C authoring **Complete** |
 | Draft-local material undo (Materials Workspace scrub stack, not level `HistoryStack`) | **Accepted** (architectural decision — not a defect) | Materials are project assets edited as drafts until Save; level history owns actor/world commands only | One undo entry per finished numeric scrub in Materials; Cancel restores saved baseline; level Undo does not mutate material JSON; documented in Academy/help | Batch 2 editor design; keep — do not “fix” by wiring materials into `HistoryStack` |
 
-### Batch 3 — Lighting
+### Batch 3 — Lighting — **Implemented**
 
-| Pri | Item | API | Schema |
-|-----|------|-----|--------|
-| P0 | HemisphereLight + toolbar | core | lightType |
-| P0 | Shadow bias/normalBias/radius (+ blurSamples) | LightShadow | fields |
-| P0 | Directional shadow camera size/near/far | shadow.camera | fields |
-| P1 | RectAreaLight + UniformsLib.init | core+addon | lightType, width/height |
-| P1 | Light targets (spot/dir) | target | targetActorId |
-| P1 | decay / power | Point/Spot | fields |
-| P1 | Lensflare on lights | Lensflare.js | elements[] |
-| P2 | Spot projection map | SpotLight.map | textureAssetId |
-| P2 | Opt-in light helpers | helpers | editor pref |
-| P2 | Ambient on creation toolbar | existing type | — |
+| Pri | Item | API | Schema | Status |
+|-----|------|-----|--------|--------|
+| P0 | HemisphereLight + toolbar | core | lightType | **Done** |
+| P0 | Shadow bias/normalBias/radius (+ blurSamples) | LightShadow | fields | **Done** |
+| P0 | Directional shadow camera size/near/far | shadow.camera | fields | **Done** |
+| P1 | RectAreaLight + UniformsLib.init | core+addon | lightType, width/height | **Done** |
+| P1 | Light targets (spot/dir) | target | targetActorId | **Done** |
+| P1 | decay / power | Point/Spot | fields | **Done** |
+| P1 | Lensflare on lights | Lensflare.js | elements[] | **Done** |
+| P2 | Spot projection map | SpotLight.map | spotMapId | **Done** |
+| P2 | Opt-in light helpers | helpers | showHelper | **Done** |
+| P2 | Ambient on creation toolbar | existing type | — | **Done** |
 
-**Depends on:** Batch 1 for area lights in HDR environments.  
+**Acceptance:** `public/levels/acceptance-lighting.json` + `docs/ACCEPTANCE_LIGHTING.md`  
+**Academy:** lesson 23 (`lighting-advanced`)  
+**Depends on:** Batch 1 for area lights in HDR environments; Batch 2 materials for RectArea response.  
 **Note:** CSM/IES deferred with reason (scale/niche).
+
+#### Batch 3 residuals / native limits
+
+| Item | Status | Dependency | Acceptance criteria | Cross-ref |
+|------|--------|------------|---------------------|-----------|
+| RectAreaLight shadows | **N/A (native)** | Three.js WebGL RectAreaLight does not cast shadows | Documented in Details + acceptance; no false UI affordance | Three.js limitation |
+| RectArea + Basic/Toon/Matcap | **Documented** | Batch 2 shading models | Softbox visible on Standard/Physical in acceptance; Basic/Toon/Matcap may not receive area lighting | Batch 2 materials |
+| Lensflare occlusion fidelity | **Accepted** | Official Lensflare depth test vs scene | Perspective visibility + ortho hide verified; deep occlusion edge cases follow Three.js addon | Batch 3 Lensflare |
+| World Ambient Undo | **Tracked (pre-existing)** | World Settings ambient still outside `HistoryStack` | Separate from actor light scrub undo (Batch 3 Complete) | Batch 1 residual note |
 
 ### Batch 4 — Environmental objects
 

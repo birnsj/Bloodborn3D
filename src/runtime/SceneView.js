@@ -70,6 +70,11 @@ import {
   assetUrl,
 } from './materialFactory.js';
 import {
+  createThreeLightFromComponent,
+  setLensflarePerspectiveVisible,
+  ensureRectAreaLightUniforms,
+} from './createThreeLight.js';
+import {
   BOX_SURFACE_IDS,
   getStructuralComponent,
   resolveSurfaceMaterialId,
@@ -946,6 +951,8 @@ export class SceneView {
         this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
         // Sky / grounded skybox follow perspective panes only (same as atmosphere).
         this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
+        // Lensflare is a screen-space effect — hide in ortho construction panes.
+        setLensflarePerspectiveVisible(this.scene, !ortho);
         if (showAtmosphere) this.atmosphere?.update?.(cam, dt);
 
         try {
@@ -990,6 +997,7 @@ export class SceneView {
     syncCameraAtmosphereLayer(camera, showAtmosphere);
     this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
     this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
+    setLensflarePerspectiveVisible(this.scene, !ortho);
     if (showAtmosphere) this.atmosphere?.update?.(camera, dt);
     this.renderer.setScissorTest(false);
     const fullW = Math.max(1, Math.round(this._size.width || 1));
@@ -1302,9 +1310,18 @@ export class SceneView {
     entry.transformFingerprint = actorTransformFingerprint(actor);
     // Spot / directional lights need target matrices current after the group moves.
     entry.group.updateMatrixWorld(true);
+    const lightComp = actor.getComponent?.('Light');
     entry.group.traverse((obj) => {
       if (obj.isLight && obj.target) {
-        obj.target.updateMatrixWorld(true);
+        if (lightComp?.targetActorId) {
+          this._applyLightTargetAim(obj.parent, obj, lightComp, actor.world);
+        } else {
+          obj.target.updateMatrixWorld(true);
+        }
+      }
+      if (obj.isSpotLightHelper || obj.isDirectionalLightHelper || obj.isPointLightHelper
+        || obj.isHemisphereLightHelper || obj.type === 'RectAreaLightHelper') {
+        obj.update?.();
       }
     });
     if (this.selectedActorIds.includes(actor.id)) {
@@ -1482,10 +1499,7 @@ export class SceneView {
         marker.userData.editorOnly = true;
         group.add(marker);
       } else if (comp.type === 'Light') {
-        group.add(this._createLight(comp));
-        if (this.editMode) {
-          group.add(this._createLightGizmo(comp, actor.id));
-        }
+        this._addLightVisual(group, actor, comp, syncToken, world);
       } else if (comp.type === 'StaticMesh') {
         this._addStaticMeshVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'PlayerSpawn' && this.editMode) {
@@ -2176,68 +2190,111 @@ export class SceneView {
     }
   }
 
+  /**
+   * Async light visual (spot maps / lensflare textures). Placeholder root is sync so
+   * transforms and pick gizmos appear immediately.
+   */
+  _addLightVisual(group, actor, comp, syncToken, world = actor.world) {
+    if (comp.lightType === 'rectArea') ensureRectAreaLightUniforms();
+    const holder = new THREE.Group();
+    holder.userData.bbLightHolder = true;
+    holder.userData.actorId = actor.id;
+    group.add(holder);
+    if (this.editMode) {
+      group.add(this._createLightGizmo(comp, actor.id));
+    }
+    void this._finishLightVisual(holder, actor, comp, syncToken, world);
+  }
+
+  async _finishLightVisual(holder, actor, comp, syncToken, world) {
+    const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
+    const resolveTextureUrl = (assetId) => {
+      const path = this.assetResolver?.getTextureUrl?.(assetId);
+      return path ? (assetUrl(path) || path) : null;
+    };
+    let built;
+    try {
+      built = await createThreeLightFromComponent(comp, {
+        resolveTextureUrl,
+        maxAnisotropy: this.maxAnisotropy,
+      });
+    } catch (err) {
+      console.warn('[BloodBound] light build failed', actor?.id, err);
+      return;
+    }
+    if (!this._isActorVisualCurrent(actor.id, syncToken, visualEpoch)) {
+      built.dispose?.();
+      if (built.root) disposeObject(built.root);
+      return;
+    }
+    while (holder.children.length) {
+      const child = holder.children[0];
+      holder.remove(child);
+      disposeObject(child);
+    }
+    holder.add(built.root);
+    holder.userData.bbLightDispose = built.dispose;
+    holder.userData.bbLightRef = built.light;
+    // Target lives as a sibling of the light under built.root when present.
+    this._applyLightTargetAim(built.light.parent || holder, built.light, comp, world);
+    built.helper?.update?.();
+  }
+
+  /** Sync factory for tests/benches that stub or call `_createLight` directly. */
   _createLight(comp) {
+    // Prefer the async `_addLightVisual` path in production; this sync helper
+    // preserves legacy stubbing and unit benches.
     const color = new THREE.Color(comp.color || '#ffffff');
     const intensity = comp.intensity ?? 1;
+    const decay = Number.isFinite(Number(comp.decay)) ? Number(comp.decay) : 2;
     let light;
-
     if (comp.lightType === 'directional') {
       light = new THREE.DirectionalLight(color, intensity);
-      light.position.set(0, 0, 0);
       light.target.position.set(0, -1, 0);
     } else if (comp.lightType === 'ambient') {
       light = new THREE.AmbientLight(color, intensity);
+    } else if (comp.lightType === 'hemisphere') {
+      light = new THREE.HemisphereLight(color, new THREE.Color(comp.groundColor || '#444444'), intensity);
+    } else if (comp.lightType === 'rectArea') {
+      ensureRectAreaLightUniforms();
+      light = new THREE.RectAreaLight(color, intensity, toMeters(comp.width || 200), toMeters(comp.height || 200));
+      light.rotation.x = -Math.PI / 2;
     } else if (comp.lightType === 'spot') {
-      const rangeMeters = toMeters(comp.range ?? 1000);
       light = new THREE.SpotLight(
         color,
         intensity,
-        rangeMeters,
+        toMeters(comp.range ?? 1000),
         THREE.MathUtils.degToRad(comp.spotAngle ?? 45),
         comp.spotPenumbra ?? 0.25,
-        2,
+        decay,
       );
-      light.position.set(0, 0, 0);
       light.target.position.set(0, -1, 0);
     } else {
-      const rangeMeters = toMeters(comp.range ?? 1000);
-      light = new THREE.PointLight(color, intensity, rangeMeters, 2);
+      light = new THREE.PointLight(color, intensity, toMeters(comp.range ?? 1000), decay);
     }
-
-    if (light.isDirectionalLight || light.isSpotLight || light.isPointLight) {
-      light.castShadow = Boolean(comp.castShadow);
-      if (light.castShadow && light.shadow) {
-        const mapSize = Math.max(256, Number(comp.shadowMapSize) || 1024);
-        light.shadow.mapSize.set(mapSize, mapSize);
-        // Soft contact shadows; normalBias reduces acne on large brush faces.
-        light.shadow.bias = -0.0005;
-        light.shadow.normalBias = 0.04;
-        light.shadow.radius = 2;
-        if (light.isDirectionalLight) {
-          // Cover a hall-sized volume (~±20 m) from the fill light.
-          const extent = 20;
-          light.shadow.camera.left = -extent;
-          light.shadow.camera.right = extent;
-          light.shadow.camera.top = extent;
-          light.shadow.camera.bottom = -extent;
-          light.shadow.camera.near = 0.5;
-          light.shadow.camera.far = 80;
-          light.shadow.camera.updateProjectionMatrix();
-        } else if (light.isSpotLight) {
-          const rangeMeters = toMeters(comp.range ?? 1000);
-          light.shadow.camera.near = 0.2;
-          light.shadow.camera.far = Math.max(rangeMeters, 1);
-          light.shadow.camera.updateProjectionMatrix();
-        } else if (light.isPointLight) {
-          const rangeMeters = toMeters(comp.range ?? 1000);
-          light.shadow.camera.near = 0.2;
-          light.shadow.camera.far = Math.max(rangeMeters, 1);
-          light.shadow.camera.updateProjectionMatrix();
-        }
+    if ((light.isDirectionalLight || light.isSpotLight || light.isPointLight) && comp.castShadow) {
+      light.castShadow = true;
+      const mapSize = Math.max(256, Number(comp.shadowMapSize) || 1024);
+      light.shadow.mapSize.set(mapSize, mapSize);
+      light.shadow.bias = Number.isFinite(Number(comp.shadowBias)) ? Number(comp.shadowBias) : -0.0005;
+      light.shadow.normalBias = Number.isFinite(Number(comp.shadowNormalBias)) ? Number(comp.shadowNormalBias) : 0.04;
+      light.shadow.radius = Number.isFinite(Number(comp.shadowRadius)) ? Number(comp.shadowRadius) : 2;
+      if (light.isDirectionalLight) {
+        const extent = Number.isFinite(Number(comp.shadowCameraSize)) ? Number(comp.shadowCameraSize) : 20;
+        light.shadow.camera.left = -extent;
+        light.shadow.camera.right = extent;
+        light.shadow.camera.top = extent;
+        light.shadow.camera.bottom = -extent;
+        light.shadow.camera.near = Number(comp.shadowCameraNear) || 0.5;
+        light.shadow.camera.far = Number(comp.shadowCameraFar) || 80;
+        light.shadow.camera.updateProjectionMatrix();
+      } else {
+        const rangeMeters = toMeters(comp.range ?? 1000);
+        light.shadow.camera.near = Number(comp.shadowCameraNear) || 0.2;
+        light.shadow.camera.far = Number(comp.shadowCameraFar) || Math.max(rangeMeters, 1);
+        light.shadow.camera.updateProjectionMatrix();
       }
     }
-
-    // Keep target in the same group for spot/directional orientation via actor rotation
     if (light.target) {
       const holder = new THREE.Group();
       holder.add(light);
@@ -2246,6 +2303,32 @@ export class SceneView {
       return holder;
     }
     return light;
+  }
+
+  _applyLightTargetAim(holder, light, comp, world) {
+    if (!light?.target || !holder) return;
+    const targetId = comp?.targetActorId;
+    if (!targetId || !world?.getActor) {
+      light.target.position.set(0, -1, 0);
+      light.target.updateMatrixWorld(true);
+      return;
+    }
+    const targetActor = world.getActor(targetId);
+    if (!targetActor) {
+      light.target.position.set(0, -1, 0);
+      light.target.updateMatrixWorld(true);
+      return;
+    }
+    const wt = getWorldTransform(targetActor, world);
+    const worldPos = new THREE.Vector3(
+      toMeters(wt.position.x),
+      toMeters(wt.position.y),
+      toMeters(wt.position.z),
+    );
+    holder.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(holder.matrixWorld).invert();
+    light.target.position.copy(worldPos.applyMatrix4(inv));
+    light.target.updateMatrixWorld(true);
   }
 
   _createLightGizmo(comp, actorId) {
@@ -2318,7 +2401,7 @@ export class SceneView {
       );
       gizmo.add(arrow);
       marker.userData.pickable = true;
-    } else if (comp.lightType === 'ambient') {
+    } else if (comp.lightType === 'ambient' || comp.lightType === 'hemisphere') {
       const halo = new THREE.Mesh(
         new THREE.SphereGeometry(0.2, 12, 12),
         new THREE.MeshBasicMaterial({
@@ -2331,6 +2414,34 @@ export class SceneView {
       halo.userData.denseWireHelper = true;
       halo.userData.pickable = true;
       gizmo.add(halo);
+      if (comp.lightType === 'hemisphere') {
+        const ground = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 10, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(comp.groundColor || '#444444'),
+            transparent: true,
+            opacity: 0.65,
+            side: THREE.DoubleSide,
+          }),
+        );
+        ground.userData.pickable = true;
+        gizmo.add(ground);
+      }
+    } else if (comp.lightType === 'rectArea') {
+      const w = Math.min(Math.max(toMeters(comp.width || 200) * 0.15, 0.2), 1.2);
+      const h = Math.min(Math.max(toMeters(comp.height || 200) * 0.15, 0.2), 1.2);
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.55,
+          side: THREE.DoubleSide,
+        }),
+      );
+      panel.rotation.x = -Math.PI / 2;
+      panel.userData.pickable = true;
+      gizmo.add(panel);
     }
 
     gizmo.traverse((obj) => {

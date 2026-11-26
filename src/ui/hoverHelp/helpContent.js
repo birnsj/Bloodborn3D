@@ -310,7 +310,19 @@ export const HELP_CONTENT = {
   'toolbar.pointLight': {
     title: 'Point Light',
     body: 'Drag onto a surface in the viewport, or click then click a surface to place. Snaps horizontally when grid snap is on; elevation follows the support surface.',
-    tips: 'Edit intensity, color, and range in Details after placing.',
+    tips: 'Edit intensity, color, range, decay, shadows, and optional lensflare in Details after placing.',
+  },
+  'toolbar.hemiLight': {
+    title: 'Hemisphere Light',
+    body: 'Places a HemisphereLight with sky and ground colors. Soft fill by surface normal — does not cast shadows.',
+  },
+  'toolbar.rectAreaLight': {
+    title: 'Rect Area Light',
+    body: 'Places a RectAreaLight panel (width/height). Soft area lighting for MeshStandard/Physical materials. No shadows. Initializes RectAreaLightUniformsLib once.',
+  },
+  'toolbar.ambientLight': {
+    title: 'Ambient Light (actor)',
+    body: 'Places an AmbientLight actor. Separate from World Settings ambient fill — both can contribute.',
   },
   'toolbar.spotLight': {
     title: 'Spot Light',
@@ -365,7 +377,7 @@ export const HELP_CONTENT = {
   },
   'creation.lights': {
     title: 'Lights',
-    body: 'Point, spot, and directional lights. Drag onto surfaces for surface-aware placement.',
+    body: 'Point, Spot, Directional, Hemisphere, Rect Area, and Ambient lights. Drag onto surfaces for surface-aware placement.',
   },
   'creation.actors': {
     title: 'Actors',
@@ -575,7 +587,47 @@ export const HELP_CONTENT = {
   },
   'details.light': {
     title: 'Light Properties',
-    body: 'Edits light type parameters such as intensity, color, range, and spot angles. Changes are undoable and sync to the viewport.',
+    body: 'Type-specific groups: base (color/intensity/decay/power), spot gobo, aim target, shadows (bias/camera), lensflare presets, and optional native helpers. Numeric scrub = live preview + one Undo entry on commit.',
+  },
+  'details.light.type': {
+    title: 'Light Type',
+    body: 'Switches the Three.js light class. Legacy levels keep Point/Spot/Directional/Ambient appearance; Hemisphere and Rect Area are Batch 3 additions.',
+  },
+  'details.light.hemisphere': {
+    title: 'Hemisphere Colors',
+    body: 'Sky color (primary) and ground color blend by surface normal.',
+  },
+  'details.light.rectArea': {
+    title: 'Rect Area Size',
+    body: 'Width/height in editor units (100 eu = 1 m). RectAreaLight does not cast shadows.',
+  },
+  'details.light.decay': {
+    title: 'Decay',
+    body: 'Distance falloff exponent for Point/Spot (default 2 — matches pre-Batch-3 hardcoded behavior).',
+  },
+  'details.light.power': {
+    title: 'Power (lumens)',
+    body: 'Physical luminous power helper for Point/Spot. Editing power sets intensity ≈ power / (4π). Intensity remains the serialized fallback when power is unset.',
+  },
+  'details.light.target': {
+    title: 'Light Target',
+    body: 'Aim Spot/Directional at another actor. Empty = legacy local −Y aim from the light’s rotation.',
+  },
+  'details.light.spotMap': {
+    title: 'Spot Projection Map',
+    body: 'Texture projected through the spotlight cone (gobo/cookie). Uses the SpotLight.map slot.',
+  },
+  'details.light.shadowBias': {
+    title: 'Shadow Bias',
+    body: 'bias / normalBias reduce acne; radius softens PCF/VSM; blur samples apply to VSM. Camera near/far and directional ortho size control the shadow frustum.',
+  },
+  'details.light.lensflare': {
+    title: 'Lensflare',
+    body: 'Official three/addons Lensflare with local CC0 flare textures. Soft/Bright presets. Hidden in orthographic panes; works with Fog/PP in perspective.',
+  },
+  'details.light.helper': {
+    title: 'Light Helper',
+    body: 'Optional native Three.js light helper (Point/Spot/Dir/Hemi/RectArea) in addition to pick gizmos. Editor-only.',
   },
   'details.staticMesh': {
     title: 'Static Mesh',

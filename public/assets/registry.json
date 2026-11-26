@@ -1439,6 +1439,86 @@
       },
       "createdAt": 1795719251101,
       "updatedAt": 1795719251101
+    },
+    {
+      "id": "tex_flare_main",
+      "kind": "texture",
+      "name": "Lensflare Main",
+      "folder": "Textures",
+      "path": "textures/tex_flare_main.png",
+      "originalName": "tex_flare_main.png",
+      "tags": [
+        "batch3",
+        "lensflare",
+        "cc0"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795720148748,
+      "updatedAt": 1795720148748
+    },
+    {
+      "id": "tex_flare_hex",
+      "kind": "texture",
+      "name": "Lensflare Hex",
+      "folder": "Textures",
+      "path": "textures/tex_flare_hex.png",
+      "originalName": "tex_flare_hex.png",
+      "tags": [
+        "batch3",
+        "lensflare",
+        "cc0"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795720148748,
+      "updatedAt": 1795720148748
+    },
+    {
+      "id": "tex_flare_ring",
+      "kind": "texture",
+      "name": "Lensflare Ring",
+      "folder": "Textures",
+      "path": "textures/tex_flare_ring.png",
+      "originalName": "tex_flare_ring.png",
+      "tags": [
+        "batch3",
+        "lensflare",
+        "cc0"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795720148748,
+      "updatedAt": 1795720148748
+    },
+    {
+      "id": "tex_batch3_spot_gobo",
+      "kind": "texture",
+      "name": "Batch3 Spot Gobo",
+      "folder": "Textures",
+      "path": "textures/tex_batch3_spot_gobo.png",
+      "originalName": "tex_batch3_spot_gobo.png",
+      "tags": [
+        "batch3",
+        "spot",
+        "gobo"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795720148748,
+      "updatedAt": 1795720148748
     }
   ]
 }

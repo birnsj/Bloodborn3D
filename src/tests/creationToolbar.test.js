@@ -38,6 +38,22 @@ describe('creation toolbar catalog', () => {
     expect(parseCreateDragPayload(JSON.stringify({ toolId: 'box', tool: 'box' })).tool).toBe('box');
     expect(parseCreateDragPayload('nope')).toBeNull();
   });
+
+  it('exposes Batch 3 light types on the Lights flyout', () => {
+    const cats = buildCreationCategories([]);
+    const lights = cats.find((c) => c.id === 'lights');
+    const ids = lights.tools.map((t) => t.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      'pointLight',
+      'spotLight',
+      'dirLight',
+      'hemiLight',
+      'rectAreaLight',
+      'ambientLight',
+    ]));
+    expect(findCreationTool(cats, 'hemiLight').tool.lightType).toBe('hemisphere');
+    expect(findCreationTool(cats, 'rectAreaLight').tool.lightType).toBe('rectArea');
+  });
 });
 
 describe('creation toolbar prefs', () => {
