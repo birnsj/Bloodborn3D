@@ -30,7 +30,7 @@ export const staticMeshesLesson = {
     {
       id: 'lod',
       title: 'Level of detail',
-      body: 'Add LOD levels with mesh assets and distance thresholds (editor units). Preview forces a level; Automatic uses camera distance. Collision stays on the primary collider, not the visual LOD. Automatic simplification is Batch 7.',
+      body: 'Add LOD levels with mesh assets and distance thresholds (editor units). Preview forces a level; Automatic uses camera distance. Collision stays on the primary collider, not the visual LOD. Use Generate auto LOD (Batch 7) for SimplifyModifier-derived levels.',
       highlight: 'details.staticMesh.lod',
       verify: { type: 'manualConfirm' },
     },

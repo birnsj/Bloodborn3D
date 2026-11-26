@@ -59,18 +59,67 @@ export async function replaceTextureFile(id, file) {
   return res.json();
 }
 
-export async function importMeshFile(file) {
+/**
+ * Import a mesh into the registry.
+ * @param {Blob|File} fileOrBlob production GLB/GLTF bytes (or legacy direct upload)
+ * @param {{ fileName?: string, assetName?: string, tags?: string[], meta?: object }} [options]
+ */
+export async function importMeshFile(fileOrBlob, options = {}) {
+  const fileName = options.fileName || fileOrBlob?.name || 'import.glb';
+  const qs = new URLSearchParams({
+    action: 'import-mesh',
+    name: fileName,
+  });
+  if (options.assetName) qs.set('assetName', options.assetName);
+  if (options.tags?.length) qs.set('tags', options.tags.join(','));
+  if (options.meta && typeof options.meta === 'object') {
+    qs.set('meta', JSON.stringify(options.meta));
+  }
+  const res = await fetch(`/api/assets?${qs}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: fileOrBlob,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Mesh import failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Store the pre-normalization source file alongside a mesh asset (non-destructive). */
+export async function storeMeshSourceOriginal(assetId, file, { extension = null } = {}) {
+  const ext = extension || (file?.name ? file.name.match(/(\.[^.]+)$/)?.[1] : null) || '.bin';
+  const qs = new URLSearchParams({
+    action: 'mesh-source',
+    id: assetId,
+    ext,
+  });
+  const res = await fetch(`/api/assets?${qs}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Mesh source store failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Patch mesh asset meta (derived links, inspect stats) without replacing bytes. */
+export async function patchMeshAssetMeta(assetId, metaPatch = {}) {
   const res = await fetch(
-    `/api/assets?action=import-mesh&name=${encodeURIComponent(file.name)}`,
+    `/api/assets?action=patch-mesh-meta&id=${encodeURIComponent(assetId)}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: file,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meta: metaPatch }),
     },
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Mesh import failed: ${res.status}`);
+    throw new Error(err.error || `Mesh meta patch failed: ${res.status}`);
   }
   return res.json();
 }

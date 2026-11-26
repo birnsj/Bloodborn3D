@@ -5,7 +5,15 @@ import { useLayout } from './LayoutContext.jsx';
 import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
 import { ScrubAxisLabel, ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
-import { listByKind, ASSET_KINDS, isEnvironmentMapAsset } from '../../assets/AssetRegistry.js';
+import { listByKind, ASSET_KINDS, isEnvironmentMapAsset, findAsset } from '../../assets/AssetRegistry.js';
+import { publicAssetUrl } from '../../io/assetFileApi.js';
+import { loadGltfScene } from '../../runtime/meshLoader.js';
+import { exportMeshRoot } from '../../assets/meshFormatIO.js';
+import {
+  generateLodLevelsFromRoot,
+  lodLevelsFromAssetIds,
+  DEFAULT_LOD_DISTANCES_EU,
+} from '../../assets/meshLodGenerate.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { isWallBrush, normalizeOpenings } from '../../runtime/wallOpenings.js';
@@ -2100,6 +2108,12 @@ function StaticMeshDetailsSection({
   updateSelectedStaticMesh,
 }) {
   const { getStaticMeshSlots, getStaticMeshTriangleCounts } = useEditor();
+  const {
+    registry,
+    importDerivedMeshGlb,
+    notify,
+  } = useAssetBrowser();
+  const [lodBusy, setLodBusy] = useState(false);
   const discovered = actorId ? (getStaticMeshSlots?.(actorId) || []) : [];
   const triangleCounts = actorId ? (getStaticMeshTriangleCounts?.(actorId) || []) : [];
   const overrideKeys = Object.keys(staticMesh.materialOverrides || {});
@@ -2109,6 +2123,61 @@ function StaticMeshDetailsSection({
   ])];
   const lodLevels = Array.isArray(staticMesh.lodLevels) ? staticMesh.lodLevels : [];
   const collisionOn = staticMesh.collidable && staticMesh.collisionType !== 'none';
+
+  const generateAutoLod = useCallback(async () => {
+    if (!staticMesh.assetId || lodBusy) return;
+    const meshAsset = findAsset(registry, staticMesh.assetId);
+    const path = meshAsset?.path;
+    if (!path) {
+      notify?.('Mesh asset path not found — open Content Browser and ensure the mesh is registered.');
+      return;
+    }
+    setLodBusy(true);
+    try {
+      const loaded = await loadGltfScene(publicAssetUrl(path));
+      if (!loaded?.scene) throw new Error('Failed to load mesh for LOD generation');
+      const generated = await generateLodLevelsFromRoot(loaded.scene);
+      const assetIds = [];
+      for (const level of generated.levels) {
+        if (level.isSource) {
+          assetIds.push(staticMesh.assetId);
+          continue;
+        }
+        const exported = await exportMeshRoot(level.root, 'glb');
+        const derived = await importDerivedMeshGlb(exported.data, {
+          name: `${meshAsset.name || staticMesh.assetId} LOD${level.index}`,
+          sourceAssetId: staticMesh.assetId,
+          tags: ['derived', 'lod'],
+          meta: {
+            lodGenerated: true,
+            lodIndex: level.index,
+            lodRatio: level.ratio,
+            lodDistanceEu: level.distance,
+            triangles: level.after.triangles,
+            vertices: level.after.vertices,
+            derivedFrom: staticMesh.assetId,
+          },
+        });
+        assetIds.push(derived.id);
+      }
+      updateSelectedStaticMesh({
+        lodLevels: lodLevelsFromAssetIds(assetIds, DEFAULT_LOD_DISTANCES_EU),
+        lodPreview: -1,
+      });
+      notify?.(`Auto LOD assigned (${assetIds.length} levels). Source mesh preserved; collision unchanged.`);
+    } catch (err) {
+      notify?.(err?.message || String(err));
+    } finally {
+      setLodBusy(false);
+    }
+  }, [
+    staticMesh.assetId,
+    lodBusy,
+    registry,
+    importDerivedMeshGlb,
+    notify,
+    updateSelectedStaticMesh,
+  ]);
 
   return (
     <Collapsible title="Static Mesh" storageKey="details.staticMesh" defaultOpen>
@@ -2266,7 +2335,7 @@ function StaticMeshDetailsSection({
 
         <Collapsible title="LOD" storageKey="details.staticMesh.lod">
           <p className="bb-muted">
-            Distances in editor units (100 eu = 1 m). Level 0 is nearest. Automatic simplification is Batch 7.
+            Distances in editor units (100 eu = 1 m). Level 0 is nearest. Auto LOD uses SimplifyModifier (Batch 7) and saves derived assets without overwriting the source.
           </p>
           {lodLevels.map((row, i) => (
             <div className="bb-field-row" key={`lod-${i}`}>
@@ -2292,6 +2361,15 @@ function StaticMeshDetailsSection({
               />
             </div>
           ))}
+          <button
+            type="button"
+            className="bb-btn bb-btn--primary"
+            disabled={disabled || !staticMesh.assetId || lodBusy}
+            onClick={() => { void generateAutoLod(); }}
+            {...helpProps('details.staticMesh.autoLod')}
+          >
+            {lodBusy ? 'Generating LOD…' : 'Generate auto LOD'}
+          </button>
           <button
             type="button"
             className="bb-btn"

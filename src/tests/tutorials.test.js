@@ -80,7 +80,7 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(26);
+    expect(LESSONS).toHaveLength(27);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
@@ -98,6 +98,7 @@ describe('lesson registry', () => {
     expect(listLessons().map((l) => l.id)).toContain('environmental-objects');
     expect(listLessons().map((l) => l.id)).toContain('native-geometry');
     expect(listLessons().map((l) => l.id)).toContain('static-meshes');
+    expect(listLessons().map((l) => l.id)).toContain('asset-tools');
     expect(getLessonById('missing')).toBeNull();
   });
 

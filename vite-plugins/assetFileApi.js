@@ -150,6 +150,23 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'mesh-source') {
+            const id = url.searchParams.get('id');
+            const ext = url.searchParams.get('ext') || '.bin';
+            const buffer = await readBodyBuffer(req, DEFAULT_MESH_UPLOAD_LIMIT);
+            const result = await storeMeshSourceOriginal(id, buffer, ext);
+            sendJson(res, 200, result);
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'patch-mesh-meta') {
+            const id = url.searchParams.get('id');
+            const body = JSON.parse(await readBody(req));
+            const result = await patchMeshAssetMeta(id, body?.meta || {});
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'POST' && action === 'mesh-preview') {
             const id = url.searchParams.get('id');
             const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
@@ -435,9 +452,61 @@ async function importBinaryAsset(req, kind, allowedExts) {
     return importTextureBuffer(buffer, base);
   }
 
+  let meta = {};
+  const metaRaw = url.searchParams.get('meta');
+  if (metaRaw) {
+    try { meta = JSON.parse(metaRaw); } catch { meta = {}; }
+  }
+  const tagsParam = url.searchParams.get('tags');
+  const tags = tagsParam ? tagsParam.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  const assetName = url.searchParams.get('assetName');
+
   return importMeshBuffer(buffer, {
     originalName: base,
-    name: stripExt(base),
+    name: assetName || stripExt(base),
+    tags,
+    meta,
+  });
+}
+
+/** Preserve foreign-format source bytes next to a mesh asset (Batch 7). */
+export async function storeMeshSourceOriginal(id, buffer, ext = '.bin') {
+  if (!id) throw new Error('Missing mesh id');
+  if (!buffer?.length) throw new Error('Empty source upload');
+  const safeExt = String(ext || '.bin').toLowerCase().replace(/[^.a-z0-9]/g, '') || '.bin';
+  const rel = `${KIND_DIRS.mesh}/originals/${id}${safeExt.startsWith('.') ? safeExt : `.${safeExt}`}`;
+  const full = resolveSafeAssetPath(rel);
+  await fs.mkdir(path.dirname(full), { recursive: true });
+  await fs.writeFile(full, buffer);
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'mesh');
+    if (!entry) {
+      const err = new Error('Mesh not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    entry.meta = {
+      ...(entry.meta || {}),
+      sourceOriginalPath: rel,
+      sourceOriginalBytes: buffer.length,
+    };
+    entry.updatedAt = Date.now();
+    return { ok: true, asset: entry, registry, sourceOriginalPath: rel };
+  });
+}
+
+export async function patchMeshAssetMeta(id, metaPatch = {}) {
+  if (!id) throw new Error('Missing mesh id');
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'mesh');
+    if (!entry) {
+      const err = new Error('Mesh not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    entry.meta = { ...(entry.meta || {}), ...metaPatch };
+    entry.updatedAt = Date.now();
+    return { ok: true, asset: entry, registry };
   });
 }
 

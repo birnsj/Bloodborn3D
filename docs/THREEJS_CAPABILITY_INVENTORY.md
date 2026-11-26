@@ -8,7 +8,10 @@
 **Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).  
 **Batch 2 status:** **Implemented** (Materials Workspace shading models + full Standard/Physical maps/flags; Basic/Toon/Matcap).  
 **Batch 3 status:** **Implemented** (Hemisphere/RectArea/Ambient toolbar, shadow bias/camera, targets, spot map, Lensflare, helpers).  
-**Batch 4 status:** **Implemented** (Water/Water2, Reflector, Refractor, Decal, Sprite billboard, placeable Sky).
+**Batch 4 status:** **Implemented** (Water/Water2, Reflector, Refractor, Decal, Sprite billboard, placeable Sky).  
+**Batch 5 status:** **Implemented** (native PrimitiveMesh + procedural props).  
+**Batch 6 status:** **Implemented** (StaticMesh collision / materials / LOD / opt-in InstancedMesh).  
+**Batch 7 status:** **Implemented** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.
 
 ### Principles
 
@@ -123,9 +126,9 @@
 | Materials | Full Standard + Physical + Basic/Toon/Matcap + side/alpha | — | — (Batch 2 done) |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush + PrimitiveMesh props | — | Batch 5 complete (native + procedural props); brushes unchanged |
-| Static meshes | GLTF + full collision / LOD / opt-in InstancedMesh | Batch 6 Done | BatchedMesh deferred; Batch 7 compression / Simplify |
-| Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform/compression |
-| Asset tools | Import texture/mesh, thumbs | — | Simplify, BufferGeometryUtils, exporters, DRACO/KTX2/Meshopt, diagnostics |
+| Static meshes | GLTF + full collision / LOD / opt-in InstancedMesh | Batch 6 Done | BatchedMesh deferred |
+| Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform (Batch 8); KTX2 decode via Batch 7 |
+| Asset tools | Multi-format I/O, Simplify, auto LOD, decode DRACO/Meshopt/KTX2, inspect | Encode deferred | BufferGeometryUtils center/merge P1 residual |
 | Editor organization | Cells/prefabs/hierarchy | — | Authoring layers + solo/lock/vis |
 | Viewport | Multi-pane, fog/PP chips, ortho clear | — | ViewHelper, light helpers as opt-in |
 | Post-processing | pmndrs catalog | Input-gated UX | Official Three passes = N/A |
@@ -351,7 +354,7 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 | PP catalog | Y | Y | Y | Y | N/A | PP controller | Y | Y | Input-gated effects |
 | MeshStandard | Y | Y | Y | Y | Y | materialFactory | Y | Y | Maps/models incomplete |
 | Lights | Y | Y | Y | Y | Y | SceneView | Y | Y | Advanced props |
-| GLTF StaticMesh | Y | Y | Y | Y | Y | meshLoader | Y | Y | Compression → Batch 7; shadows/LOD/collision/overrides **Done** (Batch 6) |
+| GLTF StaticMesh | Y | Y | Y | Y | Y | meshLoader | Y | Y | shadows/LOD/collision/overrides **Done** (Batch 6); compression decode + Simplify/auto LOD **Done** (Batch 7); encode deferred |
 
 ---
 
@@ -511,20 +514,24 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 
 **Depends on:** Batch 7 compression / SimplifyModifier for heavy meshes and automatic LOD generation; Batch 2 materials.
 
-### Batch 7 — Asset tools
+### Batch 7 — Asset tools — **DONE** (encode deferred)
 
-| Pri | Item | API |
-|-----|------|-----|
-| P0 | DRACO + KTX2 + Meshopt in GLTFLoader path | loaders + libs |
-| P0 | HDR/EXR import to texture/env assets | HDRLoader/EXRLoader |
-| P1 | BufferGeometryUtils center/merge/index/normals | utils |
-| P1 | SimplifyModifier tool | modifier |
-| P1 | GLTFExporter / OBJExporter | exporters |
-| P2 | FBX/OBJ/STL/PLY import | loaders |
-| P2 | Normals/tangents helpers + bounds viz | helpers |
-| P2 | Pivot/center utilities | utils |
+| Pri | Item | API | Status |
+|-----|------|-----|--------|
+| P0 | DRACO + KTX2 + Meshopt in GLTFLoader path | loaders + local `/vendor` | **Done** (decode) |
+| P0 | HDR/EXR import to texture/env assets | HDRLoader/EXRLoader | **Done** (Batch 1 / Content Browser) |
+| P1 | BufferGeometryUtils center/merge/index/normals | utils | **Partial** — used internally by SimplifyModifier; dedicated authoring UI deferred |
+| P1 | SimplifyModifier tool | modifier | **Done** — Asset Viewer + derived assets |
+| P1 | GLTFExporter / OBJExporter (+ STL/PLY/USDZ) | exporters | **Done** |
+| P2 | FBX/OBJ/STL/PLY/Collada/USDZ import → GLB normalize | loaders | **Done** — source originals preserved |
+| P2 | Normals/tangents helpers + bounds viz | helpers | **Partial** — bounds/inspect in Asset Viewer; dedicated helpers deferred |
+| P2 | Pivot/center utilities | utils | **Deferred** — no dedicated UI this batch |
+| P1 | Auto LOD generation → Batch 6 `lodLevels` | SimplifyModifier | **Done** |
+| — | Compression **encode** (Draco/Basis/meshopt) | encoders | **Deferred** — no official encoders bundled; decode-only documented |
 
-**Depends on:** none hard; **feeds** Batches 1, 4, 6.
+**Acceptance report:** `docs/ACCEPTANCE_ASSET_TOOLS.md`  
+**Academy:** lesson 27 (`asset-tools`)  
+**Depends on:** none hard; **feeds** Batches 1, 4, 6, 8.
 
 ### Batch 8 — Textures
 

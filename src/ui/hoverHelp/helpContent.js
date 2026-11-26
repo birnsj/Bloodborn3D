@@ -699,7 +699,7 @@ export const HELP_CONTENT = {
   },
   'details.staticMesh.lod': {
     title: 'Static Mesh LOD',
-    body: 'Assign mesh assets to LOD levels with distances in editor units (100 eu = 1 m). Preview forces a level; Automatic follows camera distance. Collision is independent of the visible LOD. Mesh simplification is Batch 7.',
+    body: 'Assign mesh assets to LOD levels with distances in editor units (100 eu = 1 m). Preview forces a level; Automatic follows camera distance. Generate auto LOD creates derived simplified meshes (Batch 7) without overwriting the source. Collision is independent of the visible LOD.',
   },
   'details.staticMesh.rendering': {
     title: 'Static Mesh Rendering',
@@ -978,8 +978,8 @@ export const HELP_CONTENT = {
   },
   'content.importMesh': {
     title: 'Import Mesh',
-    body: 'Imports a glTF/GLB mesh. BloodBound assumes meters in the file and 100 editor units per meter—no automatic rescale. After import, the editor bakes a small WebGL thumbnail for the Asset Viewer grid.',
-    tips: 'Drag a mesh from the Asset Viewer into the viewport to place a Static Mesh actor.',
+    body: 'Imports GLB/GLTF, FBX, OBJ, STL, PLY, Collada (.dae), or USDZ. Foreign formats convert to GLB for the production pipeline; the original source file is stored alongside. Unsupported features are reported as import notes. Units: meters in file, 100 editor units per meter.',
+    tips: 'Double-click a mesh to inspect, simplify, generate LODs, or export. Source registry assets are never overwritten by simplify/LOD.',
   },
   'content.newMaterial': {
     title: 'New Material',
@@ -1015,6 +1015,15 @@ export const HELP_CONTENT = {
   'assetViewer.generateMeshIcon': {
     title: 'Generate Icon',
     body: 'Saves the current mesh preview camera view as the Asset Viewer thumbnail (square PNG). Orbit/pan/zoom first to frame the shot you want.',
+  },
+  'assetViewer.meshTools': {
+    title: 'Mesh Asset Tools',
+    body: 'Batch 7 tools: inspection (tris/verts/materials/bounds/relationships), non-destructive SimplifyModifier preview/save, auto LOD derived assets, and format export (GLB/GLTF/OBJ/STL/PLY/USDZ). Compression decode (DRACO/Meshopt/KTX2) is local; encode authoring is deferred.',
+    tips: 'Simplified and LOD meshes are always new derived assets — the source GLB stays intact.',
+  },
+  'details.staticMesh.autoLod': {
+    title: 'Generate Auto LOD',
+    body: 'Runs SimplifyModifier at default ratios (100% / 50% / 25%), saves L1/L2 as derived mesh assets, and assigns Static Mesh LOD distances. Collision stays on the actor collider and is independent of visual LODs.',
   },
   'assetViewer.generateMaterialIcon': {
     title: 'Generate Icon',

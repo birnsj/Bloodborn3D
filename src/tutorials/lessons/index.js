@@ -24,6 +24,7 @@ import { lightingAdvancedLesson } from './23-lighting-advanced.js';
 import { environmentalObjectsLesson } from './24-environmental-objects.js';
 import { nativeGeometryLesson } from './25-native-geometry.js';
 import { staticMeshesLesson } from './26-static-meshes.js';
+import { assetToolsLesson } from './27-asset-tools.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -52,6 +53,7 @@ export const LESSONS = [
   environmentalObjectsLesson,
   nativeGeometryLesson,
   staticMeshesLesson,
+  assetToolsLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

@@ -27,11 +27,19 @@ import {
   importTextureFile,
   publicAssetUrl,
   replaceTextureFile,
+  storeMeshSourceOriginal,
+  patchMeshAssetMeta,
   updateMaterial,
   updatePrefab,
   uploadMaterialPreview,
   uploadMeshPreview,
 } from '../../io/assetFileApi.js';
+import {
+  convertMeshFileToGlb,
+  extensionOf,
+  isSupportedMeshImportName,
+  formatFromFileName,
+} from '../../assets/meshFormatIO.js';
 import { clearTextureCache } from '../../runtime/materialFactory.js';
 import { normalizePrefabDefinition } from '../../prefabs/PrefabDefinition.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
@@ -352,12 +360,62 @@ export function AssetBrowserProvider({ children }) {
   }, [setStatus]);
 
   const importMesh = useCallback(async (file) => {
+    if (!file?.name) throw new Error('No mesh file');
+    if (!isSupportedMeshImportName(file.name)) {
+      throw new Error(`Unsupported mesh format: ${file.name}`);
+    }
     setStatus(`Importing mesh ${file.name}…`);
-    const result = await importMeshFile(file);
+    const sourceFormat = formatFromFileName(file.name);
+    const ext = extensionOf(file.name);
+    let uploadBlob = file;
+    let uploadName = file.name;
+    let meta = {};
+    let warnings = [];
+
+    // Normalize foreign formats to GLB for the production pipeline; keep source bytes.
+    if (sourceFormat && sourceFormat !== 'glb' && sourceFormat !== 'gltf') {
+      setStatus(`Converting ${sourceFormat.toUpperCase()} → GLB…`);
+      const converted = await convertMeshFileToGlb(file);
+      warnings = converted.warnings || [];
+      uploadBlob = new Blob([converted.glb], { type: 'model/gltf-binary' });
+      uploadName = `${file.name.replace(/\.[^.]+$/, '') || 'import'}.glb`;
+      meta = {
+        sourceFormat,
+        sourceOriginalName: file.name,
+        importWarnings: warnings,
+        triangles: converted.stats?.triangles,
+        vertices: converted.stats?.vertices,
+        meshCount: converted.stats?.meshCount,
+        materialCount: converted.stats?.materialCount,
+        boundingBoxMeters: converted.stats?.boundingBoxMeters,
+        relationship: 'source',
+        normalizedTo: 'glb',
+      };
+    } else {
+      meta = { sourceFormat: sourceFormat || 'glb', relationship: 'source' };
+    }
+
+    const result = await importMeshFile(uploadBlob, {
+      fileName: uploadName,
+      assetName: file.name.replace(/\.[^.]+$/, '') || 'Mesh',
+      meta,
+      tags: sourceFormat && sourceFormat !== 'glb' ? ['imported', sourceFormat] : ['imported'],
+    });
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
-    notify(`Imported mesh ${result.asset.name}`);
+
+    if (sourceFormat && sourceFormat !== 'glb' && sourceFormat !== 'gltf') {
+      try {
+        const stored = await storeMeshSourceOriginal(result.asset.id, file, { extension: ext });
+        setRegistry(normalizeRegistry(stored.registry));
+      } catch (err) {
+        console.warn('[BloodBound] source original store failed', err);
+      }
+    }
+
+    const warnSuffix = warnings.length ? ` (${warnings.length} format note${warnings.length > 1 ? 's' : ''})` : '';
+    notify(`Imported mesh ${result.asset.name}${warnSuffix}`);
     void enqueueMeshThumbnailBake(result.asset, uploadMeshPreview, publicAssetUrl)
       .then(async (baked) => {
         if (!baked) return;
@@ -375,6 +433,39 @@ export function AssetBrowserProvider({ children }) {
       });
     return result.asset;
   }, [notify, setStatus]);
+
+  /**
+   * Register a derived GLB (simplified / LOD) without overwriting the source asset.
+   */
+  const importDerivedMeshGlb = useCallback(async (glbBuffer, {
+    name = 'Derived Mesh',
+    sourceAssetId = null,
+    meta = {},
+    tags = ['derived'],
+  } = {}) => {
+    const blob = new Blob([glbBuffer], { type: 'model/gltf-binary' });
+    const result = await importMeshFile(blob, {
+      fileName: `${name}.glb`,
+      assetName: name,
+      tags,
+      meta: {
+        relationship: 'derived',
+        derivedFrom: sourceAssetId,
+        ...meta,
+      },
+    });
+    setRegistry(normalizeRegistry(result.registry));
+    setRevision((r) => r + 1);
+    void enqueueMeshThumbnailBake(result.asset, uploadMeshPreview, publicAssetUrl);
+    return result.asset;
+  }, []);
+
+  const updateMeshMeta = useCallback(async (assetId, metaPatch) => {
+    const result = await patchMeshAssetMeta(assetId, metaPatch);
+    setRegistry(normalizeRegistry(result.registry));
+    setRevision((r) => r + 1);
+    return result.asset;
+  }, []);
 
   const createNewMaterial = useCallback(async (partial = {}) => {
     setStatus('Creating material…');
@@ -559,6 +650,8 @@ export function AssetBrowserProvider({ children }) {
     importTexture,
     replaceTexture,
     importMesh,
+    importDerivedMeshGlb,
+    updateMeshMeta,
     createNewMaterial,
     duplicateMaterial,
     saveMaterialDefinition,
@@ -586,6 +679,8 @@ export function AssetBrowserProvider({ children }) {
     importTexture,
     replaceTexture,
     importMesh,
+    importDerivedMeshGlb,
+    updateMeshMeta,
     createNewMaterial,
     duplicateMaterial,
     saveMaterialDefinition,

@@ -8,6 +8,7 @@ import {
   markSharedMaterialTextures,
   markSharedSubtree,
 } from './gpuResources.js';
+import { configureGltfLoaderCompression } from './gltfCompression.js';
 
 const gltfLoader = new GLTFLoader();
 const meshCache = createRetryableCache();
@@ -16,15 +17,33 @@ const meshMetaByUrl = new Map();
 /** url → cached glTF scene root for sync collider extraction (Batch 6). */
 const meshSceneByUrl = new Map();
 
+let compressionConfigured = null;
+
+function ensureCompressionConfigured(renderer = null) {
+  if (!compressionConfigured) {
+    compressionConfigured = configureGltfLoaderCompression(gltfLoader, { renderer });
+  }
+  return compressionConfigured;
+}
+
+/**
+ * Optional: pass the active WebGLRenderer so KTX2 can detect GPU support.
+ */
+export function configureMeshLoaderRenderer(renderer) {
+  compressionConfigured = null;
+  return ensureCompressionConfigured(renderer);
+}
+
 /**
  * Load a glTF/GLB asset. Geometry stays in meters (Three.js / Rapier space).
  * Actor transforms convert editor units → meters at the SceneView boundary.
  * No arbitrary rescale is applied.
+ * Batch 7: DRACO / Meshopt / KTX2 decode via local /vendor libs.
  */
-export function loadGltfScene(url) {
+export function loadGltfScene(url, { renderer = null } = {}) {
   if (!url) return Promise.resolve(null);
   // Failed loads resolve null and are evicted, so a later request retries.
-  return meshCache.get(url, () => new Promise((resolve) => {
+  return meshCache.get(url, () => ensureCompressionConfigured(renderer).then(() => new Promise((resolve) => {
     gltfLoader.load(
       url,
       (gltf) => {
@@ -46,6 +65,8 @@ export function loadGltfScene(url) {
           boundingBoxCenterMeters: { x: center.x, y: center.y, z: center.z },
           boundingBoxEditor: metersToEditorSize({ x: size.x, y: size.y, z: size.z }),
           triangles: countTriangles(root),
+          vertices: countVertices(root),
+          meshCount: countMeshes(root),
         };
         const validation = validateMeshScale(meta);
         // Geometries/materials stay in the cache — mark shared before cloning out.
@@ -62,7 +83,7 @@ export function loadGltfScene(url) {
       undefined,
       () => resolve(null),
     );
-  }));
+  })));
 }
 
 export async function cloneLoadedMesh(url) {
@@ -142,3 +163,23 @@ function countTriangles(root) {
   });
   return Math.round(tris);
 }
+
+function countVertices(root) {
+  let verts = 0;
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.geometry) return;
+    const pos = obj.geometry.attributes?.position;
+    if (pos) verts += pos.count;
+  });
+  return verts;
+}
+
+function countMeshes(root) {
+  let n = 0;
+  root.traverse((obj) => {
+    if (obj.isMesh) n += 1;
+  });
+  return n;
+}
+
+export { countTriangles };

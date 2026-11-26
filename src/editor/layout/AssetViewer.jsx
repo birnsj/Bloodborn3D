@@ -6,8 +6,10 @@ import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useEditor } from '../EditorContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
+import { MeshAssetTools } from '../assets/MeshAssetTools.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { uploadMaterialPreview, uploadMeshPreview } from '../../io/assetFileApi.js';
+import { isSupportedMeshImportName } from '../../assets/meshFormatIO.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import {
@@ -31,6 +33,7 @@ export function AssetViewer({ docked = false } = {}) {
     beginAssetDrag,
     importTexture,
     importMesh,
+    importDerivedMeshGlb,
     createNewMaterial,
     dragMime,
     notify,
@@ -70,7 +73,7 @@ export function AssetViewer({ docked = false } = {}) {
         if (/\.(png|jpe?g|webp|gif)$/i.test(lower)) {
           await importTexture(file);
           patch({ contentFolder: 'Textures' });
-        } else if (/\.(glb|gltf)$/i.test(lower)) {
+        } else if (isSupportedMeshImportName(file.name)) {
           await importMesh(file);
           patch({ contentFolder: 'Meshes' });
         } else {
@@ -262,7 +265,7 @@ export function AssetViewer({ docked = false } = {}) {
         <input
           ref={meshInputRef}
           type="file"
-          accept=".glb,.gltf"
+          accept=".glb,.gltf,.fbx,.obj,.stl,.ply,.dae,.usdz"
           hidden
           onChange={async (e) => {
             const file = e.target.files?.[0];
@@ -342,13 +345,15 @@ export function AssetViewer({ docked = false } = {}) {
         <AssetPreviewDialog
           asset={previewAsset}
           onClose={() => setPreviewAsset(null)}
+          importDerivedMeshGlb={importDerivedMeshGlb}
+          notify={notify}
         />
       ) : null}
     </section>
   );
 }
 
-function AssetPreviewDialog({ asset, onClose }) {
+function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, notify }) {
   const [meshMeta, setMeshMeta] = useState(null);
 
   useEffect(() => {
@@ -449,6 +454,19 @@ function AssetPreviewDialog({ asset, onClose }) {
               })}
             </dl>
             <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
+            {asset.type === 'mesh' && (
+              <MeshAssetTools
+                asset={{
+                  id: asset.id,
+                  kind: 'mesh',
+                  name: asset.name,
+                  path: asset.path,
+                  meta: asset.meta,
+                }}
+                importDerivedMeshGlb={importDerivedMeshGlb}
+                notify={notify}
+              />
+            )}
           </div>
         </div>
       </div>
