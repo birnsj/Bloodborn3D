@@ -15,13 +15,14 @@ function makeIsolatedSceneView() {
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 0.95,
     autoClear: true,
-    shadowMap: { enabled: false, type: THREE.PCFSoftShadowMap },
+    shadowMap: { enabled: false, type: THREE.PCFSoftShadowMap, autoUpdate: true, needsUpdate: false },
     setScissorTest: vi.fn(),
     setViewport: vi.fn(),
     setScissor: vi.fn(),
     getScissorTest: () => true,
     render: vi.fn(),
   };
+  view.worldEnvironment = { setPerspectiveVisible: vi.fn() };
   view._size = { width: 400, height: 200 };
   view._worldRenderer = { toneMapping: 'ACESFilmic', toneMappingExposure: 0.95 };
   view._postProcessing = { enabled: false };
@@ -261,5 +262,64 @@ describe('SceneView.renderViewports isolation', () => {
     expect(view.scene.background).toBe(authored);
     expect(view.scene.backgroundIntensity).toBe(1.5);
     expect(view.scene.backgroundBlurriness).toBe(0.25);
+  });
+
+  it('reuses shadow maps after the first pane and skips per-pane env ticks', () => {
+    const view = makeIsolatedSceneView();
+    const shadowFlags = [];
+    const tickFlags = [];
+    view._drawScene = function draw(_camera, opts) {
+      shadowFlags.push(opts.updateShadows);
+      tickFlags.push(opts.tickEnvironment);
+    };
+
+    view.renderViewports([
+      {
+        paneId: 'pane-0',
+        rect: { x: 0, y: 0, width: 200, height: 200 },
+        cameraMode: 'perspective',
+        displayMode: 'lit',
+        showFog: true,
+        paneState: {
+          id: 'pane-0',
+          cameraMode: 'perspective',
+          position: [6, 5, 8],
+          target: [0, 1.5, 0],
+          frustumSize: 12,
+        },
+      },
+      {
+        paneId: 'pane-1',
+        rect: { x: 200, y: 0, width: 200, height: 200 },
+        cameraMode: 'top',
+        displayMode: 'lit',
+        showFog: false,
+        paneState: {
+          id: 'pane-1',
+          cameraMode: 'top',
+          position: [0, 20, 0],
+          target: [0, 1.5, 0],
+          frustumSize: 12,
+        },
+      },
+      {
+        paneId: 'pane-2',
+        rect: { x: 0, y: 200, width: 200, height: 200 },
+        cameraMode: 'front',
+        displayMode: 'lit',
+        showFog: false,
+        paneState: {
+          id: 'pane-2',
+          cameraMode: 'front',
+          position: [0, 0, 20],
+          target: [0, 1.5, 0],
+          frustumSize: 12,
+        },
+      },
+    ]);
+
+    expect(shadowFlags).toEqual([true, false, false]);
+    expect(tickFlags).toEqual([false, false, false]);
+    expect(view.renderer.shadowMap.autoUpdate).toBe(true);
   });
 });

@@ -7,7 +7,8 @@
 **CDP entry:** `import('/src/dev/integratedEditorAcceptance.js').then(m => m.runIntegratedEditorAcceptance())`  
 **Screenshots:** `docs/acceptance-integrated-editor/`  
 **Commit:** `8b4ded6`  
-**Unit tests:** **1,081 passed**
+**Unit tests:** **1,081 passed** (baseline; see performance stabilization for later counts)  
+**Performance follow-up:** `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`
 
 ## Objective
 
@@ -76,7 +77,8 @@ Regression: `src/tests/integratedEditorAcceptance.test.js`.
 | Content Browser DnD | Manual only |
 | Compression encode | **Deferred** (Batch 7) |
 | Brush displacement tessellation | **Outstanding** |
-| Full scene rebuild on sync | Known M6 debt |
+| Full scene rebuild on sync | Known M6 debt (ordinary edits incremental; see performance stabilization) |
+| Quad viewport ≥30 FPS | **Not met** — see `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md` |
 | Batch 8 | **Not started** |
 
 ## Recommended manual user tests

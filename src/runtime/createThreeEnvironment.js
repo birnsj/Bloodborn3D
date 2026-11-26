@@ -30,6 +30,8 @@ function wrapEnvPass(object) {
   const prior = object.onBeforeRender.bind(object);
   object.onBeforeRender = function wrappedEnvPass(renderer, scene, camera) {
     if (envPassDepth > 0) return;
+    // Ortho panes use flat proxies; skip reflector/refractor RT passes.
+    if (camera?.isOrthographicCamera) return;
     envPassDepth += 1;
     const hidden = [];
     scene.traverse((obj) => {
@@ -179,6 +181,8 @@ async function createWater2(def, rt, resolveUrl, maxAniso) {
   let lastFlowTime = performance.now();
   water.onBeforeRender = function (renderer, scene, camera) {
     if (envPassDepth > 0) return;
+    // Ortho construction panes use the flat proxy mesh — skip reflection/refraction RTs.
+    if (camera?.isOrthographicCamera) return;
     envPassDepth += 1;
     const hidden = [];
     scene.traverse((obj) => {

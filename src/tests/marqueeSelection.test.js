@@ -104,4 +104,19 @@ describe('viewportDisplay', () => {
     expect(rangeGuide.visible).toBe(true);
     expect(light.intensity).toBe(0.5);
   });
+
+  it('lit display mode is a no-op traverse (authored materials)', () => {
+    const scene = new THREE.Scene();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00, wireframe: false });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    scene.add(mesh);
+    const light = new THREE.AmbientLight(0xffffff, 0.4);
+    const state = applyDisplayMode(scene, [light], 'lit');
+    expect(state.noop).toBe(true);
+    expect(state.materials).toHaveLength(0);
+    expect(mat.wireframe).toBe(false);
+    expect(light.intensity).toBe(0.4);
+    restoreDisplayMode(state);
+    expect(light.intensity).toBe(0.4);
+  });
 });

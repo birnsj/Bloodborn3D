@@ -2565,7 +2565,11 @@ export function Viewport() {
       getRuntime: () => runtimeRef.current,
       getShellSize: () => ({ ...shellSizeRef.current }),
       focusSelected: () => focusSelected(),
-      measureFrameTimes: async (seconds = 0.4) => {
+      measureFrameTimes: async (seconds = 0.4, { warmupFrames = 12 } = {}) => {
+        // Warm-up: discard early frames (shader compile, layout settle).
+        for (let i = 0; i < warmupFrames; i += 1) {
+          await new Promise((r) => requestAnimationFrame(r));
+        }
         const times = [];
         let last = performance.now();
         const end = last + seconds * 1000;
@@ -2575,13 +2579,69 @@ export function Viewport() {
           times.push(now - last);
           last = now;
         }
+        const sorted = [...times].sort((a, b) => a - b);
         const avgMs = times.length
           ? times.reduce((a, b) => a + b, 0) / times.length
+          : 0;
+        const pct = (p) => {
+          if (!sorted.length) return 0;
+          const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+          return sorted[idx];
+        };
+        const medianMs = sorted.length
+          ? (sorted.length % 2
+            ? sorted[(sorted.length - 1) / 2]
+            : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
           : 0;
         return {
           samples: times.length,
           avgFrameMs: +avgMs.toFixed(2),
+          medianFrameMs: +medianMs.toFixed(2),
+          p95FrameMs: +pct(95).toFixed(2),
+          minFrameMs: sorted.length ? +sorted[0].toFixed(2) : 0,
+          maxFrameMs: sorted.length ? +sorted[sorted.length - 1].toFixed(2) : 0,
           avgFps: avgMs > 0 ? +(1000 / avgMs).toFixed(1) : 0,
+          medianFps: medianMs > 0 ? +(1000 / medianMs).toFixed(1) : 0,
+        };
+      },
+      /**
+       * Snapshot renderer.info after an explicit info.reset() + one render.
+       * Without reset, drawCalls/triangles accumulate across shadow/PP/depth passes
+       * and prior frames — do not treat raw info as a single-pass cost.
+       */
+      measureGpuSnapshot: async ({ layoutMode = null } = {}) => {
+        const rt = runtimeRef.current;
+        const sv = rt?.sceneView;
+        const renderer = sv?.renderer;
+        if (!renderer?.info) return null;
+        if (layoutMode && typeof window.__bloodboundViewport?.setPrefs === 'function') {
+          window.__bloodboundViewport.setPrefs({ layoutMode });
+          await new Promise((r) => requestAnimationFrame(r));
+          await new Promise((r) => requestAnimationFrame(r));
+        }
+        renderer.info.reset();
+        const t0 = performance.now();
+        if (rt.viewportPanes?.length && sv.renderViewports) {
+          sv.renderViewports(rt.viewportPanes);
+        } else {
+          sv.render?.(sv.camera);
+        }
+        if (renderer.getContext?.()?.finish) {
+          try { renderer.getContext().finish(); } catch { /* ignore */ }
+        }
+        const cpuMs = +(performance.now() - t0).toFixed(2);
+        const r = renderer.info.render;
+        return {
+          cpuSubmitMs: cpuMs,
+          drawCalls: r.calls,
+          triangles: r.triangles,
+          points: r.points,
+          lines: r.lines,
+          geometries: renderer.info.memory?.geometries ?? null,
+          textures: renderer.info.memory?.textures ?? null,
+          paneCount: rt.viewportPanes?.length || 1,
+          dpr: renderer.getPixelRatio?.() ?? null,
+          size: sv._size ? { ...sv._size } : null,
         };
       },
     };

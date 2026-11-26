@@ -628,11 +628,16 @@ export class SceneView {
     usePostProcess = false,
     atmosphere = true,
     scissor = null,
+    tickEnvironment = true,
+    updateShadows = true,
   } = {}) {
     const renderer = this.renderer;
     const prevToneMapping = renderer.toneMapping;
     const prevExposure = renderer.toneMappingExposure;
     const prevAutoClear = renderer.autoClear;
+    const shadowMap = renderer.shadowMap;
+    const prevShadowAuto = shadowMap?.autoUpdate;
+    const prevShadowNeeds = shadowMap?.needsUpdate;
 
     try {
       // Keep exposure in sync when PP is on but composer is bypassed (ACES-only).
@@ -650,15 +655,30 @@ export class SceneView {
         }
       }
 
+      if (shadowMap && !updateShadows) {
+        shadowMap.autoUpdate = false;
+        shadowMap.needsUpdate = false;
+      }
+
       const showAtmosphere = Boolean(atmosphere) && !camera?.isOrthographicCamera;
       syncCameraAtmosphereLayer(camera, showAtmosphere);
       if (!showAtmosphere) {
         this.atmosphere?.setPerspectiveVisible?.(false);
       } else {
         // Soft wall occlusion for mist / noise / volumetric (perspective only).
-        this.atmosphere?.captureDepth?.(this.renderer, camera);
+        // Depth prepass must not regenerate shadow maps — same lights as the main draw.
+        const depthShadowAuto = shadowMap?.autoUpdate;
+        if (shadowMap) shadowMap.autoUpdate = false;
+        try {
+          this.atmosphere?.captureDepth?.(this.renderer, camera);
+        } finally {
+          if (shadowMap) {
+            shadowMap.autoUpdate = updateShadows ? depthShadowAuto : false;
+            if (updateShadows) shadowMap.needsUpdate = true;
+          }
+        }
       }
-      tickEnvironmentVisuals(this.scene);
+      if (tickEnvironment) tickEnvironmentVisuals(this.scene);
 
       if (usePostProcess && this.postProcessingController?.isActive) {
         try {
@@ -671,6 +691,10 @@ export class SceneView {
       }
       this.renderer.render(this.scene, camera);
     } finally {
+      if (shadowMap) {
+        shadowMap.autoUpdate = prevShadowAuto;
+        shadowMap.needsUpdate = prevShadowNeeds;
+      }
       renderer.toneMapping = prevToneMapping;
       renderer.toneMappingExposure = prevExposure;
       renderer.autoClear = prevAutoClear;
@@ -901,7 +925,12 @@ export class SceneView {
     const canvasH = this._size.height || 1;
     const fullW = Math.max(1, Math.round(this._size.width || 1));
     const fullH = Math.max(1, Math.round(this._size.height || 1));
-    this._ensureActorEdgesOverlays();
+    // Edges overlays are only needed for wireframe / solid-edges display modes.
+    const needsEdges = panes.some((p) => {
+      const m = p.displayMode || 'lit';
+      return m === 'wireframe' || m === 'solid-edges';
+    });
+    if (needsEdges) this._ensureActorEdgesOverlays();
 
     const renderer = this.renderer;
     const lights = [this.ambient, this.editFill, this.editFill2];
@@ -924,6 +953,15 @@ export class SceneView {
     const prevScissorTest = renderer.getScissorTest();
 
     renderer.setScissorTest(true);
+
+    // Multi-pane: regenerate shadow maps once, then reuse for remaining scissors.
+    // Lights and casters are shared — per-pane shadow rebuilds are redundant.
+    const shadowMap = renderer.shadowMap;
+    const prevShadowAuto = shadowMap?.autoUpdate;
+    let shadowsDrawn = false;
+    let lastPerspectiveVisible = null;
+    // Environment ticks once per frame (not once per pane).
+    tickEnvironmentVisuals(this.scene);
 
     try {
       for (const pane of panes) {
@@ -972,20 +1010,27 @@ export class SceneView {
         }
         syncCameraAtmosphereLayer(cam, showAtmosphere);
         this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
-        // Sky / grounded skybox follow perspective panes only (same as atmosphere).
-        this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
-        // Lensflare is a screen-space effect — hide in ortho construction panes.
-        setLensflarePerspectiveVisible(this.scene, !ortho);
-        setEnvironmentSurfacesPerspectiveVisible(this.scene, !ortho);
-        this._syncPlaceableSkyPrecedence();
+        // Sky / env surfaces / lensflare: only re-traverse when perspective↔ortho flips.
+        const perspectiveVisible = !ortho;
+        if (lastPerspectiveVisible !== perspectiveVisible) {
+          this.worldEnvironment?.setPerspectiveVisible?.(perspectiveVisible);
+          setLensflarePerspectiveVisible(this.scene, perspectiveVisible);
+          setEnvironmentSurfacesPerspectiveVisible(this.scene, perspectiveVisible);
+          this._syncPlaceableSkyPrecedence();
+          lastPerspectiveVisible = perspectiveVisible;
+        }
         if (showAtmosphere) this.atmosphere?.update?.(cam, dt);
 
+        const updateShadows = !shadowsDrawn;
         try {
           this._drawScene(cam, {
             usePostProcess,
             atmosphere: showAtmosphere,
             scissor: usePostProcess ? scissor : null,
+            tickEnvironment: false,
+            updateShadows,
           });
+          shadowsDrawn = true;
         } catch (err) {
           console.error('[BloodBound] viewport pane render failed', err);
         } finally {
@@ -997,11 +1042,16 @@ export class SceneView {
         }
       }
     } finally {
+      if (shadowMap) {
+        shadowMap.autoUpdate = prevShadowAuto;
+      }
       this.scene.fog = authoredFog;
       this.scene.background = authoredBackground;
       this.scene.backgroundIntensity = authoredBgIntensity;
       this.scene.backgroundBlurriness = authoredBgBlurriness;
       this.worldEnvironment?.setPerspectiveVisible?.(true);
+      setLensflarePerspectiveVisible(this.scene, true);
+      setEnvironmentSurfacesPerspectiveVisible(this.scene, true);
       renderer.toneMapping = prevToneMapping;
       renderer.toneMappingExposure = prevExposure;
       renderer.autoClear = prevAutoClear;

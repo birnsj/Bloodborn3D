@@ -16,7 +16,15 @@ export function applyDisplayMode(scene, lights, mode) {
     lights: [],
     edgesVisible: [],
     objectVisibility: [],
+    noop: false,
   };
+
+  // Lit uses authored materials/lights — skip the full scene traverse.
+  // Non-lit modes still walk the scene; restoreDisplayMode is a no-op for this state.
+  if (display === 'lit') {
+    state.noop = true;
+    return state;
+  }
 
   if (lights) {
     for (const light of lights) {
