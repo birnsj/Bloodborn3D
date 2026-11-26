@@ -32,7 +32,7 @@ export async function generateLodLevelsFromRoot(sourceRoot, options = {}) {
     const distance = distancesEu[i] ?? (i === 0 ? 0 : 400 * i);
     if (ratio >= 0.999) {
       // Keep original as L0 without re-simplify
-      const { inspectMeshRoot } = await import('./meshInspect.js');
+      const { inspectMeshRoot } = await import('./meshInspect.js'); // kept dynamic to avoid circular init
       const stats = inspectMeshRoot(sourceRoot);
       levels.push({
         index: i,

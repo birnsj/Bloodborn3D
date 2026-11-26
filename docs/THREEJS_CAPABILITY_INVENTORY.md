@@ -11,7 +11,8 @@
 **Batch 4 status:** **Implemented** (Water/Water2, Reflector, Refractor, Decal, Sprite billboard, placeable Sky).  
 **Batch 5 status:** **Implemented** (native PrimitiveMesh + procedural props).  
 **Batch 6 status:** **Implemented** (StaticMesh collision / materials / LOD / opt-in InstancedMesh).  
-**Batch 7 status:** **Implemented** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.
+**Batch 7 status:** **Implemented** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.  
+**Batch 7 verification:** gap-closure pass measured production-mesh simplify/LOD, Meshopt fixture decode, multi-cam LOD (Batch 6 residual closed); hysteresis + lodPreview autoUpdate + STL ArrayBuffer defects fixed.
 
 ### Principles
 
@@ -529,8 +530,9 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | P1 | Auto LOD generation → Batch 6 `lodLevels` | SimplifyModifier | **Done** |
 | — | Compression **encode** (Draco/Basis/meshopt) | encoders | **Deferred** — no official encoders bundled; decode-only documented |
 
-**Acceptance report:** `docs/ACCEPTANCE_ASSET_TOOLS.md`  
+**Acceptance report:** `docs/ACCEPTANCE_ASSET_TOOLS.md` (implementation `8d5af2e` + verification pass)  
 **Academy:** lesson 27 (`asset-tools`)  
+**Fixture:** `public/assets/fixtures/meshopt_triangle.glb` (decode-only sample)  
 **Depends on:** none hard; **feeds** Batches 1, 4, 6, 8.
 
 ### Batch 8 — Textures

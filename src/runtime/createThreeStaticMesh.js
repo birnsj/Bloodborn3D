@@ -126,12 +126,20 @@ export async function buildStaticMeshVisual(comp, {
   } else {
     const lod = new THREE.LOD();
     lod.userData.bbStaticLod = true;
-    lod.userData.bbLodHysteresisMeters = toMeters(fields.lodHysteresis || 0);
+    const hystMeters = toMeters(fields.lodHysteresis || 0);
+    lod.userData.bbLodHysteresisMeters = hystMeters;
     for (const level of loadedLevels) {
-      lod.addLevel(level.root, toMeters(level.distanceEu || 0));
+      const distM = toMeters(level.distanceEu || 0);
+      // THREE.LOD hysteresis is a fraction of the level distance (not absolute meters).
+      const hystFrac = distM > 1e-6
+        ? Math.min(0.49, Math.max(0, hystMeters / distM))
+        : 0;
+      lod.addLevel(level.root, distM, hystFrac);
     }
     if (fields.lodPreview >= 0 && fields.lodPreview < loadedLevels.length) {
       // Force a specific level for editor preview (manual LOD).
+      // Disable autoUpdate so the renderer does not override visibility per camera.
+      lod.autoUpdate = false;
       for (let i = 0; i < lod.levels.length; i += 1) {
         lod.levels[i].object.visible = i === fields.lodPreview;
       }

@@ -46,13 +46,13 @@ Architectural brush collision path unchanged.
 | Unintended blocking / penetration | **Pass** | No collidable actor allowed center penetration in push probes; brushes Floor + Additive Wall retain bodies |
 | Brush collision unchanged | **Pass** | Floor half-extents 8×0.1×6 m; Additive Wall body present |
 | Material restore + persistence | **Pass** | Slot overrides + restore UI; prefab serialize preserves `materialOverrides` |
-| LOD from different cameras | **Pass** (native THREE.LOD) / **Unverified** (multi-cam A/B photo) | Per-viewport cameras; manual `lodPreview` |
+| LOD from different cameras | **Pass** | Closed in Batch 7 verification: unit near/mid/far cameras + two-pane screenshots (`docs/acceptance-asset-tools/03-*.png`, `04-*.png`); hysteresis + manual preview autoUpdate fixed |
 | Select/edit instanced actors | **Pass** | Invisible pick proxies; individual outliner entries; unique instance actor IDs |
 | Prefab create / override / save-load | **Pass** | Live create from Box+Cone+LOD+Material Override; 2 instances; sphere/mat override on A only; serialize/deserialize round-trip |
 | Undo/redo + scrub gestures | **Pass** | `commitStaticMeshGesture` + `SetStaticMeshPropertiesCommand` undo/redo unit |
 | Duplication / independent identity | **Pass** | Two prefab instances → 4 unique actor IDs; unpack preserves edited collision |
 | Viewport layouts + Play/Stop | **Pass** | Four-pane + Play screenshot |
-| Additive / subtractive brush regression | **Pass** (additive on level) / **Unverified** (subtractive this level) | Floor + wall; subtractive covered by existing acceptance levels |
+| Additive / subtractive brush regression | **Pass** | Additive on this level; subtractive re-validated via `acceptance-subtractive.json` in Batch 7 verification |
 | Asset reassignment + GPU dispose | **Pass** (architecture) / **Unverified** (stress loop) | Shared GLB geo; owned instance mats; disposeObjectTree patterns |
 | Perf before auto-batch default | **Pass** | Measured; auto default stays **off** |
 

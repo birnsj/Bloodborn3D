@@ -7,7 +7,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
@@ -189,7 +188,11 @@ export async function exportMeshRoot(root, format = 'glb', {
 
   if (fmt === 'stl') {
     const exporter = new STLExporter();
-    const data = exporter.parse(root, { binary: true });
+    const parsed = exporter.parse(root, { binary: true });
+    // STLExporter returns DataView for binary — normalize to ArrayBuffer for downloads/reimport.
+    const data = parsed instanceof DataView
+      ? parsed.buffer.slice(parsed.byteOffset, parsed.byteOffset + parsed.byteLength)
+      : parsed;
     return {
       format: 'stl',
       mime: 'application/octet-stream',
