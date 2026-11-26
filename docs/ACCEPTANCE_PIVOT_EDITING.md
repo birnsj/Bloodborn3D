@@ -1,7 +1,7 @@
 # Batch 7.1 — Pivot Editing acceptance
 
 **Baseline (actor pivot):** `d43be56` (1,075 tests)  
-**Closure (Asset Viewer gizmo):** `a0c371e` (1,078 tests)  
+**Closure (Asset Viewer gizmo):** `e92e22f` (1,078 tests)  
 **Academy:** lesson 28 (`pivot-editing`)  
 **Level:** `public/levels/acceptance-pivot-editing.json`  
 **Screenshots:** `docs/acceptance-pivot-editing/`  
@@ -92,4 +92,4 @@
 | Unit tests | **1,078 passed** |
 | Lint | Pass (warnings only; pre-existing) |
 | Production build | Pass |
-| Commit | `a0c371e` |
+| Commit | `e92e22f` |
