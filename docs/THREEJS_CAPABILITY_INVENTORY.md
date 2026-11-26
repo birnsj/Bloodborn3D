@@ -505,7 +505,9 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 
 **Also shipped:** none/auto/box/sphere/capsule/cylinder colliders; editable dims/offsets; collision helpers; Details Collision/Materials/LOD/Rendering; undo gestures; Academy lesson 26; `acceptance-static-meshes.json`.
 
-**Batch 5 residuals updated:** richer StaticMesh / primitive collision authoring delivered here; brush CSG collision unchanged. **Brush displacement tessellation** remains Outstanding (Batch 2).
+**Gap closure (2026-11-26):** player capsule push probes vs all StaticMesh collider modes + Batch 5 primitives; no-collision traversal; LOD-independent collision; prefab create/instance overrides/save-load for StaticMesh+PrimitiveMesh — see `docs/ACCEPTANCE_STATIC_MESHES.md` / `docs/ACCEPTANCE_GEOMETRY.md`. **No new defects.**
+
+**Batch 5 residuals updated:** richer StaticMesh / primitive collision authoring + live collision/prefab verification **Done**. **Brush displacement tessellation** remains Outstanding (Batch 2).
 
 **Depends on:** Batch 7 compression / SimplifyModifier for heavy meshes and automatic LOD generation; Batch 2 materials.
 

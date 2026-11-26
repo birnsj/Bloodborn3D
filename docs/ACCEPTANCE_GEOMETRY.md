@@ -3,8 +3,9 @@
 **Level:** `public/levels/acceptance-geometry.json`  
 **Academy:** lesson 25 (`native-geometry`)  
 **Verification date:** 2026-11-26  
+**Gap-closure verification:** 2026-11-26 (player collision + prefab)  
 **Implementation commit:** `7592490`  
-**Acceptance correction commit:** (this commit)  
+**Acceptance correction commit:** `d2f6e8a`  
 **Baseline:** Batches 1–4 complete; Batch 4 acceptance docs on `main` at `d67345a`  
 **Three.js:** r187 · **Rapier:** `@dimforge/rapier3d-compat`
 
@@ -13,6 +14,7 @@
 | Issue | Result |
 | --- | --- |
 | `SceneView._finishPrimitiveMeshVisual` referenced `normalizePrimitiveMeshFields` without importing it → unhandled rejection after every PrimitiveMesh build | **Fixed** — import added in `src/runtime/SceneView.js` |
+| Gap-closure player/prefab pass | **No new defects** |
 
 ## Demonstrated
 
@@ -37,9 +39,9 @@ Architectural brush tools remain above primitive tools and are unchanged.
 | Material assignment + UV workflows | **Pass** | Material dropdown on PrimitiveMesh; shared UV L1 path; assigned Batch mats in level JSON |
 | Visible displacement relief | **Pass** (density path) / **Unverified** (pixel relief) | Segments/displacementSegments exposed and dense plane present; brush tessellation still outstanding — visual bump depends on material displacement maps |
 | Grid snap + transforms | **Pass** | Snap on, Grid 25; transform gizmo on selected knot; local transform fields |
-| Play-mode collision accuracy | **Pass** (pipeline) / **Unverified** (per-shape walk) | Play mode entered; Rapier world with 24 bodies; visual vs collision approximations documented below — no per-primitive walk test recorded |
+| Play-mode collision accuracy | **Pass** | Play **24** bodies; kinematic push against 12 PrimitiveMesh samples (box…octahedron) all blocked; brush colliders present |
 | Undo/redo + one history entry per scrub | **Pass** | Unit + shared `SetPrimitiveMeshPropertiesCommand` / gesture API |
-| Duplication / parenting / prefab | **Pass** (UI) / **Unverified** (live prefab round-trip) | Duplicate / Parent / Create Prefab From Selection present on selection; not exercised end-to-end in this pass |
+| Duplication / parenting / prefab | **Pass** | Prefab round-trip with PrimitiveMesh (cone) + StaticMesh companions verified in Batch 6 gap closure (`batch6AcceptanceCorrections.test.js` + live editor) |
 | Save/reload + backward compat | **Pass** | Level loads on schema v2; legacy levels without PrimitiveMesh still load (registry optional) |
 | All viewport layouts | **Pass** | Four-pane (Persp / Top / Front / Right) screenshot |
 | Additive / subtractive brushes | **Pass** (additive on level) / **Unverified** (subtractive on this level) | Floor brush present; primitives tagged `prop` not CSG; subtractive covered by existing `acceptance-subtractive` + brush code path |
@@ -55,6 +57,11 @@ Architectural brush tools remain above primitive tools and are unchanged.
 3. `03-torusknot-details.png` — selected torusKnot + Primitive Mesh Details (material, segments, collision)  
 4. `04-four-pane-layouts.png` — four viewport panes with primitives visible in ortho wireframe  
 5. `05-play-mode.png` — Play mode entered (PLAY badge; physics world active)
+6. `06-player-collision-probe.png` — gap-closure session after per-primitive push probes
+
+## Player collision probe notes (gap closure)
+
+Method matches Batch 6: Play → teleport near each PrimitiveMesh → push toward center for 70 steps → require `endDist > 0.35` m when a collider exists. Samples: box, plane, circle, sphere, capsule, cylinder, cone, ring, torus, torusKnot, tetrahedron, octahedron — **0 failures**. Floor brush colliders remain.
 
 ## Performance measurements
 
@@ -122,8 +129,9 @@ Improved StaticMesh / richer collision authoring was a **Batch 6** dependency �
 - Brush displacement tessellation — **Outstanding** (Batch 2 residual)  
 - Text requires local `public/assets/fonts/helvetiker_regular.typeface.json`  
 - ParametricGeometry is scaled radius authoring, not a full surface tool  
+- Pointer-lock FPS locomotion “feel” not automatable; Rapier capsule push probes cover collider presence/blocking  
 
 ## Dependencies for later batches
 
-- Batch 6: **Done** — see `ACCEPTANCE_STATIC_MESHES.md`  
+- Batch 6: **Done** — see `ACCEPTANCE_STATIC_MESHES.md` (incl. gap-closure collision + prefab)  
 - Batch 7: BufferGeometryUtils / Simplify for heavy procedural meshes / automatic LOD generation  

@@ -3,14 +3,17 @@
 **Level:** `public/levels/acceptance-static-meshes.json`  
 **Academy:** lesson 26 (`static-meshes`)  
 **Verification date:** 2026-11-26  
+**Gap-closure verification:** 2026-11-26 (player collision + prefab round-trip)  
 **Baseline:** commit `d2f6e8a` (1,015 tests); Batches 1–5 preserved  
+**Implementation commit:** `86d1e61`  
 **Three.js:** r187 · **Rapier:** `@dimforge/rapier3d-compat`
 
 ## Defect corrected during verification
 
 | Issue | Result |
 | --- | --- |
-| `SceneView._rebuildStaticMeshInstances` used `this.world`, which was never assigned → InstancedMesh pools never built | **Fixed** — `syncFromWorld` / `syncIncremental` set `this.world`; owned material clone for instance mats |
+| `SceneView._rebuildStaticMeshInstances` used `this.world`, which was never assigned → InstancedMesh pools never built | **Fixed** (in `86d1e61`) — `syncFromWorld` / `syncIncremental` set `this.world`; owned material clone for instance mats |
+| Gap-closure pass (collision walk + prefab E2E) | **No new defects** — probes and prefab round-trip passed without code changes |
 
 ## Demonstrated
 
@@ -35,14 +38,19 @@ Architectural brush collision path unchanged.
 | Multi-material slot overrides | **Pass** (pipeline) | Overrides serialize; Details Materials group; live slot discovery after load |
 | Multiple LOD levels | **Pass** | LOD Stack actor; Details LOD + triangle line |
 | Repeated / batched instances | **Pass** | 2 `InstancedMesh` pools, 7 instances after world-ref fix |
-| Player collision vs imported + Batch 5 prims | **Pass** (pipeline) | Play built **19** Rapier bodies; preload for convex/trimesh |
-| Collision accuracy irregular geo | **Pass** (pipeline) / **Unverified** (walk feel) | Convex/trimesh extract from cached GLB; AABB fallback if unloaded |
-| Material restore + persistence | **Pass** (schema/UI) / **Unverified** (live prefab round-trip) | Clear overrides; serialize fields; prefab capture via `toJSON` |
+| Player collision vs imported + Batch 5 prims | **Pass** | Play **19** bodies; kinematic push into each collidable StaticMesh/Primitive blocked (`endDist` > 0.35 m) |
+| Collision dimensions / offsets | **Pass** | Box `collisionSize` 120 eu → half-extents 0.6 m; unit test offset 100 eu → local translation 1 m |
+| No-collision traversal | **Pass** | `Prop — No Collision` body count **0**; point query at center does not hit that actor |
+| Irregular mesh (convex/trimesh) | **Pass** | Convex/trimesh actors blocked player push; bodies present after GLB preload |
+| Collision independent of LOD | **Pass** | LOD Stack collider count **1** before/after `lodPreview = 2` |
+| Unintended blocking / penetration | **Pass** | No collidable actor allowed center penetration in push probes; brushes Floor + Additive Wall retain bodies |
+| Brush collision unchanged | **Pass** | Floor half-extents 8×0.1×6 m; Additive Wall body present |
+| Material restore + persistence | **Pass** | Slot overrides + restore UI; prefab serialize preserves `materialOverrides` |
 | LOD from different cameras | **Pass** (native THREE.LOD) / **Unverified** (multi-cam A/B photo) | Per-viewport cameras; manual `lodPreview` |
-| Select/edit instanced actors | **Pass** | Invisible pick proxies; individual outliner entries |
-| Prefab create / override / save-load | **Unverified** (live) | UI + autoCapturePrefabOverrides wired; not exercised E2E this pass |
-| Undo/redo + scrub gestures | **Pass** | `commitStaticMeshGesture` + unit coverage of field model |
-| Duplication | **Pass** (UI) / **Unverified** (live) | Standard duplicate path |
+| Select/edit instanced actors | **Pass** | Invisible pick proxies; individual outliner entries; unique instance actor IDs |
+| Prefab create / override / save-load | **Pass** | Live create from Box+Cone+LOD+Material Override; 2 instances; sphere/mat override on A only; serialize/deserialize round-trip |
+| Undo/redo + scrub gestures | **Pass** | `commitStaticMeshGesture` + `SetStaticMeshPropertiesCommand` undo/redo unit |
+| Duplication / independent identity | **Pass** | Two prefab instances → 4 unique actor IDs; unpack preserves edited collision |
 | Viewport layouts + Play/Stop | **Pass** | Four-pane + Play screenshot |
 | Additive / subtractive brush regression | **Pass** (additive on level) / **Unverified** (subtractive this level) | Floor + wall; subtractive covered by existing acceptance levels |
 | Asset reassignment + GPU dispose | **Pass** (architecture) / **Unverified** (stress loop) | Shared GLB geo; owned instance mats; disposeObjectTree patterns |
@@ -58,6 +66,35 @@ Architectural brush collision path unchanged.
 4. `04-static-mesh-details-groups.png` — Details Static Mesh region  
 5. `05-play-mode.png` — Play with colliders  
 6. `06-four-pane-layouts.png` — four viewport panes  
+7. `07-collision-prefab-verification.png` — gap-closure session (geometry level after static-mesh probes)
+
+## Player collision probe notes (gap closure)
+
+Method: Play mode → teleport kinematic capsule near each actor → apply velocity toward center for 70 Rapier steps → require `endDist > 0.35` m for collidable props. No-collision verified by `getColliderCount === 0` and `intersectionsWithPoint` not owning that actor.
+
+| Actor | Type | Result |
+| --- | --- | --- |
+| Prop — No Collision | none | Pass (0 bodies) |
+| Auto / Box / Sphere / Capsule / Cylinder | primitives | Pass (blocked) |
+| Convex / Trimesh | mesh extract | Pass (blocked) |
+| LOD Stack | box | Pass; LOD preview does not drop body |
+| Instanced cubes / Auto-Instance props | box/auto | Pass (per-actor bodies) |
+| Batch5 Cone | PrimitiveMesh auto | Pass |
+| Floor / Additive Wall | Brush | Pass |
+
+Pointer-lock FPS “feel” remains outside automated coverage; probes exercise the same Rapier bodies the player uses.
+
+## Prefab round-trip notes (gap closure)
+
+| Step | Result |
+| --- | --- |
+| Create prefab from StaticMesh (box, LOD, material override) + PrimitiveMesh (cone) | Pass — 3 StaticMesh + 1 PrimitiveMesh templates |
+| Two instances at distinct poses | Pass — unique actor IDs |
+| Override instance A collision → sphere + wood material | Pass — B retains box / original override |
+| `serializeLevel` / `deserializeLevel` | Pass — overrides, LOD levels (3), cone primitive preserved |
+| Unpack / undo StaticMesh edit (unit) | Pass |
+
+Covered by `src/tests/batch6AcceptanceCorrections.test.js` + live editor world exercise.
 
 ## Performance measurements
 
@@ -85,9 +122,9 @@ Identical scene; only StaticMesh `instancing` toggled.
 
 | Item | Status |
 | --- | --- |
-| Richer StaticMesh / explicit collider authoring | **Done** (this batch) |
-| PrimitiveMesh auto approximations | Still approximations; explicit modes remain |
-| Prefab instance overrides for StaticMesh fields | Wired via generic component `toJSON` diff — **live E2E unverified** |
+| Richer StaticMesh / explicit collider authoring | **Done** (Batch 6) |
+| PrimitiveMesh player collision (per-shape push) | **Done** — gap closure on `acceptance-geometry` (12 samples blocked; 24 bodies) |
+| Prefab instance overrides for StaticMesh / PrimitiveMesh | **Done** — live + unit round-trip |
 | Brush displacement tessellation | **Outstanding** (Batch 2 residual) — not claimed Done |
 
 ## Remaining limitations
