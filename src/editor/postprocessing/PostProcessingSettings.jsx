@@ -196,15 +196,20 @@ function EffectSection({
   effectId,
   state,
   disabled,
+  masterEnabled,
   actors,
   textures,
   commitEffect,
+  onToggleEnabled,
   resetEffect,
 }) {
   const def = EFFECT_DEFINITIONS[effectId];
   if (!def || !state) return null;
   const live = state;
   const ready = effectInputsReady(effectId, live);
+  // Param editors stay locked until both master PP and this effect are on,
+  // except required inputs (light / actors / texture) so you can wire them first.
+  const paramsLocked = disabled || !masterEnabled || !live.enabled;
 
   return (
     <Collapsible
@@ -213,6 +218,9 @@ function EffectSection({
       defaultOpen={false}
     >
       {def.note ? <p className="bb-muted">{def.note}</p> : null}
+      {!masterEnabled ? (
+        <p className="bb-muted">Enabling this effect also turns on Post Processing.</p>
+      ) : null}
       {!ready && live.enabled ? (
         <p className="bb-muted">Requires inputs before this effect runs.</p>
       ) : null}
@@ -223,7 +231,7 @@ function EffectSection({
           disabled={disabled}
           checked={Boolean(live.enabled)}
           onChange={(e) => {
-            commitEffect(effectId, { enabled: e.target.checked });
+            onToggleEnabled?.(effectId, e.target.checked);
           }}
         />
       </label>
@@ -238,7 +246,7 @@ function EffectSection({
             key={param.key}
             param={param}
             value={live[param.key]}
-            disabled={disabled || (!live.enabled && !isRequiredInput)}
+            disabled={paramsLocked && !isRequiredInput}
             actors={actors}
             textures={textures}
             onChange={() => {}}
@@ -324,6 +332,22 @@ export function PostProcessingSettings() {
       { label: `Edit ${EFFECT_DEFINITIONS[effectId]?.label || effectId}` },
     );
   }, [updateWorldPostProcessing]);
+
+  /** Allow enabling an effect even when master PP is off — turns master on too. */
+  const toggleEffectEnabled = useCallback((effectId, on) => {
+    const label = EFFECT_DEFINITIONS[effectId]?.label || effectId;
+    if (on && !settings.enabled) {
+      updateWorldPostProcessing?.(
+        { enabled: true, effects: { [effectId]: { enabled: true } } },
+        { label: `Enable ${label}` },
+      );
+      return;
+    }
+    updateWorldPostProcessing?.(
+      { effects: { [effectId]: { enabled: on } } },
+      { label: on ? `Enable ${label}` : `Disable ${label}` },
+    );
+  }, [settings.enabled, updateWorldPostProcessing]);
 
   const applyPreset = useCallback(() => {
     const preset = allPresets.find((p) => p.id === presetId);
@@ -505,10 +529,12 @@ export function PostProcessingSettings() {
               key={effectId}
               effectId={effectId}
               state={settings.effects[effectId]}
-              disabled={disabled || !settings.enabled}
+              disabled={disabled}
+              masterEnabled={Boolean(settings.enabled)}
               actors={actors}
               textures={textures}
               commitEffect={commitEffect}
+              onToggleEnabled={toggleEffectEnabled}
               resetEffect={(id) => resetWorldPostProcessingEffect?.(id)}
             />
           ))}
