@@ -7,6 +7,227 @@
     "intensity": 0.12,
     "playIntensity": 0.12
   },
+  "postProcessing": {
+    "version": 1,
+    "enabled": false,
+    "multisampling": 0,
+    "exposure": 0.95,
+    "effects": {
+      "ssao": {
+        "enabled": false,
+        "samples": 9,
+        "rings": 7,
+        "radius": 0.1825,
+        "intensity": 1,
+        "luminanceInfluence": 0.7,
+        "distanceScaling": true,
+        "depthAwareUpsampling": true,
+        "color": "#000000"
+      },
+      "bloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 1,
+        "luminanceSmoothing": 0.03,
+        "kernelSize": "LARGE",
+        "mipmapBlur": true,
+        "radius": 0.85
+      },
+      "selectiveBloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 0.1,
+        "luminanceSmoothing": 0.025,
+        "kernelSize": "LARGE",
+        "inverted": false,
+        "ignoreBackground": false,
+        "actorIds": []
+      },
+      "godRays": {
+        "enabled": false,
+        "lightActorId": null,
+        "density": 0.96,
+        "decay": 0.9,
+        "weight": 0.4,
+        "exposure": 0.6,
+        "clampMax": 1,
+        "samples": 60,
+        "blur": true,
+        "kernelSize": "SMALL"
+      },
+      "depthOfField": {
+        "enabled": false,
+        "focusDistance": 0.1,
+        "focalLength": 0.1,
+        "bokehScale": 1,
+        "resolutionScale": 0.5
+      },
+      "realisticBokeh": {
+        "enabled": false,
+        "focus": 1,
+        "focalLength": 24,
+        "fStop": 0.9,
+        "luminanceThreshold": 0.5,
+        "luminanceGain": 2,
+        "bias": 0.5,
+        "fringe": 0.7,
+        "maxBlur": 1,
+        "rings": 3,
+        "samples": 2,
+        "showFocus": false,
+        "manualDoF": false,
+        "pentagon": false
+      },
+      "tiltShift": {
+        "enabled": false,
+        "offset": 0,
+        "rotation": 0,
+        "focusArea": 0.4,
+        "feather": 0.3,
+        "kernelSize": "MEDIUM",
+        "resolutionScale": 0.5
+      },
+      "brightnessContrast": {
+        "enabled": false,
+        "brightness": 0,
+        "contrast": 0
+      },
+      "hueSaturation": {
+        "enabled": false,
+        "hue": 0,
+        "saturation": 0
+      },
+      "gammaCorrection": {
+        "enabled": false,
+        "gamma": 2
+      },
+      "colorAverage": {
+        "enabled": false
+      },
+      "sepia": {
+        "enabled": false,
+        "intensity": 1
+      },
+      "colorDepth": {
+        "enabled": false,
+        "bitDepth": 16
+      },
+      "lut": {
+        "enabled": false,
+        "textureAssetId": null,
+        "tetrahedralInterpolation": false
+      },
+      "vignette": {
+        "enabled": false,
+        "technique": "DEFAULT",
+        "offset": 0.5,
+        "darkness": 0.5
+      },
+      "chromaticAberration": {
+        "enabled": false,
+        "offsetX": 0.002,
+        "offsetY": 0.002,
+        "radialModulation": false,
+        "modulationOffset": 0.15
+      },
+      "lensDistortion": {
+        "enabled": false,
+        "distortionX": 0,
+        "distortionY": 0,
+        "principalPointX": 0,
+        "principalPointY": 0,
+        "focalLengthX": 1,
+        "focalLengthY": 1,
+        "skew": 0
+      },
+      "noise": {
+        "enabled": false,
+        "premultiply": false,
+        "opacity": 0.2
+      },
+      "pixelation": {
+        "enabled": false,
+        "granularity": 30
+      },
+      "dotScreen": {
+        "enabled": false,
+        "angle": 1.57,
+        "scale": 1
+      },
+      "scanlines": {
+        "enabled": false,
+        "density": 1.25,
+        "scrollSpeed": 0
+      },
+      "grid": {
+        "enabled": false,
+        "scale": 1,
+        "lineWidth": 0
+      },
+      "glitch": {
+        "enabled": false,
+        "mode": "SPORADIC",
+        "minDelay": 0.5,
+        "maxDelay": 1,
+        "minDuration": 0.05,
+        "maxDuration": 0.2,
+        "minStrength": 0.05,
+        "maxStrength": 0.2,
+        "columns": 0.05,
+        "ratio": 0.85
+      },
+      "outline": {
+        "enabled": false,
+        "actorIds": [],
+        "edgeStrength": 3,
+        "visibleEdgeColor": "#ffffff",
+        "hiddenEdgeColor": "#22090a",
+        "pulseSpeed": 0,
+        "xRay": true,
+        "blur": false,
+        "kernelSize": "VERY_SMALL",
+        "multisampling": 0,
+        "resolutionScale": 0.5
+      },
+      "textureOverlay": {
+        "enabled": false,
+        "textureAssetId": null,
+        "aspectCorrection": false
+      },
+      "shockWave": {
+        "enabled": false,
+        "epicenter": {
+          "x": 0,
+          "y": 100,
+          "z": 0
+        },
+        "speed": 2,
+        "maxRadius": 1,
+        "waveSize": 0.2,
+        "amplitude": 0.05
+      },
+      "toneMapping": {
+        "enabled": true,
+        "mode": "ACES_FILMIC",
+        "resolution": 256,
+        "whitePoint": 4,
+        "middleGrey": 0.6,
+        "averageLuminance": 1,
+        "minLuminance": 0.01,
+        "adaptationRate": 1
+      },
+      "fxaa": {
+        "enabled": false,
+        "minEdgeThreshold": 0.0312,
+        "maxEdgeThreshold": 0.125,
+        "subpixelQuality": 0.75,
+        "samples": 12
+      },
+      "smaa": {
+        "enabled": false
+      }
+    }
+  },
   "actors": [
     {
       "id": "actor_floor",
@@ -170,7 +391,19 @@
           "faceMaterials": {
             "pz": "mat_0807fae227e1"
           },
-          "faceUVs": null,
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1,
+                "y": 2
+              },
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
           "operation": "add",
           "miterStart": 0,
           "miterEnd": 0,
@@ -230,7 +463,19 @@
           "faceMaterials": {
             "nz": "mat_0807fae227e1"
           },
-          "faceUVs": null,
+          "faceUVs": {
+            "nz": {
+              "scale": {
+                "x": 1,
+                "y": 2
+              },
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
           "operation": "add",
           "miterStart": 0,
           "miterEnd": 0,
@@ -290,7 +535,19 @@
           "faceMaterials": {
             "px": "mat_0807fae227e1"
           },
-          "faceUVs": null,
+          "faceUVs": {
+            "px": {
+              "scale": {
+                "x": 1,
+                "y": 2
+              },
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
           "operation": "add",
           "miterStart": 0,
           "miterEnd": 0,
@@ -350,7 +607,19 @@
           "faceMaterials": {
             "nx": "mat_0807fae227e1"
           },
-          "faceUVs": null,
+          "faceUVs": {
+            "nx": {
+              "scale": {
+                "x": 1,
+                "y": 2
+              },
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
           "operation": "add",
           "miterStart": 0,
           "miterEnd": 0,

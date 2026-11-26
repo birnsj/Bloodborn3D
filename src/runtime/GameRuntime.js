@@ -406,7 +406,7 @@ export class GameRuntime {
 
   /**
    * Replace the live world's authored fields from a serializeLevel snapshot.
-   * Restores mapMode, ambient, and postProcessing as well as actors (Phase 2F.7E).
+   * Restores mapMode, ambient, scene, renderer, and postProcessing as well as actors.
    */
   _applyAuthoredSnapshot(snapshot) {
     // Snapshot came from a world already validated at Play start.
@@ -416,6 +416,8 @@ export class GameRuntime {
     this.world.schemaVersion = restored.schemaVersion;
     this.world.mapMode = restored.mapMode;
     this.world.ambient = restored.ambient;
+    this.world.scene = restored.scene;
+    this.world.renderer = restored.renderer;
     this.world.postProcessing = restored.postProcessing;
     for (const actor of restored.actors) {
       this.world.addActor(actor);

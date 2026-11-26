@@ -208,6 +208,7 @@ export function IconRestore(props) {
   );
 }
 
+/** Expanded section — chevron points down. */
 export function IconCollapse(props) {
   return (
     <Svg {...props}>
@@ -216,10 +217,11 @@ export function IconCollapse(props) {
   );
 }
 
+/** Collapsed section — chevron points right. */
 export function IconExpand(props) {
   return (
     <Svg {...props}>
-      <path fill="currentColor" d="M4.5 9.8 8 6.3l3.5 3.5 1-1L8 4.3 3.5 8.8l1 1Z" />
+      <path fill="currentColor" d="M6.2 4.5 9.7 8l-3.5 3.5 1 1L11.7 8 7.2 3.5l-1 1Z" />
     </Svg>
   );
 }

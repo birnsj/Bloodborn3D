@@ -92,12 +92,137 @@ export function migrateLegacyWorldAmbient(value) {
   return normalizeWorldAmbient(value);
 }
 
+function normalizeHexColor(value, fallback) {
+  if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
+    return value.toLowerCase();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `#${(value >>> 0).toString(16).padStart(6, '0')}`;
+  }
+  return fallback;
+}
+
+function clampNonNeg(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, n);
+}
+
+/**
+ * Level-authored Three.js Scene look (background + fog).
+ * Defaults match SceneView hardcodes so missing fields keep the current look.
+ */
+export const DEFAULT_WORLD_SCENE = Object.freeze({
+  background: '#0e1218',
+  backgroundIntensity: 1,
+  backgroundBlurriness: 0,
+  fog: Object.freeze({
+    type: 'none',
+    color: '#0e1218',
+    near: 10,
+    far: 100,
+    density: 0.02,
+  }),
+});
+
+export const WORLD_FOG_TYPES = Object.freeze(['none', 'linear', 'exp2']);
+
+export function normalizeWorldFog(value) {
+  const d = DEFAULT_WORLD_SCENE.fog;
+  const out = {
+    type: d.type,
+    color: d.color,
+    near: d.near,
+    far: d.far,
+    density: d.density,
+  };
+  if (!value || typeof value !== 'object') return out;
+  if (WORLD_FOG_TYPES.includes(value.type)) out.type = value.type;
+  out.color = normalizeHexColor(value.color, out.color);
+  out.near = clampNonNeg(value.near, out.near);
+  out.far = clampNonNeg(value.far, out.far);
+  if (out.far < out.near) out.far = out.near;
+  out.density = clampNonNeg(value.density, out.density);
+  return out;
+}
+
+export function normalizeWorldScene(value) {
+  const out = {
+    background: DEFAULT_WORLD_SCENE.background,
+    backgroundIntensity: DEFAULT_WORLD_SCENE.backgroundIntensity,
+    backgroundBlurriness: DEFAULT_WORLD_SCENE.backgroundBlurriness,
+    fog: normalizeWorldFog(null),
+  };
+  if (!value || typeof value !== 'object') return out;
+  out.background = normalizeHexColor(value.background, out.background);
+  const intensity = Number(value.backgroundIntensity);
+  if (Number.isFinite(intensity)) out.backgroundIntensity = Math.max(0, intensity);
+  const blurriness = Number(value.backgroundBlurriness);
+  if (Number.isFinite(blurriness)) {
+    out.backgroundBlurriness = Math.min(1, Math.max(0, blurriness));
+  }
+  out.fog = normalizeWorldFog(value.fog);
+  return out;
+}
+
+/**
+ * Level-authored WebGLRenderer look (tone mapping + shadows).
+ * Tone mapping applies when post-processing is off; PP owns exposure/mode when active.
+ */
+export const DEFAULT_WORLD_RENDERER = Object.freeze({
+  toneMapping: 'ACESFilmic',
+  toneMappingExposure: 0.95,
+  shadowMapEnabled: true,
+  shadowMapType: 'PCFSoft',
+});
+
+export const WORLD_TONE_MAPPINGS = Object.freeze([
+  'None',
+  'Linear',
+  'Reinhard',
+  'Cineon',
+  'ACESFilmic',
+  'AgX',
+  'Neutral',
+]);
+
+export const WORLD_SHADOW_MAP_TYPES = Object.freeze([
+  'Basic',
+  'PCF',
+  'PCFSoft',
+  'VSM',
+]);
+
+export function normalizeWorldRenderer(value) {
+  const out = {
+    toneMapping: DEFAULT_WORLD_RENDERER.toneMapping,
+    toneMappingExposure: DEFAULT_WORLD_RENDERER.toneMappingExposure,
+    shadowMapEnabled: DEFAULT_WORLD_RENDERER.shadowMapEnabled,
+    shadowMapType: DEFAULT_WORLD_RENDERER.shadowMapType,
+  };
+  if (!value || typeof value !== 'object') return out;
+  if (WORLD_TONE_MAPPINGS.includes(value.toneMapping)) {
+    out.toneMapping = value.toneMapping;
+  }
+  const exposure = Number(value.toneMappingExposure);
+  if (Number.isFinite(exposure)) out.toneMappingExposure = Math.max(0, exposure);
+  if (typeof value.shadowMapEnabled === 'boolean') {
+    out.shadowMapEnabled = value.shadowMapEnabled;
+  }
+  if (WORLD_SHADOW_MAP_TYPES.includes(value.shadowMapType)) {
+    out.shadowMapType = value.shadowMapType;
+  }
+  return out;
+}
+
 export class World {
   constructor({
     name = 'Untitled Level',
     schemaVersion = 1,
     mapMode = 'additive',
     ambient = null,
+    scene = null,
+    renderer = null,
     postProcessing = null,
   } = {}) {
     this.name = name;
@@ -106,6 +231,10 @@ export class World {
     this.mapMode = normalizeMapMode(mapMode);
     /** Scene AmbientLight fill — not an actor light. */
     this.ambient = normalizeWorldAmbient(ambient);
+    /** Level-authored Three.js Scene look (background, fog). */
+    this.scene = normalizeWorldScene(scene);
+    /** Level-authored WebGLRenderer look (tone mapping, shadows). */
+    this.renderer = normalizeWorldRenderer(renderer);
     /** Map-authored post-processing (pmndrs effects). Missing → disabled defaults. */
     this.postProcessing = normalizePostProcessing(postProcessing);
     this.actors = [];
@@ -154,6 +283,8 @@ export class World {
       name: this.name,
       mapMode: normalizeMapMode(this.mapMode),
       ambient: normalizeWorldAmbient(this.ambient),
+      scene: normalizeWorldScene(this.scene),
+      renderer: normalizeWorldRenderer(this.renderer),
       postProcessing: normalizePostProcessing(this.postProcessing),
       actors: this.actors.map((a) => a.toJSON()),
     };

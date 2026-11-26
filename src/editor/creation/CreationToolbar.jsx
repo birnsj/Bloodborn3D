@@ -12,7 +12,6 @@ import {
   IconFolder,
   IconLight,
   IconMesh,
-  IconPin,
   IconPrefab,
   IconArch,
   IconArchGothic,
@@ -69,7 +68,7 @@ function ToolIcon({ tool }) {
 }
 
 /**
- * Photoshop-style floating tool strip: category rail + hover icon rollout.
+ * Floating tool strip: category rail + click-to-open icon rollout (stays open).
  */
 export function CreationToolbar({
   viewportRef,
@@ -81,13 +80,10 @@ export function CreationToolbar({
   const { tool, mode } = useEditor();
   const { registry } = useAssetBrowser();
   const [prefs, setPrefs] = useState(() => loadCreationToolbarPrefs());
-  /** Category id open from mouse-over (null when closed). */
-  const [hoverId, setHoverId] = useState(null);
   const [flyoutOffset, setFlyoutOffset] = useState(0);
   const dragBarRef = useRef(null);
   const rootRef = useRef(null);
   const catRefs = useRef(new Map());
-  const leaveTimerRef = useRef(null);
 
   const assetsList = useMemo(
     () => (Array.isArray(registry?.assets) ? registry.assets : []),
@@ -99,13 +95,11 @@ export function CreationToolbar({
     [assetsList],
   );
 
-  const openId = prefs.pinned && prefs.expanded
-    ? prefs.categoryId
-    : hoverId;
+  const openId = prefs.expanded ? prefs.categoryId : null;
   const activeCategory = (openId && cats.find((c) => c.id === openId))
     || cats.find((c) => c.id === prefs.categoryId)
     || cats[0];
-  const expanded = Boolean(openId && activeCategory);
+  const expanded = Boolean(openId && activeCategory && cats.some((c) => c.id === openId));
 
   const persist = useCallback((next) => {
     const clamped = clampCreationToolbarPrefs(next, measureViewport(viewportRef));
@@ -113,38 +107,19 @@ export function CreationToolbar({
     saveCreationToolbarPrefs(clamped);
   }, [viewportRef]);
 
-  const clearLeaveTimer = useCallback(() => {
-    if (leaveTimerRef.current != null) {
-      clearTimeout(leaveTimerRef.current);
-      leaveTimerRef.current = null;
-    }
-  }, []);
-
-  const openHover = useCallback((id) => {
+  const toggleCategory = useCallback((id) => {
     if (disabled || !id) return;
-    clearLeaveTimer();
-    setHoverId(id);
-    setPrefs((p) => {
-      if (p.categoryId === id) return p;
-      const next = clampCreationToolbarPrefs(
-        { ...p, categoryId: id },
-        measureViewport(viewportRef),
-      );
-      saveCreationToolbarPrefs(next);
-      return next;
+    if (prefs.expanded && prefs.categoryId === id) {
+      persist({ ...prefs, expanded: false, pinned: false });
+      return;
+    }
+    persist({
+      ...prefs,
+      categoryId: id,
+      expanded: true,
+      pinned: false,
     });
-  }, [clearLeaveTimer, disabled, viewportRef]);
-
-  const scheduleCloseHover = useCallback(() => {
-    if (prefs.pinned) return;
-    clearLeaveTimer();
-    leaveTimerRef.current = setTimeout(() => {
-      setHoverId(null);
-      leaveTimerRef.current = null;
-    }, 140);
-  }, [clearLeaveTimer, prefs.pinned]);
-
-  useEffect(() => () => clearLeaveTimer(), [clearLeaveTimer]);
+  }, [disabled, persist, prefs]);
 
   useEffect(() => {
     const el = viewportRef?.current;
@@ -173,17 +148,30 @@ export function CreationToolbar({
     setFlyoutOffset(Math.max(0, btnRect.top - rootRect.top - 4));
   }, [expanded, activeCategory, prefs.top, prefs.edge, cats.length, openId]);
 
+  const closeRollout = useCallback(() => {
+    persist({ ...prefs, expanded: false, pinned: false });
+  }, [persist, prefs]);
+
   useEffect(() => {
     if (!expanded || disabled) return undefined;
     const onKeyDown = (e) => {
       if (e.key !== 'Escape') return;
-      clearLeaveTimer();
-      setHoverId(null);
-      if (prefs.pinned) persist({ ...prefs, expanded: false, pinned: false });
+      closeRollout();
+    };
+    const onPointerDown = (e) => {
+      const root = rootRef.current;
+      if (!root) return;
+      if (root.contains(e.target)) return;
+      closeRollout();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [expanded, prefs, persist, disabled, clearLeaveTimer]);
+    // Capture so viewport/canvas clicks close the rollout before other handlers.
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [expanded, disabled, closeRollout]);
 
   const activateTool = (toolDef) => {
     if (disabled) return;
@@ -235,11 +223,9 @@ export function CreationToolbar({
   return (
     <div
       ref={rootRef}
-      className={`bb-creation-toolbar bb-creation-toolbar--${prefs.edge}${expanded ? ' is-expanded' : ''}${prefs.pinned ? ' is-pinned' : ''}${disabled ? ' is-disabled' : ''}`}
+      className={`bb-creation-toolbar bb-creation-toolbar--${prefs.edge}${expanded ? ' is-expanded' : ''}${disabled ? ' is-disabled' : ''}`}
       style={style}
       data-bb-tutorial="creation.toolbar"
-      onMouseEnter={clearLeaveTimer}
-      onMouseLeave={scheduleCloseHover}
       {...helpProps('creation.toolbar', disabled ? 'Unavailable during Play mode.' : null)}
     >
       <button
@@ -271,9 +257,7 @@ export function CreationToolbar({
               title={faceTool ? `${cat.label}: ${faceTool.label}` : cat.label}
               aria-expanded={active}
               aria-haspopup="true"
-              onMouseEnter={() => openHover(cat.id)}
-              onFocus={() => openHover(cat.id)}
-              onClick={() => openHover(cat.id)}
+              onClick={() => toggleCategory(cat.id)}
               {...helpProps(cat.helpId, disabled ? 'Unavailable during Play mode.' : null)}
               data-bb-tutorial={`creation.${cat.id}`}
             >
@@ -290,30 +274,7 @@ export function CreationToolbar({
           style={{ top: flyoutOffset }}
           role="menu"
           aria-label={activeCategory.label}
-          onMouseEnter={clearLeaveTimer}
         >
-          <div className="bb-creation-toolbar__rollout-bar">
-            <button
-              type="button"
-              className={`bb-creation-toolbar__pin${prefs.pinned ? ' is-active' : ''}`}
-              title={prefs.pinned ? `Unpin ${activeCategory.label}` : `Pin ${activeCategory.label} open`}
-              aria-label={prefs.pinned ? 'Unpin rollout' : 'Pin rollout open'}
-              aria-pressed={prefs.pinned}
-              onClick={() => {
-                const nextPinned = !prefs.pinned;
-                persist({
-                  ...prefs,
-                  categoryId: activeCategory.id,
-                  pinned: nextPinned,
-                  expanded: nextPinned,
-                });
-                if (!nextPinned) setHoverId(activeCategory.id);
-              }}
-              {...helpProps('creation.pin')}
-            >
-              <IconPin />
-            </button>
-          </div>
           <div className="bb-creation-toolbar__tools">
             {activeCategory.tools.length === 0 ? (
               <div className="bb-creation-toolbar__empty">Empty</div>

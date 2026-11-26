@@ -1,4 +1,10 @@
-import { World, normalizeMapMode, migrateLegacyWorldAmbient } from '../core/World.js';
+import {
+  World,
+  normalizeMapMode,
+  migrateLegacyWorldAmbient,
+  normalizeWorldScene,
+  normalizeWorldRenderer,
+} from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { wouldCreateCycle } from '../core/hierarchy.js';
 import { createComponentFromJSON } from '../components/componentRegistry.js';
@@ -35,6 +41,8 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     schemaVersion: data.schemaVersion,
     mapMode: normalizeMapMode(data.mapMode),
     ambient: migrateLegacyWorldAmbient(data.ambient),
+    scene: normalizeWorldScene(data.scene),
+    renderer: normalizeWorldRenderer(data.renderer),
     postProcessing: data.postProcessing ?? null,
   });
 

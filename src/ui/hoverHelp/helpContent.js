@@ -28,6 +28,18 @@ export const HELP_CONTENT = {
     tips: 'Black color or intensity 0 removes fill light. G = Game View. Ctrl+move = orbit. Alt+Move/Rotate/Scale = duplicate.',
   },
 
+  'world.scene': {
+    title: 'World Scene',
+    body: 'Level-authored Three.js scene look: clear/background color, background intensity/blurriness, and fog. Saved with the map and used in edit and play.',
+    tips: 'Background replaces the old editor-only viewport clear color. Fog: None, Linear (near/far), or Exp2 (density).',
+  },
+
+  'world.renderer': {
+    title: 'World Renderer',
+    body: 'Level-authored WebGLRenderer settings: tone mapping mode/exposure and shadow map on/off + type. Saved with the map.',
+    tips: 'When Post Processing is enabled and composing, PP owns tone mapping and exposure. Shadow map type: Basic, PCF, PCF Soft, or VSM.',
+  },
+
   'world.postProcessing': {
     title: 'Post Processing',
     body: 'Map-authored fullscreen image effects (bloom, vignette, tone mapping, and more) applied after scene lighting. Uses the pmndrs postprocessing library on the shared Three.js renderer. Disabled maps keep the previous ACES look.',
@@ -283,8 +295,8 @@ export const HELP_CONTENT = {
   },
   'creation.toolbar': {
     title: 'Creation Toolbox',
-    body: 'Floating Photoshop-style tool rail. Hover a category to roll out tools; click or drag a tool into the viewport to place.',
-    tips: 'Drag the handle to reposition. Pin keeps the rollout open. Esc closes an unpinned rollout or cancels placement. See Help → Keyboard Shortcuts… for the full list.',
+    body: 'Floating tool rail. Click a category to roll out tools (stays open); click outside, click the same category again, or press Esc to close. Click or drag a tool into the viewport to place.',
+    tips: 'Drag the handle to reposition. Esc closes the rollout or cancels placement. See Help → Keyboard Shortcuts… for the full list.',
   },
   'creation.geometry': {
     title: 'Geometry',
@@ -309,10 +321,6 @@ export const HELP_CONTENT = {
   'creation.prefab': {
     title: 'Prefab',
     body: 'Drag a prefab instance onto a support surface. Overrides and hierarchy behave like Content Browser placement.',
-  },
-  'creation.pin': {
-    title: 'Pin Rollout',
-    body: 'Keeps the tool icon strip open while the cursor leaves. Unpin to auto-collapse on mouse-out like Photoshop.',
   },
   'toolbar.duplicate': {
     title: 'Duplicate',

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from './LayoutContext.jsx';
-import { Collapsible } from '../../ui/Collapsible.jsx';
+import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
 import { ScrubAxisLabel, ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
 import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
@@ -20,7 +20,14 @@ import {
   describeConvexBrush,
   listCutterConvexConflicts,
 } from '../../rules/convexBrushRules.js';
-import { DEFAULT_WORLD_AMBIENT } from '../../core/World.js';
+import {
+  DEFAULT_WORLD_AMBIENT,
+  DEFAULT_WORLD_SCENE,
+  DEFAULT_WORLD_RENDERER,
+  WORLD_FOG_TYPES,
+  WORLD_TONE_MAPPINGS,
+  WORLD_SHADOW_MAP_TYPES,
+} from '../../core/World.js';
 import { PostProcessingSettings } from '../postprocessing/PostProcessingSettings.jsx';
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
@@ -220,6 +227,7 @@ export function DetailsPanel({ docked = false } = {}) {
               {spawn && <span>PlayerSpawn</span>}
             </div>
 
+            <CollapsibleGroup storagePrefixes={['details.']}>
             {selectedSurface && selectedSurface.actorId === selectedActor.id && (() => {
               const surfaceComp = brush || convexBrush || ramp || stair || column || arch || curvedWall;
               const surfaceUv = surfaceComp?.faceUVs?.[selectedSurface.surfaceId] || {
@@ -1918,6 +1926,7 @@ export function DetailsPanel({ docked = false } = {}) {
                 </p>
               </Collapsible>
             )}
+            </CollapsibleGroup>
           </>
         )}
       </div>
@@ -2025,14 +2034,20 @@ function WorldSettings() {
     mode,
     revision,
     updateWorldAmbient,
+    updateWorldScene,
+    updateWorldRenderer,
   } = useEditor();
   const disabled = mode === 'play' || !world;
   // Touch revision so ambient field values refresh after scrub/type updates.
   void revision;
   const ambient = world?.ambient || DEFAULT_WORLD_AMBIENT;
+  const scene = world?.scene || DEFAULT_WORLD_SCENE;
+  const fog = scene.fog || DEFAULT_WORLD_SCENE.fog;
+  const renderer = world?.renderer || DEFAULT_WORLD_RENDERER;
   const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
   return (
     <div>
+      <CollapsibleGroup storagePrefixes={['world.']}>
       <Collapsible title="Level" storageKey="world.level">
         <p className="bb-muted">Name: {world?.name || '—'}</p>
         <p className="bb-muted">File: {levelName}</p>
@@ -2084,12 +2099,171 @@ function WorldSettings() {
           />
         </label>
       </Collapsible>
+      <Collapsible title="Scene" storageKey="world.scene" defaultOpen>
+        <p className="bb-muted" {...helpProps('world.scene')}>
+          Background and fog for the level (saved with the map).
+        </p>
+        <label className="bb-field">
+          <span className="bb-field__label">Background</span>
+          <input
+            className="bb-input"
+            type="color"
+            disabled={disabled}
+            value={normalizeHex(scene.background)}
+            onChange={(e) => updateWorldScene?.({ background: e.target.value })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Background intensity</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={4}
+            disabled={disabled}
+            value={scene.backgroundIntensity}
+            onChange={(v) => updateWorldScene?.({ backgroundIntensity: v })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Background blurriness</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={1}
+            disabled={disabled}
+            value={scene.backgroundBlurriness}
+            onChange={(v) => updateWorldScene?.({ backgroundBlurriness: v })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Fog</span>
+          <select
+            className="bb-select"
+            disabled={disabled}
+            value={fog.type}
+            onChange={(e) => updateWorldScene?.({ fog: { type: e.target.value } })}
+          >
+            {WORLD_FOG_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type === 'none' ? 'None' : type === 'exp2' ? 'Exp2' : 'Linear'}
+              </option>
+            ))}
+          </select>
+        </label>
+        {fog.type !== 'none' && (
+          <label className="bb-field">
+            <span className="bb-field__label">Fog color</span>
+            <input
+              className="bb-input"
+              type="color"
+              disabled={disabled}
+              value={normalizeHex(fog.color)}
+              onChange={(e) => updateWorldScene?.({ fog: { color: e.target.value } })}
+            />
+          </label>
+        )}
+        {fog.type === 'linear' && (
+          <>
+            <label className="bb-field">
+              <span className="bb-field__label">Fog near</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.5}
+                min={0}
+                disabled={disabled}
+                value={fog.near}
+                onChange={(v) => updateWorldScene?.({ fog: { near: v } })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Fog far</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.5}
+                min={0}
+                disabled={disabled}
+                value={fog.far}
+                onChange={(v) => updateWorldScene?.({ fog: { far: v } })}
+              />
+            </label>
+          </>
+        )}
+        {fog.type === 'exp2' && (
+          <label className="bb-field">
+            <span className="bb-field__label">Fog density</span>
+            <ScrubNumberInput
+              className="bb-input"
+              step={0.001}
+              min={0}
+              max={1}
+              disabled={disabled}
+              value={fog.density}
+              onChange={(v) => updateWorldScene?.({ fog: { density: v } })}
+            />
+          </label>
+        )}
+      </Collapsible>
+      <Collapsible title="Renderer" storageKey="world.renderer" defaultOpen>
+        <p className="bb-muted" {...helpProps('world.renderer')}>
+          Tone mapping and shadows. PP overrides tone mapping when composing.
+        </p>
+        <label className="bb-field">
+          <span className="bb-field__label">Tone mapping</span>
+          <select
+            className="bb-select"
+            disabled={disabled}
+            value={renderer.toneMapping}
+            onChange={(e) => updateWorldRenderer?.({ toneMapping: e.target.value })}
+          >
+            {WORLD_TONE_MAPPINGS.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Exposure</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={4}
+            disabled={disabled}
+            value={renderer.toneMappingExposure}
+            onChange={(v) => updateWorldRenderer?.({ toneMappingExposure: v })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Shadow map</span>
+          <input
+            type="checkbox"
+            disabled={disabled}
+            checked={Boolean(renderer.shadowMapEnabled)}
+            onChange={(e) => updateWorldRenderer?.({ shadowMapEnabled: e.target.checked })}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Shadow type</span>
+          <select
+            className="bb-select"
+            disabled={disabled || !renderer.shadowMapEnabled}
+            value={renderer.shadowMapType}
+            onChange={(e) => updateWorldRenderer?.({ shadowMapType: e.target.value })}
+          >
+            {WORLD_SHADOW_MAP_TYPES.map((name) => (
+              <option key={name} value={name}>{name === 'PCFSoft' ? 'PCF Soft' : name}</option>
+            ))}
+          </select>
+        </label>
+      </Collapsible>
       <PostProcessingSettings />
       <Collapsible title="Editor" storageKey="world.editor">
         <p className="bb-muted">Mode: {mode}</p>
         <p className="bb-muted">Grid: {gridSize} editor units</p>
         <p className="bb-muted">100 editor units = 1 meter</p>
       </Collapsible>
+      </CollapsibleGroup>
     </div>
   );
 }

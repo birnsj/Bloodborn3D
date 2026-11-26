@@ -7,8 +7,12 @@ import {
 } from '../core/units.js';
 import {
   DEFAULT_WORLD_AMBIENT,
+  DEFAULT_WORLD_SCENE,
+  DEFAULT_WORLD_RENDERER,
   WORLD_AMBIENT_LIGHT_RATIO,
   migrateLegacyWorldAmbient,
+  normalizeWorldScene,
+  normalizeWorldRenderer,
   worldAmbientFillStrength,
 } from '../core/World.js';
 import { PostProcessingController } from './postprocessing/PostProcessingController.js';
@@ -152,6 +156,8 @@ export class SceneView {
     // Editor fill lights — hidden in play so authored lights dominate.
     // Levels override via world.ambient (World Settings) — drives IBL + AmbientLight.
     this._worldAmbient = { ...DEFAULT_WORLD_AMBIENT };
+    this._worldScene = normalizeWorldScene(DEFAULT_WORLD_SCENE);
+    this._worldRenderer = normalizeWorldRenderer(DEFAULT_WORLD_RENDERER);
     this.ambient = new THREE.AmbientLight(
       DEFAULT_WORLD_AMBIENT.color,
       DEFAULT_WORLD_AMBIENT.intensity * WORLD_AMBIENT_LIGHT_RATIO,
@@ -275,19 +281,20 @@ export class SceneView {
   }
 
   /**
-   * Apply editor viewport color prefs (background, grid, selection, subtract).
+   * Apply editor viewport color prefs (grid, selection, subtract).
+   * Scene clear color comes from level-authored world.scene.background.
    * @param {Partial<typeof DEFAULT_VIEWPORT_COLORS>} colors integer RGB colors
    * @param {import('../core/World.js').World|null} [world] used to refresh selection helpers
    */
   setViewportColors(colors = {}, world = null) {
     if (!colors || typeof colors !== 'object') return;
     for (const key of Object.keys(DEFAULT_VIEWPORT_COLORS)) {
+      if (key === 'background') continue;
       const value = colors[key];
       if (typeof value === 'number' && Number.isFinite(value)) {
         this.viewportColors[key] = value >>> 0;
       }
     }
-    this.scene.background.set(this.viewportColors.background);
     if (this.editMode) this.setGridSize(this.gridSize);
     this._applySubtractColorsToMeshes();
     if (this.selectedActorIds.length) {
@@ -321,11 +328,97 @@ export class SceneView {
     this._syncAmbientFromWorld();
   }
 
+  /** Level-authored Three.js Scene look (background + fog). */
+  applyWorldScene(settings) {
+    this._worldScene = normalizeWorldScene(settings);
+    this._syncSceneFromWorld();
+  }
+
+  /** Level-authored WebGLRenderer look (tone mapping + shadows). */
+  applyWorldRenderer(settings) {
+    this._worldRenderer = normalizeWorldRenderer(settings);
+    this._syncRendererFromWorld();
+  }
+
+  _syncSceneFromWorld() {
+    const s = this._worldScene || normalizeWorldScene(null);
+    if (!this.scene) return;
+    if (!(this.scene.background instanceof THREE.Color)) {
+      this.scene.background = new THREE.Color(s.background);
+    } else {
+      this.scene.background.set(s.background);
+    }
+    this.scene.backgroundIntensity = s.backgroundIntensity;
+    this.scene.backgroundBlurriness = s.backgroundBlurriness;
+    this.viewportColors.background = parseInt(s.background.slice(1), 16) >>> 0;
+
+    const fog = s.fog;
+    if (!fog || fog.type === 'none') {
+      this.scene.fog = null;
+    } else if (fog.type === 'exp2') {
+      this.scene.fog = new THREE.FogExp2(fog.color, fog.density);
+    } else {
+      this.scene.fog = new THREE.Fog(fog.color, fog.near, fog.far);
+    }
+  }
+
+  _toneMappingFromName(name) {
+    switch (name) {
+      case 'None':
+        return THREE.NoToneMapping;
+      case 'Linear':
+        return THREE.LinearToneMapping;
+      case 'Reinhard':
+        return THREE.ReinhardToneMapping;
+      case 'Cineon':
+        return THREE.CineonToneMapping;
+      case 'AgX':
+        return THREE.AgXToneMapping;
+      case 'Neutral':
+        return THREE.NeutralToneMapping;
+      case 'ACESFilmic':
+      default:
+        return THREE.ACESFilmicToneMapping;
+    }
+  }
+
+  _shadowMapTypeFromName(name) {
+    switch (name) {
+      case 'Basic':
+        return THREE.BasicShadowMap;
+      case 'PCF':
+        return THREE.PCFShadowMap;
+      case 'VSM':
+        return THREE.VSMShadowMap;
+      case 'PCFSoft':
+      default:
+        return THREE.PCFSoftShadowMap;
+    }
+  }
+
+  _syncRendererFromWorld() {
+    const r = this._worldRenderer || normalizeWorldRenderer(null);
+    if (!this.renderer) return;
+    this.renderer.shadowMap.enabled = r.shadowMapEnabled;
+    this.renderer.shadowMap.type = this._shadowMapTypeFromName(r.shadowMapType);
+    // When post-processing is active it owns tone mapping / exposure.
+    const ppActive = Boolean(
+      this._postProcessing?.enabled && this.postProcessingController?.isActive,
+    );
+    if (!ppActive) {
+      this.renderer.toneMapping = this._toneMappingFromName(r.toneMapping);
+      this.renderer.toneMappingExposure = r.toneMappingExposure;
+    }
+  }
+
   /** Map-authored post-processing settings (live apply). */
   applyPostProcessing(settings) {
     this._postProcessing = normalizePostProcessing(settings);
     const ctrl = this.postProcessingController;
-    if (!ctrl) return;
+    if (!ctrl) {
+      this._syncRendererFromWorld();
+      return;
+    }
     // Keep composer buffers matched to the canvas before rebuild/render.
     ctrl.setSize(this._size.width || 1, this._size.height || 1);
     try {
@@ -346,6 +439,8 @@ export class SceneView {
       });
       this.postProcessingController.setSize(this._size.width || 1, this._size.height || 1);
     }
+    // When PP is off / inactive, restore level-authored tone mapping + exposure.
+    this._syncRendererFromWorld();
   }
 
   setPostProcessingPreview(enabled) {
@@ -432,6 +527,13 @@ export class SceneView {
       const exposure = this._postProcessing.exposure;
       if (Number.isFinite(exposure)) {
         this.renderer.toneMappingExposure = exposure;
+      }
+    } else if (!this.postProcessingController?.isActive) {
+      // Restore level-authored tone mapping when PP is not composing.
+      const r = this._worldRenderer;
+      if (r) {
+        this.renderer.toneMapping = this._toneMappingFromName(r.toneMapping);
+        this.renderer.toneMappingExposure = r.toneMappingExposure;
       }
     }
 
@@ -718,7 +820,11 @@ export class SceneView {
     const token = ++this._syncToken;
     if (world) {
       world.ambient = migrateLegacyWorldAmbient(world.ambient);
+      world.scene = normalizeWorldScene(world.scene);
+      world.renderer = normalizeWorldRenderer(world.renderer);
       this.applyWorldAmbient(world.ambient);
+      this.applyWorldScene(world.scene);
+      this.applyWorldRenderer(world.renderer);
       this.applyPostProcessing(world.postProcessing);
     }
     this.clearWorldMeshes();
@@ -752,7 +858,11 @@ export class SceneView {
     this.syncStats.incrementalSyncs += 1;
     if (!world) return;
     world.ambient = migrateLegacyWorldAmbient(world.ambient);
+    world.scene = normalizeWorldScene(world.scene);
+    world.renderer = normalizeWorldRenderer(world.renderer);
     this.applyWorldAmbient(world.ambient);
+    this.applyWorldScene(world.scene);
+    this.applyWorldRenderer(world.renderer);
 
     let carveDirty = false;
     const liveIds = new Set(world.actors.map((a) => a.id));

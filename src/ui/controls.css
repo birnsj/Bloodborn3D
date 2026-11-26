@@ -229,6 +229,19 @@ body.bb-is-scrubbing * {
 .bb-axis--y { color: var(--bb-axis-y); }
 .bb-axis--z { color: var(--bb-axis-z); }
 
+.bb-collapse-group__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.bb-collapse-group__actions .bb-btn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: var(--bb-font-size-sm);
+}
+
 .bb-collapse {
   border: 1px solid var(--bb-border-subtle);
   border-radius: var(--bb-radius);

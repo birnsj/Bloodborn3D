@@ -142,7 +142,13 @@ import {
   validateOpenings,
 } from '../runtime/wallOpenings.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
-import { migrateLegacyWorldAmbient, normalizeWorldAmbient } from '../core/World.js';
+import {
+  migrateLegacyWorldAmbient,
+  normalizeWorldAmbient,
+  normalizeWorldScene,
+  normalizeWorldFog,
+  normalizeWorldRenderer,
+} from '../core/World.js';
 import {
   mergePostProcessing,
   normalizePostProcessing,
@@ -1906,6 +1912,36 @@ export function EditorProvider({ children }) {
     bump();
   }, [mode, bump]);
 
+  /** Level-authored Three.js Scene look (background + fog). */
+  const updateWorldScene = useCallback((partial) => {
+    const current = worldRef.current;
+    if (!current || mode === 'play') return;
+    const base = normalizeWorldScene(current.scene);
+    current.scene = normalizeWorldScene({
+      ...base,
+      ...partial,
+      fog: normalizeWorldFog({
+        ...base.fog,
+        ...(partial?.fog && typeof partial.fog === 'object' ? partial.fog : {}),
+      }),
+    });
+    runtimeRef.current?.sceneView?.applyWorldScene?.(current.scene);
+    bump();
+  }, [mode, bump]);
+
+  /** Level-authored WebGLRenderer look (tone mapping + shadows). */
+  const updateWorldRenderer = useCallback((partial) => {
+    const current = worldRef.current;
+    if (!current || mode === 'play') return;
+    const base = normalizeWorldRenderer(current.renderer);
+    current.renderer = normalizeWorldRenderer({
+      ...base,
+      ...partial,
+    });
+    runtimeRef.current?.sceneView?.applyWorldRenderer?.(current.renderer);
+    bump();
+  }, [mode, bump]);
+
   const applyPostProcessingToView = useCallback((settings) => {
     runtimeRef.current?.sceneView?.applyPostProcessing?.(settings);
   }, []);
@@ -3597,6 +3633,8 @@ export function EditorProvider({ children }) {
     removeBrushOpening,
     updateSelectedLight,
     updateWorldAmbient,
+    updateWorldScene,
+    updateWorldRenderer,
     updateWorldPostProcessing,
     resetWorldPostProcessingEffect,
     resetWorldPostProcessingAll,

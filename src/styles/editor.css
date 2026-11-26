@@ -1291,39 +1291,6 @@ select {
   }
 }
 
-.bb-creation-toolbar__rollout-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-bottom: 2px;
-  border-bottom: 1px solid var(--bb-border-subtle);
-}
-
-.bb-creation-toolbar__pin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--bb-radius);
-  background: transparent;
-  color: var(--bb-text-dim);
-  cursor: pointer;
-}
-
-.bb-creation-toolbar__pin:hover {
-  background: var(--bb-bg-hover);
-  color: var(--bb-text-bright);
-}
-
-.bb-creation-toolbar__pin.is-active {
-  background: var(--bb-brand-soft);
-  border-color: var(--bb-brand);
-  color: var(--bb-text-bright);
-}
-
 .bb-creation-toolbar__tools {
   display: flex;
   flex-direction: column;

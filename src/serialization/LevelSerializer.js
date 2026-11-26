@@ -4,11 +4,15 @@
  * schemaVersion 3 is emitted only when the level contains a ConvexBrush (Phase 2F.0).
  * Optional `ambient` (scene fill color / intensity / playIntensity) is written when
  * present; older levels without it load with World defaults. No schema bump required.
- * Optional `postProcessing` is written the same way (disabled defaults when absent).
- * v1 levels remain loadable.
+ * Optional `scene` / `renderer` (Three.js look) and `postProcessing` are written the
+ * same way (defaults when absent). v1 levels remain loadable.
  */
 
-import { normalizeWorldAmbient } from '../core/World.js';
+import {
+  normalizeWorldAmbient,
+  normalizeWorldScene,
+  normalizeWorldRenderer,
+} from '../core/World.js';
 import { normalizePostProcessing } from '../runtime/postprocessing/postProcessingState.js';
 
 export const LEVEL_SCHEMA_VERSION = 3;
@@ -38,6 +42,8 @@ export function serializeLevel(world) {
     name: world.name ?? 'Untitled Level',
     mapMode,
     ambient: normalizeWorldAmbient(world.ambient),
+    scene: normalizeWorldScene(world.scene),
+    renderer: normalizeWorldRenderer(world.renderer),
     postProcessing: normalizePostProcessing(world.postProcessing),
     actors: world.actors.map((actor) => actor.toJSON()),
   };
