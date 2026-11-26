@@ -64,6 +64,6 @@
 
 | Gate | Result |
 | --- | --- |
-| Unit | `npm test` (includes `batch3Lighting.test.js`, ambient undo in `worldEnvironment.test.js`) |
-| Lint | `npm run lint` |
-| Build | `npm run build` |
+| Unit | Pass — 988 tests (`batch3Lighting.test.js`, ambient undo in `worldEnvironment.test.js`) |
+| Lint | Pass (`oxlint`; pre-existing warnings only) |
+| Build | Pass (`vite build`) |
