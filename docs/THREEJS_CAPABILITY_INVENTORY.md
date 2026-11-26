@@ -11,8 +11,8 @@
 **Batch 4 status:** **Implemented** (Water/Water2, Reflector, Refractor, Decal, Sprite billboard, placeable Sky).  
 **Batch 5 status:** **Implemented** (native PrimitiveMesh + procedural props).  
 **Batch 6 status:** **Implemented** (StaticMesh collision / materials / LOD / opt-in InstancedMesh).  
-**Batch 7 status:** **Implemented** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.  
-**Batch 7 verification:** gap-closure pass measured production-mesh simplify/LOD, Meshopt fixture decode, multi-cam LOD (Batch 6 residual closed); hysteresis + lodPreview autoUpdate + STL ArrayBuffer defects fixed.
+**Batch 7 status:** **Complete** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.  
+**Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.
 
 ### Principles
 
@@ -112,7 +112,7 @@
 | API | Files | Status |
 |-----|-------|--------|
 | `OrbitControls` | Viewport, mesh previews | Complete |
-| `GLTFLoader` | `meshLoader.js` | Partial (no DRACO/KTX2/Meshopt yet) |
+| `GLTFLoader` | `meshLoader.js` + `gltfCompression.js` | Complete (local DRACO/KTX2/Meshopt decode) |
 | `RoomEnvironment` | `studioEnvironment.js` | Partial (fixed studio IBL) |
 | `Line2` family | `SceneView.js` | Internal |
 
@@ -128,7 +128,7 @@
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush + PrimitiveMesh props | — | Batch 5 complete (native + procedural props); brushes unchanged |
 | Static meshes | GLTF + full collision / LOD / opt-in InstancedMesh | Batch 6 Done | BatchedMesh deferred |
-| Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform (Batch 8); KTX2 decode via Batch 7 |
+| Textures | Asset refs; KTX2 decode via Batch 7 | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform (Batch 8) |
 | Asset tools | Multi-format I/O, Simplify, auto LOD, decode DRACO/Meshopt/KTX2, inspect | Encode deferred | BufferGeometryUtils center/merge P1 residual |
 | Editor organization | Cells/prefabs/hierarchy | — | Authoring layers + solo/lock/vis |
 | Viewport | Multi-pane, fog/PP chips, ortho clear | — | ViewHelper, light helpers as opt-in |
@@ -254,10 +254,10 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 
 | Capability | API | BB | Missing | Editor | Schema | Cx | Val | Status |
 |------------|-----|----|---------|--------|--------|----|-----|--------|
-| GLTF place | GLTFLoader | Y | DRACO/KTX2/Meshopt | Creation | assetId | — | H | **Partial** |
+| GLTF place | GLTFLoader | Y | encode deferred | Creation | assetId | — | H | **Complete** (decode) |
 | castShadow / receiveShadow | Mesh flags | Hardcoded on | toggles | Details | fields | S | H | **Missing** |
 | Material overrides | swap materials | Face mats on brushes + StaticMesh slots | per-slot override on GLTF | Details | overrides{} | M | H | **Done** (Batch 6) |
-| LOD | `LOD` | N | distances + child meshes | Details | lod levels | M | M | **Missing** |
+| LOD | `LOD` | Y | — | Details | lod levels | M | M | **Done** (Batch 6/7) |
 | Instancing | `InstancedMesh` | Internal batch only | authorable instance sets | Creation/Details | instance transforms | L | M | **Missing** |
 | Batching | `BatchedMesh` | Experimental solids | expose later | — | — | L | M | **Partial** / Internal |
 | renderOrder | Object3D | N | number | Details | field | S | M | **Missing** |
@@ -273,18 +273,18 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 |------------|-----|----|--------|----|-----|--------|
 | Import texture/mesh | loaders + registry | Y | Asset Viewer | — | H | **Complete** |
 | Thumbs | custom bake | Y | Asset Viewer | — | H | **Complete** |
-| SimplifyModifier | addon | N | Asset tools / mesh inspector | M | H | **Missing** |
-| BufferGeometryUtils | addon | N | merge, index, normals, center | M | H | **Missing** |
-| GLTFExporter / OBJExporter | addons | N | Export selected / asset | M | H | **Missing** |
-| FBX/OBJ/STL/PLY import | loaders | N | Import | M | M | **Missing** |
-| DRACO | DRACOLoader + libs/draco | N | meshLoader | M | H | **Missing** |
-| KTX2 | KTX2Loader + basis | N | textures/meshes | M | H | **Missing** |
-| Meshopt | meshopt_decoder.module.js + GLTF | N | meshLoader | M | H | **Missing** |
-| computeVertexNormals / tangents | BufferGeometry / utils | Internal ad hoc | Tool buttons + helpers | S | H | **Missing** |
+| SimplifyModifier | addon | Y | Asset Viewer mesh tools | M | H | **Done** (Batch 7) |
+| BufferGeometryUtils | addon | Partial | merge/index used by Simplify; dedicated UI deferred | M | H | **Partial** |
+| GLTFExporter / OBJExporter (+ STL/PLY/USDZ) | addons | Y | Asset Viewer export | M | H | **Done** (Batch 7) |
+| FBX/OBJ/STL/PLY/Collada/USDZ import | loaders | Y | Import → GLB normalize | M | M | **Done** (Batch 7) |
+| DRACO | DRACOLoader + `/vendor/draco` | Y | meshLoader / GLTF | M | H | **Done** (decode) |
+| KTX2 | KTX2Loader + `/vendor/basis` | Y | GLTF + fixtures | M | H | **Done** (decode) |
+| Meshopt | meshopt_decoder + `/vendor/meshopt` | Y | meshLoader / GLTF | M | H | **Done** (decode) |
+| computeVertexNormals / tangents | BufferGeometry / utils | Internal ad hoc | Tool buttons + helpers | S | H | **Partial** |
 | VertexNormalsHelper / VertexTangentsHelper | addons | N | Viewport diagnostic | S | M | **Missing** |
-| Box3Helper / bounds display | core | Selection box only | Mesh diagnostics | S | M | **Partial** |
-| Geometry center / pivot | utils / manual | N | Asset tool | S | H | **Missing** |
-| HDR/EXR import | HDRLoader/EXRLoader | N | Asset Viewer → Environment | M | H | **Missing** |
+| Box3Helper / bounds display | core | Selection + inspect bounds | Mesh diagnostics | S | M | **Partial** |
+| Geometry center / pivot | utils / manual | N | Asset tool | S | H | **Deferred** |
+| HDR/EXR import | HDRLoader/EXRLoader | Y | Asset Viewer → Environment | M | H | **Done** (Batch 1) |
 
 ---
 
@@ -300,7 +300,7 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 | colorSpace | Texture | set in adapter | enum | inspector | meta | **Missing** |
 | channel (UV set) | Texture.channel | N | 0..N | inspector / material | meta + mat | **Missing** |
 | offset / repeat / rotation / center | Texture | via material UV L2 | optional tex-level | inspector | meta | **Partial** |
-| Compression (KTX2) | compressed textures | N | import path | Asset Viewer | kind | **Missing** |
+| Compression (KTX2) | compressed textures | Y (decode) | encode deferred | Asset Viewer / GLTF | kind | **Done** (Batch 7 decode) |
 
 ---
 
@@ -515,24 +515,24 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 
 **Depends on:** Batch 7 compression / SimplifyModifier for heavy meshes and automatic LOD generation; Batch 2 materials.
 
-### Batch 7 — Asset tools — **DONE** (encode deferred)
+### Batch 7 — Asset tools — **COMPLETE** (encode deferred)
 
 | Pri | Item | API | Status |
 |-----|------|-----|--------|
-| P0 | DRACO + KTX2 + Meshopt in GLTFLoader path | loaders + local `/vendor` | **Done** (decode) |
+| P0 | DRACO + KTX2 + Meshopt in GLTFLoader path | loaders + local `/vendor` | **Complete** (decode verified with licensed fixtures) |
 | P0 | HDR/EXR import to texture/env assets | HDRLoader/EXRLoader | **Done** (Batch 1 / Content Browser) |
 | P1 | BufferGeometryUtils center/merge/index/normals | utils | **Partial** — used internally by SimplifyModifier; dedicated authoring UI deferred |
 | P1 | SimplifyModifier tool | modifier | **Done** — Asset Viewer + derived assets |
-| P1 | GLTFExporter / OBJExporter (+ STL/PLY/USDZ) | exporters | **Done** |
-| P2 | FBX/OBJ/STL/PLY/Collada/USDZ import → GLB normalize | loaders | **Done** — source originals preserved |
+| P1 | GLTFExporter / OBJExporter (+ STL/PLY/USDZ) | exporters | **Complete** — USDZ via `parseAsync`; GLTF/USDZ reimport verified |
+| P2 | FBX/OBJ/STL/PLY/Collada/USDZ import → GLB normalize | loaders | **Complete** — USDLoader; fixtures + CDP evidence |
 | P2 | Normals/tangents helpers + bounds viz | helpers | **Partial** — bounds/inspect in Asset Viewer; dedicated helpers deferred |
 | P2 | Pivot/center utilities | utils | **Deferred** — no dedicated UI this batch |
 | P1 | Auto LOD generation → Batch 6 `lodLevels` | SimplifyModifier | **Done** |
 | — | Compression **encode** (Draco/Basis/meshopt) | encoders | **Deferred** — no official encoders bundled; decode-only documented |
 
-**Acceptance report:** `docs/ACCEPTANCE_ASSET_TOOLS.md` (implementation `8d5af2e` + verification pass)  
+**Acceptance report:** `docs/ACCEPTANCE_ASSET_TOOLS.md` (implementation `8d5af2e` + gap closure `1897cfd` + final closure)  
 **Academy:** lesson 27 (`asset-tools`)  
-**Fixture:** `public/assets/fixtures/meshopt_triangle.glb` (decode-only sample)  
+**Fixtures:** `public/assets/fixtures/` — Meshopt + Khronos DRACO Box/Duck + three.js KTX2 + FBX/Collada/GLTF samples  
 **Depends on:** none hard; **feeds** Batches 1, 4, 6, 8.
 
 ### Batch 8 — Textures

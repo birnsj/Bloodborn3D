@@ -457,8 +457,6 @@ describe('Batch 7 verification — Meshopt compression decode', () => {
     expect(support.encode.draco).toBe(false);
     expect(support.encode.ktx2).toBe(false);
     expect(support.encode.reasonDraco).toMatch(/encoder/i);
-    // Actual Draco/KTX2 sample assets not authored (encode deferred) —
-    // decoder WASM/JS footprint measured on disk.
     record({
       op: 'compression-wiring',
       dracoWasmBytes: statSync(path.join(rootDir, 'public/vendor/draco/gltf/draco_decoder.wasm')).size,
@@ -467,6 +465,129 @@ describe('Batch 7 verification — Meshopt compression decode', () => {
       encodeDeferred: true,
     });
   });
+
+  it('ships licensed DRACO + KTX2 fixtures declaring compression extensions', () => {
+    const dracoBox = path.join(rootDir, 'public/assets/fixtures/draco/Box.gltf');
+    const dracoDuck = path.join(rootDir, 'public/assets/fixtures/draco/Duck.gltf');
+    const ktx2Uastc = path.join(rootDir, 'public/assets/fixtures/ktx2/2d_uastc.ktx2');
+    const ktx2Etc1s = path.join(rootDir, 'public/assets/fixtures/ktx2/2d_etc1s.ktx2');
+    const ktx2Gltf = path.join(rootDir, 'public/assets/fixtures/ktx2/ktx2_quad.gltf');
+    const fbx = path.join(rootDir, 'public/assets/fixtures/fbx/vCube.fbx');
+    const collada = path.join(rootDir, 'public/assets/fixtures/collada/polygons.dae');
+    const gltfBox = path.join(rootDir, 'public/assets/fixtures/gltf/Box.gltf');
+    for (const p of [dracoBox, dracoDuck, ktx2Uastc, ktx2Etc1s, ktx2Gltf, fbx, collada, gltfBox]) {
+      expect(existsSync(p)).toBe(true);
+    }
+    const boxJson = JSON.parse(readFileSync(dracoBox, 'utf8'));
+    const duckJson = JSON.parse(readFileSync(dracoDuck, 'utf8'));
+    const ktx2Json = JSON.parse(readFileSync(ktx2Gltf, 'utf8'));
+    expect(boxJson.extensionsUsed).toContain('KHR_draco_mesh_compression');
+    expect(duckJson.extensionsUsed).toContain('KHR_draco_mesh_compression');
+    expect(ktx2Json.extensionsUsed).toContain('KHR_texture_basisu');
+    // Browser CDP acceptance (measurements-final.json) verified actual WASM decode.
+    const finalMeas = path.join(rootDir, 'docs/acceptance-asset-tools/measurements-final.json');
+    expect(existsSync(finalMeas)).toBe(true);
+    const meas = JSON.parse(readFileSync(finalMeas, 'utf8'));
+    expect(meas.ok).toBe(true);
+    expect(meas.cdnHits).toEqual([]);
+    const ops = (meas.tests || []).map((t) => t.op);
+    expect(ops).toEqual(expect.arrayContaining([
+      'draco-box-decode',
+      'draco-duck-decode',
+      'ktx2-uastc-transcode',
+      'ktx2-gltf-decode',
+      'fbx-import',
+      'collada-import',
+      'gltf-import',
+      'gltf-export-reimport',
+      'usdz-export-reimport',
+    ]));
+    record({
+      op: 'licensed-fixtures',
+      dracoBoxBytes: statSync(dracoBox).size,
+      dracoDuckBytes: statSync(dracoDuck).size,
+      ktx2UastcBytes: statSync(ktx2Uastc).size,
+      browserVerifyOk: meas.ok,
+    });
+  });
+});
+
+describe('Batch 7 verification — GLTF/USDZ export regression', () => {
+  it('GLB export preserves triangle count and unit-cube bounds', async () => {
+    // Three.js GLTFExporter binary path uses FileReader; vitest/jsdom lacks it.
+    if (typeof globalThis.FileReader !== 'function') {
+      globalThis.FileReader = class FileReaderPolyfill {
+        constructor() {
+          this.result = null;
+          this.onloadend = null;
+          this.onerror = null;
+        }
+        readAsArrayBuffer(blob) {
+          const done = (ab) => {
+            this.result = ab;
+            if (typeof this.onloadend === 'function') this.onloadend({ target: this });
+          };
+          if (typeof blob.arrayBuffer === 'function') {
+            blob.arrayBuffer().then(done).catch((err) => {
+              if (typeof this.onerror === 'function') this.onerror(err);
+            });
+            return;
+          }
+          // Fallback for older Blob shims
+          const fr = new Response(blob).arrayBuffer();
+          fr.then(done).catch((err) => {
+            if (typeof this.onerror === 'function') this.onerror(err);
+          });
+        }
+      };
+    }
+
+    const root = new THREE.Group();
+    root.add(new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1, 2, 2, 2),
+      new THREE.MeshStandardMaterial({ color: 0x88aacc }),
+    ));
+    const before = inspectMeshRoot(root);
+    const exported = await exportMeshRoot(root, 'glb');
+    expect(exported.format).toBe('glb');
+    expect(exported.data).toBeInstanceOf(ArrayBuffer);
+    expect(exported.limitations.length).toBeGreaterThan(0);
+    const loader = new GLTFLoader();
+    const gltf = await new Promise((resolve, reject) => {
+      loader.parse(exported.data, '', resolve, reject);
+    });
+    const after = inspectMeshRoot(gltf.scene);
+    expect(after.triangles).toBe(before.triangles);
+    expect(after.boundingBoxMeters.x).toBeCloseTo(1, 2);
+    expect(after.boundingBoxMeters.y).toBeCloseTo(1, 2);
+    expect(after.boundingBoxMeters.z).toBeCloseTo(1, 2);
+    record({
+      op: 'glb-export-reimport-unit',
+      beforeTris: before.triangles,
+      afterTris: after.triangles,
+      bytes: exported.data.byteLength,
+    });
+  }, 30000);
+
+  it('USDZ export uses parseAsync and returns ArrayBuffer (r187 regression)', async () => {
+    const root = new THREE.Group();
+    root.add(new THREE.Mesh(
+      new THREE.SphereGeometry(0.5, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0xccaa88 }),
+    ));
+    const before = inspectMeshRoot(root);
+    const exported = await exportMeshRoot(root, 'usdz');
+    expect(exported.format).toBe('usdz');
+    expect(exported.data).toBeInstanceOf(ArrayBuffer);
+    expect(exported.data.byteLength).toBeGreaterThan(100);
+    expect(exported.limitations[0]).toMatch(/USDZ/i);
+    // Reimport covered in browser CDP (USDLoader); Node lacks full ZIP+USD stack reliability.
+    record({
+      op: 'usdz-export-parseAsync',
+      beforeTris: before.triangles,
+      bytes: exported.data.byteLength,
+    });
+  }, 30000);
 });
 
 describe('Batch 7 verification — lifecycle + brush regression', () => {

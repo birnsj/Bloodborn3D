@@ -1,0 +1,153 @@
+{
+  "at": "2026-11-26T22:17:49.896Z",
+  "ok": true,
+  "cdnHits": [],
+  "vendorRequests": [
+    "http://localhost:5174/vendor/draco/gltf/draco_wasm_wrapper.js",
+    "http://localhost:5174/vendor/draco/gltf/draco_decoder.wasm",
+    "http://localhost:5174/vendor/basis/basis_transcoder.js",
+    "http://localhost:5174/vendor/basis/basis_transcoder.wasm"
+  ],
+  "tests": [
+    {
+      "op": "draco-box-decode",
+      "ms": 30.1,
+      "triangles": 12,
+      "vertices": 24,
+      "meshes": 1,
+      "extensionsUsed": [
+        "KHR_draco_mesh_compression"
+      ],
+      "bounds": {
+        "x": 1.001,
+        "y": 1.001,
+        "z": 1.001
+      }
+    },
+    {
+      "op": "draco-duck-decode",
+      "ms": 23,
+      "triangles": 4212,
+      "vertices": 2399,
+      "meshes": 1,
+      "hasTextureMap": true,
+      "extensionsUsed": [
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "op": "ktx2-uastc-transcode",
+      "ms": 48.8,
+      "width": 40,
+      "height": 40,
+      "isCompressedTexture": true
+    },
+    {
+      "op": "ktx2-etc1s-transcode",
+      "ms": 47.1,
+      "width": 40,
+      "height": 40,
+      "isCompressedTexture": true
+    },
+    {
+      "op": "ktx2-gltf-decode",
+      "ms": 49.1,
+      "triangles": 2,
+      "hasTextureMap": true,
+      "mapIsCompressed": true,
+      "extensionsUsed": [
+        "KHR_texture_basisu"
+      ]
+    },
+    {
+      "op": "fbx-import",
+      "ms": 7.5,
+      "triangles": 12,
+      "vertices": 36,
+      "meshes": 1,
+      "bounds": {
+        "x": 200,
+        "y": 200,
+        "z": 200
+      },
+      "note": "FBX sample in cm-scale units per Three.js FBXLoader"
+    },
+    {
+      "op": "collada-import",
+      "ms": 4.5,
+      "triangles": 2,
+      "vertices": 6,
+      "meshes": 1
+    },
+    {
+      "op": "gltf-import",
+      "ms": 5.8,
+      "triangles": 12,
+      "vertices": 24,
+      "bounds": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "op": "gltf-export-reimport",
+      "beforeTris": 48,
+      "afterTris": 48,
+      "beforeBounds": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "afterBounds": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bytes": 3248
+    },
+    {
+      "op": "usdz-export-reimport",
+      "beforeTris": 352,
+      "afterTris": 352,
+      "beforeBounds": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "afterBounds": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "bytes": 29884,
+      "ms": 7.7
+    },
+    {
+      "op": "render-asset-viewer-draco-duck",
+      "ok": true
+    },
+    {
+      "op": "render-editor-draco-duck",
+      "ok": true
+    },
+    {
+      "op": "render-play-draco-duck",
+      "ok": true
+    },
+    {
+      "op": "render-asset-viewer-ktx2",
+      "ok": true
+    }
+  ],
+  "defectsFixed": [
+    {
+      "id": "usdz-parseAsync",
+      "detail": "USDZExporter.parse is callback-only in r187; exportMeshRoot now uses parseAsync"
+    },
+    {
+      "id": "usdz-loader",
+      "detail": "Switched USDZLoader (deprecated r179) to USDLoader"
+    }
+  ]
+}

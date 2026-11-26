@@ -10,7 +10,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
-import { USDZLoader } from 'three/addons/loaders/USDZLoader.js';
+import { USDLoader } from 'three/addons/loaders/USDLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
@@ -122,9 +122,10 @@ export async function loadMeshFileToScene(file, { renderer = null } = {}) {
       animations = result.animations || [];
       warnings.push('Collada: some lights/cameras/controllers are ignored; meshes and basic materials are kept.');
     } else if (format === 'usdz') {
-      const loader = new USDZLoader();
+      // USDZLoader was deprecated in r179 — use USDLoader (same .usdz support).
+      const loader = new USDLoader();
       root = await loader.loadAsync(url);
-      warnings.push('USDZ: support follows Three.js USDZLoader limits (static mesh / material subset).');
+      warnings.push('USDZ: support follows Three.js USDLoader limits (static mesh / material subset).');
     }
 
     if (!root) throw new Error(`Failed to parse ${format.toUpperCase()} file`);
@@ -217,13 +218,19 @@ export async function exportMeshRoot(root, format = 'glb', {
   }
 
   if (fmt === 'usdz') {
+    // Three.js r187: parse() is callback-only; parseAsync returns ArrayBuffer.
     const exporter = new USDZExporter();
-    const data = await exporter.parse(root);
+    const data = await exporter.parseAsync(root);
+    if (!(data instanceof ArrayBuffer) && !(data instanceof Uint8Array)) {
+      throw new Error('USDZExporter.parseAsync did not return binary data');
+    }
     return {
       format: 'usdz',
       mime: 'model/vnd.usdz+zip',
       extension: '.usdz',
-      data,
+      data: data instanceof Uint8Array
+        ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+        : data,
       limitations: ['USDZExporter subset of materials/textures; verify on target viewers.'],
     };
   }
