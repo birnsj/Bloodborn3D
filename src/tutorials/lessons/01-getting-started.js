@@ -34,15 +34,18 @@ export const gettingStartedLesson = {
     },
     {
       id: 'viewport-chrome',
-      title: 'Cam, View, Reset, and layout',
-      body: 'Top of the Viewport: Cam (Perspective, Isometric, Top…), View (Lit / Wireframe…), layout boxes for 1–4 panes, Reset (home pose + zoom), and Max.',
+      title: 'Cam, View, Fog, PP, and layout',
+      body: 'Top of the Viewport: Cam (Perspective, Isometric, Top…), View (Lit / Wireframe…), Fog and PP chips (per-pane fog and post-processing preview), layout boxes for 1–4 panes, Reset (home pose + zoom), and Max.',
       terms: [
         { term: 'Cam', def: 'Camera type for this pane (Perspective, Isometric, Top, Front…).' },
+        { term: 'Fog', def: 'Shows or hides distance fog / atmosphere in this pane only.' },
+        { term: 'PP', def: 'Shows or hides map post-processing preview in this pane only.' },
         { term: 'Reset', def: 'Restores this pane’s resting orientation and default zoom.' },
         { term: 'Focus (F)', def: 'Frames the current selection — different from Reset.' },
       ],
       highlight: ['viewport.chrome'],
       verify: { type: 'manualConfirm', label: 'I found the chrome' },
+      explain: 'Later lessons cover World Fog & Atmosphere and Post Processing. Ortho panes hide fog by default.',
     },
     {
       id: 'isometric',

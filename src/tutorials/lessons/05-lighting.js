@@ -1,18 +1,19 @@
 export const lightingLesson = {
   id: 'lighting',
   title: 'Lighting',
-  summary: 'Place lights and edit their properties.',
+  summary: 'Place lights, edit properties, and know World Ambient vs fog / post-processing.',
   order: 5,
   starterPath: 'tutorials/openings.json',
   steps: [
     {
       id: 'intro',
       title: 'Lights',
-      body: 'Lights illuminate your room in the editor preview. You can place Point, Spot, or Directional lights from the toolbar.',
+      body: 'Lights illuminate your room in the editor preview. Place Point, Spot, or Directional lights from the toolbar. World Ambient (Details → World Settings) is separate scene fill; fog and post-processing are later look layers.',
       terms: [
         { term: 'Point light', def: 'Glows outward in all directions from a point.' },
         { term: 'Spot light', def: 'A cone of light, like a flashlight.' },
         { term: 'Directional light', def: 'Parallel rays, like sunlight.' },
+        { term: 'World Ambient', def: 'Scene-wide fill in World Settings — not a placeable light actor.' },
       ],
       verify: { type: 'manualConfirm', label: 'Continue' },
     },
@@ -38,6 +39,13 @@ export const lightingLesson = {
       body: 'From the Lights flyout, place a Spot Light. Aim it with Rotate (E). Skip if you are happy with Point lights.',
       highlight: ['toolbar.spotLight'],
       verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'world-look',
+      title: 'World look layers (optional)',
+      body: 'Details → World Settings also has Ambient, Scene (background + fog / atmosphere), Renderer, and Post Processing. Fog softens depth; PP adds bloom/SSAO/vignette. Academy lessons World Fog & Atmosphere and Post Processing go deeper.',
+      highlight: ['world.ambient', 'world.scene'],
+      verify: { type: 'manualConfirm', label: 'Got it' },
     },
   ],
 };

@@ -1,19 +1,20 @@
 export const postProcessingLesson = {
   id: 'post-processing',
   title: 'Post Processing',
-  summary: 'Enable map-authored bloom, vignette, and tone mapping.',
+  summary: 'Enable map-authored bloom, SSAO, vignette, and tone mapping; preview with the PP chip.',
   order: 19,
   starterPath: 'tutorials/openings.json',
   steps: [
     {
       id: 'intro',
       title: 'Image effects after lighting',
-      body: 'Post-processing sits after scene lights and World Ambient. Ambient fills the room, lights illuminate locally, exposure and tone mapping convert HDR to display color, and effects like bloom or vignette style the final image.',
+      body: 'Post-processing sits after scene lights and World Ambient. Ambient fills the room, lights illuminate locally, exposure and tone mapping convert HDR to display color, and effects like bloom, SSAO, or vignette style the final image. Fog / atmosphere are separate (World Scene).',
       terms: [
         { term: 'World Ambient', def: 'Scene-wide fill (IBL + editor fills) authored in World Settings.' },
         { term: 'Exposure', def: 'Scales HDR luminance before tone mapping when post-processing is on.' },
         { term: 'Tone mapping', def: 'Maps HDR colors into displayable LDR (BloodBound defaults to ACES Filmic).' },
-        { term: 'Post effect', def: 'Fullscreen filter such as bloom, vignette, or film grain.' },
+        { term: 'SSAO', def: 'Screen-space ambient occlusion — contact shadows in crevices.' },
+        { term: 'PP chip', def: 'Viewport toggle for post-processing preview on that pane only.' },
       ],
       highlight: ['world.postProcessing'],
       verify: { type: 'manualConfirm', label: 'Continue' },
@@ -28,17 +29,24 @@ export const postProcessingLesson = {
     {
       id: 'enable-pp',
       title: 'Enable post-processing',
-      body: 'Turn Enabled on. Keep Editor preview checked so the perspective Lit pane updates live. Ortho and wireframe panes stay raw on purpose.',
+      body: 'Turn Enabled on, or check any effect below — enabling an effect also turns master Enabled on. Keep Editor preview checked so perspective Lit panes update live. Ortho and wireframe panes stay raw on purpose.',
       highlight: ['world.postProcessing'],
       verify: { type: 'manualConfirm', label: 'Enabled' },
-      failHint: 'Check Enabled in Details → World Settings → Post Processing.',
+      failHint: 'Check Enabled (or any effect) in Details → World Settings → Post Processing.',
     },
     {
-      id: 'try-bloom',
-      title: 'Try Bloom and Vignette',
-      body: 'Under Lighting enable Bloom and raise Intensity slightly. Under Camera and Lens enable Vignette. Watch the perspective viewport.',
+      id: 'try-effects',
+      title: 'Try Bloom, SSAO, and Vignette',
+      body: 'Under Lighting enable Bloom and raise Intensity slightly; try SSAO for contact shadow. Under Camera and Lens enable Vignette. Watch the perspective viewport.',
       highlight: ['world.postProcessing'],
       verify: { type: 'manualConfirm', label: 'I see the change' },
+    },
+    {
+      id: 'pp-chip',
+      title: 'Per-pane PP chip',
+      body: 'On the Viewport chrome, click PP to hide or show post-processing preview for that pane only. Useful in multi-pane layouts so one Perspective pane shows the look while others stay raw.',
+      highlight: ['viewport.showPostProcessing', 'viewport.chrome'],
+      verify: { type: 'manualConfirm', label: 'I toggled PP' },
     },
     {
       id: 'presets',

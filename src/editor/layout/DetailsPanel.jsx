@@ -2258,7 +2258,7 @@ function WorldSettings() {
             <p className="bb-muted" {...helpProps('world.scene.atmosphere')}>
               Moving atmosphere (perspective / Play only; hidden in ortho).
             </p>
-            <label className="bb-field">
+            <label className="bb-field" {...helpProps('world.scene.mist')}>
               <span className="bb-field__label">Mist</span>
               <input
                 type="checkbox"
@@ -2319,7 +2319,7 @@ function WorldSettings() {
                 </label>
               </>
             )}
-            <label className="bb-field">
+            <label className="bb-field" {...helpProps('world.scene.noise')}>
               <span className="bb-field__label">Noise</span>
               <input
                 type="checkbox"
@@ -2368,7 +2368,7 @@ function WorldSettings() {
                 </label>
               </>
             )}
-            <label className="bb-field">
+            <label className="bb-field" {...helpProps('world.scene.volumetric')}>
               <span className="bb-field__label">Volumetric</span>
               <input
                 type="checkbox"

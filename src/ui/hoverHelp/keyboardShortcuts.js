@@ -13,6 +13,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     title: 'Edit',
     rows: [
       { keys: ['Ctrl', 'S'], action: 'Save level' },
+      { keys: ['Ctrl', 'Shift', 'S'], action: 'Save All', note: 'level + dirty materials' },
       { keys: ['Ctrl', 'Z'], action: 'Undo' },
       { keys: ['Ctrl', 'Y'], action: 'Redo', note: 'or Ctrl+Shift+Z' },
       { keys: ['Ctrl', 'A'], action: 'Select all' },

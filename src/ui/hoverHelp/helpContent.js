@@ -30,25 +30,40 @@ export const HELP_CONTENT = {
 
   'world.scene': {
     title: 'World Scene',
-    body: 'Level-authored Three.js scene look: clear/background color, background intensity/blurriness, and fog. Saved with the map and used in edit and play.',
-    tips: 'Enable Fog, then Linear (near/far in editor units) or Exp2 (density). Drift breathes depth/density. Mist / Noise / Volumetric add moving atmosphere. Hidden in ortho panes. 100 eu = 1 m.',
+    body: 'Level-authored scene look: background color/intensity/blurriness, distance fog, and optional moving atmosphere. Saved with the map for edit and Play.',
+    tips: 'Enable Fog → Linear (near/far, editor units) or Exp2 (density). Drift breathes depth/density. Mist / Noise / Volumetric add motion. Ortho panes hide fog and use a dark editor clear instead of the authored background. 100 eu = 1 m.',
   },
   'world.scene.atmosphere': {
     title: 'Moving Atmosphere',
     body: 'Optional layers on top of distance fog: world-space particle Mist, lagged Noise sheets, and a local Volumetric volume. Soft depth fades stop fog at walls. Independent of post-processing.',
     tips: 'Perspective and Play only. Mist drifts in world space (you move through it). Volumetric steps trade quality for cost. Noise alone uses soft sheets; with Volumetric on, noise drives the volume shader instead.',
   },
+  'world.scene.mist': {
+    title: 'Mist',
+    body: 'World-space particle fog that drifts through the level. You fly through it; it does not stick to the camera.',
+    tips: 'Count, speed, opacity, and size (meters) control density and motion. Soft depth fades keep mist from cutting through walls.',
+  },
+  'world.scene.noise': {
+    title: 'Noise Atmosphere',
+    body: 'Lagged noise sheets that break up fog density. Alone they render as soft sheets; with Volumetric on, the same noise drives the volume shader.',
+    tips: 'Strength, scale, and speed tune how busy the pattern feels.',
+  },
+  'world.scene.volumetric': {
+    title: 'Volumetric Fog',
+    body: 'Local raymarched fog volume with soft depth against geometry. Heavier than Mist or Noise alone.',
+    tips: 'Density and steps trade look for cost. Combine with Noise for animated density inside the volume.',
+  },
 
   'world.renderer': {
     title: 'World Renderer',
     body: 'Level-authored WebGLRenderer settings: tone mapping mode/exposure and shadow map on/off + type. Saved with the map.',
-    tips: 'When Post Processing is enabled and composing, PP owns tone mapping and exposure. Shadow map type: Basic, PCF, PCF Soft, or VSM.',
+    tips: 'When Post Processing is composing, PP owns tone mapping and exposure. Shadow map type: Basic, PCF, PCF Soft, or VSM.',
   },
 
   'world.postProcessing': {
     title: 'Post Processing',
-    body: 'Map-authored fullscreen image effects (bloom, vignette, tone mapping, and more) applied after scene lighting. Uses the pmndrs postprocessing library on the shared Three.js renderer. Disabled maps keep the previous ACES look.',
-    tips: 'Ambient = scene fill. Lights = local illumination. Exposure / tone mapping = HDR→display. Post effects = artistic image filters. Ortho and wireframe panes stay raw.',
+    body: 'Map-authored fullscreen image effects (bloom, SSAO, vignette, tone mapping, and more) applied after scene lighting. Uses the pmndrs postprocessing library. Disabled maps keep the previous ACES look.',
+    tips: 'Checking an effect also turns master Enabled on. Ambient = scene fill. Lights = local. Exposure / tone mapping = HDR→display. Ortho / wireframe stay raw. Use the viewport PP chip to preview per pane.',
   },
   'world.postProcessingExposure': {
     title: 'Exposure',
@@ -57,13 +72,13 @@ export const HELP_CONTENT = {
   },
   'world.postProcessingPreview': {
     title: 'Editor Preview',
-    body: 'When on, perspective Lit panes show map post-processing while editing. Play always uses map settings. This toggle is an editor preference, not saved in the level JSON.',
+    body: 'When on, perspective Lit panes with the PP chip on show map post-processing while editing. Play always uses map settings. This toggle is an editor preference, not saved in the level JSON.',
   },
 
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
-    body: 'Open Help → Keyboard Shortcuts… for edit, transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, and Project Art Library gallery bindings.',
+    body: 'Open Help → Keyboard Shortcuts… for edit (including Ctrl+Shift+S Save All), transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, and Project Art Library gallery bindings.',
     tips: 'Hover Help shows matching shortcuts on toolbar, viewport, and AI Assets controls.',
   },
   'help.hoverHelp': {
@@ -832,18 +847,18 @@ export const HELP_CONTENT = {
   },
   'viewport.showFog': {
     title: 'Show Fog',
-    body: 'Toggles distance fog and moving atmosphere for this viewport only. Does not change World Settings fog.',
-    tips: 'Off by default in orthographic panes. Perspective and Play keep authored fog unless you turn this off.',
+    body: 'Toggles distance fog and moving atmosphere for this viewport pane only. Does not change World Settings fog authorship.',
+    tips: 'Off by default in orthographic panes (they also use a dark editor clear instead of the map background). Perspective and Play keep authored fog unless you turn this chip off.',
   },
   'viewport.showPostProcessing': {
     title: 'Show Post-Processing',
-    body: 'Toggles map post-processing preview for this viewport only. Requires map Post Processing enabled and Editor Preview on.',
-    tips: 'Perspective Lit only. Ortho / Unlit / Wireframe stay raw. Multiple perspective panes can preview PP at once.',
+    body: 'Toggles map post-processing preview for this viewport pane only. Needs map Post Processing enabled (or an effect checked) and Editor Preview on.',
+    tips: 'Perspective Lit only. Ortho / Unlit / Wireframe stay raw. Each perspective pane can show or hide PP independently.',
   },
   'viewport.layout': {
     title: 'Viewport Layout',
-    body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own camera and display mode.',
-    tips: 'Also under View → Viewport Layout. Maximize expands the active pane; Restore returns to the split.',
+    body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own Cam, View, Fog, and PP chips.',
+    tips: 'Also under View → Viewport Layout. Maximize expands the active pane; Restore returns to the split. Space maximizes in multi-pane (jumps in Play).',
   },
   'viewport.reset': {
     title: 'Reset Camera',
@@ -867,7 +882,7 @@ export const HELP_CONTENT = {
   'panel.tutorials': {
     title: 'Tutorials',
     body: 'Guided lessons (Academy) with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
-    tips: 'Help → Tutorials… or Window → Tutorials. Includes level building plus Art & generation (Project Art Library, Asset Generation).',
+    tips: 'Help → Tutorials… or Window → Tutorials. Covers building, workspace Fog/PP chips, World Fog & Atmosphere, Post Processing, Project Art Library, and Asset Generation.',
   },
   'settings.dialog': {
     title: 'Editor Settings',

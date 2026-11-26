@@ -17,6 +17,7 @@ import { columnsArchesCurvesLesson } from './16-columns-arches-curves.js';
 import { projectArtLibraryLesson } from './17-project-art-library.js';
 import { assetGenerationLesson } from './18-asset-generation.js';
 import { postProcessingLesson } from './19-post-processing.js';
+import { worldFogAtmosphereLesson } from './20-world-fog-atmosphere.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -38,6 +39,7 @@ export const LESSONS = [
   projectArtLibraryLesson,
   assetGenerationLesson,
   postProcessingLesson,
+  worldFogAtmosphereLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

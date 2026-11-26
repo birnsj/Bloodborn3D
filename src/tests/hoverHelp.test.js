@@ -85,10 +85,20 @@ describe('hover help content', () => {
       'toolbar.geometryVertex',
       'viewport.camera',
       'viewport.display',
+      'viewport.showFog',
+      'viewport.showPostProcessing',
       'viewport.layout',
       'viewport.reset',
       'viewport.maximize',
       'viewport.focus',
+      'world.scene',
+      'world.scene.atmosphere',
+      'world.scene.mist',
+      'world.scene.noise',
+      'world.scene.volumetric',
+      'world.postProcessing',
+      'world.postProcessingPreview',
+      'world.postProcessingExposure',
       'assetViewer.thumbSize',
       'details.surface.material',
       'details.convex.convert',
@@ -145,6 +155,8 @@ describe('keyboard shortcuts catalog', () => {
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Shift+G');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Commit clip');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Project Art Library');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Save All');
+    expect(flat.some((r) => r.keys.includes('Ctrl') && r.keys.includes('Shift') && r.keys.includes('S'))).toBe(true);
   });
 });
 

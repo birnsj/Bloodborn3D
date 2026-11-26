@@ -399,8 +399,9 @@ export function PostProcessingSettings() {
   return (
     <Collapsible title="Post Processing" storageKey="world.postProcessing" defaultOpen={false}>
       <p className="bb-muted" {...helpProps('world.postProcessing')}>
-        Map-authored image effects (pmndrs). Ambient fills the scene; exposure and tone mapping
-        sit after lighting. Ortho / wireframe panes stay raw.
+        Map-authored image effects (pmndrs) — bloom, SSAO, vignette, and more. Ambient fills the scene;
+        exposure and tone mapping sit after lighting. Ortho / wireframe panes stay raw. Use the
+        viewport PP chip to preview per pane.
       </p>
 
       <label className="bb-field bb-field--row">
@@ -413,12 +414,15 @@ export function PostProcessingSettings() {
         />
       </label>
       {!settings.enabled ? (
-        <p className="bb-muted">Turn Enabled on to edit and preview effects in the perspective Lit view.</p>
+        <p className="bb-muted">
+          Turn Enabled on, or check any effect below — enabling an effect also turns master on.
+          Preview in perspective Lit panes (PP chip on).
+        </p>
       ) : (
         <p className="bb-muted">
           {runtimeRef?.current?.sceneView?.postProcessingController?.isActive
             ? 'Composer active'
-            : 'Native tone mapping (composer starts when you enable bloom, AA, etc.)'}
+            : 'Native tone mapping (composer starts when you enable bloom, SSAO, AA, etc.)'}
           {' · '}Effects with required inputs stay off until you set those inputs.
         </p>
       )}

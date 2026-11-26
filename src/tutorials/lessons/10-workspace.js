@@ -1,7 +1,7 @@
 export const workspaceLesson = {
   id: 'workspace',
   title: 'Workspace & Viewports',
-  summary: 'Dock panels, Asset Viewer, named layouts, multi-pane cameras, AI Assets tab, Editor Settings, and hover help.',
+  summary: 'Dock panels, Asset Viewer, named layouts, multi-pane Fog/PP chips, AI Assets tab, Editor Settings, and hover help.',
   order: 10,
   starterPath: 'tutorials/getting-started.json',
   steps: [
@@ -43,10 +43,18 @@ export const workspaceLesson = {
     {
       id: 'iso-pane',
       title: 'Isometric on a pane',
-      body: 'Click a pane to activate it, then set Cam → Isometric. Use Reset on that pane to restore home pose and zoom.',
+      body: 'Click a pane to activate it, then set Cam → Isometric. Use Reset on that pane to restore home pose and zoom. Ortho panes hide fog by default and use a dark editor clear — not the authored map background.',
       highlight: ['viewport.camera', 'viewport.reset'],
       verify: { type: 'viewportCameraIs', cameraMode: 'isometric' },
       failHint: 'Activate a viewport pane and set Cam to Isometric.',
+    },
+    {
+      id: 'fog-pp-chips',
+      title: 'Fog and PP chips',
+      body: 'Each pane has Fog and PP chips. Fog toggles distance fog / atmosphere for that pane only. PP toggles post-processing preview (perspective Lit; needs map PP enabled). Multi-pane layouts keep ortho clear while Perspective keeps look.',
+      highlight: ['viewport.showFog', 'viewport.showPostProcessing'],
+      verify: { type: 'manualConfirm', label: 'I found Fog and PP' },
+      explain: 'World Fog & Atmosphere and Post Processing lessons author the look; these chips only preview per pane.',
     },
     {
       id: 'named-layouts',
@@ -72,8 +80,8 @@ export const workspaceLesson = {
     {
       id: 'hover-help',
       title: 'Hover Help',
-      body: 'Help → Show Hover Help. Pause on a toolbar or viewport control for a tip. Help → Keyboard Shortcuts… lists hotkeys (including Enter for clip, Esc cascades, Tab for placement).',
-      highlight: ['toolbar.select'],
+      body: 'Help → Show Hover Help. Pause on a toolbar or viewport control (including Fog / PP) for a tip. Help → Keyboard Shortcuts… lists hotkeys (Ctrl+Shift+S Save All, Enter for clip, Esc cascades, Tab for placement, Space maximize).',
+      highlight: ['toolbar.select', 'help.hoverHelp'],
       verify: { type: 'manualConfirm', label: 'I saw a tip' },
     },
     {

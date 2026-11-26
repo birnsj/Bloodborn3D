@@ -80,7 +80,7 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(19);
+    expect(LESSONS).toHaveLength(20);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
@@ -91,12 +91,14 @@ describe('lesson registry', () => {
     expect(listLessons().map((l) => l.id)).toContain('project-art-library');
     expect(listLessons().map((l) => l.id)).toContain('asset-generation');
     expect(listLessons().map((l) => l.id)).toContain('post-processing');
+    expect(listLessons().map((l) => l.id)).toContain('world-fog-atmosphere');
     expect(getLessonById('missing')).toBeNull();
   });
 
   it('teaches latest camera and material-on-face features', () => {
     const start = getLessonById('getting-started');
     expect(start.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    expect(start.steps.some((s) => s.id === 'viewport-chrome' && /Fog|PP/i.test(s.body))).toBe(true);
     const materials = getLessonById('materials');
     expect(materials.summary.toLowerCase()).toContain('face');
     expect(materials.steps.some((s) => s.verify?.type === 'faceMaterialAssigned')).toBe(true);
@@ -105,7 +107,14 @@ describe('lesson registry', () => {
     const workspace = getLessonById('workspace');
     expect(workspace.steps.some((s) => s.id === 'asset-viewer')).toBe(true);
     expect(workspace.steps.some((s) => s.id === 'ai-assets-tab')).toBe(true);
+    expect(workspace.steps.some((s) => s.id === 'fog-pp-chips')).toBe(true);
     expect(workspace.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    const fog = getLessonById('world-fog-atmosphere');
+    expect(fog.steps.some((s) => s.id === 'mist')).toBe(true);
+    expect(fog.steps.some((s) => s.id === 'fog-chip')).toBe(true);
+    const pp = getLessonById('post-processing');
+    expect(pp.steps.some((s) => s.id === 'pp-chip')).toBe(true);
+    expect(pp.summary.toLowerCase()).toContain('ssao');
     const projectArt = getLessonById('project-art-library');
     expect(projectArt.steps.some((s) => s.id === 'region')).toBe(true);
     const assetGen = getLessonById('asset-generation');
