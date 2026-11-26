@@ -92,6 +92,23 @@ export async function uploadMeshPreview(id, blob) {
   return res.json();
 }
 
+/** Upload a browser-captured PNG thumbnail for a material asset. */
+export async function uploadMaterialPreview(id, blob) {
+  const res = await fetch(
+    `/api/assets?action=material-preview&id=${encodeURIComponent(id)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: blob,
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Material preview upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function createMaterial(definition) {
   const res = await fetch('/api/assets?action=create-material', {
     method: 'POST',

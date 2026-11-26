@@ -951,7 +951,7 @@ export const HELP_CONTENT = {
   },
   'content.newMaterial': {
     title: 'New Material',
-    body: 'Creates a material asset and bakes a lit-sphere thumbnail for the Asset Viewer grid. If a texture is selected, it becomes the base color map. Materials missing a preview (for example seeded Batch assets) are backfilled automatically when the registry loads.',
+    body: 'Creates a material asset and bakes a lit-sphere thumbnail for the Asset Viewer grid using the same studio lighting as the detail preview (so metal/glass read correctly). If a texture is selected, it becomes the base color map. Older CPU thumbs upgrade automatically when the registry loads.',
   },
   'content.createPrefab': {
     title: 'Create Prefab',
@@ -983,6 +983,10 @@ export const HELP_CONTENT = {
   'assetViewer.generateMeshIcon': {
     title: 'Generate Icon',
     body: 'Saves the current mesh preview camera view as the Asset Viewer thumbnail (square PNG). Orbit/pan/zoom first to frame the shot you want.',
+  },
+  'assetViewer.generateMaterialIcon': {
+    title: 'Generate Icon',
+    body: 'Saves a center crop of the live material preview as the Asset Viewer thumbnail (square PNG) — same lighting and framing you see. Orbit/zoom first to frame the shot you want.',
   },
   'assetViewer.thumbSize': {
     title: 'Thumbnail Size',

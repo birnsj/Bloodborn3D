@@ -18,7 +18,6 @@ import { normalizeRegistry, findAsset } from '../../assets/AssetRegistry.js';
 import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
 import { materialDraftForDuplicate } from '../materials/materialDraft.js';
 import {
-  bakeMissingMaterialPreviews,
   createMaterial,
   createPrefab,
   fetchAssetRegistry,
@@ -30,6 +29,7 @@ import {
   replaceTextureFile,
   updateMaterial,
   updatePrefab,
+  uploadMaterialPreview,
   uploadMeshPreview,
 } from '../../io/assetFileApi.js';
 import { clearTextureCache } from '../../runtime/materialFactory.js';
@@ -40,6 +40,10 @@ import {
   enqueueMeshThumbnailBake,
   enqueueMissingMeshThumbnails,
 } from './meshThumbnailBake.js';
+import {
+  enqueueMaterialThumbnailBake,
+  enqueueMissingMaterialThumbnails,
+} from './materialThumbnailBake.js';
 
 const AssetBrowserContext = createContext(null);
 
@@ -144,34 +148,55 @@ export function AssetBrowserProvider({ children }) {
             }
           });
       }
-      // Dev server: backfill lit-sphere thumbs for materials missing previewPath
-      // (New Material already bakes on create; this covers seeded/legacy assets).
-      const missingMaterialThumbs = next.assets.some(
-        (a) => a.kind === 'material' && !a.meta?.previewPath,
+      // Browser WebGL thumbs (studio IBL) — upgrades CPU/script spheres that lack metal look.
+      const needsMaterialWebglThumbs = next.assets.some(
+        (a) => a.kind === 'material' && (
+          !a.meta?.previewPath
+          || a.meta?.previewRenderer !== 'webgl'
+          || a.meta?.previewStyle !== 'sphere-fill'
+        ),
       );
-      if (missingMaterialThumbs) {
-        void bakeMissingMaterialPreviews()
-          .then(async (result) => {
-            if (!result?.baked) return;
-            if (result.definitions) {
-              const defs = { ...materialCacheRef.current };
-              for (const [id, def] of Object.entries(result.definitions)) {
-                const normalized = normalizeMaterialDefinition(def);
-                if (normalized) defs[id] = normalized;
-              }
-              materialCacheRef.current = defs;
-              setMaterialDefs({ ...defs });
-            }
-            if (result.registry) {
-              setRegistry(normalizeRegistry(result.registry));
-            } else {
+      if (needsMaterialWebglThumbs) {
+        const resolveTexUrl = (id) => {
+          const entry = next.assets.find((a) => a.id === id && a.kind === 'texture');
+          if (!entry) return null;
+          const base = publicAssetUrl(entry.path);
+          if (!base) return null;
+          const v = Number(entry.updatedAt) || 0;
+          const sep = base.includes('?') ? '&' : '?';
+          return `${base}${sep}v=${v}`;
+        };
+        void enqueueMissingMaterialThumbnails(
+          next,
+          defs,
+          uploadMaterialPreview,
+          resolveTexUrl,
+        )
+          .then(async () => {
+            try {
               const data = await fetchAssetRegistry();
-              setRegistry(normalizeRegistry(data));
+              const refreshed = normalizeRegistry(data);
+              setRegistry(refreshed);
+              // Refresh material defs so previewPath + updatedAt stay in sync.
+              const matDefs = { ...materialCacheRef.current };
+              await Promise.all(
+                refreshed.assets
+                  .filter((a) => a.kind === 'material')
+                  .map(async (m) => {
+                    try {
+                      const def = normalizeMaterialDefinition(await fetchMaterialDefinition(m.id));
+                      if (def) matDefs[m.id] = def;
+                    } catch {
+                      /* ignore */
+                    }
+                  }),
+              );
+              materialCacheRef.current = matDefs;
+              setMaterialDefs({ ...matDefs });
+              setRevision((r) => r + 1);
+            } catch {
+              /* ignore — CPU spheres remain until next refresh */
             }
-            setRevision((r) => r + 1);
-          })
-          .catch(() => {
-            /* ignore — diagonal swatches remain until next refresh */
           });
       }
       return next;
@@ -363,8 +388,46 @@ export function AssetBrowserProvider({ children }) {
     setRevision((r) => r + 1);
     setSelectedAssetId(result.asset.id);
     notify(`Created material ${result.asset.name}`);
+    // Overwrite CPU placeholder with studio-IBL WebGL thumb (matches detail preview).
+    if (def) {
+      const resolveTexUrl = (texId) => {
+        const entry = result.registry?.assets?.find((a) => a.id === texId && a.kind === 'texture');
+        if (!entry) return getTextureUrl(texId);
+        const base = publicAssetUrl(entry.path);
+        if (!base) return null;
+        const v = Number(entry.updatedAt) || 0;
+        const sep = base.includes('?') ? '&' : '?';
+        return `${base}${sep}v=${v}`;
+      };
+      void enqueueMaterialThumbnailBake(
+        result.asset,
+        def,
+        uploadMaterialPreview,
+        resolveTexUrl,
+        { force: true },
+      ).then(async (baked) => {
+        if (!baked) return;
+        if (baked.definition) {
+          const nextDef = normalizeMaterialDefinition(baked.definition);
+          if (nextDef) {
+            materialCacheRef.current[nextDef.id] = nextDef;
+            setMaterialDefs((prev) => ({ ...prev, [nextDef.id]: nextDef }));
+          }
+        }
+        if (baked.registry) {
+          setRegistry(normalizeRegistry(baked.registry));
+        } else {
+          try {
+            setRegistry(normalizeRegistry(await fetchAssetRegistry()));
+          } catch {
+            /* ignore */
+          }
+        }
+        setRevision((r) => r + 1);
+      });
+    }
     return { asset: result.asset, definition: def };
-  }, [notify, setStatus]);
+  }, [getTextureUrl, notify, setStatus]);
 
   const duplicateMaterial = useCallback(async (id) => {
     const source = await (async () => {
@@ -387,8 +450,28 @@ export function AssetBrowserProvider({ children }) {
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     notify(`Updated material ${result.asset.name}`);
+    void enqueueMaterialThumbnailBake(
+      result.asset,
+      def,
+      uploadMaterialPreview,
+      getTextureUrl,
+      { force: true },
+    ).then(async (baked) => {
+      if (!baked) return;
+      if (baked.definition) {
+        const nextDef = normalizeMaterialDefinition(baked.definition);
+        if (nextDef) {
+          materialCacheRef.current[nextDef.id] = nextDef;
+          setMaterialDefs((prev) => ({ ...prev, [nextDef.id]: nextDef }));
+        }
+      }
+      if (baked.registry) {
+        setRegistry(normalizeRegistry(baked.registry));
+      }
+      setRevision((r) => r + 1);
+    });
     return def;
-  }, [notify]);
+  }, [getTextureUrl, notify]);
 
   const getPrefabDefinition = useCallback(async (id) => {
     if (!id) return null;

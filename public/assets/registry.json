@@ -55,13 +55,19 @@
       ],
       "meta": {
         "baseColor": "#ffffff",
-        "hasBaseMap": true,
         "roughness": 0.8,
         "metalness": 0,
-        "previewPath": "previews/mat_verify_wall_sphere.png"
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_verify_wall_sphere.png",
+        "previewBytes": 54664,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795721516228
+      "updatedAt": 1795725166361
     },
     {
       "id": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d",
@@ -333,15 +339,19 @@
       ],
       "meta": {
         "baseColor": "#a8a098",
+        "roughness": 1,
+        "metalness": 0.02,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
         "previewPath": "previews/mat_hall_stone_sphere.png",
-        "roughness": 1,
-        "metalness": 0.02
+        "previewBytes": 113962,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795721516590
+      "updatedAt": 1795725166673
     },
     {
       "id": "mat_hall_floor",
@@ -357,15 +367,19 @@
       ],
       "meta": {
         "baseColor": "#8e8478",
+        "roughness": 1,
+        "metalness": 0,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
         "previewPath": "previews/mat_hall_floor_sphere.png",
-        "roughness": 1,
-        "metalness": 0
+        "previewBytes": 104817,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795721516970
+      "updatedAt": 1795725166923
     },
     {
       "id": "mat_hall_ceiling",
@@ -381,15 +395,19 @@
       ],
       "meta": {
         "baseColor": "#9a9690",
+        "roughness": 1,
+        "metalness": 0,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
         "previewPath": "previews/mat_hall_ceiling_sphere.png",
-        "roughness": 1,
-        "metalness": 0
+        "previewBytes": 84133,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795721517280
+      "updatedAt": 1795725167162
     },
     {
       "id": "mat_hall_wood",
@@ -405,15 +423,19 @@
       ],
       "meta": {
         "baseColor": "#6e4a32",
+        "roughness": 1,
+        "metalness": 0.05,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
         "previewPath": "previews/mat_hall_wood_sphere.png",
-        "roughness": 1,
-        "metalness": 0.05
+        "previewBytes": 136753,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795721517627
+      "updatedAt": 1795725167464
     },
     {
       "id": "mat_0d7229acc49d",
@@ -427,11 +449,17 @@
         "baseColor": "#8a9099",
         "roughness": 0.75,
         "metalness": 0.05,
+        "shadingModel": "standard",
         "hasBaseMap": false,
-        "previewPath": "previews/mat_0d7229acc49d_sphere.png"
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_0d7229acc49d_sphere.png",
+        "previewBytes": 35449,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795496202588,
-      "updatedAt": 1795721517644
+      "updatedAt": 1795725167582
     },
     {
       "id": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
@@ -480,11 +508,17 @@
         "baseColor": "#ffffff",
         "roughness": 0.85,
         "metalness": 0.02,
+        "shadingModel": "standard",
         "hasBaseMap": true,
-        "previewPath": "previews/mat_8609cf1b090a_sphere.png"
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_8609cf1b090a_sphere.png",
+        "previewBytes": 124553,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795581403650,
-      "updatedAt": 1795721517702
+      "updatedAt": 1795725167728
     },
     {
       "id": "tex_bed0f902ccaa",
@@ -534,11 +568,17 @@
         "baseColor": "#ffffff",
         "roughness": 0.85,
         "metalness": 0.02,
+        "shadingModel": "standard",
         "hasBaseMap": true,
-        "previewPath": "previews/mat_a64e6e8fecee_sphere.png"
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_a64e6e8fecee_sphere.png",
+        "previewBytes": 114223,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795650000888,
-      "updatedAt": 1795721517763
+      "updatedAt": 1795725167872
     },
     {
       "id": "tex_c62b419b178b",
@@ -572,6 +612,7 @@
         "baseColor": "#ffffff",
         "roughness": 1,
         "metalness": 0,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
@@ -579,10 +620,12 @@
         "pbrSourceTextureId": "tex_c62b419b178b",
         "tileHorizontal": true,
         "tileVertical": false,
-        "normalScale": 4
+        "previewBytes": 78581,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795665630908,
-      "updatedAt": 1795721517883
+      "updatedAt": 1795725168026
     },
     {
       "id": "tex_b24283819269",
@@ -616,6 +659,7 @@
         "baseColor": "#ffffff",
         "roughness": 1,
         "metalness": 0,
+        "shadingModel": "standard",
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
@@ -623,10 +667,12 @@
         "pbrSourceTextureId": "tex_b24283819269",
         "tileHorizontal": true,
         "tileVertical": false,
-        "normalScale": 5.5
+        "previewBytes": 94764,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795665950910,
-      "updatedAt": 1795721518002
+      "updatedAt": 1795725168185
     },
     {
       "id": "tex_7e918f2f33af",
@@ -1183,10 +1229,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch1_metal_sphere.png"
+        "previewPath": "previews/mat_batch1_metal_sphere.png",
+        "previewBytes": 68765,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795718430764,
-      "updatedAt": 1795721518022
+      "updatedAt": 1795725168312
     },
     {
       "id": "mat_batch1_rough",
@@ -1207,10 +1256,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch1_rough_sphere.png"
+        "previewPath": "previews/mat_batch1_rough_sphere.png",
+        "previewBytes": 34223,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795718430764,
-      "updatedAt": 1795721518038
+      "updatedAt": 1795725168426
     },
     {
       "id": "tex_batch2_toon_gradient",
@@ -1286,10 +1338,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_standard_sphere.png"
+        "previewPath": "previews/mat_batch2_standard_sphere.png",
+        "previewBytes": 34962,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518054
+      "updatedAt": 1795725168543
     },
     {
       "id": "mat_batch2_metal",
@@ -1310,10 +1365,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_metal_sphere.png"
+        "previewPath": "previews/mat_batch2_metal_sphere.png",
+        "previewBytes": 70320,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518070
+      "updatedAt": 1795725168661
     },
     {
       "id": "mat_batch2_glass",
@@ -1334,10 +1392,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_glass_sphere.png"
+        "previewPath": "previews/mat_batch2_glass_sphere.png",
+        "previewBytes": 67611,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518094
+      "updatedAt": 1795725168789
     },
     {
       "id": "mat_batch2_clearcoat",
@@ -1358,10 +1419,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_clearcoat_sphere.png"
+        "previewPath": "previews/mat_batch2_clearcoat_sphere.png",
+        "previewBytes": 69464,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518115
+      "updatedAt": 1795725168948
     },
     {
       "id": "mat_batch2_foliage",
@@ -1382,10 +1446,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_foliage_sphere.png"
+        "previewPath": "previews/mat_batch2_foliage_sphere.png",
+        "previewBytes": 2376,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518148
+      "updatedAt": 1795725169033
     },
     {
       "id": "mat_batch2_basic",
@@ -1406,10 +1473,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_basic_sphere.png"
+        "previewPath": "previews/mat_batch2_basic_sphere.png",
+        "previewBytes": 4884,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518165
+      "updatedAt": 1795725169106
     },
     {
       "id": "mat_batch2_toon",
@@ -1430,10 +1500,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_toon_sphere.png"
+        "previewPath": "previews/mat_batch2_toon_sphere.png",
+        "previewBytes": 8242,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518191
+      "updatedAt": 1795725169193
     },
     {
       "id": "mat_batch2_matcap",
@@ -1454,10 +1527,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_matcap_sphere.png"
+        "previewPath": "previews/mat_batch2_matcap_sphere.png",
+        "previewBytes": 57039,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518225
+      "updatedAt": 1795725169273
     },
     {
       "id": "mat_batch2_sheen",
@@ -1478,10 +1554,13 @@
         "hasBaseMap": false,
         "hasNormalMap": false,
         "hasRoughnessMap": false,
-        "previewPath": "previews/mat_batch2_sheen_sphere.png"
+        "previewPath": "previews/mat_batch2_sheen_sphere.png",
+        "previewBytes": 49504,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795721518247
+      "updatedAt": 1795725169354
     },
     {
       "id": "tex_flare_main",

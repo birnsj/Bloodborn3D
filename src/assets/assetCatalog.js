@@ -49,9 +49,12 @@ function buildPreview(entry, materialDef) {
   if (entry.kind === ASSET_KINDS.material) {
     const previewPath = materialDef?.previewPath || entry.meta?.previewPath;
     if (previewPath) {
+      const base = publicAssetUrl(previewPath);
+      const v = Number(entry.updatedAt) || 0;
+      const sep = base?.includes('?') ? '&' : '?';
       return {
         kind: 'image',
-        url: publicAssetUrl(previewPath),
+        url: base && v ? `${base}${sep}v=${v}` : base,
         color: materialDef?.baseColor || entry.meta?.baseColor || '#8a9099',
       };
     }

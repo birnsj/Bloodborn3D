@@ -7,6 +7,7 @@ import {
   __testSetAssetRoots,
   bakeMissingMaterialPreviews,
   createMaterialAssetFromDefinition,
+  saveMaterialPreviewPng,
 } from '../../vite-plugins/assetFileApi.js';
 import { toCatalogAsset } from '../assets/assetCatalog.js';
 import {
@@ -44,6 +45,34 @@ describe('material sphere preview bake', () => {
     const catalog = toCatalogAsset(result.asset, result.definition);
     expect(catalog.preview.kind).toBe('image');
     expect(catalog.preview.url).toContain('_sphere.png');
+  });
+
+  it('material-preview upload overwrites sphere PNG and registry meta', async () => {
+    const created = await createMaterialAssetFromDefinition({
+      name: 'Capture Target',
+      baseColor: '#4050c0',
+    });
+    const id = created.asset.id;
+    const tinyPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const result = await saveMaterialPreviewPng(id, tinyPng);
+    expect(result.previewPath).toBe(`previews/${id}_sphere.png`);
+    expect(result.asset.meta.previewPath).toBe(result.previewPath);
+    expect(result.asset.meta.previewRenderer).toBe('webgl');
+    expect(result.asset.meta.previewStyle).toBe('sphere-fill');
+    expect(result.definition.previewPath).toBe(result.previewPath);
+
+    const abs = path.join(tmp, result.previewPath);
+    const st = await fs.stat(abs);
+    expect(st.size).toBe(tinyPng.length);
+
+    const onDisk = JSON.parse(await fs.readFile(path.join(tmp, created.asset.path), 'utf8'));
+    expect(onDisk.previewPath).toBe(result.previewPath);
+
+    await expect(saveMaterialPreviewPng(id, Buffer.from('not-png')))
+      .rejects.toMatchObject({ code: 'INVALID_IMAGE' });
   });
 
   it('bake-missing backfills materials that still use the swatch fallback', async () => {

@@ -158,6 +158,14 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'material-preview') {
+            const id = url.searchParams.get('id');
+            const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
+            const result = await saveMaterialPreviewPng(id, buffer);
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'POST' && action === 'create-material') {
             const body = JSON.parse(await readBody(req));
             const result = await createMaterialAsset(body);
@@ -463,6 +471,57 @@ export async function saveMeshPreviewPng(id, buffer) {
     };
     entry.updatedAt = Date.now();
     return { ok: true, asset: entry, registry, previewPath: previewRel };
+  });
+}
+
+/**
+ * Save a browser-captured material sphere PNG (from Asset Viewer detailed preview)
+ * and attach previewPath on both the definition JSON and registry meta.
+ */
+export async function saveMaterialPreviewPng(id, buffer) {
+  if (!id) throw new Error('Missing material id');
+  if (!buffer?.length) throw new Error('Empty material preview upload');
+  const magic = detectImageMagic(buffer);
+  if (magic !== 'png') {
+    const err = new Error('Material preview must be a PNG');
+    err.code = 'INVALID_IMAGE';
+    throw err;
+  }
+
+  const previewRel = `previews/${id}_sphere.png`;
+  const previewFull = resolveSafeAssetPath(previewRel);
+  await fs.mkdir(path.dirname(previewFull), { recursive: true });
+  await fs.writeFile(previewFull, buffer);
+
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'material');
+    if (!entry) {
+      const err = new Error('Material not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+
+    const full = resolveSafeAssetPath(entry.path);
+    const current = JSON.parse(await fs.readFile(full, 'utf8'));
+    const definition = normalizeMaterialDefinition({
+      ...current,
+      id,
+      previewPath: previewRel,
+      updatedAt: Date.now(),
+    });
+    await atomicWriteJson(full, materialDefinitionForDisk(definition));
+
+    entry.name = definition.name || entry.name;
+    entry.updatedAt = definition.updatedAt;
+    entry.meta = {
+      ...materialRegistryMeta(definition),
+      previewBytes: buffer.length,
+      // Marks browser WebGL bake (studio IBL) vs CPU script approximation.
+      previewRenderer: 'webgl',
+      // Sphere-only, tightly framed (no ground disc).
+      previewStyle: 'sphere-fill',
+    };
+    return { ok: true, asset: entry, definition, registry, previewPath: previewRel };
   });
 }
 

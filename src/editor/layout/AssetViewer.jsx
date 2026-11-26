@@ -7,7 +7,7 @@ import { useLayout } from './LayoutContext.jsx';
 import { useEditor } from '../EditorContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
-import { uploadMeshPreview } from '../../io/assetFileApi.js';
+import { uploadMaterialPreview, uploadMeshPreview } from '../../io/assetFileApi.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import {
@@ -477,11 +477,7 @@ function PreviewSurface({ asset }) {
   }
 
   if (asset.type === 'material') {
-    return (
-      <div className="bb-asset-preview__surface bb-asset-preview__surface--live">
-        <MaterialPreviewWithMap asset={asset} />
-      </div>
-    );
+    return <MaterialPreviewWithIcon asset={asset} />;
   }
 
   return (
@@ -531,20 +527,53 @@ function MeshPreviewWithIcon({ asset }) {
   );
 }
 
-function MaterialPreviewWithMap({ asset }) {
-  const { assetResolver } = useAssetBrowser();
+function MaterialPreviewWithIcon({ asset }) {
+  const previewRef = useRef(null);
+  const { assetResolver, notify, refreshRegistry } = useAssetBrowser();
+  const [busy, setBusy] = useState(false);
   const getTextureUrl = assetResolver?.getTextureUrl;
   const color = asset.definition?.baseColor || asset.meta?.baseColor || asset.preview?.color || '#8a9099';
   const mapUrl = asset.definition?.baseColorMapId && getTextureUrl
     ? getTextureUrl(asset.definition.baseColorMapId)
     : null;
+
+  const onGenerateIcon = useCallback(async () => {
+    if (!asset?.id || busy) return;
+    setBusy(true);
+    try {
+      const blob = await previewRef.current?.captureIconPngBlob?.();
+      if (!blob) throw new Error('Could not capture material icon');
+      await uploadMaterialPreview(asset.id, blob);
+      await refreshRegistry?.();
+      notify('Material icon saved');
+    } catch (err) {
+      notify(err?.message || String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [asset?.id, busy, notify, refreshRegistry]);
+
   return (
-    <MaterialPreviewCanvas
-      definition={asset.definition}
-      color={color}
-      mapUrl={mapUrl || null}
-      getTextureUrl={getTextureUrl || null}
-    />
+    <div className="bb-asset-preview__surface bb-asset-preview__surface--live">
+      <div className="bb-asset-preview__mesh-toolbar">
+        <button
+          type="button"
+          className="bb-btn bb-btn--primary"
+          disabled={busy}
+          onClick={() => { void onGenerateIcon(); }}
+          {...helpProps('assetViewer.generateMaterialIcon')}
+        >
+          {busy ? 'Saving…' : 'Generate Icon'}
+        </button>
+      </div>
+      <MaterialPreviewCanvas
+        ref={previewRef}
+        definition={asset.definition}
+        color={color}
+        mapUrl={mapUrl || null}
+        getTextureUrl={getTextureUrl || null}
+      />
+    </div>
   );
 }
 
@@ -553,7 +582,7 @@ function previewHint(asset) {
     case 'mesh':
       return 'Orbit to frame the model, then Generate Icon to save that view as the Asset Viewer thumbnail. Models load in meters (100 editor units = 1 m).';
     case 'material':
-      return 'PBR material preview. Assign to brushes from the Details panel.';
+      return 'Orbit to frame the sphere, then Generate Icon to save that view as the Asset Viewer thumbnail. Assign materials to brushes from the Details panel.';
     case 'texture':
       return 'Imported texture preview. Use New Material to build a reusable material.';
     default:

@@ -166,9 +166,10 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
 
 /**
  * Lit PBR material preview for Asset Viewer / Materials workspace.
+ * Imperative API: `captureIconPngBlob({ size })` for Generate Icon from the current camera.
  * @param {'sphere'|'cube'|'plane'} [shape]
  */
-export function MaterialPreviewCanvas({
+export const MaterialPreviewCanvas = forwardRef(function MaterialPreviewCanvas({
   definition = null,
   color = '#8a9099',
   mapUrl = null,
@@ -176,9 +177,10 @@ export function MaterialPreviewCanvas({
   shape = 'sphere',
   /** Degrees around Y — moves the key light for interactive lighting previews. */
   lightAzimuth = null,
-}) {
+}, ref) {
   const canvasRef = useRef(null);
   const lightRef = useRef(null);
+  const apiRef = useRef(null);
   const previewShape = shape === 'cube' || shape === 'plane' ? shape : 'sphere';
   // Fingerprint all authorable fields so Batch 2 maps/flags invalidate the preview.
   const defKey = definition
@@ -193,11 +195,26 @@ export function MaterialPreviewCanvas({
     }`
     : `${color}|${mapUrl || ''}|${previewShape}`;
 
+  useImperativeHandle(ref, () => ({
+    captureIconPngBlob: (opts) => {
+      if (!apiRef.current?.captureIconPngBlob) {
+        return Promise.reject(new Error('Material preview is not ready'));
+      }
+      return apiRef.current.captureIconPngBlob(opts);
+    },
+  }), []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    // preserveDrawingBuffer so Generate Icon can read the same pixels the user sees.
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: false,
+      preserveDrawingBuffer: true,
+    });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -319,8 +336,9 @@ export function MaterialPreviewCanvas({
     ro.observe(canvas);
 
     let raf = 0;
+    let capturing = false;
     const tick = () => {
-      if (disposed) return;
+      if (disposed || capturing) return;
       if (previewShape !== 'plane') {
         mesh.rotation.y += 0.006;
       }
@@ -330,8 +348,73 @@ export function MaterialPreviewCanvas({
     };
     raf = requestAnimationFrame(tick);
 
+    apiRef.current = {
+      async captureIconPngBlob({ size = MESH_THUMB_SIZE } = {}) {
+        if (disposed) throw new Error('Material preview was closed');
+
+        // Pause the live loop and detach the ground disc so it cannot appear in the icon.
+        capturing = true;
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+        const groundWasInScene = ground.parent === scene;
+        if (groundWasInScene) scene.remove(ground);
+
+        const prevPos = camera.position.clone();
+        const prevTarget = controls.target.clone();
+        const prevAspect = camera.aspect;
+        const prevSize = new THREE.Vector2();
+        renderer.getSize(prevSize);
+        const prevPR = renderer.getPixelRatio();
+
+        try {
+          controls.update();
+          // Keep the user's view angle, but dolly in and render square so the
+          // sphere fills the thumb (wide detail preview left too much padding).
+          const target = controls.target.clone();
+          const dir = camera.position.clone().sub(target);
+          if (dir.lengthSq() < 1e-8) dir.set(1.55, 0.85, 1.85);
+          dir.normalize();
+          const box = new THREE.Box3().setFromObject(mesh);
+          const sphere = box.getBoundingSphere(new THREE.Sphere());
+          const radius = Math.max(sphere.radius, 0.05);
+          const fill = 0.92;
+          const dist = radius / (fill * Math.tan((camera.fov * Math.PI) / 360));
+          camera.position.copy(target).add(dir.multiplyScalar(dist));
+          camera.lookAt(target);
+          camera.aspect = 1;
+          camera.updateProjectionMatrix();
+
+          renderer.setPixelRatio(1);
+          renderer.setSize(size, size, false);
+          renderer.render(scene, camera);
+
+          const blob = await new Promise((resolve, reject) => {
+            renderer.domElement.toBlob(
+              (b) => (b ? resolve(b) : reject(new Error('Failed to encode material icon PNG'))),
+              'image/png',
+            );
+          });
+          return blob;
+        } finally {
+          camera.position.copy(prevPos);
+          controls.target.copy(prevTarget);
+          camera.aspect = prevAspect;
+          camera.updateProjectionMatrix();
+          controls.update();
+          renderer.setPixelRatio(prevPR);
+          renderer.setSize(prevSize.x, prevSize.y, false);
+          if (groundWasInScene) scene.add(ground);
+          capturing = false;
+          if (!disposed && !raf) raf = requestAnimationFrame(tick);
+        }
+      },
+    };
+
     return () => {
       disposed = true;
+      apiRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
@@ -357,4 +440,4 @@ export function MaterialPreviewCanvas({
   }, [lightAzimuth, defKey]);
 
   return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
-}
+});
