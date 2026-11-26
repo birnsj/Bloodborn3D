@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
@@ -195,7 +196,13 @@ export function OpenArtResults() {
           formValues: { ...ui.formValues },
           tileHorizontal: Boolean(aiUi.promptComposition?.tileHorizontal),
           tileVertical: Boolean(aiUi.promptComposition?.tileVertical),
-          assetCategory: origin?.assetCategory || null,
+          // Template the user generated from (current selection wins over the handoff origin).
+          promptTemplateId: aiUi.selectedPromptTemplateId || origin?.promptTemplateId || null,
+          assetCategory: aiUi.selectedPromptTemplateId || origin?.assetCategory
+            || origin?.promptTemplateId || null,
+          sourceRegion: origin?.sourceRegion || null,
+          sourceItemId: origin?.sourceItemId || null,
+          croppedReference: origin?.croppedReference || null,
           finalPrompt: submittedPrompt,
           savedAt: new Date().toISOString(),
         },
@@ -208,7 +215,7 @@ export function OpenArtResults() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [aiUi.promptComposition, artSaveFolder, notify, setStatus, ui]);
+  }, [aiUi.promptComposition, aiUi.selectedPromptTemplateId, artSaveFolder, notify, setStatus, ui]);
 
   const phaseLabel = describePhase(ui);
   const thumbSize = Number(aiUi.resultsThumbSize) || RESULTS_THUMB_SIZE_DEFAULT;
@@ -321,6 +328,10 @@ export function OpenArtResults() {
               className="bb-btn bb-btn--primary"
               disabled={!hasResult || ui.busy}
               onClick={onImportTexture}
+              {...helpProps(
+                'openart.importTexture',
+                !hasResult ? 'Generate a result first.' : null,
+              )}
             >
               Import Texture
             </button>
@@ -329,6 +340,10 @@ export function OpenArtResults() {
               className="bb-btn"
               disabled={!hasResult || ui.busy}
               onClick={onCreateMaterial}
+              {...helpProps(
+                'openart.createMaterial',
+                !hasResult ? 'Generate a result first.' : null,
+              )}
             >
               Create Material
             </button>
@@ -341,6 +356,12 @@ export function OpenArtResults() {
                   ? `Save into Project Art / ${artSaveFolder || '(root)'}`
                   : 'Start from Project Art Library → Send to Asset Generation'}
                 onClick={onSaveToProjectArt}
+                {...helpProps(
+                  'openart.saveProjectArt',
+                  !canSaveProjectArt
+                    ? 'Send from Project Art Library first, then generate a result.'
+                    : null,
+                )}
               >
                 Save to Project Art
               </button>
@@ -367,6 +388,7 @@ export function OpenArtResults() {
                 openArtDiscardResult();
                 setStatus('OpenArt result discarded');
               }}
+              {...helpProps('openart.discard')}
             >
               ×
             </button>
@@ -488,6 +510,27 @@ export function OpenArtResults() {
                 <>
                   <dt>Asset category</dt>
                   <dd>{generationOrigin.assetCategory}</dd>
+                </>
+              )}
+              {generationOrigin?.promptTemplateId && (
+                <>
+                  <dt>Prompt template</dt>
+                  <dd>{generationOrigin.promptTemplateId}</dd>
+                </>
+              )}
+              {generationOrigin?.sourceRegion && (
+                <>
+                  <dt>Source region</dt>
+                  <dd>
+                    {generationOrigin.sourceRegion.title || generationOrigin.sourceItemId || 'region'}
+                    {` — x ${Math.round((generationOrigin.sourceRegion.x || 0) * 100)}%, y ${Math.round((generationOrigin.sourceRegion.y || 0) * 100)}%, ${Math.round((generationOrigin.sourceRegion.width || 0) * 100)}% × ${Math.round((generationOrigin.sourceRegion.height || 0) * 100)}%`}
+                  </dd>
+                </>
+              )}
+              {generationOrigin?.croppedReference?.stagingId && (
+                <>
+                  <dt>Cropped reference</dt>
+                  <dd>{generationOrigin.croppedReference.stagingId}</dd>
                 </>
               )}
             </dl>

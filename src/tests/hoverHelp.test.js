@@ -55,6 +55,9 @@ describe('hover help content', () => {
       'viewport.',
       'settings.',
       'panel.',
+      'workspace.',
+      'projectArt.',
+      'openart.',
     ];
     for (const prefix of requiredPrefixes) {
       expect(ids.some((id) => id.startsWith(prefix))).toBe(true);
@@ -67,6 +70,8 @@ describe('hover help content', () => {
     expect(getHelpEntry('viewport.camera')?.title).toBe('Camera Mode');
     expect(getHelpEntry('details.prefab.apply')?.title).toBe('Apply Source');
     expect(getHelpEntry('content.asset')?.body?.toLowerCase()).toContain('face');
+    expect(getHelpEntry('openart.generatePrompt')?.title).toBe('Compose Prompt');
+    expect(getHelpEntry('projectArt.action.sendRegion')?.body?.toLowerCase()).toMatch(/crop/);
     expect(getHelpEntry('missing')).toBeNull();
   });
 
@@ -90,6 +95,15 @@ describe('hover help content', () => {
       'panel.tutorials',
       'settings.dialog',
       'settings.camera',
+      'workspace.ai',
+      'ai.section.library',
+      'ai.section.generation',
+      'projectArt.region.select',
+      'projectArt.action.sendRegion',
+      'openart.promptTemplate',
+      'openart.tiling',
+      'openart.generate',
+      'openart.createMaterial',
     ];
     for (const id of required) {
       expect(content[id], id).toBeTruthy();
@@ -99,7 +113,16 @@ describe('hover help content', () => {
   it('does not claim stubbed features as working', () => {
     const blob = JSON.stringify(HELP_CONTENT);
     expect(blob.toLowerCase()).not.toContain('visual scripting');
+    // Prefer “Asset Generation” / “AI-assisted” — not the stub phrase “ai generation”.
     expect(blob.toLowerCase()).not.toContain('ai generation');
+  });
+
+  it('documents AI Assets and Project Art workflows', () => {
+    expect(getHelpEntry('workspace.ai')?.body?.toLowerCase()).toContain('project art');
+    expect(getHelpEntry('openart.tiling')?.body?.toLowerCase()).toContain('horizontal');
+    expect(getHelpEntry('openart.generate')?.body?.toLowerCase()).toContain('spend');
+    expect(getHelpEntry('projectArt.action.sendRegion')?.tips?.toLowerCase()).toContain('compose prompt');
+    expect(getHelpEntry('projectArt.action.sendRegion')?.body?.toLowerCase()).toMatch(/crop/);
   });
 });
 
@@ -113,8 +136,10 @@ describe('keyboard shortcuts catalog', () => {
     expect(flat.some((r) => r.keys.includes('Enter') && /clip/i.test(r.action))).toBe(true);
     expect(flat.some((r) => r.keys.includes('Tab') && /surface/i.test(r.action))).toBe(true);
     expect(flat.some((r) => r.keys.includes('F'))).toBe(true);
+    expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'projectArt')).toBe(true);
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Shift+G');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Commit clip');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Project Art Library');
   });
 });
 

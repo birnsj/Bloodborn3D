@@ -31,8 +31,8 @@ export const HELP_CONTENT = {
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
-    body: 'Open Help → Keyboard Shortcuts… for edit, transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, and play bindings.',
-    tips: 'Hover Help shows matching shortcuts on toolbar and viewport controls.',
+    body: 'Open Help → Keyboard Shortcuts… for edit, transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, and Project Art Library gallery bindings.',
+    tips: 'Hover Help shows matching shortcuts on toolbar, viewport, and AI Assets controls.',
   },
   'help.hoverHelp': {
     title: 'Show Hover Help',
@@ -505,7 +505,149 @@ export const HELP_CONTENT = {
   },
   'workspace.ai': {
     title: 'AI Assets',
-    body: 'Dedicated workspace for AI-assisted asset generation. OpenArt is available now; other providers appear as Coming Soon.',
+    body: 'Workspace for Project Art Library (browse and organize concept art) and Asset Generation (OpenArt). Switch sections with the tabs under the workspace title.',
+    tips: 'OpenArt needs the CLI and login. ComfyUI and Meshy are Coming Soon placeholders.',
+  },
+  'workspace.level': {
+    title: 'Level Editor',
+    body: 'Main authoring workspace: viewport, brushes, lights, materials on actors, Outliner, Details, Content Browser, and Asset Viewer.',
+  },
+  'workspace.materials': {
+    title: 'Materials',
+    body: 'Edit material definitions (base color, maps, preview). Switch back to Level Editor to assign materials to brushes and faces.',
+  },
+  'workspace.placeholder': {
+    title: 'Extension workspace',
+    body: 'Reserved tab for a future BloodBound module. The shell is present so layout stays stable; the feature is not implemented yet.',
+  },
+
+  // —— AI Assets shell ——
+  'ai.section.library': {
+    title: 'Project Art Library',
+    body: 'Browse, organize, and select concept art. Pin references and send images or regions to Asset Generation. This tab does not run OpenArt jobs.',
+  },
+  'ai.section.generation': {
+    title: 'Asset Generation',
+    body: 'Compose prompts (templates + references + tiling), estimate cost, approve spend, and generate with OpenArt. Import textures or create materials from results.',
+  },
+  'ai.provider.openart': {
+    title: 'OpenArt provider',
+    body: 'Live image provider driven by the OpenArt CLI. Connect/log in from Generation Settings before estimating or generating.',
+  },
+  'ai.provider.soon': {
+    title: 'Coming soon provider',
+    body: 'Layout placeholder only. Selecting it shows a Coming Soon panel — no jobs run.',
+  },
+
+  // —— Project Art Library ——
+  'projectArt.nav.filters': {
+    title: 'Library filters',
+    body: 'All Assets, Recent, and Favorites list across the library. Projects tree and gallery folders navigate the on-disk folder hierarchy.',
+  },
+  'projectArt.nav.collections': {
+    title: 'Collections',
+    body: 'Named groups of library items (e.g. art-direction sets). Opening a collection filters the gallery to those items.',
+  },
+  'projectArt.nav.tags': {
+    title: 'Tags',
+    body: 'Click a tag to filter the library. Edit tags on the Details tab of a selected image.',
+  },
+  'projectArt.gallery': {
+    title: 'Art gallery',
+    body: 'Folder tiles open subfolders. Image tiles select assets (Ctrl/Cmd multi-select, Shift range, Ctrl+A all visible files). Drag images onto the gallery to import into the current folder.',
+    shortcut: 'Ctrl+A',
+    tips: 'Import requires an open folder view — not All Assets / Favorites / tag views.',
+  },
+  'projectArt.import': {
+    title: 'Import images',
+    body: 'Import image files into the currently open Project Art folder. Disabled until a folder is open.',
+  },
+  'projectArt.tray': {
+    title: 'Generation References tray',
+    body: 'Pinned Project Art images that Asset Generation uses as references. Add from selection (+ / Use as Reference); remove with × on a thumb.',
+  },
+  'projectArt.region.select': {
+    title: 'Select Region',
+    body: 'Toggle region drawing on the preview, then drag a rectangle. The crop of that region becomes the OpenArt image reference — not a new Project Art asset file.',
+    tips: 'Clear Region removes the selection. Re-draw to update.',
+  },
+  'projectArt.region.clear': {
+    title: 'Clear Region',
+    body: 'Removes the temporary rectangle selection from the preview and from the handoff store.',
+  },
+  'projectArt.detail.tabs': {
+    title: 'Preview tabs',
+    body: 'Details: metadata, tags, description. Prompt: editable working generation prompt. Generation: original prompt, provider/model, template, tiling, source region, and cropped-reference provenance.',
+  },
+  'projectArt.action.useAsReference': {
+    title: 'Use as Reference',
+    body: 'Pins the selected image(s) into the Generation References tray for Asset Generation. Does not start a job.',
+  },
+  'projectArt.action.sendToGeneration': {
+    title: 'Send to Generation',
+    body: 'Opens Asset Generation with this image as a reference, any saved prompt, and the current folder as the Project Art save target.',
+  },
+  'projectArt.action.sendRegion': {
+    title: 'Send Region to Generation',
+    body: 'Crops the selected rectangle and stages it as the OpenArt image reference (Nano Banana 2 --image), preserving source image, region coordinates, and associations. Does not spend credits.',
+    tips: 'Requires an active region. Use Compose Prompt in Asset Generation for the Wall Texture (or other) template, then Estimate / Generate with spend approval.',
+  },
+
+  // —— OpenArt / Asset Generation ——
+  'openart.model': {
+    title: 'Model',
+    body: 'OpenArt image model for this job. Available modes and schema fields refresh when the model changes.',
+  },
+  'openart.mode': {
+    title: 'Mode',
+    body: 'Text to image or Image to image (and other modes the selected model exposes). Image to image needs a reference image.',
+  },
+  'openart.promptTemplate': {
+    title: 'Prompt template',
+    body: 'Project-level template (Wall Texture, Prop, Character, …) that defines framing, technical constraints, suggested output type, and whether tiling language applies.',
+    tips: 'Templates scaffold wording. Attached reference crops supply visual material — there is no separate vision-analysis step.',
+  },
+  'openart.generatePrompt': {
+    title: 'Compose Prompt',
+    body: 'Fills the editable Prompt field from the selected template, optional instructions, and region/crop context. Tiling sentences come from the Tile checkboxes when you submit. The cropped reference image is submitted with the job so the model can read material detail directly.',
+  },
+  'openart.prompt': {
+    title: 'Prompt',
+    body: 'Editable working prompt sent to OpenArt (after composition with tiling). Edit freely after Compose Prompt.',
+  },
+  'openart.savePrompt': {
+    title: 'Save Prompt',
+    body: 'Persists the working prompt into Project Art metadata and can attach it to the source library item for reuse.',
+  },
+  'openart.tiling': {
+    title: 'Tiling options',
+    body: 'Tile Horizontal / Tile Vertical append seamless-tiling language to the final submitted prompt (once). Use these checkboxes only — there are no duplicate tiling controls elsewhere.',
+    tips: 'Both on → bidirectional tiling. Neither → no tiling sentence. Existing tiling wording in the body is not duplicated.',
+  },
+  'openart.estimate': {
+    title: 'Estimate',
+    body: 'Asks OpenArt for the credit cost of the current model, mode, and settings without spending.',
+  },
+  'openart.generate': {
+    title: 'Generate…',
+    body: 'Starts an OpenArt job after an explicit spend-approval confirmation. Never auto-spends credits.',
+    tips: 'Requires a connected CLI session and a non-empty prompt (plus reference when the mode needs one).',
+  },
+  'openart.importTexture': {
+    title: 'Import Texture',
+    body: 'Registers the current generation result as a project texture asset for use in materials and the level.',
+  },
+  'openart.createMaterial': {
+    title: 'Create Material',
+    body: 'Creates a material asset from the imported (or importable) generation result texture.',
+  },
+  'openart.saveProjectArt': {
+    title: 'Save to Project Art',
+    body: 'Writes the result into the Project Art folder chosen when you sent from the library. Enabled in Project Art save mode.',
+  },
+  'openart.discard': {
+    title: 'Discard result',
+    body: 'Clears the current OpenArt preview/result from the session without deleting imported project assets.',
   },
 
   'content.search': {
@@ -591,8 +733,8 @@ export const HELP_CONTENT = {
   // —— Panels / settings ——
   'panel.tutorials': {
     title: 'Tutorials',
-    body: 'Guided lessons with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
-    tips: 'Toggle the panel from Window → Tutorials. Lessons cover rooms, materials, lights, prefabs, subtractive geo, and more.',
+    body: 'Guided lessons (Academy) with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
+    tips: 'Help → Tutorials… or Window → Tutorials. Includes level building plus Art & generation (Project Art Library, Asset Generation).',
   },
   'settings.dialog': {
     title: 'Editor Settings',

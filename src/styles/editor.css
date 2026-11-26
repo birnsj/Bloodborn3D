@@ -3439,6 +3439,11 @@ select {
   padding: 8px 10px;
 }
 
+.bb-project-art__detail-body {
+  display: flex;
+  flex-direction: column;
+}
+
 .bb-project-art__center {
   min-width: 0;
 }
@@ -3576,11 +3581,35 @@ select {
   margin: 2px 0 6px 18px;
 }
 
-.bb-project-art__filter {
+.bb-project-art__nav-section {
+  margin-bottom: 10px;
+}
+
+.bb-project-art__nav-section-title {
   display: block;
+  margin: 0 0 4px;
+  padding: 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bb-muted, #889);
+}
+
+.bb-project-art__filter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bb-project-art__filter {
+  display: flex;
   width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   text-align: left;
-  margin: 8px 0 4px;
+  margin: 0 0 2px;
   padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: var(--bb-radius);
@@ -3599,10 +3628,25 @@ select {
   border-color: var(--bb-accent);
 }
 
-.bb-project-art__collections {
+.bb-project-art__filter-count {
+  color: var(--bb-muted, #889);
+  font-size: 11px;
+}
+
+.bb-project-art__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
   border-top: 1px solid var(--bb-border);
-  padding-top: 8px;
-  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+}
+
+.bb-project-art__collections {
+  padding-top: 2px;
 }
 
 .bb-project-art__collections-head {
@@ -3856,6 +3900,57 @@ select {
   border-radius: var(--bb-radius);
   background: #0b0e14;
   overflow: hidden;
+  position: relative;
+}
+
+.bb-project-art-detail__hero-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+.bb-project-art-detail__region-mode {
+  cursor: crosshair;
+}
+
+.bb-project-art-detail__region {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--bb-accent, #c9a227);
+  background: rgba(201, 162, 39, 0.18);
+  pointer-events: none;
+}
+
+.bb-project-art-detail__region-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--bb-accent, #c9a227);
+  border: 1px solid #0b0e14;
+}
+
+.bb-project-art-detail__region-handle.is-nw { left: -5px; top: -5px; }
+.bb-project-art-detail__region-handle.is-ne { right: -5px; top: -5px; }
+.bb-project-art-detail__region-handle.is-sw { left: -5px; bottom: -5px; }
+.bb-project-art-detail__region-handle.is-se { right: -5px; bottom: -5px; }
+
+.bb-project-art-detail__hero-tools {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.bb-project-art-detail__hero-tools .bb-btn {
+  background: rgba(11, 14, 20, 0.8);
+}
+
+.bb-project-art-detail__hero-tools .bb-btn.is-active {
+  border-color: var(--bb-accent, #c9a227);
 }
 
 .bb-project-art-detail__preview {
@@ -3863,6 +3958,29 @@ select {
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+.bb-openart__templates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.bb-openart__template-help,
+.bb-openart__template-region {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.bb-openart__template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .bb-project-art-detail__preview-empty {
@@ -3884,7 +4002,16 @@ select {
   padding-right: 2px;
 }
 
+.bb-project-art-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .bb-project-art-detail__filename {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 650;
   overflow: hidden;
@@ -3892,11 +4019,39 @@ select {
   white-space: nowrap;
 }
 
-.bb-project-art-detail__summary {
+.bb-project-art-detail__tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.bb-project-art-detail__tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--bb-muted, #889);
   cursor: pointer;
-  font-weight: 650;
+  font: inherit;
   font-size: 12px;
-  padding: 2px 0;
+  font-weight: 600;
+}
+
+.bb-project-art-detail__tab:hover {
+  color: var(--bb-text);
+}
+
+.bb-project-art-detail__tab.is-active {
+  color: var(--bb-text-bright, #fff);
+  border-bottom-color: var(--bb-accent, #4d7ea8);
+}
+
+.bb-project-art-detail__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .bb-project-art-detail__meta,
@@ -3905,6 +4060,41 @@ select {
   flex-direction: column;
   gap: 8px;
   padding-top: 6px;
+}
+
+.bb-project-art-detail__meta-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+}
+
+.bb-project-art-detail__meta-row {
+  display: contents;
+}
+
+.bb-project-art-detail__meta-row dt {
+  margin: 0;
+  color: var(--bb-muted, #889);
+}
+
+.bb-project-art-detail__meta-row dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-project-art-detail__footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--bb-border);
+  padding-top: 8px;
+  margin-top: auto;
+}
+
+.bb-project-art-detail__hint {
+  margin: 0 0 4px;
+  font-size: 11px;
 }
 
 .bb-project-art-detail__rating {
@@ -4668,6 +4858,49 @@ select {
 .bb-gen-frame-preview__tile-label.is-on {
   color: var(--bb-accent);
   font-weight: 650;
+}
+
+.bb-openart__library-refs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.bb-openart__library-refs-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 40px;
+}
+
+.bb-openart__library-ref-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--bb-border);
+  background: #0b0e14;
+  flex-shrink: 0;
+}
+
+.bb-openart__library-ref-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bb-openart__banner {
+  padding: 6px 8px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  background: rgba(201, 162, 39, 0.12);
+  font-size: 11px;
 }
 
 .bb-openart__tiling {

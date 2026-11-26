@@ -43,8 +43,9 @@ const initialState = () => ({
   searchQuery: '',
   searchResults: null, // null = not searching; array = search hit items
   sortMode: 'name', // name | date | rating
-  viewMode: 'folder', // folder | favorites | collection
+  viewMode: 'folder', // folder | favorites | collection | all | recent | tag
   activeCollectionId: null,
+  tagFilter: null,
   selectedIds: [],
   anchorId: null,
   expandedPaths: {},
@@ -117,6 +118,7 @@ export async function openFolder(folderPath = '') {
     currentFolder: path,
     viewMode: 'folder',
     activeCollectionId: null,
+    tagFilter: null,
     searchQuery: '',
     searchResults: null,
   });
@@ -152,6 +154,7 @@ export async function search(query) {
       searchResults: res.results || [],
       viewMode: 'folder',
       activeCollectionId: null,
+      tagFilter: null,
     });
     return res.results || [];
   } catch (err) {
@@ -169,6 +172,51 @@ export function setViewFavorites() {
   setState({
     viewMode: 'favorites',
     activeCollectionId: null,
+    tagFilter: null,
+    searchQuery: '',
+    searchResults: null,
+    selectedIds: [],
+    anchorId: null,
+  });
+}
+
+/** Flat gallery of every library item (Bridge “All Assets”). */
+export function setViewAll() {
+  setState({
+    viewMode: 'all',
+    activeCollectionId: null,
+    tagFilter: null,
+    searchQuery: '',
+    searchResults: null,
+    selectedIds: [],
+    anchorId: null,
+  });
+}
+
+/** Flat gallery sorted by recency (Bridge “Recent”). */
+export function setViewRecent() {
+  setState({
+    viewMode: 'recent',
+    activeCollectionId: null,
+    tagFilter: null,
+    sortMode: 'date',
+    searchQuery: '',
+    searchResults: null,
+    selectedIds: [],
+    anchorId: null,
+  });
+}
+
+export function setViewTag(tag) {
+  const next = String(tag || '').trim();
+  if (!next) {
+    setViewAll();
+    return;
+  }
+  setState({
+    viewMode: 'tag',
+    tagFilter: next,
+    activeCollectionId: null,
     searchQuery: '',
     searchResults: null,
     selectedIds: [],
@@ -180,6 +228,7 @@ export function openCollection(collectionId) {
   setState({
     viewMode: 'collection',
     activeCollectionId: collectionId || null,
+    tagFilter: null,
     searchQuery: '',
     searchResults: null,
     selectedIds: [],
@@ -214,42 +263,56 @@ export function getVisibleItemIds() {
     .map((e) => e.item.id);
 }
 
+function itemToEntry(item) {
+  return {
+    name: item.title || item.relativePath,
+    path: item.relativePath,
+    type: 'file',
+    item,
+  };
+}
+
 export function getVisibleEntries() {
-  const { library, folderEntries, searchResults, viewMode, activeCollectionId, sortMode } = state;
+  const {
+    library, folderEntries, searchResults, viewMode, activeCollectionId, sortMode, tagFilter,
+  } = state;
 
   let entries;
   if (searchResults) {
-    entries = searchResults.map((item) => ({
-      name: item.title || item.relativePath,
-      path: item.relativePath,
-      type: 'file',
-      item,
-    }));
+    entries = searchResults.map(itemToEntry);
   } else if (viewMode === 'favorites') {
+    entries = (library.items || []).filter((item) => item.favorite).map(itemToEntry);
+  } else if (viewMode === 'all' || viewMode === 'recent') {
+    entries = (library.items || []).map(itemToEntry);
+  } else if (viewMode === 'tag' && tagFilter) {
+    const needle = String(tagFilter).toLowerCase();
     entries = (library.items || [])
-      .filter((item) => item.favorite)
-      .map((item) => ({
-        name: item.title || item.relativePath,
-        path: item.relativePath,
-        type: 'file',
-        item,
-      }));
+      .filter((item) => (item.tags || []).some((t) => String(t).toLowerCase() === needle))
+      .map(itemToEntry);
   } else if (viewMode === 'collection' && activeCollectionId) {
     const col = (library.collections || []).find((c) => c.id === activeCollectionId);
     const idSet = new Set(col?.itemIds || []);
-    entries = (library.items || [])
-      .filter((item) => idSet.has(item.id))
-      .map((item) => ({
-        name: item.title || item.relativePath,
-        path: item.relativePath,
-        type: 'file',
-        item,
-      }));
+    entries = (library.items || []).filter((item) => idSet.has(item.id)).map(itemToEntry);
   } else {
     entries = [...(folderEntries || [])];
   }
 
-  return sortEntries(entries, sortMode);
+  return sortEntries(entries, viewMode === 'recent' ? 'date' : sortMode);
+}
+
+/** Tag frequency list for the library sidebar. */
+export function getLibraryTagCounts() {
+  const counts = new Map();
+  for (const item of state.library.items || []) {
+    for (const tag of item.tags || []) {
+      const key = String(tag).trim();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
 
 function sortEntries(entries, sortMode) {

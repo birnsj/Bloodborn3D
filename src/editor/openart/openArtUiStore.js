@@ -33,6 +33,7 @@ const initialState = () => ({
   formValues: {},
   referenceFileName: null,
   referenceStagingPath: null,
+  referenceStagingId: null,
   estimate: null,
   job: null,
   staging: null,
@@ -211,6 +212,7 @@ export async function openArtApplySeed({
   formValues = null,
   referenceFileName = null,
   referenceStagingPath = null,
+  referenceStagingId = null,
 } = {}) {
   if (modelId && modelId !== state.modelId) {
     await openArtSetModel(modelId);
@@ -230,6 +232,7 @@ export async function openArtApplySeed({
     openArtSetReference({
       fileName: referenceFileName || 'concept-reference',
       stagingPath: referenceStagingPath,
+      stagingId: referenceStagingId,
     });
   }
   return getOpenArtUiState();
@@ -247,7 +250,13 @@ export async function openArtSetModel(modelId) {
   const model = state.imageModels.find((m) => m.id === modelId);
   const modes = model?.modes?.image?.map((m) => m.mode) || ['text2image'];
   const mode = modes.includes(state.mode) ? state.mode : modes[0];
-  setState({ modelId, mode, estimate: null, referenceStagingPath: mode === 'text2image' ? null : state.referenceStagingPath });
+  setState({
+    modelId,
+    mode,
+    estimate: null,
+    referenceStagingPath: mode === 'text2image' ? null : state.referenceStagingPath,
+    referenceStagingId: mode === 'text2image' ? null : state.referenceStagingId,
+  });
   await openArtLoadForm(modelId, mode);
 }
 
@@ -257,14 +266,20 @@ export async function openArtSetMode(mode) {
     estimate: null,
     referenceFileName: mode === 'image2image' ? state.referenceFileName : null,
     referenceStagingPath: mode === 'image2image' ? state.referenceStagingPath : null,
+    referenceStagingId: mode === 'image2image' ? state.referenceStagingId : null,
   });
   await openArtLoadForm(state.modelId, mode);
 }
 
-export function openArtSetReference({ fileName = null, stagingPath = null } = {}) {
+export function openArtSetReference({
+  fileName = null,
+  stagingPath = null,
+  stagingId = null,
+} = {}) {
   setState({
     referenceFileName: fileName,
     referenceStagingPath: stagingPath,
+    referenceStagingId: stagingId,
     estimate: null,
     phase: state.phase === 'estimated' ? 'ready' : state.phase,
   });

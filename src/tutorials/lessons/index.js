@@ -14,6 +14,8 @@ import { rampsStairsLesson } from './13-ramps-stairs.js';
 import { geometryEditingLesson } from './14-geometry-editing.js';
 import { surfaceAlignLesson } from './15-surface-align.js';
 import { columnsArchesCurvesLesson } from './16-columns-arches-curves.js';
+import { projectArtLibraryLesson } from './17-project-art-library.js';
+import { assetGenerationLesson } from './18-asset-generation.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -32,6 +34,8 @@ export const LESSONS = [
   geometryEditingLesson,
   surfaceAlignLesson,
   columnsArchesCurvesLesson,
+  projectArtLibraryLesson,
+  assetGenerationLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

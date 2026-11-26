@@ -80,7 +80,7 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(16);
+    expect(LESSONS).toHaveLength(18);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
@@ -88,6 +88,8 @@ describe('lesson registry', () => {
     expect(listLessons().map((l) => l.id)).toContain('geometry-editing');
     expect(listLessons().map((l) => l.id)).toContain('surface-align');
     expect(listLessons().map((l) => l.id)).toContain('columns-arches-curves');
+    expect(listLessons().map((l) => l.id)).toContain('project-art-library');
+    expect(listLessons().map((l) => l.id)).toContain('asset-generation');
     expect(getLessonById('missing')).toBeNull();
   });
 
@@ -101,7 +103,15 @@ describe('lesson registry', () => {
     expect(surface.steps.some((s) => s.verify?.type === 'surfaceSelected')).toBe(true);
     const workspace = getLessonById('workspace');
     expect(workspace.steps.some((s) => s.id === 'asset-viewer')).toBe(true);
+    expect(workspace.steps.some((s) => s.id === 'ai-assets-tab')).toBe(true);
     expect(workspace.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    const projectArt = getLessonById('project-art-library');
+    expect(projectArt.steps.some((s) => s.id === 'region')).toBe(true);
+    const assetGen = getLessonById('asset-generation');
+    expect(assetGen.steps.some((s) => s.id === 'compose')).toBe(true);
+    expect(assetGen.steps.find((s) => s.id === 'compose')?.title).toMatch(/Compose Prompt/i);
+    expect(assetGen.steps.some((s) => s.id === 'tiling')).toBe(true);
+    expect(assetGen.steps.some((s) => s.id === 'cost')).toBe(true);
     const subtract = getLessonById('subtractive-geometry');
     expect(subtract.summary.toLowerCase()).toContain('world solid');
     expect(subtract.steps.some((s) => s.id === 'map-modes')).toBe(true);

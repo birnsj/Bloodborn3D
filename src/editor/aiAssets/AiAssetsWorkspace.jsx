@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProjectArtLibraryPanel } from '../projectArt/ProjectArtLibraryPanel.jsx';
 import { OpenArtControls } from '../openart/OpenArtControls.jsx';
 import { OpenArtResults } from '../openart/OpenArtResults.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import {
   getAiAssetsUiState,
   setAiAssetsSection,
@@ -31,12 +32,13 @@ export function AiAssetsWorkspace() {
   const conceptSaveMode = Boolean(ui.conceptSaveTargetAreaId);
 
   return (
-    <div className="bb-workspace bb-ai-assets-shell" data-bb-tutorial="workspace.ai">
+    <div className="bb-workspace bb-ai-assets-shell" {...helpProps('workspace.ai')}>
       <div className="bb-ai-assets-shell__tabs">
         <button
           type="button"
           className={`bb-ai-assets-shell__tab${isConcepts ? ' is-active' : ''}`}
           onClick={() => setAiAssetsSection('concepts')}
+          {...helpProps('ai.section.library')}
         >
           Project Art Library
         </button>
@@ -44,6 +46,7 @@ export function AiAssetsWorkspace() {
           type="button"
           className={`bb-ai-assets-shell__tab${!isConcepts ? ' is-active' : ''}`}
           onClick={() => setAiAssetsSection('generation')}
+          {...helpProps('ai.section.generation')}
         >
           Asset Generation
         </button>

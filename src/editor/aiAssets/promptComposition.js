@@ -24,8 +24,18 @@ export function tilingInstruction({ tileHorizontal = false, tileVertical = false
 }
 
 /**
+ * True when text already carries seamless-tiling language (case-insensitive
+ * "seamless" + "tiling"), so appending the checkbox sentence would duplicate it.
+ */
+export function hasTilingLanguage(text) {
+  const t = String(text ?? '').toLowerCase();
+  return t.includes('seamless') && t.includes('tiling');
+}
+
+/**
  * Compose the exact prompt text submitted to an image provider.
  * Does not mutate the editable prompt — callers keep that separate.
+ * Skips the tiling append when the body already contains tiling language.
  */
 export function composeGenerationPrompt({
   prompt = '',
@@ -35,6 +45,7 @@ export function composeGenerationPrompt({
   const body = String(prompt ?? '').trim();
   const tiling = tilingInstruction({ tileHorizontal, tileVertical });
   if (!tiling) return body;
+  if (body && hasTilingLanguage(body)) return body;
   if (!body) return tiling;
   return `${body}\n\n${tiling}`;
 }

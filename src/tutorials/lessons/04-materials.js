@@ -62,5 +62,13 @@ export const materialsLesson = {
       body: 'Level → Open Materials (or the Materials workspace tab) to edit material definitions, then switch back to Level Editor.',
       verify: { type: 'manualConfirm', label: 'Got it' },
     },
+    {
+      id: 'from-generation',
+      title: 'Textures from Asset Generation',
+      body: 'AI Assets → Asset Generation can Import Texture and Create Material from an OpenArt result. Those assets then appear in Content Browser / Asset Viewer like any other material.',
+      highlight: ['workspace.ai', 'openart.createMaterial'],
+      verify: { type: 'manualConfirm', label: 'Understood' },
+      explain: 'Project Art Library holds concept references; imported textures/materials live in the normal asset folders used by the level editor.',
+    },
   ],
 };

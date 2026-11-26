@@ -1,13 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
-import { uploadOpenArtReference } from '../../io/openArtClient.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+import { openArtStagingPreviewUrl, uploadOpenArtReference } from '../../io/openArtClient.js';
 import {
   getAiAssetsUiState,
   setPromptComposition,
+  setSelectedPromptTemplateId,
+  setSelectedRegion,
   subscribeAiAssetsUi,
 } from '../aiAssets/aiAssetsUiStore.js';
 import { composeGenerationPrompt } from '../aiAssets/promptComposition.js';
+import {
+  ASSET_CATEGORIES,
+  assembleRegionTemplatePrompt,
+  composeTemplateAssetPrompt,
+  describeRegionCoords,
+  getPromptTemplate,
+  summarizeTemplateConstraints,
+} from '../projectArt/promptTemplates.js';
+import {
+  projectArtCreatePrompt,
+  projectArtPreviewUrl,
+  projectArtUpdateItem,
+} from '../projectArt/projectArtStore.js';
 import {
   getOpenArtComposedPrompt,
   getOpenArtUiState,
@@ -37,6 +53,8 @@ export function OpenArtControls() {
   const refInput = useRef(null);
   const connectedRef = useRef(false);
   const [refPreviewUrl, setRefPreviewUrl] = useState(null);
+  const [instruction, setInstruction] = useState('');
+  const [promptSource, setPromptSource] = useState(null);
 
   useEffect(() => subscribeOpenArtUi(setUi), []);
   useEffect(() => subscribeAiAssetsUi(setAiUi), []);
@@ -97,6 +115,7 @@ export function OpenArtControls() {
       openArtSetReference({
         fileName: file.name,
         stagingPath: uploaded.absolutePath,
+        stagingId: uploaded.stagingId || null,
       });
       if (ui.mode !== 'image2image') await openArtSetMode('image2image');
       setStatus(`Reference ready: ${file.name}`);
@@ -104,6 +123,12 @@ export function OpenArtControls() {
       notify(err.message || String(err));
     }
   }, [notify, refPreviewUrl, setStatus, ui.mode]);
+
+  const referencePreviewSrc = refPreviewUrl
+    || (ui.referenceStagingId ? openArtStagingPreviewUrl(ui.referenceStagingId) : null)
+    || (aiUi.generationOrigin?.croppedReference?.stagingId
+      ? openArtStagingPreviewUrl(aiUi.generationOrigin.croppedReference.stagingId)
+      : null);
 
   const onEstimate = useCallback(async () => {
     try {
@@ -180,6 +205,91 @@ export function OpenArtControls() {
     openArtClearEstimate();
   }, []);
 
+  const trayRefs = aiUi.generationReferences || [];
+
+  // Template selection is shared via the store so Project Art handoff can preselect it.
+  const templateId = [aiUi.selectedPromptTemplateId, aiUi.generationOrigin?.promptTemplateId, 'environment_concept']
+    .find((id) => id && getPromptTemplate(id));
+  const template = getPromptTemplate(templateId);
+  const constraintSummary = summarizeTemplateConstraints(template);
+  // Fall back to the origin's region so the summary survives Project Art selection changes.
+  const activeRegion = aiUi.selectedRegion || aiUi.generationOrigin?.sourceRegion || null;
+
+  const onComposePrompt = useCallback(() => {
+    try {
+      const referenceTitles = trayRefs.map((r) => r.title).filter(Boolean);
+      const hasCroppedRef = Boolean(
+        aiUi.generationOrigin?.croppedReference?.absolutePath
+        || ui.referenceStagingPath,
+      );
+      // Tiling is left to the checkboxes: composeGenerationPrompt appends it at submit time.
+      const common = {
+        instruction,
+        tileHorizontal,
+        tileVertical,
+        referenceTitles,
+        includeTiling: false,
+      };
+      const result = (activeRegion || hasCroppedRef)
+        ? assembleRegionTemplatePrompt({
+          ...common,
+          templateId,
+          itemTitle: activeRegion?.title || referenceTitles[0] || '',
+          regionDescription: activeRegion
+            ? [activeRegion.description, describeRegionCoords(activeRegion)]
+              .filter(Boolean)
+              .join('; ')
+            : '',
+        })
+        : composeTemplateAssetPrompt({ ...common, templateId });
+      openArtSetPrompt(result.promptText || '');
+      openArtClearEstimate();
+      setPromptSource('template');
+      notify(
+        hasCroppedRef || activeRegion
+          ? 'Prompt composed — reference image supplies visual detail'
+          : 'Prompt composed from template',
+      );
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [
+    trayRefs, templateId, instruction, tileHorizontal, tileVertical, activeRegion,
+    aiUi.generationOrigin, ui.referenceStagingPath, notify,
+  ]);
+
+  const onSavePrompt = useCallback(async () => {
+    const promptText = String(ui.prompt || '').trim();
+    if (!promptText) {
+      notify('Nothing to save — enter a prompt first');
+      return;
+    }
+    try {
+      const origin = getAiAssetsUiState().generationOrigin;
+      const sourceItemId = origin?.sourceItemId || null;
+      const itemIds = sourceItemId
+        ? [sourceItemId]
+        : trayRefs.map((r) => r.id).filter(Boolean);
+      const res = await projectArtCreatePrompt({
+        name: `${template?.label || 'Asset'} prompt`,
+        promptText,
+        assetCategory: templateId,
+        tileHorizontal,
+        tileVertical,
+        itemIds,
+        category: 'other',
+      });
+      if (sourceItemId) {
+        await projectArtUpdateItem(sourceItemId, { generationPrompt: promptText });
+      }
+      setStatus(
+        res?.promptId ? 'Prompt saved to Project Art' : 'Prompt saved',
+      );
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [ui.prompt, template, templateId, tileHorizontal, tileVertical, trayRefs, notify, setStatus]);
+
   return (
     <div className="bb-openart-controls">
       <div className="bb-openart-controls__scroll">
@@ -223,7 +333,7 @@ export function OpenArtControls() {
           </div>
         )}
 
-        <label className="bb-field">
+        <label className="bb-field" {...helpProps('openart.model')}>
           <span className="bb-field-caption">Model</span>
           <select
             className="bb-select"
@@ -237,7 +347,7 @@ export function OpenArtControls() {
           </select>
         </label>
 
-        <label className="bb-field">
+        <label className="bb-field" {...helpProps('openart.mode')}>
           <span className="bb-field-caption">Mode</span>
           <select
             className="bb-select"
@@ -253,7 +363,128 @@ export function OpenArtControls() {
           </select>
         </label>
 
-        <label className="bb-field bb-openart__prompt-field">
+        <div className="bb-openart__templates" {...helpProps('openart.promptTemplate')}>
+          <span className="bb-field-caption">Prompt Templates</span>
+          <label className="bb-field">
+            <span className="bb-field-caption">Template</span>
+            <select
+              className="bb-select"
+              value={templateId}
+              disabled={ui.busy}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedPromptTemplateId(id);
+                const next = getPromptTemplate(id);
+                if (next?.suggestedDefaults
+                  && (typeof next.suggestedDefaults.tileHorizontal === 'boolean'
+                    || typeof next.suggestedDefaults.tileVertical === 'boolean')) {
+                  setPromptComposition({
+                    ...(typeof next.suggestedDefaults.tileHorizontal === 'boolean'
+                      ? { tileHorizontal: next.suggestedDefaults.tileHorizontal }
+                      : {}),
+                    ...(typeof next.suggestedDefaults.tileVertical === 'boolean'
+                      ? { tileVertical: next.suggestedDefaults.tileVertical }
+                      : {}),
+                  });
+                  openArtClearEstimate();
+                }
+                setPromptSource(null);
+              }}
+            >
+              {ASSET_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </label>
+          {template && (
+            <p className="bb-muted bb-openart__template-help">
+              {template.description}
+              {constraintSummary ? ` Constraints: ${constraintSummary}.` : ''}
+            </p>
+          )}
+
+          {activeRegion && (
+            <div className="bb-openart__template-region">
+              <div>
+                <strong>Selected region:</strong>
+                {' '}
+                {activeRegion.title}
+                {' — '}
+                {describeRegionCoords(activeRegion)}
+                {aiUi.generationOrigin?.croppedReference?.stagingId
+                  ? ' (cropped reference staged for OpenArt)'
+                  : ''}
+              </div>
+              {aiUi.selectedRegion && (
+                <input
+                  className="bb-input"
+                  value={activeRegion.description || ''}
+                  disabled={ui.busy}
+                  placeholder="Optional note about the region (e.g. carved stone frieze)…"
+                  onChange={(e) => setSelectedRegion({
+                    ...aiUi.selectedRegion,
+                    description: e.target.value,
+                  })}
+                />
+              )}
+            </div>
+          )}
+
+          <label className="bb-field">
+            <span className="bb-field-caption">Instructions (optional)</span>
+            <textarea
+              className="bb-input bb-openart__prompt"
+              rows={3}
+              value={instruction}
+              disabled={ui.busy}
+              placeholder="Optional extra direction — the reference image carries material detail…"
+              onChange={(e) => setInstruction(e.target.value)}
+            />
+          </label>
+
+          <div className="bb-openart__template-actions">
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={ui.busy}
+              onClick={onComposePrompt}
+              {...helpProps('openart.generatePrompt')}
+            >
+              Compose Prompt
+            </button>
+          </div>
+          <p className="bb-muted bb-openart__template-help">
+            Tiling language is appended from the checkboxes below. Attached reference images are submitted with the prompt — no separate vision pass.
+          </p>
+          {promptSource === 'template' && (
+            <div className="bb-openart__banner">
+              Prompt composed from template. The image model interprets any attached reference directly.
+            </div>
+          )}
+        </div>
+
+        <div className="bb-openart__library-refs">
+          <span className="bb-field-caption">
+            Project Art references ({trayRefs.length})
+          </span>
+          <div className="bb-openart__library-refs-strip">
+            {trayRefs.map((ref) => {
+              const rurl = projectArtPreviewUrl(ref.relativePath);
+              return (
+                <div key={ref.id} className="bb-openart__library-ref-thumb" title={ref.title}>
+                  {rurl ? <img src={rurl} alt="" /> : <span className="bb-muted">?</span>}
+                </div>
+              );
+            })}
+            {!trayRefs.length && (
+              <span className="bb-muted">
+                Use Project Art Library → Use as Reference to pin images here.
+              </span>
+            )}
+          </div>
+        </div>
+
+        <label className="bb-field bb-openart__prompt-field" {...helpProps('openart.prompt')}>
           <span className="bb-field-caption">Prompt</span>
           <textarea
             className="bb-input bb-openart__prompt"
@@ -261,11 +492,33 @@ export function OpenArtControls() {
             value={ui.prompt}
             disabled={ui.busy}
             placeholder="Describe the asset to generate…"
-            onChange={(e) => openArtSetPrompt(e.target.value)}
+            onChange={(e) => {
+              openArtSetPrompt(e.target.value);
+              if (promptSource) setPromptSource('edited');
+            }}
           />
         </label>
+        <div className="bb-openart__template-actions">
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={ui.busy || !ui.prompt?.trim()}
+            onClick={onSavePrompt}
+            {...helpProps(
+              'openart.savePrompt',
+              !ui.prompt?.trim() ? 'Enter a prompt first.' : null,
+            )}
+          >
+            Save Prompt
+          </button>
+        </div>
 
-        <div className="bb-openart__tiling" role="group" aria-label="Tiling options">
+        <div
+          className="bb-openart__tiling"
+          role="group"
+          aria-label="Tiling options"
+          {...helpProps('openart.tiling')}
+        >
           <label className="bb-field bb-field--row bb-openart__tiling-option">
             <input
               type="checkbox"
@@ -338,8 +591,8 @@ export function OpenArtControls() {
             <div className="bb-openart__ref-thumbs">
               {ui.referenceFileName ? (
                 <div className="bb-openart__ref-thumb is-filled">
-                  {refPreviewUrl ? (
-                    <img src={refPreviewUrl} alt={ui.referenceFileName} />
+                  {referencePreviewSrc ? (
+                    <img src={referencePreviewSrc} alt={ui.referenceFileName} />
                   ) : (
                     <span className="bb-muted">{ui.referenceFileName}</span>
                   )}
@@ -407,7 +660,13 @@ export function OpenArtControls() {
             )}
           </div>
           <div className="bb-openart__actions">
-            <button type="button" className="bb-btn" disabled={!canEstimate} onClick={onEstimate}>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={!canEstimate}
+              onClick={onEstimate}
+              {...helpProps('openart.estimate', !canEstimate ? 'Connect OpenArt and set a prompt first.' : null)}
+            >
               Estimate
             </button>
             <button
@@ -416,6 +675,10 @@ export function OpenArtControls() {
               disabled={!canGenerate}
               onClick={onGenerate}
               title="Requires explicit spend approval"
+              {...helpProps(
+                'openart.generate',
+                !canGenerate ? 'Estimate/connect and set a prompt first. Spend requires confirmation.' : null,
+              )}
             >
               {ui.phase === 'submitting' || ui.phase === 'running' ? 'Generating…' : 'Generate…'}
             </button>

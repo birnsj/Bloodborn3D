@@ -1,15 +1,23 @@
 export const workspaceLesson = {
   id: 'workspace',
   title: 'Workspace & Viewports',
-  summary: 'Dock panels, Asset Viewer, named layouts, multi-pane cameras, Editor Settings, and hover help.',
+  summary: 'Dock panels, Asset Viewer, named layouts, multi-pane cameras, AI Assets tab, Editor Settings, and hover help.',
   order: 10,
   starterPath: 'tutorials/getting-started.json',
   steps: [
     {
       id: 'intro',
       title: 'Your workspace',
-      body: 'Content Browser navigates folders; Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together.',
+      body: 'Content Browser navigates folders; Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together. Workspace tabs (Level Editor, Materials, AI Assets, …) switch major editor modes.',
       verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'ai-assets-tab',
+      title: 'AI Assets workspace',
+      body: 'Open the AI Assets workspace tab for Project Art Library (browse / organize concept art) and Asset Generation (OpenArt). Other workspace tabs like World Map or Visual Scripting are extension placeholders — do not expect full editors there yet.',
+      highlight: ['workspace.ai'],
+      verify: { type: 'manualConfirm', label: 'I found AI Assets' },
+      explain: 'Dedicated Tutorials lessons cover Project Art Library and Asset Generation under Art & generation.',
     },
     {
       id: 'asset-viewer',

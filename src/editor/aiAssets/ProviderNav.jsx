@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IconGrid, IconMesh } from '../../ui/icons.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { getOpenArtUiState, subscribeOpenArtUi } from '../openart/openArtUiStore.js';
 import { AI_PROVIDER_CATEGORIES } from './providers.js';
 import { selectAiProvider } from './aiAssetsUiStore.js';
@@ -63,6 +64,7 @@ export function ProviderNav({ selectedProviderId }) {
                     className={`bb-ai-assets__provider${active ? ' is-active' : ''}${soon ? ' is-soon' : ''}`}
                     aria-current={active ? 'true' : undefined}
                     onClick={() => selectAiProvider(provider.id)}
+                    {...helpProps(soon ? 'ai.provider.soon' : 'ai.provider.openart')}
                   >
                     <span className="bb-ai-assets__provider-icon" aria-hidden>
                       {provider.id === 'meshy' ? <IconMesh /> : <IconGrid />}

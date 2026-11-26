@@ -11,8 +11,17 @@ import {
 } from '../editor/projectArt/schema.js';
 import {
   ASSET_CATEGORIES,
+  PROMPT_TEMPLATES,
+  assembleRegionTemplatePrompt,
   composeTemplateAssetPrompt,
+  getPromptTemplate,
 } from '../editor/projectArt/promptTemplates.js';
+import {
+  TILING_INSTRUCTIONS,
+  composeGenerationPrompt,
+  hasTilingLanguage,
+  tilingInstruction,
+} from '../editor/aiAssets/promptComposition.js';
 import {
   analyzeAssetPromptRequest,
   getVisionCapability,
@@ -147,7 +156,7 @@ describe('Project Art — ASSET_CATEGORIES + templates', () => {
     expect(ASSET_CATEGORIES.find((c) => c.id === 'door_window')?.label).toBe('Door / Window');
   });
 
-  it('composeTemplateAssetPrompt includes tiling + orthographic for wall_texture', () => {
+  it('composeTemplateAssetPrompt wall_texture recreates reference material + tiling', () => {
     const result = composeTemplateAssetPrompt({
       assetCategory: 'wall_texture',
       instruction: 'weathered limestone ashlar',
@@ -156,11 +165,69 @@ describe('Project Art — ASSET_CATEGORIES + templates', () => {
       referenceTitles: ['Hall study'],
     });
     expect(result.source).toBe('template');
-    expect(result.promptText.toLowerCase()).toMatch(/orthographic/);
+    expect(result.promptText.toLowerCase()).toMatch(/reference image/);
+    expect(result.promptText.toLowerCase()).toMatch(/perspective|weathering/);
     expect(result.promptText.toLowerCase()).toMatch(/tiling|tile/);
     expect(result.promptText).toMatch(/weathered limestone ashlar/i);
     expect(result.promptText).toMatch(/Hall study/);
     expect(result.notes.some((n) => /template/i.test(n))).toBe(true);
+  });
+
+  it('adds 3D Model Reference + Sprite templates with full definitions', () => {
+    expect(getPromptTemplate('model_3d_reference')?.label).toBe('3D Model Reference');
+    expect(getPromptTemplate('sprite')?.label).toBe('Sprite');
+    expect(ASSET_CATEGORIES.map((c) => c.id)).toEqual(PROMPT_TEMPLATES.map((t) => t.id));
+    for (const t of PROMPT_TEMPLATES) {
+      expect(typeof t.description).toBe('string');
+      expect(typeof t.framing).toBe('string');
+      expect(Array.isArray(t.technicalConstraints)).toBe(true);
+      expect(typeof t.outputType).toBe('string');
+      expect(typeof t.tilingRelevant).toBe('boolean');
+      expect(typeof t.orthographicRequired).toBe('boolean');
+      expect(typeof t.isolatedObject).toBe('boolean');
+      expect(typeof t.suggestedDefaults).toBe('object');
+    }
+    expect(getPromptTemplate('nope')).toBeNull();
+  });
+
+  it('assembleRegionTemplatePrompt wall texture: cropped reference + horizontal tiling only', () => {
+    const result = assembleRegionTemplatePrompt({
+      templateId: 'wall_texture',
+      regionDescription: 'x 10%, y 20%, 40% × 30%',
+      instruction: 'weathered limestone ashlar',
+      tileHorizontal: true,
+      tileVertical: false,
+      referenceTitles: ['Hall study'],
+      itemTitle: 'Hall study',
+    });
+    const text = result.promptText;
+    expect(text.toLowerCase()).toMatch(/cropped region/);
+    expect(text.toLowerCase()).toMatch(/reference image/);
+    expect(text).toContain(tilingInstruction({ tileHorizontal: true }));
+    expect(text).not.toContain(TILING_INSTRUCTIONS.vertical);
+    expect(text).toMatch(/weathered limestone ashlar/);
+    expect(result.notes.some((n) => /image reference/i.test(n))).toBe(true);
+  });
+
+  it('template body without tiling gets tiling exactly once via composeGenerationPrompt', () => {
+    const body = assembleRegionTemplatePrompt({
+      templateId: 'wall_texture',
+      instruction: 'stone',
+      tileHorizontal: true,
+      includeTiling: false,
+    }).promptText;
+    expect(hasTilingLanguage(body)).toBe(false);
+    const final = composeGenerationPrompt({ prompt: body, tileHorizontal: true });
+    expect(final.split(TILING_INSTRUCTIONS.horizontal)).toHaveLength(2);
+
+    // Template with tiling already included is not re-appended.
+    const withTiling = composeTemplateAssetPrompt({
+      assetCategory: 'wall_texture',
+      instruction: 'stone',
+      tileHorizontal: true,
+    }).promptText;
+    const again = composeGenerationPrompt({ prompt: withTiling, tileHorizontal: true });
+    expect(again).toBe(withTiling);
   });
 });
 

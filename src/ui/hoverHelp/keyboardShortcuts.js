@@ -91,6 +91,32 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['Esc'], action: 'Stop Play' },
     ],
   },
+  {
+    id: 'projectArt',
+    title: 'Project Art Library',
+    rows: [
+      {
+        keys: ['Ctrl', 'A'],
+        action: 'Select all visible files',
+        note: 'gallery focused · not folders',
+      },
+      {
+        keys: ['Ctrl', 'LMB'],
+        action: 'Toggle file in selection',
+        note: 'also Cmd on macOS',
+      },
+      {
+        keys: ['Shift', 'LMB'],
+        action: 'Range-select files',
+        note: 'from last anchor',
+      },
+      {
+        keys: ['Esc'],
+        action: 'Clear gallery selection',
+        note: 'when focus is not in an input',
+      },
+    ],
+  },
 ];
 
 /** Plain-text fallback (hover help / tests). */

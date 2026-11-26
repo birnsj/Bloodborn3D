@@ -33,6 +33,11 @@ const SECTIONS = [
     title: 'Editor & play',
     ids: ['testing', 'workspace'],
   },
+  {
+    id: 'art',
+    title: 'Art & generation',
+    ids: ['project-art-library', 'asset-generation'],
+  },
 ];
 
 /**
@@ -81,7 +86,8 @@ export function TutorialsPanel({ docked = false }) {
       <header className="bb-tutorials__header">
         <h2 className="bb-tutorials__title">Tutorials</h2>
         <p className="bb-tutorials__lead">
-          Choose a lesson. A tip appears next to each control — finish the task and it moves on.
+          BloodBound Academy — choose a lesson. A tip appears next to each control; finish the task to advance.
+          Art &amp; generation covers Project Art Library and Asset Generation.
         </p>
       </header>
 

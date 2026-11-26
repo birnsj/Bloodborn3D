@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
 import {
   LIBRARY_THUMB_SIZE_DEFAULT,
@@ -8,41 +9,28 @@ import {
   LIBRARY_THUMB_SIZE_MIN,
   addGenerationReferences,
   clearGenerationReferencesWarning,
+  clearSelectedRegion,
   getAiAssetsUiState,
   removeGenerationReference,
-  selectAiProvider,
-  setAiAssetsSection,
-  setArtSaveTargetFolder,
-  setConceptSaveTargetAreaId,
-  setGenerationOrigin,
-  setGenerationReferences,
   setLibraryThumbSize,
-  setPromptComposition,
+  setSelectedRegion,
   subscribeAiAssetsUi,
 } from '../aiAssets/aiAssetsUiStore.js';
 import {
-  getOpenArtUiState,
-  openArtApplySeed,
-  openArtConnect,
-  openArtSetReference,
-} from '../openart/openArtUiStore.js';
-import { ASSET_CATEGORIES } from './promptTemplates.js';
-import {
-  createArtGenerationOrigin,
-  openArtSupportsReferenceImages,
-  preferReferenceMode,
-  resolveOpenArtMaxRefs,
-} from './generation.js';
+  addItemsAsGenerationReferences,
+  sendProjectArtToGeneration,
+  sendRegionToGeneration,
+} from './generationHandoff.js';
+import { describeRegionCoords, getPromptTemplate } from './promptTemplates.js';
 import {
   deselectAll,
   getPrimarySelectedItem,
   getSelectedItems,
+  getLibraryTagCounts,
   getVisibleEntries,
   openCollection,
   openFolder,
-  projectArtAnalyzePrompt,
   projectArtBootstrap,
-  projectArtComposePrompt,
   projectArtCreateCollection,
   projectArtCreatePrompt,
   projectArtCreateReferenceSet,
@@ -53,14 +41,16 @@ import {
   projectArtOpenInExplorer,
   projectArtPreviewUrl,
   projectArtRename,
-  projectArtStageReferences,
   projectArtUpdateItem,
   rangeShift,
   selectAll,
   selectOnly,
   setSelection,
   setSortMode,
+  setViewAll,
   setViewFavorites,
+  setViewRecent,
+  setViewTag,
   setExpandedPath,
   subscribeProjectArt,
   getProjectArtState,
@@ -69,10 +59,12 @@ import {
   search as projectArtSearch,
 } from './projectArtStore.js';
 
-const LEFT_MIN = 160;
-const LEFT_MAX = 280;
-const RIGHT_MIN = 280;
-const RIGHT_MAX = 420;
+const LEFT_MIN = 180;
+const LEFT_MAX = 300;
+const RIGHT_MIN = 300;
+const RIGHT_MAX = 460;
+
+const DETAIL_TABS = ['details', 'prompt', 'generation'];
 
 /**
  * Project Art Library — Adobe Bridge–inspired three-column browser.
@@ -86,8 +78,8 @@ export function ProjectArtLibraryPanel() {
   const fileRef = useRef(null);
   const loadedRef = useRef(false);
   const rootRef = useRef(null);
-  const [leftW, setLeftW] = useState(200);
-  const [rightW, setRightW] = useState(320);
+  const [leftW, setLeftW] = useState(220);
+  const [rightW, setRightW] = useState(360);
 
   useEffect(() => subscribeProjectArt(setStore), []);
   useEffect(() => subscribeAiAssetsUi(setAiUi), []);
@@ -111,8 +103,21 @@ export function ProjectArtLibraryPanel() {
   const thumbSize = Number(aiUi.libraryThumbSize) || LIBRARY_THUMB_SIZE_DEFAULT;
   const collections = store.library.collections || [];
 
+  const tagCounts = useMemo(() => getLibraryTagCounts(), [store.library]);
+
+  const itemCount = useMemo(
+    () => entries.filter((e) => e.type === 'file').length,
+    [entries],
+  );
+  const selectedCount = store.selectedIds.length;
+
   const breadcrumb = useMemo(() => {
     if (store.viewMode === 'favorites') return [{ label: 'Favorites', path: null }];
+    if (store.viewMode === 'all') return [{ label: 'All Assets', path: null }];
+    if (store.viewMode === 'recent') return [{ label: 'Recent', path: null }];
+    if (store.viewMode === 'tag') {
+      return [{ label: `Tag: ${store.tagFilter || '…'}`, path: null }];
+    }
     if (store.viewMode === 'collection') {
       const col = collections.find((c) => c.id === store.activeCollectionId);
       return [{ label: col?.name || 'Collection', path: null }];
@@ -125,7 +130,9 @@ export function ProjectArtLibraryPanel() {
       crumbs.push({ label: part, path: acc });
     }
     return crumbs;
-  }, [store.viewMode, store.currentFolder, store.activeCollectionId, collections]);
+  }, [
+    store.viewMode, store.currentFolder, store.activeCollectionId, store.tagFilter, collections,
+  ]);
 
   const runFolderAction = useCallback(async (action, node) => {
     try {
@@ -195,12 +202,12 @@ export function ProjectArtLibraryPanel() {
         const targets = selectedItems.some((s) => s.id === item.id)
           ? selectedItems
           : [item];
-        addGenerationReferences(targets.map((i) => ({
-          id: i.id,
-          relativePath: i.relativePath,
-          title: i.title,
-        })));
-        setStatus(`Added ${targets.length} reference(s)`);
+        addItemsAsGenerationReferences(targets);
+        setStatus(
+          targets.length === 1
+            ? 'Added to Generation References'
+            : `Added ${targets.length} references`,
+        );
         return;
       }
       if (action === 'favorite') {
@@ -258,7 +265,7 @@ export function ProjectArtLibraryPanel() {
     >
       <aside className="bb-panel-chrome bb-project-art__nav">
         <div className="bb-panel-chrome__head">
-          <span className="bb-panel-chrome__title">Folders</span>
+          <span className="bb-panel-chrome__title">Library</span>
           <button
             type="button"
             className="bb-btn bb-btn--ghost"
@@ -283,33 +290,62 @@ export function ProjectArtLibraryPanel() {
           </button>
         </div>
         <div className="bb-panel-chrome__body bb-project-art__nav-body">
-          <FolderTree
-            nodes={store.tree}
-            currentFolder={store.currentFolder}
-            expandedPaths={store.expandedPaths}
-            viewMode={store.viewMode}
-            onOpen={(path) => openFolder(path).catch((err) => notify(err.message))}
-            onToggle={toggleExpandedPath}
-            onContextMenu={(event, node) => {
-              openFromEvent(event, buildFolderMenuItems({
-                node,
-                isRoot: !node?.path,
-                run: (action) => runFolderAction(action, node),
-              }));
-            }}
-          />
+          <div className="bb-project-art__nav-section" {...helpProps('projectArt.nav.filters')}>
+            <span className="bb-project-art__nav-section-title">Project Library</span>
+            <ul className="bb-project-art__filter-list">
+              <li>
+                <button
+                  type="button"
+                  className={`bb-project-art__filter${store.viewMode === 'all' ? ' is-active' : ''}`}
+                  onClick={() => setViewAll()}
+                >
+                  All Assets
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={`bb-project-art__filter${store.viewMode === 'recent' ? ' is-active' : ''}`}
+                  onClick={() => setViewRecent()}
+                >
+                  Recent
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={`bb-project-art__filter${store.viewMode === 'favorites' ? ' is-active' : ''}`}
+                  onClick={() => setViewFavorites()}
+                >
+                  Favorites
+                </button>
+              </li>
+            </ul>
+          </div>
 
-          <button
-            type="button"
-            className={`bb-project-art__filter${store.viewMode === 'favorites' ? ' is-active' : ''}`}
-            onClick={() => setViewFavorites()}
-          >
-            Favorites
-          </button>
+          <div className="bb-project-art__nav-section">
+            <span className="bb-project-art__nav-section-title">Projects</span>
+            <FolderTree
+              nodes={store.tree}
+              currentFolder={store.currentFolder}
+              expandedPaths={store.expandedPaths}
+              viewMode={store.viewMode}
+              onOpen={(path) => openFolder(path).catch((err) => notify(err.message))}
+              onToggle={toggleExpandedPath}
+              onContextMenu={(event, node) => {
+                openFromEvent(event, buildFolderMenuItems({
+                  node,
+                  isRoot: !node?.path,
+                  run: (action) => runFolderAction(action, node),
+                }));
+              }}
+            />
+          </div>
 
-          <div className="bb-project-art__collections">
+          <div className="bb-project-art__nav-section" {...helpProps('projectArt.nav.collections')}>
+            <div className="bb-project-art__collections">
             <div className="bb-project-art__collections-head">
-              <span className="bb-field-caption">Collections</span>
+              <span className="bb-project-art__nav-section-title">Collections</span>
               <button
                 type="button"
                 className="bb-btn bb-btn--ghost"
@@ -372,6 +408,30 @@ export function ProjectArtLibraryPanel() {
                 </li>
               ))}
             </ul>
+            </div>
+          </div>
+
+          <div className="bb-project-art__nav-section" {...helpProps('projectArt.nav.tags')}>
+            <span className="bb-project-art__nav-section-title">Tags</span>
+            <ul className="bb-project-art__filter-list">
+              {tagCounts.length === 0 && (
+                <li className="bb-muted">No tags yet</li>
+              )}
+              {tagCounts.map(({ tag, count }) => (
+                <li key={tag}>
+                  <button
+                    type="button"
+                    className={`bb-project-art__filter${
+                      store.viewMode === 'tag' && store.tagFilter === tag ? ' is-active' : ''
+                    }`}
+                    onClick={() => setViewTag(tag)}
+                  >
+                    <span>{tag}</span>
+                    <span className="bb-muted">{count}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </aside>
@@ -421,24 +481,18 @@ export function ProjectArtLibraryPanel() {
               <option value="date">Date</option>
               <option value="rating">Rating</option>
             </select>
-            <label className="bb-project-art__size" title="Thumbnail size">
-              <span className="bb-muted">Size</span>
-              <input
-                type="range"
-                min={LIBRARY_THUMB_SIZE_MIN}
-                max={LIBRARY_THUMB_SIZE_MAX}
-                step={4}
-                value={thumbSize}
-                onChange={(e) => setLibraryThumbSize(Number(e.target.value))}
-                aria-label="Gallery thumbnail size"
-              />
-            </label>
             <button
               type="button"
               className="bb-btn"
               disabled={store.busy || store.viewMode !== 'folder' || !store.currentFolder}
               title={store.currentFolder ? 'Import images into this folder' : 'Open a folder before importing'}
               onClick={() => fileRef.current?.click()}
+              {...helpProps(
+                'projectArt.import',
+                store.viewMode !== 'folder' || !store.currentFolder
+                  ? 'Open a folder before importing.'
+                  : null,
+              )}
             >
               Import
             </button>
@@ -505,6 +559,31 @@ export function ProjectArtLibraryPanel() {
           />
         </div>
 
+        <div className="bb-project-art__status">
+          <span>
+            {itemCount}
+            {' '}
+            item
+            {itemCount === 1 ? '' : 's'}
+            {' | '}
+            {selectedCount}
+            {' '}
+            selected
+          </span>
+          <label className="bb-project-art__size" title="Thumbnail size">
+            <span className="bb-muted">Size</span>
+            <input
+              type="range"
+              min={LIBRARY_THUMB_SIZE_MIN}
+              max={LIBRARY_THUMB_SIZE_MAX}
+              step={4}
+              value={thumbSize}
+              onChange={(e) => setLibraryThumbSize(Number(e.target.value))}
+              aria-label="Gallery thumbnail size"
+            />
+          </label>
+        </div>
+
         <GenerationReferencesTray
           refs={aiUi.generationReferences}
           selectedItems={selectedItems}
@@ -555,6 +634,7 @@ export function ProjectArtLibraryPanel() {
             item={primary}
             selectedItems={selectedItems}
             trayRefs={aiUi.generationReferences}
+            selectedTemplateId={aiUi.selectedPromptTemplateId}
             currentFolder={store.currentFolder}
             busy={store.busy}
             notify={notify}
@@ -705,7 +785,10 @@ function ArtGallery({
 
   const onPointerDownBg = useCallback((e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('[data-id]')) return;
+    // Don't start marquee on image tiles or folder buttons — capture would steal the click.
+    if (e.target.closest('[data-id], .bb-project-art__folder-tile, button, a, input, textarea, select')) {
+      return;
+    }
     const root = galleryRef.current;
     if (!root) return;
     const rect = root.getBoundingClientRect();
@@ -783,6 +866,7 @@ function ArtGallery({
     <div
       ref={galleryRef}
       className="bb-project-art__gallery"
+      {...helpProps('projectArt.gallery')}
       onPointerDown={onPointerDownBg}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -865,7 +949,7 @@ function ArtGallery({
 
 function GenerationReferencesTray({ refs, selectedItems, notify, setStatus, prompt }) {
   return (
-    <div className="bb-project-art__tray">
+    <div className="bb-project-art__tray" {...helpProps('projectArt.tray')}>
       <div className="bb-project-art__tray-head">
         <span className="bb-field-caption">
           Generation References ({refs.length})
@@ -940,107 +1024,189 @@ function GenerationReferencesTray({ refs, selectedItems, notify, setStatus, prom
 }
 
 function ArtPreviewDetail({
-  item, selectedItems, trayRefs, currentFolder, busy, notify, setStatus,
+  item, selectedItems, trayRefs, selectedTemplateId, currentFolder, busy, notify, setStatus,
 }) {
   const [draft, setDraft] = useState(null);
-  const [metaOpen, setMetaOpen] = useState(true);
-  const [promptOpen, setPromptOpen] = useState(true);
-  const [assetCategory, setAssetCategory] = useState('environment_concept');
-  const [instruction, setInstruction] = useState('');
-  const [tileH, setTileH] = useState(false);
-  const [tileV, setTileV] = useState(false);
-  const [generatedPrompt, setGeneratedPrompt] = useState('');
-  const [promptSource, setPromptSource] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [workingPrompt, setWorkingPrompt] = useState('');
   const [savedPromptId, setSavedPromptId] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [regionMode, setRegionMode] = useState(false);
+  // Normalized region (0..1 of natural image size) for the current item.
+  const [region, setRegion] = useState(null);
+  // Live rectangle while dragging (same normalized units).
+  const [dragRegion, setDragRegion] = useState(null);
+  const imgRef = useRef(null);
+  const dragStartRef = useRef(null);
 
   useEffect(() => {
     setDraft(item ? {
       ...item,
       tags: [...(item.tags || [])],
     } : null);
-    // Selecting an image loads its saved working prompt into the prompt panel.
     const saved = item?.generationPrompt || item?.originalGenerationPrompt || '';
-    setGeneratedPrompt(saved);
-    setInstruction('');
-    setPromptSource(item?.generationPrompt || item?.originalGenerationPrompt ? 'saved' : null);
+    setWorkingPrompt(saved);
     setSavedPromptId(item?.associatedPromptIds?.[0] || null);
-    if (item?.provenance?.assetCategory) {
-      setAssetCategory(item.provenance.assetCategory);
+    setActiveTab('details');
+    // Regions belong to one item: restore a stored region for this item (e.g.
+    // after switching workspace tabs), otherwise clear.
+    setRegionMode(false);
+    setDragRegion(null);
+    dragStartRef.current = null;
+    const stored = getAiAssetsUiState().selectedRegion;
+    if (stored && item?.id && stored.itemId === item.id) {
+      setRegion(stored);
+    } else {
+      setRegion(null);
+      clearSelectedRegion();
     }
-    if (item?.provenance?.tileHorizontal != null) setTileH(Boolean(item.provenance.tileHorizontal));
-    if (item?.provenance?.tileVertical != null) setTileV(Boolean(item.provenance.tileVertical));
-  }, [item]);
+  }, [item?.id]);
 
-  const url = item ? projectArtPreviewUrl(item) : null;
-  const originalPrompt = item?.originalGenerationPrompt
-    || item?.provenance?.finalPrompt
-    || '';
-  const refStrip = trayRefs.length
-    ? trayRefs
-    : selectedItems.map((i) => ({
-      id: i.id,
-      relativePath: i.relativePath,
-      title: i.title,
-    }));
+  // Map a pointer event to normalized coords of the image content box
+  // (object-fit: contain letterboxes inside the element rect).
+  const pointToNormalized = useCallback((event) => {
+    const img = imgRef.current;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+    const rect = img.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    const left = rect.left + (rect.width - w) / 2;
+    const top = rect.top + (rect.height - h) / 2;
+    return {
+      x: clamp((event.clientX - left) / w, 0, 1),
+      y: clamp((event.clientY - top) / h, 0, 1),
+    };
+  }, []);
 
-  const onAnalyze = useCallback(async () => {
-    setAnalyzing(true);
+  const rectFromPoints = (a, b) => ({
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    width: Math.abs(a.x - b.x),
+    height: Math.abs(a.y - b.y),
+  });
+
+  const onStagePointerDown = useCallback((event) => {
+    if (!regionMode || event.button !== 0) return;
+    const point = pointToNormalized(event);
+    if (!point) return;
+    event.preventDefault();
+    dragStartRef.current = point;
+    setDragRegion({ ...point, width: 0, height: 0 });
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, [regionMode, pointToNormalized]);
+
+  const onStagePointerMove = useCallback((event) => {
+    const start = dragStartRef.current;
+    if (!start) return;
+    const point = pointToNormalized(event);
+    if (point) setDragRegion(rectFromPoints(start, point));
+  }, [pointToNormalized]);
+
+  const onStagePointerUp = useCallback((event) => {
+    const start = dragStartRef.current;
+    if (!start) return;
+    dragStartRef.current = null;
     try {
-      const itemIds = refStrip.map((r) => r.id);
-      let result;
-      try {
-        result = await projectArtAnalyzePrompt({
-          mode: 'vision',
-          assetCategory,
-          instruction,
-          tileHorizontal: tileH,
-          tileVertical: tileV,
-          itemIds,
-        });
-      } catch {
-        result = null;
-      }
-      if (!result?.ok || result?.source === 'template' || !result?.promptText) {
-        result = await projectArtComposePrompt({
-          assetCategory,
-          instruction,
-          tileHorizontal: tileH,
-          tileVertical: tileV,
-          itemIds,
-        });
-      }
-      setGeneratedPrompt(result.promptText || '');
-      setPromptSource(result.source || 'template');
-      setSavedPromptId(null);
-      if ((result.source || 'template') === 'template') {
-        notify('Prompt composed from template (not vision analysis)');
-      }
-    } catch (err) {
-      notify(err.message || String(err));
-    } finally {
-      setAnalyzing(false);
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // ignore
     }
-  }, [assetCategory, instruction, tileH, tileV, refStrip, notify]);
+    const point = pointToNormalized(event);
+    setDragRegion(null);
+    if (!point || !item) return;
+    const rect = rectFromPoints(start, point);
+    // Ignore accidental clicks; keep the previous region.
+    if (rect.width < 0.01 || rect.height < 0.01) return;
+    const img = imgRef.current;
+    const committed = {
+      itemId: item.id,
+      relativePath: item.relativePath,
+      title: item.title,
+      ...rect,
+      naturalWidth: img?.naturalWidth || 0,
+      naturalHeight: img?.naturalHeight || 0,
+    };
+    setRegion(committed);
+    setSelectedRegion(committed);
+    setRegionMode(false);
+  }, [pointToNormalized, item]);
+
+  const onClearRegion = useCallback(() => {
+    setRegion(null);
+    setDragRegion(null);
+    dragStartRef.current = null;
+    clearSelectedRegion();
+  }, []);
+
+  // Image content-box metrics for region overlays (avoid reading refs during render).
+  const [imageLayout, setImageLayout] = useState(null);
+  const bumpLayout = useCallback(() => {
+    const img = imgRef.current;
+    if (!img?.naturalWidth || !img.clientWidth || !img.clientHeight) {
+      setImageLayout(null);
+      return;
+    }
+    const scale = Math.min(img.clientWidth / img.naturalWidth, img.clientHeight / img.naturalHeight);
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    setImageLayout({
+      w,
+      h,
+      offX: img.offsetLeft + (img.clientWidth - w) / 2,
+      offY: img.offsetTop + (img.clientHeight - h) / 2,
+    });
+  }, []);
+  const hasDraft = Boolean(draft);
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!hasDraft || !img || typeof ResizeObserver === 'undefined') return undefined;
+    bumpLayout();
+    const observer = new ResizeObserver(bumpLayout);
+    observer.observe(img);
+    return () => observer.disconnect();
+  }, [item?.id, hasDraft, bumpLayout]);
+
+  const overlayStyle = useCallback((r) => {
+    if (!r || !imageLayout) return null;
+    return {
+      left: imageLayout.offX + r.x * imageLayout.w,
+      top: imageLayout.offY + r.y * imageLayout.h,
+      width: r.width * imageLayout.w,
+      height: r.height * imageLayout.h,
+    };
+  }, [imageLayout]);
+
+  const prov = item?.provenance || {};
+  const assetCategory = prov.assetCategory || 'environment_concept';
+  const tileH = Boolean(prov.tileHorizontal);
+  const tileV = Boolean(prov.tileVertical);
+  const originalPrompt = item?.originalGenerationPrompt || prov.finalPrompt || '';
+  const promptForSend = (workingPrompt || item?.generationPrompt || item?.originalGenerationPrompt || '').trim();
+  const filename = item ? (item.relativePath?.split('/').pop() || item.title) : '';
+  const folderLocation = item?.relativePath?.includes('/')
+    ? item.relativePath.slice(0, item.relativePath.lastIndexOf('/'))
+    : '(root)';
+  const url = item ? projectArtPreviewUrl(item) : null;
+  const refTargets = selectedItems.length ? selectedItems : (item ? [item] : []);
 
   const onSavePrompt = useCallback(async () => {
-    if (!generatedPrompt.trim()) {
-      notify('Nothing to save — create a prompt first');
+    if (!workingPrompt.trim()) {
+      notify('Nothing to save — enter a prompt first');
       return;
     }
     try {
-      // Persist the editable working prompt on the selected image (keeps original intact).
       if (item?.id) {
-        await projectArtUpdateItem(item.id, { generationPrompt: generatedPrompt });
-        setDraft((prev) => (prev ? { ...prev, generationPrompt: generatedPrompt } : prev));
+        await projectArtUpdateItem(item.id, { generationPrompt: workingPrompt });
+        setDraft((prev) => (prev ? { ...prev, generationPrompt: workingPrompt } : prev));
       }
       const res = await projectArtCreatePrompt({
-        name: `${item?.title || ASSET_CATEGORIES.find((c) => c.id === assetCategory)?.label || 'Asset'} prompt`,
-        promptText: generatedPrompt,
+        name: `${item?.title || filename || 'Asset'} prompt`,
+        promptText: workingPrompt,
         assetCategory,
         tileHorizontal: tileH,
         tileVertical: tileV,
-        itemIds: item?.id ? [item.id, ...refStrip.map((r) => r.id).filter((id) => id !== item.id)] : refStrip.map((r) => r.id),
+        itemIds: item?.id ? [item.id] : [],
         category: 'other',
       });
       setSavedPromptId(res.promptId || null);
@@ -1048,115 +1214,63 @@ function ArtPreviewDetail({
     } catch (err) {
       notify(err.message);
     }
-  }, [generatedPrompt, assetCategory, tileH, tileV, refStrip, notify, setStatus, item]);
+  }, [workingPrompt, assetCategory, tileH, tileV, notify, setStatus, item, filename]);
 
   const onSendToGeneration = useCallback(async () => {
-    const text = generatedPrompt.trim();
-    if (!text) {
-      notify('Create or enter a prompt before sending to Asset Generation');
-      return;
-    }
-
-    let refs = [...trayRefs];
-    if (!refs.length && selectedItems.length) {
-      addGenerationReferences(selectedItems.map((i) => ({
-        id: i.id,
-        relativePath: i.relativePath,
-        title: i.title,
-      })));
-      refs = selectedItems.map((i) => ({
-        id: i.id,
-        relativePath: i.relativePath,
-        title: i.title,
-      }));
-    }
-    setGenerationReferences(refs);
-
-    setPromptComposition({ tileHorizontal: tileH, tileVertical: tileV });
-    const folderPath = currentFolder || '';
-    const origin = createArtGenerationOrigin({
-      itemIds: refs.map((r) => r.id),
-      promptId: savedPromptId,
-      finalPrompt: text,
-      assetCategory,
-      tileHorizontal: tileH,
-      tileVertical: tileV,
-      folderPath,
-    });
-    setGenerationOrigin(origin);
-    setConceptSaveTargetAreaId(null);
-    setArtSaveTargetFolder(folderPath);
-    selectAiProvider('openart');
-    setAiAssetsSection('generation');
-
     try {
-      await openArtConnect().catch(() => {});
-      await openArtApplySeed({ prompt: text });
-
-      const oa = getOpenArtUiState();
-      const model = oa.imageModels.find((m) => m.id === oa.modelId);
-      const availableModes = model?.modes?.image || [{ mode: 'text2image' }];
-      const schemaProperties = oa.form?.jsonSchema?.properties || {};
-      const supportsRefs = openArtSupportsReferenceImages({
-        mode: oa.mode,
-        schemaProperties,
-        availableModes,
+      const res = await sendProjectArtToGeneration({
+        promptText: promptForSend,
+        items: refTargets,
+        trayRefs,
+        folderPath: currentFolder || '',
+        promptId: savedPromptId || item?.associatedPromptIds?.[0] || null,
+        assetCategory,
+        tileHorizontal: tileH,
+        tileVertical: tileV,
       });
-
-      let referenceFileName = null;
-      let referenceStagingPath = null;
-      let mode = null;
-
-      if (supportsRefs && refs.length) {
-        const maxRefs = resolveOpenArtMaxRefs({ schemaProperties });
-        try {
-          const staged = await projectArtStageReferences({
-            itemIds: refs.map((r) => r.id),
-            maxRefs,
-          });
-          const first = staged.staged?.[0];
-          if (first) {
-            referenceFileName = first.originalName || first.fileName || 'art-reference';
-            referenceStagingPath = first.absolutePath;
-            mode = preferReferenceMode({
-              availableModes,
-              currentMode: oa.mode,
-              hasReference: true,
-            });
-          }
-        } catch (err) {
-          if (err.code === 'REF_LIMIT') {
-            const dropped = err.dropped || [];
-            const names = dropped.map((d) => d.title || d.id).join(', ');
-            notify(
-              `Too many references for this model (max ${maxRefs}). Would drop: ${names || 'unknown'}. Reduce the tray and try again — nothing was discarded silently.`,
-            );
-            return;
-          }
-          notify(err.message || 'Could not stage references');
-        }
-      }
-
-      if (referenceStagingPath || mode) {
-        await openArtApplySeed({
-          prompt: text,
-          mode,
-          referenceFileName,
-          referenceStagingPath,
-        });
-      }
-      if (!referenceStagingPath) openArtSetReference({});
-
-      setStatus(referenceStagingPath
-        ? 'OpenArt seeded with Project Art references — estimate before spending'
-        : 'OpenArt seeded from Project Art — estimate before spending');
+      if (res?.message) setStatus(res.message);
     } catch (err) {
       notify(err.message || String(err));
     }
   }, [
-    generatedPrompt, trayRefs, selectedItems, tileH, tileV, currentFolder,
-    savedPromptId, assetCategory, notify, setStatus,
+    promptForSend, refTargets, trayRefs, currentFolder, savedPromptId, item,
+    assetCategory, tileH, tileV, notify, setStatus,
   ]);
+
+  const onSendRegion = useCallback(async () => {
+    if (!item || !region) return;
+    try {
+      // Template: item's saved category, else the shared selection, else a safe default.
+      const templateId = [prov.assetCategory, selectedTemplateId, 'environment_concept']
+        .find((id) => id && getPromptTemplate(id));
+      const res = await sendRegionToGeneration({
+        item,
+        region,
+        promptText: promptForSend,
+        templateId,
+        // Only carry tiling that provenance actually recorded.
+        tileHorizontal: typeof prov.tileHorizontal === 'boolean' ? prov.tileHorizontal : undefined,
+        tileVertical: typeof prov.tileVertical === 'boolean' ? prov.tileVertical : undefined,
+        folderPath: currentFolder || '',
+        promptId: savedPromptId || item.associatedPromptIds?.[0] || null,
+      });
+      const message = res?.message || 'Region sent to Asset Generation';
+      setStatus(message);
+      notify(message);
+    } catch (err) {
+      notify(err.message || String(err));
+    }
+  }, [
+    item, region, prov.assetCategory, prov.tileHorizontal, prov.tileVertical,
+    selectedTemplateId, promptForSend, currentFolder, savedPromptId, notify, setStatus,
+  ]);
+
+  const onUseAsReference = useCallback(() => {
+    const res = addItemsAsGenerationReferences(refTargets);
+    if (res.added) {
+      setStatus(res.added === 1 ? 'Added to Generation References' : `Added ${res.added} references`);
+    }
+  }, [refTargets, setStatus]);
 
   if (!item || !draft) {
     return <div className="bb-muted">Select an image to preview.</div>;
@@ -1166,20 +1280,118 @@ function ArtPreviewDetail({
     <div className="bb-project-art-detail">
       <div className="bb-project-art-detail__hero">
         {url ? (
-          <img className="bb-project-art-detail__preview" src={url} alt={item.title} />
+          <div
+            className={`bb-project-art-detail__hero-stage${
+              regionMode ? ' bb-project-art-detail__region-mode' : ''
+            }`}
+            onPointerDown={onStagePointerDown}
+            onPointerMove={onStagePointerMove}
+            onPointerUp={onStagePointerUp}
+            onPointerCancel={onStagePointerUp}
+          >
+            <img
+              ref={imgRef}
+              className="bb-project-art-detail__preview"
+              src={url}
+              alt={item.title}
+              draggable={false}
+              onLoad={bumpLayout}
+            />
+            {[['drag', dragRegion], ['region', dragRegion ? null : region]].map(([key, r]) => {
+              const style = r ? overlayStyle(r) : null;
+              if (!style) return null;
+              return (
+                <div
+                  key={key}
+                  className="bb-project-art-detail__region"
+                  style={style}
+                  aria-label="Selected region"
+                >
+                  <span className="bb-project-art-detail__region-handle is-nw" />
+                  <span className="bb-project-art-detail__region-handle is-ne" />
+                  <span className="bb-project-art-detail__region-handle is-sw" />
+                  <span className="bb-project-art-detail__region-handle is-se" />
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="bb-project-art-detail__preview-empty bb-muted">No preview</div>
         )}
+        {url && (
+          <div className="bb-project-art-detail__hero-tools">
+            <button
+              type="button"
+              className={`bb-btn bb-btn--ghost${regionMode ? ' is-active' : ''}`}
+              disabled={busy}
+              aria-pressed={regionMode}
+              title="Drag on the image to select a region"
+              onClick={() => setRegionMode((on) => !on)}
+              {...helpProps('projectArt.region.select')}
+            >
+              {regionMode ? 'Drawing… (drag on image)' : 'Select Region'}
+            </button>
+            {region && (
+              <button
+                type="button"
+                className="bb-btn bb-btn--ghost"
+                onClick={onClearRegion}
+                {...helpProps('projectArt.region.clear')}
+              >
+                Clear Region
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <header className="bb-project-art-detail__header">
+        <span className="bb-project-art-detail__filename" title={item.relativePath}>
+          {filename}
+        </span>
+        <button
+          type="button"
+          className={`bb-btn bb-btn--ghost bb-project-art-detail__fav-btn${
+            draft.favorite ? ' is-on' : ''
+          }`}
+          disabled={busy}
+          aria-label={draft.favorite ? 'Remove favorite' : 'Add favorite'}
+          title={draft.favorite ? 'Remove favorite' : 'Add favorite'}
+          onClick={() => {
+            const favorite = !draft.favorite;
+            setDraft({ ...draft, favorite });
+            projectArtUpdateItem(item.id, { favorite }).catch((err) => notify(err.message));
+          }}
+        >
+          {draft.favorite ? '★' : '☆'}
+        </button>
+      </header>
+
+      <div
+        className="bb-project-art-detail__tabs"
+        role="tablist"
+        aria-label="Preview sections"
+        {...helpProps('projectArt.detail.tabs')}
+      >
+        {DETAIL_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            className={`bb-project-art-detail__tab${activeTab === tab ? ' is-active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === 'details' ? 'Details' : tab === 'prompt' ? 'Prompt' : 'Generation'}
+          </button>
+        ))}
       </div>
 
       <div className="bb-project-art-detail__scroll">
-        <div className="bb-project-art-detail__filename" title={item.relativePath}>
-          {item.relativePath.split('/').pop()}
-        </div>
-
-        <details open={metaOpen} onToggle={(e) => setMetaOpen(e.currentTarget.open)}>
-          <summary className="bb-project-art-detail__summary">Metadata</summary>
+        {activeTab === 'details' && (
           <div className="bb-project-art-detail__meta">
+            <DetailMetaRow label="Filename" value={filename} />
+            <DetailMetaRow label="Location" value={folderLocation} />
             <div className="bb-project-art-detail__rating">
               <span className="bb-field-caption">Rating</span>
               <div className="bb-project-art-detail__stars">
@@ -1199,19 +1411,6 @@ function ArtPreviewDetail({
                   </button>
                 ))}
               </div>
-              <label className="bb-project-art-detail__fav">
-                <input
-                  type="checkbox"
-                  checked={Boolean(draft.favorite)}
-                  disabled={busy}
-                  onChange={(e) => {
-                    const favorite = e.target.checked;
-                    setDraft({ ...draft, favorite });
-                    projectArtUpdateItem(item.id, { favorite }).catch((err) => notify(err.message));
-                  }}
-                />
-                Favorite
-              </label>
             </div>
             <label className="bb-field">
               <span className="bb-field-caption">Tags</span>
@@ -1233,7 +1432,7 @@ function ArtPreviewDetail({
               <span className="bb-field-caption">Description</span>
               <textarea
                 className="bb-input bb-openart__prompt"
-                rows={3}
+                rows={4}
                 value={draft.description || ''}
                 disabled={busy}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
@@ -1243,59 +1442,89 @@ function ArtPreviewDetail({
                 }}
               />
             </label>
+            <div className="bb-project-art-detail__meta-grid">
+              <DetailMetaRow label="Type" value="Concept" />
+              <DetailMetaRow label="Created" value={formatArtDate(item.createdAt || item.updatedAt)} />
+              <DetailMetaRow label="Model" value={prov.modelId || prov.model} />
+              <DetailMetaRow label="Generation ID" value={prov.generationId} />
+              <DetailMetaRow label="Provider" value={prov.provider} />
+            </div>
           </div>
-        </details>
+        )}
 
-        <details open={promptOpen} onToggle={(e) => setPromptOpen(e.currentTarget.open)}>
-          <summary className="bb-project-art-detail__summary">Generate Asset Prompt</summary>
-          <div className="bb-project-art-detail__gen">
+        {activeTab === 'prompt' && (
+          <div className="bb-project-art-detail__prompt">
+            <p className="bb-muted bb-project-art-detail__hint">
+              Edit and reuse via Send to Generation. New prompt construction lives in Asset Generation.
+            </p>
             <label className="bb-field">
-              <span className="bb-field-caption">Asset Category</span>
-              <select
-                className="bb-select"
-                value={assetCategory}
-                onChange={(e) => setAssetCategory(e.target.value)}
-              >
-                {ASSET_CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="bb-field">
-              <span className="bb-field-caption">Instruction</span>
+              <span className="bb-field-caption">Working generation prompt</span>
               <textarea
                 className="bb-input bb-openart__prompt"
-                rows={3}
-                value={instruction}
-                onChange={(e) => setInstruction(e.target.value)}
-                placeholder="Describe the asset you want to generate…"
+                rows={10}
+                value={workingPrompt}
+                disabled={busy}
+                onChange={(e) => setWorkingPrompt(e.target.value)}
               />
             </label>
-            <div className="bb-project-art-detail__tiles">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={tileH}
-                  onChange={(e) => setTileH(e.target.checked)}
-                />
-                {' '}
-                Tile Horizontal
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={tileV}
-                  onChange={(e) => setTileV(e.target.checked)}
-                />
-                {' '}
-                Tile Vertical
-              </label>
-            </div>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={busy || !workingPrompt.trim()}
+              onClick={onSavePrompt}
+            >
+              Save Prompt
+            </button>
+          </div>
+        )}
 
-            <div className="bb-project-art-detail__ref-strip">
-              <span className="bb-field-caption">References</span>
+        {activeTab === 'generation' && (
+          <div className="bb-project-art-detail__generation">
+            <div className="bb-project-art-detail__meta-grid">
+              {originalPrompt ? (
+                <div className="bb-project-art-detail__meta-row">
+                  <span className="bb-field-caption">Original prompt</span>
+                  <pre className="bb-project-art-detail__original-text">{originalPrompt}</pre>
+                </div>
+              ) : null}
+              <DetailMetaRow label="Provider" value={prov.provider} />
+              <DetailMetaRow label="Model" value={prov.modelId || prov.model} />
+              <DetailMetaRow label="Mode" value={prov.mode} />
+              <DetailMetaRow label="Generation ID" value={prov.generationId} />
+              <DetailMetaRow label="Job ID" value={prov.jobId || prov.openArtJobId} />
+              <DetailMetaRow label="Staging ID" value={prov.stagingId || prov.stagingPath} />
+              <DetailMetaRow label="Settings" value={summarizeFormValues(prov.formValues)} />
+              <DetailMetaRow
+                label="Tiling"
+                value={
+                  prov.tileHorizontal || prov.tileVertical
+                    ? [
+                      prov.tileHorizontal ? 'Horizontal' : null,
+                      prov.tileVertical ? 'Vertical' : null,
+                    ].filter(Boolean).join(', ')
+                    : null
+                }
+              />
+              <DetailMetaRow label="Asset category" value={prov.assetCategory} />
+              <DetailMetaRow label="Prompt template" value={prov.promptTemplateId} />
+              <DetailMetaRow
+                label="Source region"
+                value={prov.sourceRegion
+                  ? `${prov.sourceRegion.title || prov.sourceItemId || ''} — ${describeRegionCoords(prov.sourceRegion)}`
+                  : null}
+              />
+              <DetailMetaRow
+                label="Cropped reference"
+                value={prov.croppedReference?.stagingId
+                  || prov.croppedReference?.fileName
+                  || prov.croppedReference?.originalName
+                  || null}
+              />
+            </div>
+            <span className="bb-field-caption">Source references</span>
+            {trayRefs.length ? (
               <div className="bb-project-art__tray-strip">
-                {refStrip.map((ref) => {
+                {trayRefs.map((ref) => {
                   const rurl = projectArtPreviewUrl(ref.relativePath);
                   return (
                     <div key={ref.id} className="bb-project-art__tray-thumb" title={ref.title}>
@@ -1303,73 +1532,97 @@ function ArtPreviewDetail({
                     </div>
                   );
                 })}
-                {!refStrip.length && <span className="bb-muted">None selected</span>}
               </div>
-            </div>
-
-            <button
-              type="button"
-              className="bb-btn"
-              disabled={analyzing || busy}
-              onClick={onAnalyze}
-            >
-              Analyze References & Create Prompt
-            </button>
-
-            {promptSource === 'template' && (
-              <div className="bb-project-art-detail__banner">
-                Template-based prompt (not vision analysis). Review before generating.
-              </div>
+            ) : (
+              <p className="bb-muted">
+                Reference images for this item are managed in the Generation References tray below the gallery.
+              </p>
             )}
-            {promptSource === 'saved' && (
-              <div className="bb-project-art-detail__banner">
-                Loaded saved generation prompt for this image.
-              </div>
-            )}
-
-            <label className="bb-field">
-              <span className="bb-field-caption">Generation prompt</span>
-              <textarea
-                className="bb-input bb-openart__prompt"
-                rows={8}
-                value={generatedPrompt}
-                onChange={(e) => {
-                  setGeneratedPrompt(e.target.value);
-                  if (promptSource === 'saved') setPromptSource('edited');
-                }}
-              />
-            </label>
-
-            {originalPrompt ? (
-              <details className="bb-project-art-detail__original">
-                <summary className="bb-field-caption">Original submitted prompt</summary>
-                <pre className="bb-project-art-detail__original-text">{originalPrompt}</pre>
-              </details>
-            ) : null}
-
-            <div className="bb-project-art-detail__actions">
-              <button
-                type="button"
-                className="bb-btn"
-                disabled={busy || !generatedPrompt.trim()}
-                onClick={onSavePrompt}
-              >
-                Save Prompt
-              </button>
-              <button
-                type="button"
-                className="bb-btn bb-btn--primary"
-                disabled={busy || !generatedPrompt.trim()}
-                onClick={onSendToGeneration}
-              >
-                Send to Asset Generation
-              </button>
-            </div>
           </div>
-        </details>
+        )}
       </div>
+
+      <footer className="bb-project-art-detail__footer">
+        <div className="bb-project-art-detail__actions">
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={busy || !refTargets.length}
+            onClick={onUseAsReference}
+            {...helpProps(
+              'projectArt.action.useAsReference',
+              !refTargets.length ? 'Select an image first.' : null,
+            )}
+          >
+            Use as Reference
+          </button>
+          <button
+            type="button"
+            className="bb-btn bb-btn--primary"
+            disabled={busy || !promptForSend}
+            onClick={onSendToGeneration}
+            {...helpProps(
+              'projectArt.action.sendToGeneration',
+              !promptForSend ? 'Select an image with a prompt (or enter one on the Prompt tab).' : null,
+            )}
+          >
+            Send to Generation
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={busy || !region}
+            title={region ? 'Crop the selected region and send it as an OpenArt image reference' : 'Select a region on the preview first'}
+            onClick={onSendRegion}
+            {...helpProps(
+              'projectArt.action.sendRegion',
+              !region ? 'Select a region on the preview first.' : null,
+            )}
+          >
+            Send Region to Generation
+          </button>
+        </div>
+      </footer>
     </div>
   );
+}
+
+function DetailMetaRow({ label, value }) {
+  if (value == null || value === '') return null;
+  return (
+    <div className="bb-project-art-detail__meta-row">
+      <span className="bb-field-caption">{label}</span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function formatArtDate(iso) {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString();
+  } catch {
+    return String(iso);
+  }
+}
+
+function summarizeFormValues(formValues) {
+  if (!formValues || typeof formValues !== 'object') return null;
+  const keys = ['aspectRatio', 'resolution', 'width', 'height', 'steps', 'guidance', 'seed'];
+  const parts = [];
+  for (const key of keys) {
+    if (formValues[key] != null && formValues[key] !== '') {
+      parts.push(`${key}: ${formValues[key]}`);
+    }
+  }
+  if (!parts.length) {
+    const entries = Object.entries(formValues).filter(([, v]) => v != null && v !== '');
+    if (!entries.length) return null;
+    return entries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+  }
+  return parts.join(' · ');
 }
 
 function ColumnResizeHandle({ onDelta, ariaLabel, title }) {
@@ -1439,7 +1692,7 @@ function buildFolderMenuItems({ node, isRoot = false, run }) {
 
 function buildImageMenuItems({ item, multiCount = 1, run }) {
   const deleteLabel = multiCount > 1 ? `Delete ${multiCount} Images` : 'Delete';
-  const addLabel = multiCount > 1 ? `Add ${multiCount} to References` : 'Add to References';
+  const addLabel = multiCount > 1 ? `Use ${multiCount} as References` : 'Use as Reference';
   return [
     { id: 'add-refs', label: addLabel, onSelect: () => run('add-refs') },
     {

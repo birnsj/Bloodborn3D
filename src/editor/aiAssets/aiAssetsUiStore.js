@@ -23,7 +23,8 @@ let state = {
    * Preserved through OpenArt estimate/generate/import so associations can be written.
    * {
    *   areaId, conceptId, promptId, finalPrompt,
-   *   assetCategory, tileHorizontal, tileVertical, itemIds, folderPath
+   *   assetCategory, tileHorizontal, tileVertical, itemIds, folderPath,
+   *   promptTemplateId?, sourceRegion?, sourceItemId?, croppedReference?
    * } | null
    */
   generationOrigin: null,
@@ -39,6 +40,13 @@ let state = {
    * Editable prompt text lives in the active provider store.
    */
   promptComposition: defaultPromptComposition(),
+  /**
+   * Region drawn on a Project Art preview (normalized 0..1 of natural image size).
+   * { itemId, relativePath, title, x, y, width, height, naturalWidth, naturalHeight, description? } | null
+   */
+  selectedRegion: null,
+  /** Prompt template id shared by Project Art handoff and Asset Generation UI. */
+  selectedPromptTemplateId: null,
   /** Result strip thumbnail size (px), like Asset Viewer Size. */
   resultsThumbSize: 72,
   /** Project Art Library gallery thumbnail size (px). */
@@ -80,9 +88,62 @@ function normalizeRefItem(raw) {
   };
 }
 
+const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0));
+
+/** Validate + clamp a region; returns null when unusable. */
+export function normalizeRegion(raw) {
+  if (!raw || typeof raw !== 'object' || !raw.itemId) return null;
+  const x = clamp01(raw.x);
+  const y = clamp01(raw.y);
+  const width = Math.min(clamp01(raw.width), 1 - x);
+  const height = Math.min(clamp01(raw.height), 1 - y);
+  if (!(width > 0) || !(height > 0)) return null;
+  const region = {
+    itemId: String(raw.itemId),
+    relativePath: String(raw.relativePath || ''),
+    title: String(raw.title || raw.relativePath || raw.itemId),
+    x,
+    y,
+    width,
+    height,
+    naturalWidth: Math.max(0, Math.round(Number(raw.naturalWidth) || 0)),
+    naturalHeight: Math.max(0, Math.round(Number(raw.naturalHeight) || 0)),
+  };
+  if (raw.description != null && String(raw.description).trim()) {
+    region.description = String(raw.description).trim();
+  }
+  return region;
+}
+
 function normalizeGenerationOrigin(origin) {
   if (!origin || typeof origin !== 'object') return null;
+  // Optional fields are only present when set, so existing origins keep their shape.
+  const optional = {};
+  if (origin.promptTemplateId) optional.promptTemplateId = String(origin.promptTemplateId);
+  const sourceRegion = normalizeRegion(origin.sourceRegion);
+  if (sourceRegion) optional.sourceRegion = sourceRegion;
+  if (origin.sourceItemId) optional.sourceItemId = String(origin.sourceItemId);
+  if (origin.croppedReference && typeof origin.croppedReference === 'object') {
+    optional.croppedReference = {
+      stagingId: origin.croppedReference.stagingId
+        ? String(origin.croppedReference.stagingId)
+        : null,
+      fileName: origin.croppedReference.fileName
+        ? String(origin.croppedReference.fileName)
+        : null,
+      originalName: origin.croppedReference.originalName
+        ? String(origin.croppedReference.originalName)
+        : null,
+      absolutePath: origin.croppedReference.absolutePath
+        ? String(origin.croppedReference.absolutePath)
+        : null,
+      sourceItemId: origin.croppedReference.sourceItemId
+        ? String(origin.croppedReference.sourceItemId)
+        : null,
+    };
+  }
   return {
+    ...optional,
     areaId: origin.areaId || null,
     conceptId: origin.conceptId || null,
     promptId: origin.promptId || null,
@@ -105,6 +166,8 @@ function emptyUiState() {
     generationReferences: [],
     generationReferencesWarning: null,
     promptComposition: defaultPromptComposition(),
+    selectedRegion: null,
+    selectedPromptTemplateId: null,
     resultsThumbSize: RESULTS_THUMB_SIZE_DEFAULT,
     libraryThumbSize: LIBRARY_THUMB_SIZE_DEFAULT,
   };
@@ -286,6 +349,26 @@ export function setPromptComposition(patch = {}) {
   return state;
 }
 
+export function setSelectedRegion(region) {
+  state = { ...state, selectedRegion: normalizeRegion(region) };
+  emit();
+  return state;
+}
+
+export function clearSelectedRegion() {
+  if (!state.selectedRegion) return state;
+  return setSelectedRegion(null);
+}
+
+export function setSelectedPromptTemplateId(id) {
+  state = {
+    ...state,
+    selectedPromptTemplateId: id != null && id !== '' ? String(id) : null,
+  };
+  emit();
+  return state;
+}
+
 export function resetPromptComposition() {
   state = { ...state, promptComposition: defaultPromptComposition() };
   emit();
@@ -330,6 +413,9 @@ if (typeof window !== 'undefined') {
     setGenerationReferences,
     setPromptComposition,
     resetPromptComposition,
+    setSelectedRegion,
+    clearSelectedRegion,
+    setSelectedPromptTemplateId,
     setResultsThumbSize,
     setLibraryThumbSize,
     setResultsPreviewSize,

@@ -45,6 +45,13 @@ describe('AI Assets prompt composition — tiling', () => {
     })).toBe(`stone\n\n${TILING_INSTRUCTIONS.both}`);
   });
 
+  it('does not double-append tiling when the body already has seamless tiling language', () => {
+    const body = 'Stone wall. SEAMLESS horizontal Tiling with matching edges.';
+    expect(composeGenerationPrompt({ prompt: body, tileHorizontal: true })).toBe(body);
+    expect(composeGenerationPrompt({ prompt: 'plain stone', tileHorizontal: true }))
+      .toBe(`plain stone\n\n${TILING_INSTRUCTIONS.horizontal}`);
+  });
+
   it('does not mutate the editable prompt stored in OpenArt UI state', () => {
     openArtSetPrompt('editable body');
     setPromptComposition({ tileHorizontal: true, tileVertical: false });

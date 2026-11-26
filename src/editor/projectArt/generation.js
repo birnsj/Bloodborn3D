@@ -27,9 +27,34 @@ export function createArtGenerationOrigin({
   folderPath = null,
   areaId = null,
   conceptId = null,
+  promptTemplateId = null,
+  sourceRegion = null,
+  sourceItemId = null,
+  croppedReference = null,
 } = {}) {
   const ids = Array.isArray(itemIds) ? itemIds.map(String).filter(Boolean) : [];
+  // Region/template fields are only present for region handoffs.
+  const optional = {};
+  if (promptTemplateId) optional.promptTemplateId = String(promptTemplateId);
+  if (sourceRegion) optional.sourceRegion = sourceRegion;
+  if (sourceItemId) optional.sourceItemId = String(sourceItemId);
+  if (croppedReference && typeof croppedReference === 'object') {
+    optional.croppedReference = {
+      stagingId: croppedReference.stagingId ? String(croppedReference.stagingId) : null,
+      fileName: croppedReference.fileName ? String(croppedReference.fileName) : null,
+      originalName: croppedReference.originalName
+        ? String(croppedReference.originalName)
+        : null,
+      absolutePath: croppedReference.absolutePath
+        ? String(croppedReference.absolutePath)
+        : null,
+      sourceItemId: croppedReference.sourceItemId
+        ? String(croppedReference.sourceItemId)
+        : null,
+    };
+  }
   return {
+    ...optional,
     areaId: areaId || null,
     conceptId: conceptId || ids[0] || null,
     promptId: promptId || null,
