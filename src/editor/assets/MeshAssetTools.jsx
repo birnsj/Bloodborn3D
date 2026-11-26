@@ -26,21 +26,42 @@ export function MeshAssetTools({
   importDerivedMeshGlb,
   updateMeshMeta,
   notify,
+  pivotDraft: pivotDraftProp = null,
+  onPivotDraftChange = null,
+  pivotEditMode = false,
+  onPivotEditModeChange = null,
+  previewRotationY = 0,
+  onPreviewRotationYChange = null,
+  previewScale = 1,
+  onPreviewScaleChange = null,
+  snapEnabled = true,
+  onSnapEnabledChange = null,
+  onApplyPivot = null,
+  onCancelPivot = null,
+  pivotDirty = false,
 }) {
   const [report, setReport] = useState(() => buildMeshAssetReport(asset));
   const [busy, setBusy] = useState(null);
   const [ratio, setRatio] = useState(0.5);
   const [previewCompare, setPreviewCompare] = useState(null);
   const [exportFormat, setExportFormat] = useState('glb');
-  const [pivotDraft, setPivotDraft] = useState(() =>
+  const [localPivotDraft, setLocalPivotDraft] = useState(() =>
     normalizeContentOffset(asset?.meta?.defaultContentOffset));
   const compression = describeCompressionSupport();
+
+  const controlled = typeof onPivotDraftChange === 'function';
+  const pivotDraft = controlled
+    ? normalizeContentOffset(pivotDraftProp)
+    : localPivotDraft;
+  const setPivotDraft = controlled ? onPivotDraftChange : setLocalPivotDraft;
 
   useEffect(() => {
     let cancelled = false;
     setReport(buildMeshAssetReport(asset));
     setPreviewCompare(null);
-    setPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
+    if (!controlled) {
+      setLocalPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
+    }
     (async () => {
       if (!asset?.path) return;
       const url = publicAssetUrl(asset.path);
@@ -50,12 +71,17 @@ export function MeshAssetTools({
       setReport(buildMeshAssetReport(asset, live));
     })();
     return () => { cancelled = true; };
-  }, [asset?.id, asset?.path, asset?.meta?.bytes, asset?.meta?.defaultContentOffset]);
+  }, [asset?.id, asset?.path, asset?.meta?.bytes, asset?.meta?.defaultContentOffset, controlled]);
 
   const saveAssetPivot = useCallback(async (offset, label = 'Saved asset default pivot') => {
-    if (!asset?.id || !updateMeshMeta) return;
+    if (!asset?.id) return;
     setBusy('pivot');
     try {
+      if (typeof onApplyPivot === 'function') {
+        await onApplyPivot(offset, label);
+        return;
+      }
+      if (!updateMeshMeta) return;
       const next = normalizeContentOffset(offset);
       await updateMeshMeta(asset.id, { defaultContentOffset: next });
       setPivotDraft(next);
@@ -65,12 +91,15 @@ export function MeshAssetTools({
     } finally {
       setBusy(null);
     }
-  }, [asset, updateMeshMeta, notify]);
+  }, [asset, updateMeshMeta, notify, onApplyPivot, setPivotDraft]);
 
-  const applyAssetPivotPreset = useCallback(async (preset) => {
+  const applyAssetPivotPreset = useCallback((preset) => {
     const offset = assetPivotPresetOffset(preset, asset?.meta || report);
-    await saveAssetPivot(offset, `Asset pivot: ${PIVOT_PRESET_LABELS[preset] || preset}`);
-  }, [asset, report, saveAssetPivot]);
+    setPivotDraft(offset);
+    if (!pivotEditMode && typeof onPivotEditModeChange === 'function') {
+      onPivotEditModeChange(true);
+    }
+  }, [asset, report, setPivotDraft, pivotEditMode, onPivotEditModeChange]);
 
   const runSimplifyPreview = useCallback(async () => {
     if (!asset?.path) return;
@@ -287,10 +316,31 @@ export function MeshAssetTools({
 
       <h4 className="bb-mesh-tools__title" {...helpProps('assetViewer.pivot')}>Default Placement Pivot</h4>
       <p className="bb-muted">
-        Saved as asset meta for future placements only. Source GLB is never rewritten.
-        Existing actors keep their own pivots unless you apply explicitly in the level.
+        Interactive gizmo in the preview moves the proposed pivot; geometry stays put.
+        Saved as <code>meta.defaultContentOffset</code> for future placements only — source GLB
+        and existing actors are never rewritten.
       </p>
-      <div className="bb-field-caption">Content offset (eu)</div>
+      <div className="bb-mesh-tools__row">
+        <button
+          type="button"
+          className={`bb-btn${pivotEditMode ? ' bb-btn--active' : ''}`}
+          disabled={Boolean(busy)}
+          onClick={() => onPivotEditModeChange?.(!pivotEditMode)}
+          {...helpProps('assetViewer.pivotEdit')}
+        >
+          {pivotEditMode ? 'Exit Pivot Edit' : 'Pivot Edit'}
+        </button>
+        <label className="bb-field bb-field--inline">
+          <input
+            type="checkbox"
+            checked={Boolean(snapEnabled)}
+            disabled={Boolean(busy)}
+            onChange={(e) => onSnapEnabledChange?.(e.target.checked)}
+          />
+          <span className="bb-field__label">Snap 25</span>
+        </label>
+      </div>
+      <div className="bb-field-caption">Content offset (eu){pivotDirty ? ' · unsaved draft' : ''}</div>
       <div className="bb-mesh-tools__row">
         {['x', 'y', 'z'].map((axis) => (
           <label key={axis} className="bb-field">
@@ -301,22 +351,79 @@ export function MeshAssetTools({
               step={1}
               value={pivotDraft[axis]}
               disabled={Boolean(busy)}
-              onChange={(e) => setPivotDraft((prev) => ({
-                ...prev,
-                [axis]: Number(e.target.value) || 0,
-              }))}
+              onChange={(e) => {
+                const value = Number(e.target.value) || 0;
+                setPivotDraft({ ...pivotDraft, [axis]: value });
+                if (!pivotEditMode) onPivotEditModeChange?.(true);
+              }}
             />
           </label>
         ))}
       </div>
       <div className="bb-mesh-tools__row">
-        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => saveAssetPivot(pivotDraft)}>
-          {busy === 'pivot' ? 'Saving…' : 'Save default pivot'}
+        <button
+          type="button"
+          className="bb-btn bb-btn--primary"
+          disabled={Boolean(busy) || !pivotDirty}
+          onClick={() => saveAssetPivot(pivotDraft)}
+        >
+          {busy === 'pivot' ? 'Saving…' : 'Apply'}
+        </button>
+        <button
+          type="button"
+          className="bb-btn"
+          disabled={Boolean(busy) || (!pivotDirty && !pivotEditMode)}
+          onClick={() => {
+            if (typeof onCancelPivot === 'function') onCancelPivot();
+            else {
+              setPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
+              onPivotEditModeChange?.(false);
+            }
+          }}
+        >
+          Cancel
         </button>
         <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('original')}>Reset</button>
         <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('center')}>Center</button>
         <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('bottomCenter')}>Bottom</button>
         <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('topCenter')}>Top</button>
+      </div>
+      <div className="bb-field-caption">Preview around proposed pivot</div>
+      <div className="bb-mesh-tools__row">
+        <label className="bb-field">
+          <span className="bb-field__label">Rot Y°</span>
+          <input
+            className="bb-input"
+            type="number"
+            step={5}
+            value={previewRotationY}
+            disabled={Boolean(busy)}
+            onChange={(e) => onPreviewRotationYChange?.(Number(e.target.value) || 0)}
+          />
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Scale</span>
+          <input
+            className="bb-input"
+            type="number"
+            step={0.1}
+            min={0.1}
+            value={previewScale}
+            disabled={Boolean(busy)}
+            onChange={(e) => onPreviewScaleChange?.(Math.max(0.1, Number(e.target.value) || 1))}
+          />
+        </label>
+        <button
+          type="button"
+          className="bb-btn"
+          disabled={Boolean(busy)}
+          onClick={() => {
+            onPreviewRotationYChange?.(0);
+            onPreviewScaleChange?.(1);
+          }}
+        >
+          Clear preview
+        </button>
       </div>
 
       <h4 className="bb-mesh-tools__title">Export</h4>

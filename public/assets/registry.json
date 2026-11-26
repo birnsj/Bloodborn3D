@@ -38,10 +38,15 @@
           "z": 1
         },
         "previewPath": "previews/mesh_verify_cube_mesh.png",
-        "previewBytes": 5753
+        "previewBytes": 5753,
+        "defaultContentOffset": {
+          "x": 0,
+          "y": 50,
+          "z": 0
+        }
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795673996689
+      "updatedAt": 1795733682034
     },
     {
       "id": "mat_verify_wall",

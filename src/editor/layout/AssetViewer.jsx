@@ -10,6 +10,7 @@ import { MeshAssetTools } from '../assets/MeshAssetTools.jsx';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { uploadMaterialPreview, uploadMeshPreview } from '../../io/assetFileApi.js';
 import { isSupportedMeshImportName } from '../../assets/meshFormatIO.js';
+import { normalizeContentOffset } from '../../core/contentOffset.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import {
@@ -355,8 +356,33 @@ export function AssetViewer({ docked = false } = {}) {
   );
 }
 
+function offsetsEqual(a, b) {
+  const aa = normalizeContentOffset(a);
+  const bb = normalizeContentOffset(b);
+  return aa.x === bb.x && aa.y === bb.y && aa.z === bb.z;
+}
+
 function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMeta, notify }) {
   const [meshMeta, setMeshMeta] = useState(null);
+  const [pivotDraft, setPivotDraft] = useState(() =>
+    normalizeContentOffset(asset?.meta?.defaultContentOffset));
+  const [pivotEditMode, setPivotEditMode] = useState(false);
+  const [pivotDragActive, setPivotDragActive] = useState(false);
+  const [previewRotationY, setPreviewRotationY] = useState(0);
+  const [previewScale, setPreviewScale] = useState(1);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const previewApiRef = useRef(null);
+
+  const savedOffset = normalizeContentOffset(asset?.meta?.defaultContentOffset);
+  const pivotDirty = !offsetsEqual(pivotDraft, savedOffset);
+
+  useEffect(() => {
+    setPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
+    setPivotEditMode(false);
+    setPreviewRotationY(0);
+    setPreviewScale(1);
+    setPivotDragActive(false);
+  }, [asset.id, asset?.meta?.defaultContentOffset]);
 
   useEffect(() => {
     let cancelled = false;
@@ -369,18 +395,57 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
     return () => { cancelled = true; };
   }, [asset.id, asset.url, asset.type]);
 
+  const cancelPivotSession = useCallback(() => {
+    previewApiRef.current?.cancelPivotDrag?.();
+    setPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
+    setPivotEditMode(false);
+    setPreviewRotationY(0);
+    setPreviewScale(1);
+  }, [asset?.meta?.defaultContentOffset]);
+
+  const applyPivot = useCallback(async (offset, label = 'Saved asset default pivot') => {
+    if (!asset?.id || !updateMeshMeta) return;
+    const next = normalizeContentOffset(offset ?? pivotDraft);
+    await updateMeshMeta(asset.id, { defaultContentOffset: next });
+    setPivotDraft(next);
+    setPivotEditMode(false);
+    notify?.(`${label}. Existing placed actors are unchanged.`);
+  }, [asset?.id, updateMeshMeta, pivotDraft, notify]);
+
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose?.();
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (previewApiRef.current?.isPivotDragging?.()) {
+        previewApiRef.current.cancelPivotDrag();
+        return;
       }
+      if (pivotEditMode || pivotDirty) {
+        cancelPivotSession();
+        return;
+      }
+      onClose?.();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose, pivotEditMode, pivotDirty, cancelPivotSession, notify]);
 
   if (typeof document === 'undefined') return null;
+
+  const meshAsset = asset.type === 'mesh'
+    ? {
+        id: asset.id,
+        kind: 'mesh',
+        name: asset.name,
+        path: asset.path,
+        meta: {
+          ...(asset.meta || {}),
+          ...(meshMeta || {}),
+          defaultContentOffset: asset.meta?.defaultContentOffset,
+        },
+      }
+    : null;
 
   return createPortal(
     <div className="bb-dialog-root" role="presentation">
@@ -412,7 +477,17 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
         </div>
         <div className="bb-dialog__body bb-asset-preview-dialog">
           <div className="bb-asset-preview__stage" {...helpProps('assetViewer.preview')}>
-            <PreviewSurface asset={asset} />
+            <PreviewSurface
+              asset={asset}
+              pivotDraft={pivotDraft}
+              pivotEditMode={pivotEditMode}
+              onPivotDraftChange={setPivotDraft}
+              onPivotDragActiveChange={setPivotDragActive}
+              previewRotationY={previewRotationY}
+              previewScale={previewScale}
+              snapEnabled={snapEnabled}
+              previewApiRef={previewApiRef}
+            />
           </div>
           <div className="bb-asset-preview__meta">
             <div className="bb-asset-preview__title-row">
@@ -456,18 +531,28 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
               })}
             </dl>
             <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
-            {asset.type === 'mesh' && (
+            {pivotDragActive && (
+              <p className="bb-muted">Dragging pivot — release to commit draft, Escape to cancel drag.</p>
+            )}
+            {meshAsset && (
               <MeshAssetTools
-                asset={{
-                  id: asset.id,
-                  kind: 'mesh',
-                  name: asset.name,
-                  path: asset.path,
-                  meta: asset.meta,
-                }}
+                asset={meshAsset}
                 importDerivedMeshGlb={importDerivedMeshGlb}
                 updateMeshMeta={updateMeshMeta}
                 notify={notify}
+                pivotDraft={pivotDraft}
+                onPivotDraftChange={setPivotDraft}
+                pivotEditMode={pivotEditMode}
+                onPivotEditModeChange={setPivotEditMode}
+                previewRotationY={previewRotationY}
+                onPreviewRotationYChange={setPreviewRotationY}
+                previewScale={previewScale}
+                onPreviewScaleChange={setPreviewScale}
+                snapEnabled={snapEnabled}
+                onSnapEnabledChange={setSnapEnabled}
+                onApplyPivot={applyPivot}
+                onCancelPivot={cancelPivotSession}
+                pivotDirty={pivotDirty}
               />
             )}
           </div>
@@ -478,9 +563,31 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
   );
 }
 
-function PreviewSurface({ asset }) {
+function PreviewSurface({
+  asset,
+  pivotDraft,
+  pivotEditMode,
+  onPivotDraftChange,
+  onPivotDragActiveChange,
+  previewRotationY,
+  previewScale,
+  snapEnabled,
+  previewApiRef,
+}) {
   if (asset.type === 'mesh' && asset.url) {
-    return <MeshPreviewWithIcon asset={asset} />;
+    return (
+      <MeshPreviewWithIcon
+        asset={asset}
+        pivotDraft={pivotDraft}
+        pivotEditMode={pivotEditMode}
+        onPivotDraftChange={onPivotDraftChange}
+        onPivotDragActiveChange={onPivotDragActiveChange}
+        previewRotationY={previewRotationY}
+        previewScale={previewScale}
+        snapEnabled={snapEnabled}
+        previewApiRef={previewApiRef}
+      />
+    );
   }
 
   if (asset.type === 'texture' && asset.url) {
@@ -509,10 +616,31 @@ function PreviewSurface({ asset }) {
   );
 }
 
-function MeshPreviewWithIcon({ asset }) {
+function MeshPreviewWithIcon({
+  asset,
+  pivotDraft,
+  pivotEditMode,
+  onPivotDraftChange,
+  onPivotDragActiveChange,
+  previewRotationY,
+  previewScale,
+  snapEnabled,
+  previewApiRef,
+}) {
   const previewRef = useRef(null);
   const { notify, refreshRegistry } = useAssetBrowser();
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!previewApiRef) return undefined;
+    previewApiRef.current = {
+      cancelPivotDrag: () => previewRef.current?.cancelPivotDrag?.(),
+      isPivotDragging: () => Boolean(previewRef.current?.isPivotDragging?.()),
+    };
+    return () => {
+      previewApiRef.current = null;
+    };
+  }, [previewApiRef]);
 
   const onGenerateIcon = useCallback(async () => {
     if (!asset?.id || busy) return;
@@ -533,6 +661,11 @@ function MeshPreviewWithIcon({ asset }) {
   return (
     <div className="bb-asset-preview__surface bb-asset-preview__surface--live">
       <div className="bb-asset-preview__mesh-toolbar">
+        {pivotEditMode && (
+          <span className="bb-asset-preview__pivot-badge" {...helpProps('assetViewer.pivotEdit')}>
+            Pivot Edit · RGB = imported origin · gold = proposed pivot
+          </span>
+        )}
         <button
           type="button"
           className="bb-btn bb-btn--primary"
@@ -543,7 +676,18 @@ function MeshPreviewWithIcon({ asset }) {
           {busy ? 'Saving…' : 'Generate Icon'}
         </button>
       </div>
-      <MeshPreviewCanvas ref={previewRef} url={asset.url} />
+      <MeshPreviewCanvas
+        ref={previewRef}
+        url={asset.url}
+        contentOffset={pivotDraft}
+        pivotEditMode={Boolean(pivotEditMode)}
+        onContentOffsetChange={onPivotDraftChange}
+        onPivotDragActiveChange={onPivotDragActiveChange}
+        snapEnabled={snapEnabled}
+        snapSize={25}
+        previewRotationY={previewRotationY}
+        previewScale={previewScale}
+      />
     </div>
   );
 }

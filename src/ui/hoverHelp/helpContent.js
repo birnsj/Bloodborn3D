@@ -1045,7 +1045,12 @@ export const HELP_CONTENT = {
   },
   'assetViewer.pivot': {
     title: 'Default Placement Pivot',
-    body: 'Stores meta.defaultContentOffset for future mesh placements. Does not rewrite the source GLB and does not move actors already in levels. Use Bottom/Center presets for furniture and characters.',
+    body: 'Stores meta.defaultContentOffset for future mesh placements. Interactive Pivot Edit in the preview uses the translation gizmo; geometry stays fixed while the proposed pivot moves. Apply writes meta; Cancel/Escape discard the draft. Does not rewrite the source GLB and does not move actors already in levels.',
+    tips: 'RGB axes mark the imported origin; gold marks the proposed placement pivot. Rot Y / Scale preview spins around that pivot without saving.',
+  },
+  'assetViewer.pivotEdit': {
+    title: 'Asset Viewer Pivot Edit',
+    body: 'Enables the translation gizmo on the mesh preview. Drag axes (with optional 25 eu snap), edit XYZ, or use presets. Apply saves defaultContentOffset for future placements only; Cancel or Escape restores the last saved meta.',
   },
   'details.staticMesh.autoLod': {
     title: 'Generate Auto LOD',

@@ -6,14 +6,89 @@ import { createThreeMaterial, assetUrl } from '../../runtime/materialFactory.js'
 import { disposeObjectTree, disposeOwnedMaterial } from '../../runtime/gpuResources.js';
 import { installStudioEnvironment } from '../../runtime/studioEnvironment.js';
 import { MESH_THUMB_SIZE } from './meshThumbnailBake.js';
+import { BrushGizmo } from '../BrushGizmo.js';
+import { toMeters, toEditorUnits } from '../../core/units.js';
+import { normalizeContentOffset } from '../../core/contentOffset.js';
+import { applyAssetPivotDragDelta } from '../../rules/assetPivotPreview.js';
+
+function makeAxisHelper(size = 0.35, colors = [0xe74c3c, 0x2ecc71, 0x3498db]) {
+  const group = new THREE.Group();
+  group.name = 'AxisHelper';
+  const axes = [
+    { dir: [1, 0, 0], color: colors[0] },
+    { dir: [0, 1, 0], color: colors[1] },
+    { dir: [0, 0, 1], color: colors[2] },
+  ];
+  for (const a of axes) {
+    const arrow = new THREE.ArrowHelper(
+      new THREE.Vector3(...a.dir),
+      new THREE.Vector3(),
+      size,
+      a.color,
+      size * 0.22,
+      size * 0.14,
+    );
+    arrow.traverse((o) => {
+      if (o.material) {
+        o.material.depthTest = false;
+        o.material.depthWrite = false;
+        o.material.transparent = true;
+        o.renderOrder = 30;
+      }
+    });
+    group.add(arrow);
+  }
+  return group;
+}
+
+function makePivotMarker() {
+  const group = new THREE.Group();
+  group.name = 'ProposedPivotMarker';
+  const geo = new THREE.OctahedronGeometry(0.06, 0);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xf0c040,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.95,
+    toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 31;
+  group.add(mesh);
+  group.add(makeAxisHelper(0.28, [0xf39c12, 0xf1c40f, 0xe67e22]));
+  return group;
+}
 
 /**
  * Independent Three.js preview for Asset Viewer — not a GameRuntime.
- * Imperative API: `captureIconPngBlob({ size })` for Generate Icon from the current camera.
+ * Optional pivot editing reuses BrushGizmo; geometry stays fixed while the draft
+ * contentOffset (proposed pivot) updates. Imperative: captureIconPngBlob.
  */
-export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, ref) {
+export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({
+  url,
+  contentOffset = null,
+  pivotEditMode = false,
+  onContentOffsetChange = null,
+  onPivotDragActiveChange = null,
+  snapEnabled = true,
+  snapSize = 25,
+  previewRotationY = 0,
+  previewScale = 1,
+}, ref) {
   const canvasRef = useRef(null);
   const apiRef = useRef(null);
+  const propsRef = useRef({});
+  propsRef.current = {
+    contentOffset,
+    pivotEditMode,
+    onContentOffsetChange,
+    onPivotDragActiveChange,
+    snapEnabled,
+    snapSize,
+    previewRotationY,
+    previewScale,
+  };
 
   useImperativeHandle(ref, () => ({
     captureIconPngBlob: (opts) => {
@@ -22,8 +97,11 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
       }
       return apiRef.current.captureIconPngBlob(opts);
     },
+    cancelPivotDrag: () => apiRef.current?.cancelPivotDrag?.(),
+    isPivotDragging: () => Boolean(apiRef.current?.isPivotDragging?.()),
   }), []);
 
+  // Scene lifetime tied to url.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !url) return undefined;
@@ -53,23 +131,155 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
     const grid = new THREE.GridHelper(4, 8, 0x3a4555, 0x2a3038);
     scene.add(grid);
 
+    // Mesh stays fixed at meshAnchor; pivot visual moves with −contentOffset.
+    const meshAnchor = new THREE.Group();
+    meshAnchor.name = 'MeshAnchor';
+    scene.add(meshAnchor);
+
+    const previewXform = new THREE.Group();
+    previewXform.name = 'PivotPreviewXform';
+    meshAnchor.add(previewXform);
+
+    const contentHold = new THREE.Group();
+    contentHold.name = 'ContentHold';
+    previewXform.add(contentHold);
+
+    const originMarker = makeAxisHelper(0.32);
+    originMarker.name = 'ImportedOrigin';
+    contentHold.add(originMarker);
+
+    const pivotHold = new THREE.Group();
+    pivotHold.name = 'PivotHold';
+    meshAnchor.add(pivotHold);
+
+    const pivotMarker = makePivotMarker();
+    pivotHold.add(pivotMarker);
+
+    const gizmo = new BrushGizmo(scene);
+    gizmo.setMode('move');
+    gizmo.setSpace('world');
+    gizmo.setVisible(false);
+
     let root = null;
     let raf = 0;
     let disposed = false;
+    let drag = null;
+    const ndc = new THREE.Vector2();
+    const raycaster = new THREE.Raycaster();
 
-    const fit = (object) => {
-      const box = new THREE.Box3().setFromObject(object);
+    const fitCameraToMesh = () => {
+      if (!root) return;
+      const box = new THREE.Box3().setFromObject(contentHold);
       const size = new THREE.Vector3();
       const center = new THREE.Vector3();
       box.getSize(size);
       box.getCenter(center);
-      object.position.sub(center);
+      // Frame content without baking a position into the mesh (preserves imported origin).
       const maxDim = Math.max(size.x, size.y, size.z, 0.001);
       const dist = maxDim * 2.2;
-      camera.position.set(dist, dist * 0.7, dist);
-      controls.target.set(0, 0, 0);
+      camera.position.set(center.x + dist, center.y + dist * 0.7, center.z + dist);
+      controls.target.copy(center);
       controls.update();
+      const gridScale = Math.max(2, maxDim * 2.5);
+      grid.scale.setScalar(gridScale / 4);
+      grid.position.y = box.min.y;
     };
+
+    const syncPivotVisual = () => {
+      const offset = normalizeContentOffset(propsRef.current.contentOffset);
+      // Pivot in mesh space = −contentOffset. Mesh imported origin stays at meshAnchor (0).
+      const px = -toMeters(offset.x);
+      const py = -toMeters(offset.y);
+      const pz = -toMeters(offset.z);
+      pivotHold.position.set(px, py, pz);
+
+      // previewXform at pivot; contentHold at +offset so identity R/S keeps mesh at origin.
+      // Non-identity R/S orbits and scales the mesh around the proposed pivot.
+      previewXform.position.set(px, py, pz);
+      const rotY = THREE.MathUtils.degToRad(Number(propsRef.current.previewRotationY) || 0);
+      const scl = Math.max(0.05, Number(propsRef.current.previewScale) || 1);
+      previewXform.rotation.set(0, rotY, 0);
+      previewXform.scale.setScalar(scl);
+      contentHold.position.set(-px, -py, -pz);
+      contentHold.rotation.set(0, 0, 0);
+      contentHold.scale.setScalar(1);
+
+      const showPivot = propsRef.current.contentOffset != null;
+      pivotHold.visible = showPivot;
+      originMarker.visible = showPivot;
+      const edit = Boolean(propsRef.current.pivotEditMode) && showPivot;
+      if (edit) {
+        gizmo.update([{ position: {
+          x: toEditorUnits(px),
+          y: toEditorUnits(py),
+          z: toEditorUnits(pz),
+        } }], null);
+        gizmo.setMode('move');
+        gizmo.setVisible(true);
+        gizmo.updateScreenScale(camera);
+      } else {
+        gizmo.setVisible(false);
+      }
+    };
+
+    const pointerNdc = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(rect.width, 1);
+      const h = Math.max(rect.height, 1);
+      ndc.x = ((e.clientX - rect.left) / w) * 2 - 1;
+      ndc.y = -((e.clientY - rect.top) / h) * 2 + 1;
+      return ndc;
+    };
+
+    const onPointerDown = (e) => {
+      if (!propsRef.current.pivotEditMode || disposed) return;
+      pointerNdc(e);
+      raycaster.setFromCamera(ndc, camera);
+      gizmo.updateScreenScale(camera);
+      const hit = gizmo.pick(raycaster);
+      if (!hit || hit.kind !== 'move') return;
+      e.preventDefault();
+      e.stopPropagation();
+      controls.enabled = false;
+      gizmo.beginDrag(hit, raycaster.ray);
+      drag = {
+        axis: hit.axis,
+        startOffset: normalizeContentOffset(propsRef.current.contentOffset),
+      };
+      propsRef.current.onPivotDragActiveChange?.(true);
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    };
+
+    const onPointerMove = (e) => {
+      if (!drag || disposed) return;
+      pointerNdc(e);
+      raycaster.setFromCamera(ndc, camera);
+      const sample = gizmo.sampleDrag(raycaster.ray);
+      if (!sample || sample.kind !== 'move') return;
+      const next = applyAssetPivotDragDelta(
+        drag.startOffset,
+        { axis: sample.axis, deltaEditor: sample.deltaEditor },
+        {
+          snap: Boolean(propsRef.current.snapEnabled),
+          snapSize: propsRef.current.snapSize,
+        },
+      );
+      propsRef.current.onContentOffsetChange?.(next);
+    };
+
+    const endPivotDrag = (commit) => {
+      if (!drag) return;
+      gizmo.endDrag?.();
+      const cancelled = commit === false;
+      if (cancelled) {
+        propsRef.current.onContentOffsetChange?.(drag.startOffset);
+      }
+      drag = null;
+      controls.enabled = true;
+      propsRef.current.onPivotDragActiveChange?.(false);
+    };
+
+    const onPointerUp = () => endPivotDrag(true);
 
     const resize = () => {
       const w = canvas.clientWidth || 280;
@@ -77,10 +287,16 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
       renderer.setSize(w, h, false);
       camera.aspect = w / Math.max(h, 1);
       camera.updateProjectionMatrix();
+      gizmo.updateScreenScale(camera);
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
     cloneLoadedMesh(url).then((loaded) => {
       if (!loaded?.root) return;
@@ -89,18 +305,28 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
         return;
       }
       root = loaded.root;
-      scene.add(root);
-      fit(root);
+      contentHold.add(root);
+      fitCameraToMesh();
+      syncPivotVisual();
     });
 
     apiRef.current = {
+      syncPivotVisual,
+      cancelPivotDrag: () => endPivotDrag(false),
+      isPivotDragging: () => Boolean(drag),
       async captureIconPngBlob({ size = MESH_THUMB_SIZE } = {}) {
         if (disposed) throw new Error('Mesh preview was closed');
         if (!root) throw new Error('Mesh is still loading');
 
         controls.update();
         const prevGrid = grid.visible;
+        const prevOrigin = originMarker.visible;
+        const prevPivot = pivotHold.visible;
+        const prevGizmo = gizmo.root.visible;
         grid.visible = false;
+        originMarker.visible = false;
+        pivotHold.visible = false;
+        gizmo.setVisible(false);
 
         const thumbCanvas = document.createElement('canvas');
         thumbCanvas.width = size;
@@ -133,6 +359,9 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
           camera.aspect = prevAspect;
           camera.updateProjectionMatrix();
           grid.visible = prevGrid;
+          originMarker.visible = prevOrigin;
+          pivotHold.visible = prevPivot;
+          gizmo.setVisible(prevGizmo);
           thumbRenderer.dispose();
         }
       },
@@ -140,6 +369,7 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
 
     const tick = () => {
       if (disposed) return;
+      syncPivotVisual();
       controls.update();
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -151,17 +381,39 @@ export const MeshPreviewCanvas = forwardRef(function MeshPreviewCanvas({ url }, 
       apiRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+      endPivotDrag(false);
       controls.dispose();
+      gizmo.dispose();
       if (root) {
-        scene.remove(root);
-        // Skip shared cached GLTF geometries; dispose instance-owned materials only.
+        contentHold.remove(root);
         disposeObjectTree(root);
+        root = null;
       }
+      scene.remove(meshAnchor);
+      disposeObjectTree(meshAnchor);
       renderer.dispose();
     };
   }, [url]);
 
-  return <canvas ref={canvasRef} className="bb-mesh-preview-canvas" />;
+  // Prop-driven visual sync without remounting the scene.
+  useEffect(() => {
+    apiRef.current?.syncPivotVisual?.();
+  }, [
+    contentOffset?.x, contentOffset?.y, contentOffset?.z,
+    pivotEditMode, previewRotationY, previewScale, snapEnabled, snapSize,
+  ]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`bb-mesh-preview-canvas${pivotEditMode ? ' bb-mesh-preview-canvas--pivot-edit' : ''}`}
+      data-pivot-edit={pivotEditMode ? '1' : '0'}
+    />
+  );
 });
 
 /**

@@ -23,12 +23,20 @@ import {
   actorSupportsPivotEdit,
   assetPivotPresetOffset,
 } from '../rules/pivotEdit.js';
+import {
+  applyAssetPivotDragDelta,
+  assetPivotLocalFromOffset,
+  assetOffsetFromPivotLocal,
+  snapEditorAxis,
+} from '../rules/assetPivotPreview.js';
 import { SetPivotCommand } from '../editor/history/commands.js';
 import { getWorldTransform } from '../core/hierarchy.js';
 import { createStaticMeshActor } from '../editor/meshFactory.js';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BrushGizmo } from '../editor/BrushGizmo.js';
+import * as THREE from 'three';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -195,9 +203,44 @@ describe('Batch 7.1 presets + history', () => {
   });
 });
 
+describe('Batch 7.1 Asset Viewer pivot draft math', () => {
+  it('keeps mesh-fixed semantics when the proposed pivot moves', () => {
+    const start = { x: 0, y: 40, z: 0 };
+    const next = applyAssetPivotDragDelta(start, { axis: 'y', deltaEditor: 10 });
+    // Pivot +10 eu → contentOffset y decreases so geometry world pose is unchanged.
+    expect(next.y).toBe(30);
+    expect(assetPivotLocalFromOffset(next).y).toBe(-30);
+    expect(assetOffsetFromPivotLocal({ x: 0, y: -30, z: 0 }).y).toBe(30);
+  });
+
+  it('snaps draft offsets to the grid', () => {
+    expect(snapEditorAxis(37, 25)).toBe(25);
+    const snapped = applyAssetPivotDragDelta(
+      { x: 0, y: 0, z: 0 },
+      { axis: 'x', deltaEditor: 37 },
+      { snap: true, snapSize: 25 },
+    );
+    expect(snapped.x).toBe(-25);
+  });
+
+  it('BrushGizmo used by Asset Viewer disposes without leaking scene children', () => {
+    const scene = new THREE.Scene();
+    const before = scene.children.length;
+    const gizmo = new BrushGizmo(scene);
+    expect(scene.children.length).toBe(before + 1);
+    gizmo.update([{ position: { x: 0, y: 0, z: 0 } }], null);
+    gizmo.setMode('move');
+    gizmo.setVisible(true);
+    gizmo.dispose();
+    expect(scene.children.length).toBe(before);
+  });
+});
+
 describe('Batch 7.1 acceptance docs + level', () => {
-  it('ships acceptance doc and level', () => {
+  it('ships acceptance doc, level, and Asset Viewer pivot screenshots folder', () => {
     expect(existsSync(path.join(rootDir, 'docs/ACCEPTANCE_PIVOT_EDITING.md'))).toBe(true);
     expect(existsSync(path.join(rootDir, 'public/levels/acceptance-pivot-editing.json'))).toBe(true);
+    const doc = readFileSync(path.join(rootDir, 'docs/ACCEPTANCE_PIVOT_EDITING.md'), 'utf8');
+    expect(doc.includes('Asset Viewer')).toBe(true);
   });
 });

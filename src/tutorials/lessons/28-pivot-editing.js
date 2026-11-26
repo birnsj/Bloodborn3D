@@ -35,9 +35,9 @@ export const pivotEditingLesson = {
     },
     {
       id: 'asset-default',
-      title: 'Asset default pivot',
-      body: 'In Asset Viewer → Mesh Tools, set a default placement pivot (Bottom / Center / numeric). New placements use it; existing actors do not jump. Source files stay intact.',
-      highlight: 'assetViewer.pivot',
+      title: 'Asset Viewer pivot gizmo',
+      body: 'Double-click a mesh in Asset Viewer → Pivot Edit. Drag the gold proposed pivot (RGB = imported origin). Geometry stays put. Use Rot Y / Scale to preview around the pivot, then Apply. New placements inherit meta.defaultContentOffset; existing actors do not jump.',
+      highlight: 'assetViewer.pivotEdit',
       verify: { type: 'always' },
     },
   ],

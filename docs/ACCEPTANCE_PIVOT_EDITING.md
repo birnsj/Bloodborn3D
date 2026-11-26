@@ -1,6 +1,7 @@
 # Batch 7.1 — Pivot Editing acceptance
 
-**Baseline:** `2c029c4` (1,063 tests)  
+**Baseline (actor pivot):** `d43be56` (1,075 tests)  
+**Closure (Asset Viewer gizmo):** `a0c371e` (1,078 tests)  
 **Academy:** lesson 28 (`pivot-editing`)  
 **Level:** `public/levels/acceptance-pivot-editing.json`  
 **Screenshots:** `docs/acceptance-pivot-editing/`  
@@ -15,6 +16,7 @@
 | Pivot edit | Move transform; compensate `contentOffset` + direct children so world pose stays |
 | History | `SetPivotCommand` (one undo entry per completed edit) |
 | Asset default | `meta.defaultContentOffset` — future placements only; source GLB untouched |
+| Asset Viewer gizmo | Reuses `BrushGizmo` move handles on `MeshPreviewCanvas`; draft until Apply |
 
 ## Supported actor types
 
@@ -26,7 +28,22 @@
 | ConvexBrush / Ramp / Stair / Column / Arch / CurvedWall | **Supported** | ContentRoot parenting |
 | Lights / Environment / PlayerSpawn | **N/A** | Remain at pivot (not content-offset) |
 
-## Acceptance checks
+## Asset Viewer interactive pivot
+
+| Check | Status | Evidence |
+| --- | --- | --- |
+| Translation gizmo on all axes | **Pass** | Pivot Edit mode + BrushGizmo move handles |
+| Numeric XYZ + presets sync | **Pass** | Shared `pivotDraft` between canvas and MeshAssetTools |
+| Grid snap (25 eu) + axis constraints | **Pass** | `applyAssetPivotDragDelta` + gizmo axis handles |
+| Geometry stationary while editing | **Pass** | Mesh fixed at anchor; pivot = −contentOffset |
+| Rot / scale preview around pivot | **Pass** | Preview Rot Y° / Scale controls |
+| Apply / Cancel / Escape / Reset | **Pass** | Apply writes meta; Cancel/Escape restore draft; Reset → original |
+| Meta persistence / reopen | **Pass** | `updateMeshMeta` → `defaultContentOffset` |
+| New placements inherit; existing unchanged | **Pass** | `createStaticMeshActor` + meta-only save |
+| Gizmo dispose on close | **Pass** | Unit: BrushGizmo dispose removes scene child |
+| Actor pivot editing unchanged | **Pass** | Existing Batch 7.1 actor tests |
+
+## Actor acceptance checks
 
 | Check | Status | Evidence |
 | --- | --- | --- |
@@ -36,25 +53,21 @@
 | Collision stays aligned | **Pass** | Physics folds contentOffset / content world frame |
 | Parented actors keep world pose | **Pass** | Child compensation unit test |
 | Prefab overrides | **Pass** | `commitPivotChanges` records prefab override cmds |
-| Asset pivot ≠ move existing actors | **Pass** | Meta-only `defaultContentOffset` |
 | LOD / InstancedMesh | **Pass** | Shared ContentRoot; instance matrices use content frame |
-| Non-uniform scale / rotation | **Pass** | Scale unit test |
 | Local / world gizmo | **Pass** | Toolbar Local/World + BrushGizmo space |
-| Grid snap / numeric Details | **Pass** | Pivot drag snap + Details content offset |
 | Undo / Escape cancel | **Pass** | `SetPivotCommand` + Escape restores snapshot |
-| Additive / subtractive brush | **Pass** | Wall + opening in acceptance level |
-| Save / reload | **Pass** | `contentOffset` omitted when identity (compat) |
-| Editor / runtime Play | **Pass** | `04-play-mode.png` (spawn + light) |
-| Unit tests / lint / build | **Pass** | 1,075 tests; lint warnings only; production build OK |
+| Editor / runtime Play | **Pass** | `04-play-mode.png` |
 
 ## Screenshots
 
 | File | Captures |
 | --- | --- |
 | `01-pivot-level-overview.png` | Acceptance level lineup |
-| `02-door-pivot-edit.png` | Pivot mode + hinge gizmo on door |
+| `02-door-pivot-edit.png` | Actor Pivot mode + hinge gizmo |
 | `03-table-bottom-pivot-details.png` | Bottom-center gizmo + Details presets |
 | `04-play-mode.png` | Play/runtime parity |
+| `05-asset-viewer-pivot-edit.png` | Asset Viewer interactive pivot gizmo |
+| `06-asset-pivot-after-apply-placement.png` | Placement inherits saved default pivot |
 
 ## Limitations
 
@@ -62,23 +75,21 @@
 | --- | --- |
 | Compression encode | **Deferred** (Batch 7) |
 | Brush displacement tessellation | **Outstanding** |
-| Interactive Asset Viewer 3D pivot gizmo | Numeric + presets; placement preview uses meta |
 | USDZ AR viewer photo | Unverified (Batch 7) |
 | Batch 8 features | **Not started** |
 
-## Defects corrected during Batch 7.1
+## Defects corrected during Asset Viewer gizmo closure
 
 | Issue | Result |
 | --- | --- |
-| Rebuild reused disposed `ContentRoot` via stale `userData` → orphaned meshes (carve / World Solid batching) | `_syncContentRoot` requires `root.parent === group`; rebuild clears handle |
-| `LevelToolBar` duplicate `setStatus` binding | Removed redeclaration (build blocker) |
-| Acceptance level missing spawn/light for Play | Added PlayerSpawn + point light |
+| Asset Viewer lacked interactive pivot gizmo (numeric/presets only) | BrushGizmo on MeshPreviewCanvas + Apply/Cancel draft |
+| Dialog Escape always closed preview during pivot edit | Escape cancels drag, then draft, then dialog |
 
 ## Completion
 
 | Gate | Result |
 | --- | --- |
-| Unit tests | **1,075 passed** |
+| Unit tests | **1,078 passed** |
 | Lint | Pass (warnings only; pre-existing) |
 | Production build | Pass |
-| Commit | Recorded after push |
+| Commit | `a0c371e` |
