@@ -53,10 +53,13 @@
       ],
       "meta": {
         "baseColor": "#ffffff",
-        "hasBaseMap": true
+        "hasBaseMap": true,
+        "roughness": 0.8,
+        "metalness": 0,
+        "previewPath": "previews/mat_verify_wall_sphere.png"
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795405329387
+      "updatedAt": 1795650848404
     },
     {
       "id": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d",
@@ -414,10 +417,11 @@
         "baseColor": "#8a9099",
         "roughness": 0.75,
         "metalness": 0.05,
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "previewPath": "previews/mat_0d7229acc49d_sphere.png"
       },
       "createdAt": 1795496202588,
-      "updatedAt": 1795496202588
+      "updatedAt": 1795650848423
     },
     {
       "id": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
@@ -466,10 +470,65 @@
         "baseColor": "#ffffff",
         "roughness": 0.85,
         "metalness": 0.02,
-        "hasBaseMap": true
+        "hasBaseMap": true,
+        "previewPath": "previews/mat_8609cf1b090a_sphere.png"
       },
       "createdAt": 1795581403650,
-      "updatedAt": 1795581403650
+      "updatedAt": 1795650848483
+    },
+    {
+      "id": "tex_bed0f902ccaa",
+      "kind": "texture",
+      "name": "tex_c483469396d2",
+      "folder": "Textures",
+      "path": "textures/tex_bed0f902ccaa.png",
+      "originalName": "tex_c483469396d2.png",
+      "tags": [],
+      "meta": {
+        "format": "png",
+        "bytes": 2133017,
+        "magic": "png"
+      },
+      "createdAt": 1795649771796,
+      "updatedAt": 1795649771796
+    },
+    {
+      "id": "tex_410a19aee24a",
+      "kind": "texture",
+      "name": "OpenArt Imposing late Victorian Gothic",
+      "folder": "Textures",
+      "path": "textures/tex_410a19aee24a.png",
+      "originalName": "stg_7cdfebef0c03.png",
+      "tags": [
+        "openart",
+        "generated",
+        "phase2h1a"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1733281,
+        "magic": "png"
+      },
+      "createdAt": 1795650000880,
+      "updatedAt": 1795650000880
+    },
+    {
+      "id": "mat_a64e6e8fecee",
+      "kind": "material",
+      "name": "OpenArt Imposing late Victorian Gothic",
+      "folder": "Materials",
+      "path": "materials/mat_a64e6e8fecee.json",
+      "originalName": "mat_a64e6e8fecee.json",
+      "tags": [],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.85,
+        "metalness": 0.02,
+        "hasBaseMap": true,
+        "previewPath": "previews/mat_a64e6e8fecee_sphere.png"
+      },
+      "createdAt": 1795650000888,
+      "updatedAt": 1795650848548
     }
   ]
 }

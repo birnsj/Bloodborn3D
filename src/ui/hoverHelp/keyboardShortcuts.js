@@ -88,7 +88,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['WASD'], action: 'Move' },
       { keys: ['Mouse'], action: 'Look', note: 'click viewport to capture' },
       { keys: ['Space'], action: 'Jump' },
-      { keys: ['Esc'], action: 'Release mouse' },
+      { keys: ['Esc'], action: 'Stop Play' },
     ],
   },
 ];

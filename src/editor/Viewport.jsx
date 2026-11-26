@@ -141,6 +141,7 @@ export function Viewport() {
     setSelectedActorFlags,
     undo,
     redo,
+    stop,
     saveLevel,
     placeMeshAsset,
     placePrefabAsset,
@@ -939,9 +940,16 @@ export function Viewport() {
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (mode !== 'edit') return;
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Escape' && mode === 'play') {
+        e.preventDefault();
+        stop();
+        return;
+      }
+
+      if (mode !== 'edit') return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -1079,6 +1087,7 @@ export function Viewport() {
     cancelClipSession,
     commitClipSession,
     saveLevel,
+    stop,
     clearPlacementSession,
     resolveSurfacePose,
     updatePlacementPreview,

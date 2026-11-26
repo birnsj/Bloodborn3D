@@ -14,6 +14,10 @@ import {
   readBodyLimited,
   resolveContainedPath,
 } from './fsSafety.js';
+import {
+  bakeAndWriteMaterialSpherePreview,
+  previewAbsPathForMaterial,
+} from '../scripts/lib/materialSphereBake.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -353,6 +357,43 @@ export async function createMaterialAssetFromDefinition(body) {
   return createMaterialAsset(body);
 }
 
+function resolveTextureAbsPath(registry, textureId) {
+  if (!textureId || !registry?.assets) return null;
+  const entry = registry.assets.find((a) => a.id === textureId && a.kind === 'texture');
+  if (!entry?.path) return null;
+  try {
+    return resolveSafeAssetPath(entry.path);
+  } catch {
+    return null;
+  }
+}
+
+/** Bake lit sphere PNG used by Asset Viewer tiles; non-fatal on failure. */
+function bakeMaterialSpherePreview(definition, registry) {
+  if (!definition?.id) return definition?.previewPath || null;
+  try {
+    const { previewPath } = bakeAndWriteMaterialSpherePreview({
+      definition,
+      resolveTexturePath: (texId) => resolveTextureAbsPath(registry, texId),
+      previewAbsPath: previewAbsPathForMaterial(ASSETS_DIR, definition.id),
+    });
+    return previewPath;
+  } catch (err) {
+    console.warn(`[assets] sphere preview bake failed for ${definition.id}:`, err.message);
+    return definition.previewPath || null;
+  }
+}
+
+function materialRegistryMeta(definition) {
+  return {
+    baseColor: definition.baseColor,
+    roughness: definition.roughness,
+    metalness: definition.metalness,
+    hasBaseMap: Boolean(definition.baseColorMapId),
+    ...(definition.previewPath ? { previewPath: definition.previewPath } : {}),
+  };
+}
+
 async function createMaterialAsset(body) {
   const id = body.id || `mat_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const definition = {
@@ -386,6 +427,11 @@ async function createMaterialAsset(body) {
     updatedAt: Date.now(),
   };
 
+  const registrySnapshot = await readRegistry();
+  if (!definition.previewPath) {
+    definition.previewPath = bakeMaterialSpherePreview(definition, registrySnapshot);
+  }
+
   const relPath = `${KIND_DIRS.material}/${id}.json`;
   const full = resolveSafeAssetPath(relPath);
   await atomicWriteJson(full, definition);
@@ -398,12 +444,7 @@ async function createMaterialAsset(body) {
     path: relPath,
     originalName: `${id}.json`,
     tags: [],
-    meta: {
-      baseColor: definition.baseColor,
-      roughness: definition.roughness,
-      metalness: definition.metalness,
-      hasBaseMap: Boolean(definition.baseColorMapId),
-    },
+    meta: materialRegistryMeta(definition),
     createdAt: definition.createdAt,
     updatedAt: definition.updatedAt,
   };
@@ -437,16 +478,24 @@ async function updateMaterialAsset(id, body) {
       schemaVersion: 1,
       updatedAt: Date.now(),
     };
+
+    const mapsChanged = [
+      'baseColor',
+      'baseColorMapId',
+      'normalMapId',
+      'roughness',
+      'roughnessMapId',
+      'metalness',
+    ].some((key) => Object.prototype.hasOwnProperty.call(body, key));
+    if (mapsChanged || !definition.previewPath) {
+      definition.previewPath = bakeMaterialSpherePreview(definition, registry) || definition.previewPath;
+    }
+
     await atomicWriteJson(full, definition);
 
     entry.name = definition.name || entry.name;
     entry.updatedAt = definition.updatedAt;
-    entry.meta = {
-      baseColor: definition.baseColor,
-      roughness: definition.roughness,
-      metalness: definition.metalness,
-      hasBaseMap: Boolean(definition.baseColorMapId),
-    };
+    entry.meta = materialRegistryMeta(definition);
     return { ok: true, asset: entry, definition, registry };
   });
 }

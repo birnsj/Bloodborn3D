@@ -306,7 +306,7 @@ export const HELP_CONTENT = {
   'toolbar.play': {
     title: 'Play In Editor',
     body: 'Snapshots the authored level, builds Rapier collision, and starts first-person Play mode from the Player Spawn.',
-    tips: 'Click the viewport to capture the mouse · WASD move · Space jump · Esc releases the pointer. Stop restores the authored scene exactly.',
+    tips: 'Click the viewport to capture the mouse · WASD move · Space jump · Esc stops Play and restores the authored scene.',
   },
   'toolbar.stop': {
     title: 'Stop',

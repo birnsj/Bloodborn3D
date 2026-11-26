@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-25T21:18:22.340Z",
+  "updatedAt": "2026-11-25T23:40:00.914Z",
   "migratedFrom": null,
   "items": [
     {
@@ -364,7 +364,28 @@
       "atmosphere": "",
       "distinctiveElements": "",
       "associatedPromptIds": [],
-      "generatedAssetRefs": [],
+      "generatedAssetRefs": [
+        {
+          "id": "tex_410a19aee24a",
+          "kind": "texture",
+          "name": "OpenArt Imposing late Victorian Gothic",
+          "areaId": null,
+          "conceptId": "art_736ffceee06a",
+          "promptId": null,
+          "itemId": "art_736ffceee06a",
+          "attachedAt": "2026-11-25T23:40:00.906Z"
+        },
+        {
+          "id": "mat_a64e6e8fecee",
+          "kind": "material",
+          "name": "OpenArt Imposing late Victorian Gothic",
+          "areaId": null,
+          "conceptId": "art_736ffceee06a",
+          "promptId": null,
+          "itemId": "art_736ffceee06a",
+          "attachedAt": "2026-11-25T23:40:00.913Z"
+        }
+      ],
       "provenance": {
         "source": "openart",
         "provider": "openart",
@@ -389,7 +410,7 @@
         ]
       },
       "createdAt": "2026-11-25T21:14:13.305Z",
-      "updatedAt": "2026-11-25T21:15:16.795Z"
+      "updatedAt": "2026-11-25T23:40:00.913Z"
     },
     {
       "id": "art_47dd92cdeeb5",

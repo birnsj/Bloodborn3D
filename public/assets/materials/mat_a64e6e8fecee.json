@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "mat_a64e6e8fecee",
+  "name": "OpenArt Imposing late Victorian Gothic",
+  "type": "material",
+  "baseColor": "#ffffff",
+  "baseColorMapId": "tex_410a19aee24a",
+  "normalMapId": null,
+  "normalScale": 1,
+  "roughness": 0.85,
+  "metalness": 0.02,
+  "roughnessMapId": null,
+  "metalnessMapId": null,
+  "envMapIntensity": 1,
+  "emissive": "#000000",
+  "emissiveIntensity": 0,
+  "emissiveMapId": null,
+  "opacity": 1,
+  "transparent": false,
+  "uvScale": {
+    "x": 1,
+    "y": 1
+  },
+  "uvOffset": {
+    "x": 0,
+    "y": 0
+  },
+  "uvRotation": 0,
+  "previewPath": "previews/mat_a64e6e8fecee_sphere.png",
+  "createdAt": 1795650000888,
+  "updatedAt": 1795650848548
+}
