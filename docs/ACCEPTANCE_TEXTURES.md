@@ -1,10 +1,11 @@
 # Batch 8 — Textures acceptance
 
 **Baseline:** `c20031a` (1,085 tests) + Batches 1–7.1 / performance stabilization preserved  
+**Ship commit:** `86a8b05` (1,094 tests)  
 **Level:** `public/levels/acceptance-textures.json`  
 **Academy:** lesson 29 (`textures`)  
 **Date:** 2026-11-26  
-**Screenshots:** `docs/acceptance-textures/` (browser captures when available)
+**Screenshots:** `docs/acceptance-textures/`
 
 ## Architecture (layers)
 
