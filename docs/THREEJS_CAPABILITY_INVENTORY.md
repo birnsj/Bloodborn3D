@@ -5,7 +5,8 @@
 **Related libraries:** `postprocessing@6.39.6` (pmndrs), `@dimforge/rapier3d-compat@0.21.0`  
 **Document type:** Capability inventory + implementation status.  
 **Milestone:** Complete the base **geometry and environment authoring** layer.  
-**Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).
+**Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).  
+**Batch 2 status:** **Implemented** (Materials Workspace shading models + full Standard/Physical maps/flags; Basic/Toon/Matcap).
 
 ### Principles
 
@@ -117,7 +118,7 @@
 |----------|----------|---------|------------------------------|
 | Map / World | BG modes, fog, tone, shadows, ambient, atmosphere, HDRI/EXR env, Sky, GroundedSkybox, LightProbe, outputColorSpace | — | — (Batch 1 done) |
 | Lighting | Point/Spot/Dir/Ambient | Shadow/decay hardcoded | Hemisphere, RectArea, Lensflare, shadow props, targets, spot map, helpers |
-| Materials | Standard core maps | — | Full Standard maps; Physical; Basic/Toon/Matcap; side/alpha |
+| Materials | Full Standard + Physical + Basic/Toon/Matcap + side/alpha | — | — (Batch 2 done) |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush | — | Native primitives + RoundedBox/Lathe/Tube/Extrude/Shape/Text/Parametric/ConvexGeometry tools |
 | Static meshes | GLTF + box collision | — | Shadows toggles, overrides, LOD, instance/batch, renderOrder, collision varieties |
@@ -186,19 +187,19 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 
 | Capability | API | BB | Exposed | Missing | Editor | Schema | Cx | Val | Status |
 |------------|-----|----|---------|---------|--------|--------|----|-----|--------|
-| MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | see maps/controls below | Materials Workspace | MaterialDefinition | — | H | **Partial** |
-| aoMap / aoMapIntensity | Standard | N | — | map id + intensity | Materials | add | S | H | **Missing** |
-| bumpMap / bumpScale | Standard | N | — | — | Materials | add | S | M | **Missing** |
-| displacementMap / scale / bias | Standard | N | — | — | Materials | add | S | M | **Missing** |
-| alphaMap | Standard | N | — | — | Materials | add | S | H | **Missing** |
-| lightMap / intensity | Standard | N | — | — | Materials | add | S | M | **Missing** |
-| alphaTest / alphaHash / alphaToCoverage | Material | N | — | cutoff controls | Materials | add | S | H | **Missing** |
-| side / flatShading / wireframe / fog / toneMapped | Material | N (side only in factory opts) | — | DoubleSide etc. | Materials | add | S | H | **Missing** |
-| transparent / opacity / depthWrite | Material | opacity/transparent | — | depthWrite toggle | Materials | add | S | M | **Partial** |
-| MeshPhysicalMaterial | core | N | — | clearcoat*, transmission*, thickness, attenuation*, ior, sheen*, specular*, iridescence*, anisotropy*, dispersion | Materials type | `shadingModel: physical` + fields | M | H | **Missing** |
-| MeshBasicMaterial | core | N | — | unlit props/maps | Materials type | `basic` | S | M | **Missing** |
-| MeshToonMaterial | core | N | — | gradientMap | Materials | `toon` | M | M | **Missing** |
-| MeshMatcapMaterial | core | N | — | matcap map | Materials | `matcap` | S | M | **Missing** |
+| MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | — | Materials Workspace | MaterialDefinition | — | H | **Complete** |
+| aoMap / aoMapIntensity | Standard | Y | map id + intensity | — | Materials | fields | S | H | **Complete** |
+| bumpMap / bumpScale | Standard | Y | map + scale | — | Materials | fields | S | M | **Complete** |
+| displacementMap / scale / bias | Standard | Y | map + scale/bias | — | Materials | fields | S | M | **Complete** |
+| alphaMap | Standard | Y | map id | — | Materials | fields | S | H | **Complete** |
+| lightMap / intensity | Standard | Y | map + intensity | — | Materials | fields | S | M | **Complete** |
+| alphaTest / alphaHash / alphaToCoverage | Material | Y | cutoff + toggles | — | Materials | fields | S | H | **Complete** |
+| side / flatShading / wireframe / fog / toneMapped | Material | Y | front/back/double + flags | — | Materials | fields | S | H | **Complete** |
+| transparent / opacity / depthWrite | Material | Y | opacity/transparent/depthWrite | — | Materials | fields | S | M | **Complete** |
+| MeshPhysicalMaterial | core | Y | clearcoat*, transmission*, thickness, attenuation*, ior, sheen*, specular*, iridescence*, anisotropy*, dispersion + maps | — | Materials | `shadingModel: physical` | M | H | **Complete** |
+| MeshBasicMaterial | core | Y | unlit + reflectivity/maps | — | Materials | `basic` | S | M | **Complete** |
+| MeshToonMaterial | core | Y | gradientMap + shared maps | — | Materials | `toon` | M | M | **Complete** |
+| MeshMatcapMaterial | core | Y | matcap map | — | Materials | `matcap` | S | M | **Complete** |
 | Actor/face UV L1 | custom | Y | Details/Surface | — | Details | component | — | H | **Complete** |
 | PBR generator | custom | Y | normal/roughness | AO generate | Materials | pbrGenerator | M | M | **Partial** |
 | Node/TSL materials | three/tsl | N | — | — | — | — | L | — | **Deferred** (WebGPU) |
@@ -376,19 +377,21 @@ Priorities **P0–P2 within each batch**. Implement batches in order where possi
 **Corrections (post Batch 1):** numeric World Settings scrub → one `HistoryStack.record` undo entry; real licensed HDRI + browser visual pass.  
 **Unlocks:** Physical materials response to real env; Batch 3 RectArea look.
 
-### Batch 2 — Materials
+### Batch 2 — Materials — **Implemented**
 
-| Pri | Item | API | Schema |
-|-----|------|-----|--------|
-| P0 | aoMap + aoMapIntensity | Standard | map ids |
-| P0 | alphaMap + alphaTest/alphaHash + side | Standard/Material | fields |
-| P1 | bump + displacement maps | Standard | fields |
-| P1 | lightMap | Standard | fields |
-| P0 | MeshPhysicalMaterial opt-in + clearcoat/transmission/thickness/ior/attenuation/sheen/specular/iridescence/anisotropy | Physical | `shadingModel` + props |
-| P1 | MeshBasicMaterial / MeshMatcapMaterial | core | type |
-| P2 | MeshToonMaterial + gradientMap | core | type |
-| P2 | depthWrite / wireframe / flatShading / toneMapped | Material | fields |
+| Pri | Item | API | Schema | Status |
+|-----|------|-----|--------|--------|
+| P0 | aoMap + aoMapIntensity | Standard | map ids | **Done** |
+| P0 | alphaMap + alphaTest/alphaHash/alphaToCoverage + side | Standard/Material | fields | **Done** |
+| P1 | bump + displacement maps | Standard | fields | **Done** |
+| P1 | lightMap | Standard | fields | **Done** |
+| P0 | MeshPhysicalMaterial opt-in + clearcoat/transmission/thickness/ior/attenuation/sheen/specular/iridescence/anisotropy/dispersion | Physical | `shadingModel` + props | **Done** |
+| P1 | MeshBasicMaterial / MeshMatcapMaterial | core | type | **Done** |
+| P2 | MeshToonMaterial + gradientMap | core | type | **Done** |
+| P2 | depthWrite / wireframe / flatShading / toneMapped / fog | Material | fields | **Done** |
 
+**Acceptance:** `public/levels/acceptance-materials.json` + `docs/ACCEPTANCE_MATERIALS.md`  
+**Academy:** lesson 22 (`materials-shading`)  
 **Depends on:** Batch 1 env for Physical transmission/clearcoat to look correct.  
 **Unlocks:** Decals/Water materials; richer StaticMesh overrides.
 

@@ -59,7 +59,7 @@ export const materialsLesson = {
     {
       id: 'materials-workspace',
       title: 'Materials workspace',
-      body: 'Level → Open Materials (or the Materials workspace tab) to edit material definitions, then switch back to Level Editor.',
+      body: 'Level → Open Materials (or the Materials workspace tab) to edit material definitions — including shading model (Standard / Physical / Basic / Toon / Matcap) and collapsible property groups — then switch back to Level Editor. See Academy lesson Material Shading Models for Physical glass, clearcoat, and foliage flags.',
       verify: { type: 'manualConfirm', label: 'Got it' },
     },
     {

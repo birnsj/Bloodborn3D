@@ -180,37 +180,17 @@ export function MaterialPreviewCanvas({
   const canvasRef = useRef(null);
   const lightRef = useRef(null);
   const previewShape = shape === 'cube' || shape === 'plane' ? shape : 'sphere';
+  // Fingerprint all authorable fields so Batch 2 maps/flags invalidate the preview.
   const defKey = definition
-    ? [
-        definition.id,
-        definition.baseColor,
-        definition.baseColorMapId,
-        definition.normalMapId,
-        definition.roughnessMapId,
-        definition.metalnessMapId,
-        definition.emissiveMapId,
-        definition.roughness,
-        definition.metalness,
-        definition.normalScale,
-        definition.envMapIntensity,
-        definition.emissive,
-        definition.emissiveIntensity,
-        definition.opacity,
-        definition.transparent,
-        definition.uvScale?.x,
-        definition.uvScale?.y,
-        definition.uvOffset?.x,
-        definition.uvOffset?.y,
-        definition.uvRotation,
-        previewShape,
-        // Include map URL strings so live PBR preview blobs invalidate the effect.
-        typeof getTextureUrl === 'function' && definition.normalMapId
-          ? getTextureUrl(definition.normalMapId)
-          : '',
-        typeof getTextureUrl === 'function' && definition.roughnessMapId
-          ? getTextureUrl(definition.roughnessMapId)
-          : '',
-      ].join('|')
+    ? `${JSON.stringify(definition)}|${previewShape}|${
+      typeof getTextureUrl === 'function' && definition.normalMapId
+        ? getTextureUrl(definition.normalMapId)
+        : ''
+    }|${
+      typeof getTextureUrl === 'function' && definition.roughnessMapId
+        ? getTextureUrl(definition.roughnessMapId)
+        : ''
+    }`
     : `${color}|${mapUrl || ''}|${previewShape}`;
 
   useEffect(() => {
@@ -308,7 +288,16 @@ export function MaterialPreviewCanvas({
         disposeOwnedMaterial(next);
         return;
       }
-      for (const mapKey of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
+      for (const mapKey of [
+        'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap',
+        'alphaMap', 'aoMap', 'bumpMap', 'displacementMap', 'lightMap',
+        'matcap', 'gradientMap',
+        'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
+        'transmissionMap', 'thicknessMap',
+        'sheenColorMap', 'sheenRoughnessMap',
+        'specularIntensityMap', 'specularColorMap',
+        'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap',
+      ]) {
         if (next[mapKey]) textures.push(next[mapKey]);
       }
       mesh.material = next;

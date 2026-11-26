@@ -1,47 +1,36 @@
-import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
+import {
+  materialAuthorableKeys,
+  normalizeMaterialDefinition,
+  serializeAttenuationDistance,
+} from '../../materials/MaterialDefinition.js';
 
 /**
- * Phase 2E.4 — draft helpers for material asset authoring.
+ * Phase 2E.4 / Batch 2 — draft helpers for material asset authoring.
  * Drafts are local until Save; Cancel restores the last persisted baseline.
+ * Numeric scrub gestures can push entries onto a workspace draft history stack.
  */
 
-const DRAFT_KEYS = [
-  'name',
-  'baseColor',
-  'baseColorMapId',
-  'normalMapId',
-  'normalScale',
-  'roughness',
-  'metalness',
-  'roughnessMapId',
-  'metalnessMapId',
-  'envMapIntensity',
-  'emissive',
-  'emissiveIntensity',
-  'emissiveMapId',
-  'opacity',
-  'transparent',
-  'uvScale',
-  'uvOffset',
-  'uvRotation',
-  'previewPath',
-  'pbrGenerator',
-];
+const DRAFT_KEYS = materialAuthorableKeys();
 
 /** Deep-clone a normalized material definition for editing. */
 export function cloneMaterialDraft(raw) {
   const def = normalizeMaterialDefinition(raw);
   if (!def) return null;
+  // JSON round-trip drops Infinity; normalize restores attenuationDistance.
   return normalizeMaterialDefinition(JSON.parse(JSON.stringify(def)));
 }
 
-/** Stable fingerprint of authorable fields (ignores updatedAt). */
+/** Stable fingerprint of authorable fields (ignores updatedAt / preview). */
 export function materialDraftFingerprint(def) {
   const normalized = normalizeMaterialDefinition(def);
   if (!normalized) return '';
   const slice = {};
   for (const key of DRAFT_KEYS) {
-    slice[key] = normalized[key];
+    let value = normalized[key];
+    if (key === 'attenuationDistance') {
+      value = serializeAttenuationDistance(value);
+    }
+    slice[key] = value;
   }
   return JSON.stringify(slice);
 }
@@ -59,6 +48,7 @@ export function materialDraftToSavePayload(draft) {
   const { createdAt, ...rest } = normalized;
   return {
     ...rest,
+    attenuationDistance: serializeAttenuationDistance(normalized.attenuationDistance),
     createdAt: createdAt || Date.now(),
     updatedAt: Date.now(),
   };
@@ -74,3 +64,5 @@ export function materialDraftForDuplicate(source, nameSuffix = ' Copy') {
     name: `${normalized.name || 'Material'}${nameSuffix}`,
   };
 }
+
+export { DRAFT_KEYS };

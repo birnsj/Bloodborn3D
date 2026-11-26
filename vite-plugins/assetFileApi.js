@@ -18,6 +18,17 @@ import {
   bakeAndWriteMaterialSpherePreview,
   previewAbsPathForMaterial,
 } from '../scripts/lib/materialSphereBake.mjs';
+import {
+  normalizeMaterialDefinition,
+  serializeAttenuationDistance,
+} from '../src/materials/MaterialDefinition.js';
+
+function materialDefinitionForDisk(definition) {
+  return {
+    ...definition,
+    attenuationDistance: serializeAttenuationDistance(definition.attenuationDistance),
+  };
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -544,6 +555,7 @@ function materialRegistryMeta(definition) {
     baseColor: definition.baseColor,
     roughness: definition.roughness,
     metalness: definition.metalness,
+    shadingModel: definition.shadingModel || 'standard',
     hasBaseMap: Boolean(definition.baseColorMapId),
     hasNormalMap: Boolean(definition.normalMapId),
     hasRoughnessMap: Boolean(definition.roughnessMapId),
@@ -560,37 +572,13 @@ function materialRegistryMeta(definition) {
 
 async function createMaterialAsset(body) {
   const id = body.id || `mat_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-  const definition = {
-    schemaVersion: 1,
+  const now = Date.now();
+  const definition = normalizeMaterialDefinition({
+    ...body,
     id,
-    name: body.name || 'New Material',
-    type: 'material',
-    baseColor: body.baseColor || '#8a9099',
-    baseColorMapId: body.baseColorMapId || null,
-    normalMapId: body.normalMapId || null,
-    normalScale: Number.isFinite(Number(body.normalScale))
-      ? Math.max(0, Number(body.normalScale))
-      : 1,
-    roughness: body.roughness ?? 0.75,
-    metalness: body.metalness ?? 0.05,
-    roughnessMapId: body.roughnessMapId || null,
-    metalnessMapId: body.metalnessMapId || null,
-    envMapIntensity: Number.isFinite(Number(body.envMapIntensity))
-      ? Math.max(0, Number(body.envMapIntensity))
-      : 1,
-    emissive: body.emissive || '#000000',
-    emissiveIntensity: body.emissiveIntensity ?? 0,
-    emissiveMapId: body.emissiveMapId || null,
-    opacity: body.opacity ?? 1,
-    transparent: Boolean(body.transparent) || (body.opacity != null && body.opacity < 1),
-    uvScale: body.uvScale || { x: 1, y: 1 },
-    uvOffset: body.uvOffset || { x: 0, y: 0 },
-    uvRotation: body.uvRotation ?? 0,
-    previewPath: body.previewPath || null,
-    pbrGenerator: body.pbrGenerator || null,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+    createdAt: now,
+    updatedAt: now,
+  });
 
   const registrySnapshot = await readRegistry();
   if (!definition.previewPath) {
@@ -599,7 +587,7 @@ async function createMaterialAsset(body) {
 
   const relPath = `${KIND_DIRS.material}/${id}.json`;
   const full = resolveSafeAssetPath(relPath);
-  await atomicWriteJson(full, definition);
+  await atomicWriteJson(full, materialDefinitionForDisk(definition));
 
   const entry = {
     id,
@@ -635,31 +623,23 @@ async function updateMaterialAsset(id, body) {
 
     const full = resolveSafeAssetPath(entry.path);
     const current = JSON.parse(await fs.readFile(full, 'utf8'));
-    const definition = {
+    const definition = normalizeMaterialDefinition({
       ...current,
       ...body,
       id,
-      type: 'material',
-      schemaVersion: 1,
+      createdAt: current.createdAt,
       updatedAt: Date.now(),
-    };
+      previewPath: body.previewPath ?? current.previewPath ?? null,
+    });
 
-    const mapsChanged = [
-      'baseColor',
-      'baseColorMapId',
-      'normalMapId',
-      'normalScale',
-      'roughness',
-      'roughnessMapId',
-      'metalness',
-      'metalnessMapId',
-      'pbrGenerator',
-    ].some((key) => Object.prototype.hasOwnProperty.call(body, key));
+    const mapsChanged = Object.keys(body || {}).some((key) => (
+      key !== 'updatedAt' && key !== 'createdAt' && key !== 'id'
+    ));
     if (mapsChanged || !definition.previewPath) {
       definition.previewPath = bakeMaterialSpherePreview(definition, registry) || definition.previewPath;
     }
 
-    await atomicWriteJson(full, definition);
+    await atomicWriteJson(full, materialDefinitionForDisk(definition));
 
     entry.name = definition.name || entry.name;
     entry.updatedAt = definition.updatedAt;

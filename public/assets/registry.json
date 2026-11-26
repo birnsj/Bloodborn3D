@@ -1195,6 +1195,250 @@
       },
       "createdAt": 1795718430764,
       "updatedAt": 1795718430764
+    },
+    {
+      "id": "tex_batch2_toon_gradient",
+      "kind": "texture",
+      "name": "Batch2 Toon Gradient",
+      "folder": "Textures",
+      "path": "textures/tex_batch2_toon_gradient.png",
+      "originalName": "tex_batch2_toon_gradient.png",
+      "tags": [
+        "batch2",
+        "toon"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 1
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "tex_batch2_matcap",
+      "kind": "texture",
+      "name": "Batch2 Matcap",
+      "folder": "Textures",
+      "path": "textures/tex_batch2_matcap.png",
+      "originalName": "tex_batch2_matcap.png",
+      "tags": [
+        "batch2",
+        "matcap"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "tex_batch2_foliage_alpha",
+      "kind": "texture",
+      "name": "Batch2 Foliage Alpha",
+      "folder": "Textures",
+      "path": "textures/tex_batch2_foliage_alpha.png",
+      "originalName": "tex_batch2_foliage_alpha.png",
+      "tags": [
+        "batch2",
+        "alpha",
+        "foliage"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_standard",
+      "kind": "material",
+      "name": "Batch2 Standard Stone",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_standard.json",
+      "originalName": "mat_batch2_standard.json",
+      "tags": [
+        "batch2",
+        "standard"
+      ],
+      "meta": {
+        "baseColor": "#8a9099",
+        "roughness": 0.78,
+        "metalness": 0.02,
+        "shadingModel": "standard",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_metal",
+      "kind": "material",
+      "name": "Batch2 Polished Metal",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_metal.json",
+      "originalName": "mat_batch2_metal.json",
+      "tags": [
+        "batch2",
+        "standard"
+      ],
+      "meta": {
+        "baseColor": "#c8d0dc",
+        "roughness": 0.08,
+        "metalness": 1,
+        "shadingModel": "standard",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_glass",
+      "kind": "material",
+      "name": "Batch2 Glass",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_glass.json",
+      "originalName": "mat_batch2_glass.json",
+      "tags": [
+        "batch2",
+        "physical"
+      ],
+      "meta": {
+        "baseColor": "#cfe8ff",
+        "roughness": 0.05,
+        "metalness": 0,
+        "shadingModel": "physical",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_clearcoat",
+      "kind": "material",
+      "name": "Batch2 Clearcoat Paint",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_clearcoat.json",
+      "originalName": "mat_batch2_clearcoat.json",
+      "tags": [
+        "batch2",
+        "physical"
+      ],
+      "meta": {
+        "baseColor": "#1a3a8a",
+        "roughness": 0.35,
+        "metalness": 0.15,
+        "shadingModel": "physical",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_foliage",
+      "kind": "material",
+      "name": "Batch2 Foliage",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_foliage.json",
+      "originalName": "mat_batch2_foliage.json",
+      "tags": [
+        "batch2",
+        "standard"
+      ],
+      "meta": {
+        "baseColor": "#2e6e34",
+        "roughness": 0.85,
+        "metalness": 0,
+        "shadingModel": "standard",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_basic",
+      "kind": "material",
+      "name": "Batch2 Unlit",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_basic.json",
+      "originalName": "mat_batch2_basic.json",
+      "tags": [
+        "batch2",
+        "basic"
+      ],
+      "meta": {
+        "baseColor": "#ff9944",
+        "roughness": 0.75,
+        "metalness": 0.05,
+        "shadingModel": "basic",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_toon",
+      "kind": "material",
+      "name": "Batch2 Toon",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_toon.json",
+      "originalName": "mat_batch2_toon.json",
+      "tags": [
+        "batch2",
+        "toon"
+      ],
+      "meta": {
+        "baseColor": "#6aa8ff",
+        "roughness": 0.75,
+        "metalness": 0.05,
+        "shadingModel": "toon",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_matcap",
+      "kind": "material",
+      "name": "Batch2 Matcap",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_matcap.json",
+      "originalName": "mat_batch2_matcap.json",
+      "tags": [
+        "batch2",
+        "matcap"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.75,
+        "metalness": 0.05,
+        "shadingModel": "matcap",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
+    },
+    {
+      "id": "mat_batch2_sheen",
+      "kind": "material",
+      "name": "Batch2 Sheen Cloth",
+      "folder": "Materials",
+      "path": "materials/mat_batch2_sheen.json",
+      "originalName": "mat_batch2_sheen.json",
+      "tags": [
+        "batch2",
+        "physical"
+      ],
+      "meta": {
+        "baseColor": "#4a3058",
+        "roughness": 0.7,
+        "metalness": 0,
+        "shadingModel": "physical",
+        "hasBaseMap": false
+      },
+      "createdAt": 1795719251101,
+      "updatedAt": 1795719251101
     }
   ]
 }

@@ -1,34 +1,67 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import {
+  MATERIAL_SHADING_MODELS,
+  MATERIAL_SIDES,
+  normalizeMaterialDefinition,
+} from '../../materials/MaterialDefinition.js';
 import { ASSET_KINDS, listByKind } from '../../assets/AssetRegistry.js';
+import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
 import { ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
+const SHADING_LABELS = {
+  standard: 'Standard (PBR)',
+  physical: 'Physical',
+  basic: 'Basic (unlit)',
+  toon: 'Toon',
+  matcap: 'Matcap',
+};
 
 /**
- * Shared PBR material property form (Phase 2E.4).
+ * Shared material property form (Batch 2).
  * Edits a draft object via onChange — does not persist.
+ *
+ * Optional gesture hooks coalesce numeric scrub into one draft-history entry:
+ * onGestureBegin / onGestureCommit / onGestureCancel (Materials workspace undo).
  */
 export function MaterialDefinitionForm({
   draft,
   onChange,
   disabled = false,
+  onGestureBegin,
+  onGestureCommit,
+  onGestureCancel,
 }) {
   const { registry } = useAssetBrowser();
   const textures = useMemo(
     () => listByKind(registry, ASSET_KINDS.texture),
     [registry],
   );
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  const patch = useCallback((partial) => {
+    if (disabled || !onChange || !draftRef.current) return;
+    onChange(normalizeMaterialDefinition({ ...draftRef.current, ...partial }));
+  }, [disabled, onChange]);
+
+  const resetGroup = useCallback((defaults) => {
+    patch(defaults);
+  }, [patch]);
 
   if (!draft) {
     return <p className="bb-muted">No material selected.</p>;
   }
 
-  const patch = (partial) => {
-    if (disabled || !onChange) return;
-    onChange({ ...draft, ...partial });
-  };
+  const model = draft.shadingModel || 'standard';
+  const isPbr = model === 'standard' || model === 'physical';
+  const isPhysical = model === 'physical';
+  const isBasic = model === 'basic';
+  const isToon = model === 'toon';
+  const isMatcap = model === 'matcap';
 
-  const textureSelect = (label, field) => (
-    <label className="bb-field" key={field}>
+  const textureSelect = (label, field, helpId) => (
+    <label className="bb-field" key={field} {...(helpId ? helpProps(helpId) : {})}>
       <span className="bb-field__label">{label}</span>
       <select
         className="bb-select"
@@ -44,196 +77,307 @@ export function MaterialDefinitionForm({
     </label>
   );
 
+  const colorField = (label, field) => (
+    <label className="bb-field" key={field}>
+      <span className="bb-field__label">{label}</span>
+      <input
+        className="bb-input"
+        type="color"
+        disabled={disabled}
+        value={normalizeHex(draft[field])}
+        onChange={(e) => patch({ [field]: e.target.value })}
+      />
+    </label>
+  );
+
+  const scrub = (label, field, opts = {}) => (
+    <MaterialScrub
+      key={field}
+      label={label}
+      disabled={disabled}
+      value={opts.value ?? draft[field]}
+      step={opts.step}
+      min={opts.min}
+      max={opts.max}
+      onGestureBegin={onGestureBegin}
+      onGestureCommit={onGestureCommit}
+      onGestureCancel={onGestureCancel}
+      onChange={(v) => {
+        if (opts.map) patch(opts.map(v));
+        else patch({ [field]: v });
+      }}
+      helpId={opts.helpId}
+    />
+  );
+
+  const check = (label, field, opts = {}) => (
+    <label className="bb-field bb-field--row" key={field}>
+      <input
+        type="checkbox"
+        disabled={disabled}
+        checked={opts.checked != null ? opts.checked : Boolean(draft[field])}
+        onChange={(e) => {
+          if (opts.map) patch(opts.map(e.target.checked));
+          else patch({ [field]: e.target.checked });
+        }}
+      />
+      <span className="bb-field__label">{label}</span>
+    </label>
+  );
+
   return (
     <div className="bb-material-def">
-      <label className="bb-field">
-        <span className="bb-field__label">Name</span>
-        <input
-          className="bb-input"
-          disabled={disabled}
-          value={draft.name || ''}
-          onChange={(e) => patch({ name: e.target.value })}
-        />
-      </label>
-
-      <div className="bb-field-caption">Base</div>
-      <label className="bb-field">
-        <span className="bb-field__label">Base Color</span>
-        <input
-          className="bb-input"
-          type="color"
-          disabled={disabled}
-          value={normalizeHex(draft.baseColor)}
-          onChange={(e) => patch({ baseColor: e.target.value })}
-        />
-      </label>
-      {textureSelect('Base Color Map', 'baseColorMapId')}
-      {textureSelect('Normal Map', 'normalMapId')}
-      <label className="bb-field">
-        <span className="bb-field__label">Normal Scale</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.05}
-          min={0}
-          disabled={disabled}
-          value={draft.normalScale ?? 1}
-          onChange={(v) => patch({ normalScale: v })}
-        />
-      </label>
-
-      <div className="bb-field-caption">Surface response</div>
-      <label className="bb-field">
-        <span className="bb-field__label">Roughness</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.05}
-          min={0}
-          max={1}
-          disabled={disabled}
-          value={draft.roughness}
-          onChange={(v) => patch({ roughness: v })}
-        />
-      </label>
-      {textureSelect('Roughness Map', 'roughnessMapId')}
-      <label className="bb-field">
-        <span className="bb-field__label">Metalness</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.05}
-          min={0}
-          max={1}
-          disabled={disabled}
-          value={draft.metalness}
-          onChange={(v) => patch({ metalness: v })}
-        />
-      </label>
-      {textureSelect('Metalness Map', 'metalnessMapId')}
-      <label className="bb-field">
-        <span className="bb-field__label">Env Map Intensity</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.05}
-          min={0}
-          disabled={disabled}
-          value={draft.envMapIntensity ?? 1}
-          onChange={(v) => patch({ envMapIntensity: v })}
-        />
-      </label>
-
-      <div className="bb-field-caption">Emissive</div>
-      <label className="bb-field">
-        <span className="bb-field__label">Emissive</span>
-        <input
-          className="bb-input"
-          type="color"
-          disabled={disabled}
-          value={normalizeHex(draft.emissive)}
-          onChange={(e) => patch({ emissive: e.target.value })}
-        />
-      </label>
-      <label className="bb-field">
-        <span className="bb-field__label">Emissive Intensity</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.1}
-          min={0}
-          disabled={disabled}
-          value={draft.emissiveIntensity}
-          onChange={(v) => patch({ emissiveIntensity: v })}
-        />
-      </label>
-      {textureSelect('Emissive Map', 'emissiveMapId')}
-
-      <div className="bb-field-caption">Opacity</div>
-      <label className="bb-field">
-        <span className="bb-field__label">Opacity</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={0.05}
-          min={0}
-          max={1}
-          disabled={disabled}
-          value={draft.opacity}
-          onChange={(v) => {
-            const opacity = v;
-            patch({ opacity, transparent: opacity < 1 });
-          }}
-        />
-      </label>
-      <label className="bb-field bb-field--row">
-        <input
-          type="checkbox"
-          disabled={disabled}
-          checked={Boolean(draft.transparent)}
-          onChange={(e) => patch({ transparent: e.target.checked })}
-        />
-        <span className="bb-field__label">Transparent</span>
-      </label>
-
-      <div className="bb-field-caption">Material UV (Layer 2)</div>
-      <div className="bb-field-row">
-        <label className="bb-field">
-          <span className="bb-field__label">Scale U</span>
-          <ScrubNumberInput
-            className="bb-input"
-            step={0.05}
+      <CollapsibleGroup storagePrefixes={['materials.form.']}>
+        <label className="bb-field" {...helpProps('materials.shadingModel')}>
+          <span className="bb-field__label">Shading model</span>
+          <select
+            className="bb-select"
             disabled={disabled}
-            value={draft.uvScale?.x ?? 1}
-            onChange={(v) => patch({
-              uvScale: { x: v, y: draft.uvScale?.y ?? 1 },
-            })}
+            value={model}
+            onChange={(e) => patch({ shadingModel: e.target.value })}
+          >
+            {MATERIAL_SHADING_MODELS.map((id) => (
+              <option key={id} value={id}>{SHADING_LABELS[id] || id}</option>
+            ))}
+          </select>
+        </label>
+        <p className="bb-muted">
+          Legacy assets default to Standard. Physical unlocks clearcoat, glass, sheen, and related maps.
+        </p>
+
+        <label className="bb-field">
+          <span className="bb-field__label">Name</span>
+          <input
+            className="bb-input"
+            disabled={disabled}
+            value={draft.name || ''}
+            onChange={(e) => patch({ name: e.target.value })}
           />
         </label>
-        <label className="bb-field">
-          <span className="bb-field__label">Scale V</span>
-          <ScrubNumberInput
-            className="bb-input"
-            step={0.05}
-            disabled={disabled}
-            value={draft.uvScale?.y ?? 1}
-            onChange={(v) => patch({
-              uvScale: { x: draft.uvScale?.x ?? 1, y: v },
+
+        <Collapsible title="Base" storageKey="materials.form.base" defaultOpen>
+          {colorField('Base Color', 'baseColor')}
+          {textureSelect('Base Color Map', 'baseColorMapId')}
+          {(isPbr || isToon) && (
+            <>
+              {textureSelect('Normal Map', 'normalMapId')}
+              {scrub('Normal Scale', 'normalScale', { step: 0.05, min: 0 })}
+            </>
+          )}
+          {isMatcap && textureSelect('Matcap Map', 'matcapMapId', 'materials.matcap')}
+          {isToon && textureSelect('Gradient Map', 'gradientMapId', 'materials.toon')}
+          {isBasic && scrub('Reflectivity', 'reflectivity', { step: 0.05, min: 0, max: 1 })}
+        </Collapsible>
+
+        {isPbr && (
+          <Collapsible title="Surface response" storageKey="materials.form.surface" defaultOpen>
+            {scrub('Roughness', 'roughness', { step: 0.05, min: 0, max: 1 })}
+            {textureSelect('Roughness Map', 'roughnessMapId')}
+            {scrub('Metalness', 'metalness', { step: 0.05, min: 0, max: 1 })}
+            {textureSelect('Metalness Map', 'metalnessMapId')}
+            {scrub('Env Map Intensity', 'envMapIntensity', { step: 0.05, min: 0 })}
+            <button
+              type="button"
+              className="bb-btn bb-btn--ghost"
+              disabled={disabled}
+              onClick={() => resetGroup({
+                roughness: 0.75,
+                metalness: 0.05,
+                envMapIntensity: 1,
+                roughnessMapId: null,
+                metalnessMapId: null,
+              })}
+            >
+              Reset surface
+            </button>
+          </Collapsible>
+        )}
+
+        {(isPbr || isToon || isBasic) && (
+          <Collapsible title="Maps" storageKey="materials.form.maps">
+            {textureSelect('AO Map', 'aoMapId')}
+            {scrub('AO Intensity', 'aoMapIntensity', { step: 0.05, min: 0 })}
+            {(isPbr || isToon) && (
+              <>
+                {textureSelect('Bump Map', 'bumpMapId')}
+                {scrub('Bump Scale', 'bumpScale', { step: 0.05 })}
+                {textureSelect('Displacement Map', 'displacementMapId')}
+                {scrub('Displacement Scale', 'displacementScale', { step: 0.05 })}
+                {scrub('Displacement Bias', 'displacementBias', { step: 0.05 })}
+              </>
+            )}
+            {textureSelect('Alpha Map', 'alphaMapId')}
+            {textureSelect('Light Map', 'lightMapId')}
+            {scrub('Light Map Intensity', 'lightMapIntensity', { step: 0.05, min: 0 })}
+          </Collapsible>
+        )}
+
+        {(isPbr || isToon) && (
+          <Collapsible title="Emissive" storageKey="materials.form.emissive">
+            {colorField('Emissive', 'emissive')}
+            {scrub('Emissive Intensity', 'emissiveIntensity', { step: 0.1, min: 0 })}
+            {textureSelect('Emissive Map', 'emissiveMapId')}
+          </Collapsible>
+        )}
+
+        {isPhysical && (
+          <>
+            <Collapsible title="Clearcoat" storageKey="materials.form.clearcoat">
+              {scrub('Clearcoat', 'clearcoat', { step: 0.05, min: 0, max: 1 })}
+              {scrub('Clearcoat Roughness', 'clearcoatRoughness', { step: 0.05, min: 0, max: 1 })}
+              {textureSelect('Clearcoat Map', 'clearcoatMapId')}
+              {textureSelect('Clearcoat Normal Map', 'clearcoatNormalMapId')}
+              {scrub('Clearcoat Normal Scale', 'clearcoatNormalScale', { step: 0.05, min: 0 })}
+              {textureSelect('Clearcoat Roughness Map', 'clearcoatRoughnessMapId')}
+            </Collapsible>
+
+            <Collapsible title="Transmission / glass" storageKey="materials.form.transmission">
+              {scrub('Transmission', 'transmission', { step: 0.05, min: 0, max: 1 })}
+              {textureSelect('Transmission Map', 'transmissionMapId')}
+              {scrub('Thickness', 'thickness', { step: 0.05, min: 0 })}
+              {textureSelect('Thickness Map', 'thicknessMapId')}
+              {scrub('IOR', 'ior', { step: 0.01, min: 1, max: 2.333 })}
+              {colorField('Attenuation Color', 'attenuationColor')}
+              {scrub('Attenuation Distance', 'attenuationDistance', {
+                step: 0.1,
+                min: 0,
+                value: Number.isFinite(draft.attenuationDistance) && draft.attenuationDistance !== Infinity
+                  ? draft.attenuationDistance
+                  : 0,
+                map: (v) => ({ attenuationDistance: v <= 0 ? Infinity : v }),
+              })}
+              {scrub('Dispersion', 'dispersion', { step: 0.05, min: 0 })}
+            </Collapsible>
+
+            <Collapsible title="Sheen" storageKey="materials.form.sheen">
+              {scrub('Sheen', 'sheen', { step: 0.05, min: 0, max: 1 })}
+              {scrub('Sheen Roughness', 'sheenRoughness', { step: 0.05, min: 0, max: 1 })}
+              {colorField('Sheen Color', 'sheenColor')}
+              {textureSelect('Sheen Color Map', 'sheenColorMapId')}
+              {textureSelect('Sheen Roughness Map', 'sheenRoughnessMapId')}
+            </Collapsible>
+
+            <Collapsible title="Specular" storageKey="materials.form.specular">
+              {scrub('Specular Intensity', 'specularIntensity', { step: 0.05, min: 0 })}
+              {colorField('Specular Color', 'specularColor')}
+              {textureSelect('Specular Intensity Map', 'specularIntensityMapId')}
+              {textureSelect('Specular Color Map', 'specularColorMapId')}
+            </Collapsible>
+
+            <Collapsible title="Iridescence" storageKey="materials.form.iridescence">
+              {scrub('Iridescence', 'iridescence', { step: 0.05, min: 0, max: 1 })}
+              {scrub('Iridescence IOR', 'iridescenceIOR', { step: 0.01, min: 1, max: 2.333 })}
+              {scrub('Thickness Min (nm)', 'iridescenceThicknessMin', { step: 10, min: 0 })}
+              {scrub('Thickness Max (nm)', 'iridescenceThicknessMax', { step: 10, min: 0 })}
+              {textureSelect('Iridescence Map', 'iridescenceMapId')}
+              {textureSelect('Iridescence Thickness Map', 'iridescenceThicknessMapId')}
+            </Collapsible>
+
+            <Collapsible title="Anisotropy" storageKey="materials.form.anisotropy">
+              {scrub('Anisotropy', 'anisotropy', { step: 0.05, min: -1, max: 1 })}
+              {scrub('Anisotropy Rotation°', 'anisotropyRotation', { step: 1 })}
+              {textureSelect('Anisotropy Map', 'anisotropyMapId')}
+            </Collapsible>
+          </>
+        )}
+
+        <Collapsible title="Opacity & coverage" storageKey="materials.form.opacity" defaultOpen>
+          {scrub('Opacity', 'opacity', {
+            step: 0.05,
+            min: 0,
+            max: 1,
+            map: (opacity) => ({ opacity, transparent: opacity < 1 || draft.transparent }),
+          })}
+          {check('Transparent', 'transparent')}
+          {scrub('Alpha Test', 'alphaTest', { step: 0.01, min: 0, max: 1, helpId: 'materials.alphaTest' })}
+          {check('Alpha Hash', 'alphaHash')}
+          {check('Alpha To Coverage', 'alphaToCoverage')}
+        </Collapsible>
+
+        <Collapsible title="Surface flags" storageKey="materials.form.flags">
+          <label className="bb-field">
+            <span className="bb-field__label">Side</span>
+            <select
+              className="bb-select"
+              disabled={disabled}
+              value={draft.side || 'front'}
+              onChange={(e) => patch({ side: e.target.value })}
+            >
+              {MATERIAL_SIDES.map((s) => (
+                <option key={s} value={s}>
+                  {s === 'front' ? 'Front' : s === 'back' ? 'Back' : 'Double'}
+                </option>
+              ))}
+            </select>
+          </label>
+          {check('Depth Write', 'depthWrite', { checked: draft.depthWrite !== false })}
+          {check('Wireframe', 'wireframe')}
+          {check('Flat Shading', 'flatShading')}
+          {check('Fog', 'fog', { checked: draft.fog !== false })}
+          {check('Tone Mapped', 'toneMapped', { checked: draft.toneMapped !== false })}
+        </Collapsible>
+
+        <Collapsible title="Material UV (Layer 2)" storageKey="materials.form.uv">
+          <div className="bb-field-row">
+            {scrub('Scale U', 'uvScale.x', {
+              step: 0.05,
+              value: draft.uvScale?.x ?? 1,
+              map: (v) => ({ uvScale: { x: v, y: draft.uvScale?.y ?? 1 } }),
             })}
-          />
-        </label>
-      </div>
-      <div className="bb-field-row">
-        <label className="bb-field">
-          <span className="bb-field__label">Offset U</span>
-          <ScrubNumberInput
-            className="bb-input"
-            step={0.05}
-            disabled={disabled}
-            value={draft.uvOffset?.x ?? 0}
-            onChange={(v) => patch({
-              uvOffset: { x: v, y: draft.uvOffset?.y ?? 0 },
+            {scrub('Scale V', 'uvScale.y', {
+              step: 0.05,
+              value: draft.uvScale?.y ?? 1,
+              map: (v) => ({ uvScale: { x: draft.uvScale?.x ?? 1, y: v } }),
             })}
-          />
-        </label>
-        <label className="bb-field">
-          <span className="bb-field__label">Offset V</span>
-          <ScrubNumberInput
-            className="bb-input"
-            step={0.05}
-            disabled={disabled}
-            value={draft.uvOffset?.y ?? 0}
-            onChange={(v) => patch({
-              uvOffset: { x: draft.uvOffset?.x ?? 0, y: v },
+          </div>
+          <div className="bb-field-row">
+            {scrub('Offset U', 'uvOffset.x', {
+              step: 0.05,
+              value: draft.uvOffset?.x ?? 0,
+              map: (v) => ({ uvOffset: { x: v, y: draft.uvOffset?.y ?? 0 } }),
             })}
-          />
-        </label>
-      </div>
-      <label className="bb-field">
-        <span className="bb-field__label">UV Rotation°</span>
-        <ScrubNumberInput
-          className="bb-input"
-          step={1}
-          disabled={disabled}
-          value={draft.uvRotation ?? 0}
-          onChange={(v) => patch({ uvRotation: v })}
-        />
-      </label>
+            {scrub('Offset V', 'uvOffset.y', {
+              step: 0.05,
+              value: draft.uvOffset?.y ?? 0,
+              map: (v) => ({ uvOffset: { x: draft.uvOffset?.x ?? 0, y: v } }),
+            })}
+          </div>
+          {scrub('UV Rotation°', 'uvRotation', { step: 1 })}
+        </Collapsible>
+      </CollapsibleGroup>
     </div>
+  );
+}
+
+function MaterialScrub({
+  label,
+  value,
+  disabled,
+  step = 0.05,
+  min,
+  max,
+  onChange,
+  onGestureBegin,
+  onGestureCommit,
+  onGestureCancel,
+  helpId,
+}) {
+  return (
+    <label className="bb-field" {...(helpId ? helpProps(helpId) : {})}>
+      <span className="bb-field__label">{label}</span>
+      <ScrubNumberInput
+        className="bb-input"
+        step={step}
+        min={min}
+        max={max}
+        disabled={disabled}
+        value={Number.isFinite(value) ? value : 0}
+        onGestureStart={onGestureBegin}
+        onChange={onChange}
+        onCommit={onGestureCommit}
+        onCancel={onGestureCancel}
+      />
+    </label>
   );
 }
 

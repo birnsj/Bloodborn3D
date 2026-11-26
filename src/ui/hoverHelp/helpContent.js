@@ -608,7 +608,28 @@ export const HELP_CONTENT = {
   },
   'workspace.materials': {
     title: 'Materials',
-    body: 'Edit material definitions (base color, maps, preview). Use Generate PBR Maps to derive local normal and roughness from a base-color texture. Switch back to Level Editor to assign materials to brushes and faces.',
+    body: 'Edit material definitions: shading model (Standard / Physical / Basic / Toon / Matcap), maps, Physical groups, opacity/flags, and live preview. Use Generate PBR Maps to derive local normal and roughness from a base-color texture. Scrub Undo/Redo is draft-local (one entry per finished numeric adjustment). Switch back to Level Editor to assign materials to brushes and faces.',
+  },
+  'materials.shadingModel': {
+    title: 'Shading Model',
+    body: 'Selects the Three.js material class: Standard (MeshStandardMaterial, default), Physical (clearcoat/transmission/sheen/…), Basic (unlit), Toon (gradient map), or Matcap. Legacy assets without a model stay Standard so appearance is unchanged.',
+    tips: 'Only property groups that apply to the selected model are shown. Physical glass and clearcoat look best with a Batch 1 HDRI environment.',
+  },
+  'materials.transmission': {
+    title: 'Transmission / Glass',
+    body: 'Physical transmission (0–1) with thickness, IOR, attenuation color/distance, and optional dispersion. Enable transparent rendering as needed; depth write is often off for thick glass.',
+  },
+  'materials.alphaTest': {
+    title: 'Alpha Test / Coverage',
+    body: 'Alpha Test discards fragments below a cutoff (good for foliage cards). Alpha Hash dithered transparency; Alpha To Coverage uses MSAA coverage when the renderer supports it. Pair with an alpha map and double-sided faces for leaves.',
+  },
+  'materials.matcap': {
+    title: 'Matcap Map',
+    body: 'Spherical matcap texture for MeshMatcapMaterial. Lighting is baked into the map — scene lights have little effect.',
+  },
+  'materials.toon': {
+    title: 'Toon Gradient Map',
+    body: '1D (or small) gradient LUT for MeshToonMaterial cel bands. Sampled with nearest filtering.',
   },
   'materials.pbrGenerator': {
     title: 'Generate PBR Maps',

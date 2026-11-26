@@ -1,0 +1,370 @@
+{
+  "schemaVersion": 2,
+  "name": "acceptance-materials",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.14,
+    "playIntensity": 0.14
+  },
+  "scene": {
+    "background": "#1a2030",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0.12,
+    "backgroundType": "environment",
+    "backgroundRotation": {
+      "x": 0,
+      "y": 20,
+      "z": 0
+    },
+    "environmentAssetId": "tex_batch1_studio",
+    "environmentIntensity": 1.15,
+    "environmentRotation": {
+      "x": 0,
+      "y": 35,
+      "z": 0
+    },
+    "lightProbeEnabled": true,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 4,
+      "rayleigh": 1.2,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 14,
+      "azimuth": 150,
+      "scale": 450000
+    },
+    "groundedSkybox": {
+      "enabled": false,
+      "height": 12,
+      "radius": 80
+    },
+    "fog": {
+      "type": "linear",
+      "color": "#6a7380",
+      "near": 250,
+      "far": 2800,
+      "density": 0.05,
+      "drift": false,
+      "driftSpeed": 0.12,
+      "driftAmount": 0.15,
+      "mist": false,
+      "mistCount": 400,
+      "mistSpeed": 0.15,
+      "mistOpacity": 0.35,
+      "mistSize": 0.6,
+      "noise": false,
+      "noiseStrength": 0.35,
+      "noiseScale": 0.45,
+      "noiseSpeed": 0.08,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "actors": [
+    {
+      "id": "actor_b2_floor",
+      "name": "Floor",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1200, "y": 20, "z": 700 },
+          "color": "#4a5160",
+          "materialId": "mat_batch2_standard",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_back",
+      "name": "Back Wall",
+      "transform": {
+        "position": { "x": 0, "y": 160, "z": -320 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_back",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1200, "y": 300, "z": 20 },
+          "color": "#7a8494",
+          "materialId": "mat_batch1_rough",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_metal",
+      "name": "Polished Metal",
+      "transform": {
+        "position": { "x": -420, "y": 120, "z": 40 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_metal",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 80, "y": 220, "z": 80 },
+          "color": "#c8d0dc",
+          "materialId": "mat_batch2_metal",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_glass",
+      "name": "Glass Panel",
+      "transform": {
+        "position": { "x": -250, "y": 130, "z": 40 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2", "glass"],
+      "components": [
+        {
+          "id": "comp_glass",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 20, "y": 200, "z": 140 },
+          "color": "#cfe8ff",
+          "materialId": "mat_batch2_glass",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_clearcoat",
+      "name": "Clearcoat Paint",
+      "transform": {
+        "position": { "x": -80, "y": 120, "z": 40 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_clearcoat",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 80, "y": 220, "z": 80 },
+          "color": "#1a3a8a",
+          "materialId": "mat_batch2_clearcoat",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_sheen",
+      "name": "Sheen Cloth",
+      "transform": {
+        "position": { "x": 90, "y": 120, "z": 40 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_sheen",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 80, "y": 220, "z": 80 },
+          "color": "#4a3058",
+          "materialId": "mat_batch2_sheen",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_foliage",
+      "name": "Foliage Card",
+      "transform": {
+        "position": { "x": 260, "y": 130, "z": 40 },
+        "rotation": { "x": 0, "y": 20, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2", "foliage"],
+      "components": [
+        {
+          "id": "comp_foliage",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 12, "y": 180, "z": 140 },
+          "color": "#2e6e34",
+          "materialId": "mat_batch2_foliage",
+          "collidable": false
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_basic",
+      "name": "Unlit Basic",
+      "transform": {
+        "position": { "x": 420, "y": 90, "z": 40 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_basic",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 70, "y": 140, "z": 70 },
+          "color": "#ff9944",
+          "materialId": "mat_batch2_basic",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_toon",
+      "name": "Toon",
+      "transform": {
+        "position": { "x": -420, "y": 90, "z": 220 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_toon",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 70, "y": 140, "z": 70 },
+          "color": "#6aa8ff",
+          "materialId": "mat_batch2_toon",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_matcap",
+      "name": "Matcap",
+      "transform": {
+        "position": { "x": -250, "y": 90, "z": 220 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch2"],
+      "components": [
+        {
+          "id": "comp_matcap",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 70, "y": 140, "z": 70 },
+          "color": "#ffffff",
+          "materialId": "mat_batch2_matcap",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_chrome_ref",
+      "name": "Batch1 Chrome Ref",
+      "transform": {
+        "position": { "x": -80, "y": 90, "z": 220 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch1"],
+      "components": [
+        {
+          "id": "comp_chrome_ref",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 70, "y": 140, "z": 70 },
+          "color": "#cfd6e0",
+          "materialId": "mat_batch1_metal",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_light",
+      "name": "Key Light",
+      "transform": {
+        "position": { "x": 160, "y": 300, "z": 200 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light"],
+      "components": [
+        {
+          "id": "comp_light",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#fff2e0",
+          "intensity": 2.4,
+          "range": 1600,
+          "castShadow": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_fill",
+      "name": "Fill Light",
+      "transform": {
+        "position": { "x": -300, "y": 240, "z": 280 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light"],
+      "components": [
+        {
+          "id": "comp_fill",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#d8e6ff",
+          "intensity": 1.1,
+          "range": 1200,
+          "castShadow": false
+        }
+      ]
+    },
+    {
+      "id": "actor_b2_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 320 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

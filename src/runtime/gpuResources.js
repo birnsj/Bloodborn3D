@@ -6,7 +6,32 @@
  * geometries dispose normally.
  */
 
-const MAP_KEYS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap', 'aoMap'];
+const MAP_KEYS = [
+  'map',
+  'normalMap',
+  'roughnessMap',
+  'metalnessMap',
+  'emissiveMap',
+  'alphaMap',
+  'aoMap',
+  'bumpMap',
+  'displacementMap',
+  'lightMap',
+  'matcap',
+  'gradientMap',
+  'clearcoatMap',
+  'clearcoatNormalMap',
+  'clearcoatRoughnessMap',
+  'transmissionMap',
+  'thicknessMap',
+  'sheenColorMap',
+  'sheenRoughnessMap',
+  'specularIntensityMap',
+  'specularColorMap',
+  'iridescenceMap',
+  'iridescenceThicknessMap',
+  'anisotropyMap',
+];
 
 export function markSharedGpuResource(resource) {
   if (!resource) return resource;

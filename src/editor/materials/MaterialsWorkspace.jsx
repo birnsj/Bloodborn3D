@@ -20,6 +20,7 @@ import { PbrGeneratorPanel } from './PbrGeneratorPanel.jsx';
 import {
   cloneMaterialDraft,
   isMaterialDraftDirty,
+  materialDraftFingerprint,
   materialDraftForDuplicate,
   materialDraftToSavePayload,
 } from './materialDraft.js';
@@ -34,7 +35,7 @@ const PREVIEW_SHAPES = [
 /**
  * Phase 2E.4 — Materials workspace.
  * Draft edits stay local until Save; Cancel restores the persisted baseline.
- * Does not touch level undo/redo or level dirty tracking.
+ * Numeric scrub gestures push one entry onto a draft-local undo stack (not level HistoryStack).
  */
 export function MaterialsWorkspace() {
   const {
@@ -62,11 +63,20 @@ export function MaterialsWorkspace() {
   const [previewShape, setPreviewShape] = useState('sphere');
   const [libraryQuery, setLibraryQuery] = useState('');
   const [pbrOpen, setPbrOpen] = useState(false);
+  const [draftHistoryTick, setDraftHistoryTick] = useState(0);
   const loadTokenRef = useRef(0);
+  const gestureBeforeRef = useRef(null);
+  const draftUndoRef = useRef([]);
+  const draftRedoRef = useRef([]);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
 
   const dirty = isMaterialDraftDirty(baseline, draft);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
+  const canDraftUndo = draftUndoRef.current.length > 0;
+  const canDraftRedo = draftRedoRef.current.length > 0;
+  void draftHistoryTick;
 
   const materials = useMemo(() => {
     const entries = listByKind(registry, ASSET_KINDS.material);
@@ -121,6 +131,10 @@ export function MaterialsWorkspace() {
       const cloned = cloneMaterialDraft(def);
       setBaseline(cloned);
       setDraft(cloneMaterialDraft(def));
+      draftUndoRef.current = [];
+      draftRedoRef.current = [];
+      gestureBeforeRef.current = null;
+      setDraftHistoryTick((n) => n + 1);
       setLoading(false);
     }).catch((err) => {
       if (token !== loadTokenRef.current) return;
@@ -167,11 +181,61 @@ export function MaterialsWorkspace() {
     setStatus,
   ]);
 
+  const clearDraftHistory = useCallback(() => {
+    draftUndoRef.current = [];
+    draftRedoRef.current = [];
+    gestureBeforeRef.current = null;
+    setDraftHistoryTick((n) => n + 1);
+  }, []);
+
   const onCancel = useCallback(() => {
     if (!baseline) return;
     setDraft(cloneMaterialDraft(baseline));
+    clearDraftHistory();
     setStatus('Material edits discarded.');
-  }, [baseline, setStatus]);
+  }, [baseline, clearDraftHistory, setStatus]);
+
+  const beginDraftGesture = useCallback(() => {
+    if (gestureBeforeRef.current || !draftRef.current) return;
+    gestureBeforeRef.current = cloneMaterialDraft(draftRef.current);
+  }, []);
+
+  const commitDraftGesture = useCallback(() => {
+    const before = gestureBeforeRef.current;
+    gestureBeforeRef.current = null;
+    const after = draftRef.current;
+    if (!before || !after) return;
+    if (materialDraftFingerprint(before) === materialDraftFingerprint(after)) return;
+    draftUndoRef.current.push(before);
+    if (draftUndoRef.current.length > 50) draftUndoRef.current.shift();
+    draftRedoRef.current = [];
+    setDraftHistoryTick((n) => n + 1);
+  }, []);
+
+  const cancelDraftGesture = useCallback(() => {
+    const before = gestureBeforeRef.current;
+    gestureBeforeRef.current = null;
+    if (!before) return;
+    setDraft(cloneMaterialDraft(before));
+  }, []);
+
+  const undoDraftGesture = useCallback(() => {
+    const before = draftUndoRef.current.pop();
+    if (!before || !draftRef.current) return;
+    draftRedoRef.current.push(cloneMaterialDraft(draftRef.current));
+    setDraft(cloneMaterialDraft(before));
+    setDraftHistoryTick((n) => n + 1);
+    setStatus('Material edit undone');
+  }, [setStatus]);
+
+  const redoDraftGesture = useCallback(() => {
+    const next = draftRedoRef.current.pop();
+    if (!next || !draftRef.current) return;
+    draftUndoRef.current.push(cloneMaterialDraft(draftRef.current));
+    setDraft(cloneMaterialDraft(next));
+    setDraftHistoryTick((n) => n + 1);
+    setStatus('Material edit redone');
+  }, [setStatus]);
 
   const onSave = useCallback(async () => {
     if (!draft?.id || !dirty) return;
@@ -183,6 +247,7 @@ export function MaterialsWorkspace() {
       const cloned = cloneMaterialDraft(saved);
       setBaseline(cloned);
       setDraft(cloneMaterialDraft(saved));
+      clearDraftHistory();
       setStatus(`Saved material ${saved.name}.`);
     } catch (err) {
       notify(err.message || 'Save failed');
@@ -190,7 +255,7 @@ export function MaterialsWorkspace() {
     } finally {
       setSaving(false);
     }
-  }, [draft, dirty, saveMaterialDefinition, notify, setStatus]);
+  }, [draft, dirty, saveMaterialDefinition, notify, setStatus, clearDraftHistory]);
 
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
@@ -335,6 +400,24 @@ export function MaterialsWorkspace() {
             <button
               type="button"
               className="bb-btn"
+              disabled={!canDraftUndo || saving || loading}
+              onClick={undoDraftGesture}
+              title="Undo last numeric material adjustment"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={!canDraftRedo || saving || loading}
+              onClick={redoDraftGesture}
+              title="Redo material adjustment"
+            >
+              Redo
+            </button>
+            <button
+              type="button"
+              className="bb-btn"
               disabled={!dirty || saving || loading}
               onClick={onCancel}
             >
@@ -359,12 +442,16 @@ export function MaterialsWorkspace() {
             <>
               <p className="bb-muted">
                 Edits stay in this draft until Save. Cancel restores the last saved asset.
+                Scrub Undo/Redo is draft-local (one entry per finished numeric adjustment).
                 Level Undo/Redo is not used for material assets.
               </p>
               <MaterialDefinitionForm
                 draft={draft}
                 onChange={setDraft}
                 disabled={saving}
+                onGestureBegin={beginDraftGesture}
+                onGestureCommit={commitDraftGesture}
+                onGestureCancel={cancelDraftGesture}
               />
             </>
           )}
