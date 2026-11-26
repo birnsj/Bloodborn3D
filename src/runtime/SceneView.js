@@ -34,6 +34,7 @@ import {
   getWorldTransform,
   isEffectivelyVisible,
 } from '../core/hierarchy.js';
+import { contentOffsetToMeters } from '../core/contentOffset.js';
 import { mat4TransformPoint } from '../core/math3d.js';
 import {
   edgesCentroidLocal,
@@ -1267,6 +1268,7 @@ export class SceneView {
       entry.group.remove(child);
       disposeObject(child);
     }
+    entry.group.userData.bbContentRoot = null;
 
     entry.visualEpoch = (entry.visualEpoch || 0) + 1;
     entry.actor = actor;
@@ -1335,6 +1337,8 @@ export class SceneView {
     );
     const scale = actor.transform.scale;
     entry.group.scale.set(scale.x, scale.y, scale.z);
+    // Content frame (pivot × contentOffset) — geometry lives here.
+    this._syncContentRoot(entry.group, actor);
     entry.group.visible = isEffectivelyVisible(actor, actor.world);
     entry.transformFingerprint = actorTransformFingerprint(actor);
     // Spot / directional lights need target matrices current after the group moves.
@@ -1387,11 +1391,15 @@ export class SceneView {
       entry.group.remove(child);
       disposeObject(child);
     }
+    entry.group.userData.bbContentRoot = null;
 
     entry.visualEpoch = (entry.visualEpoch || 0) + 1;
     const token = this._syncToken;
-    if (convex) this._addConvexBrushVisual(entry.group, actor, convex, token);
-    else this._addBrushVisual(entry.group, actor, brush, token);
+    const contentRoot = typeof this._syncContentRoot === 'function'
+      ? this._syncContentRoot(entry.group, actor)
+      : entry.group;
+    if (convex) this._addConvexBrushVisual(contentRoot, actor, convex, token);
+    else this._addBrushVisual(contentRoot, actor, brush, token);
     entry.group.traverse((obj) => {
       if (obj.userData?.actorId === actor.id) this._stampActorVisual(obj, actor.id);
     });
@@ -1493,26 +1501,47 @@ export class SceneView {
     else this.root.add(group);
   }
 
+  /** Ensure content root under the actor pivot group; sync contentOffset. */
+  _syncContentRoot(group, actor) {
+    let root = group.userData.bbContentRoot;
+    // Rebuild disposes prior children; a stale userData handle must not be reused
+    // once the ContentRoot is no longer parented under the actor group.
+    if (!root || !root.isObject3D || root.parent !== group) {
+      root = new THREE.Group();
+      root.name = 'ContentRoot';
+      root.userData.bbContentRoot = true;
+      group.add(root);
+      group.userData.bbContentRoot = root;
+    }
+    const m = contentOffsetToMeters(actor?.contentOffset);
+    root.position.set(m.x, m.y, m.z);
+    return root;
+  }
+
   /** Component visuals for an actor group (shared by add + rebuild). */
   _populateActorComponents(group, actor, syncToken, world = actor.world) {
     void world;
+    // Test stubs may omit _syncContentRoot — fall back to the actor group.
+    const contentRoot = typeof this._syncContentRoot === 'function'
+      ? this._syncContentRoot(group, actor)
+      : group;
     for (const comp of actor.components) {
       if (!comp.enabled) continue;
 
       if (comp.type === 'Brush') {
-        this._addBrushVisual(group, actor, comp, syncToken);
+        this._addBrushVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'ConvexBrush') {
-        this._addConvexBrushVisual(group, actor, comp, syncToken);
+        this._addConvexBrushVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'Ramp') {
-        this._addRampVisual(group, actor, comp, syncToken);
+        this._addRampVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'Stair') {
-        this._addStairVisual(group, actor, comp, syncToken);
+        this._addStairVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'Column') {
-        this._addColumnVisual(group, actor, comp, syncToken);
+        this._addColumnVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'Arch') {
-        this._addArchVisual(group, actor, comp, syncToken);
+        this._addArchVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'CurvedWall') {
-        this._addCurvedWallVisual(group, actor, comp, syncToken);
+        this._addCurvedWallVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'Cell' && this.editMode) {
         const marker = new THREE.Mesh(
           new THREE.BoxGeometry(0.25, 0.25, 0.25),
@@ -1532,9 +1561,9 @@ export class SceneView {
       } else if (comp.type === 'Environment') {
         this._addEnvironmentVisual(group, actor, comp, syncToken, world);
       } else if (comp.type === 'StaticMesh') {
-        this._addStaticMeshVisual(group, actor, comp, syncToken);
+        this._addStaticMeshVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'PrimitiveMesh') {
-        this._addPrimitiveMeshVisual(group, actor, comp, syncToken);
+        this._addPrimitiveMeshVisual(contentRoot, actor, comp, syncToken);
       } else if (comp.type === 'PlayerSpawn' && this.editMode) {
         const marker = new THREE.Mesh(
           new THREE.ConeGeometry(0.15, 0.4, 8),
@@ -2395,12 +2424,13 @@ export class SceneView {
     actors.forEach((actor, i) => {
       const entry = this._actorMeshes.get(actor.id);
       const g = entry?.group;
-      if (g) {
-        g.updateWorldMatrix(true, false);
+      const content = g?.userData?.bbContentRoot || g;
+      if (content) {
+        content.updateWorldMatrix(true, false);
         dummy.position.set(0, 0, 0);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.set(1, 1, 1);
-        dummy.applyMatrix4(g.matrixWorld);
+        dummy.applyMatrix4(content.matrixWorld);
       } else {
         const t = actor.transform;
         dummy.position.set(
@@ -3116,6 +3146,19 @@ export class SceneView {
     return { x: x / n, y: y / n, z: z / n };
   }
 
+  setPivotEditMode(enabled) {
+    this._pivotEditMode = Boolean(enabled);
+    this.gizmo?.setMode?.('move');
+  }
+
+  setGizmoSpace(space) {
+    this._gizmoSpace = space === 'local' ? 'local' : 'world';
+    this.gizmo?.setSpace?.(this._gizmoSpace);
+    if (this.selectedActorIds?.length) {
+      this._updateGizmo(this.world);
+    }
+  }
+
   _updateGizmo(world) {
     if (!this.gizmo || !this._showEditorOverlays()) {
       this.gizmo?.setVisible?.(false);
@@ -3126,8 +3169,11 @@ export class SceneView {
       return;
     }
     this.gizmo.setGeometryElementMode?.(false, null);
+    if (this._pivotEditMode) this.gizmo.setMode?.('move');
+    this.gizmo.setSpace?.(this._gizmoSpace || 'world');
     const brushStates = [];
     let primary = null;
+    let primaryActor = null;
     for (const id of this.selectedActorIds) {
       const actor = world?.getActor?.(id) || this._actorMeshes.get(id)?.actor;
       if (!actor) continue;
@@ -3136,10 +3182,19 @@ export class SceneView {
       const state = {
         position: { ...worldPos },
         // Face-scale handles only for brushes (parametric actors keep size in Details).
-        size: brush ? { ...brush.size } : undefined,
+        size: brush && !this._pivotEditMode ? { ...brush.size } : undefined,
       };
       brushStates.push(state);
-      if (!primary) primary = state;
+      if (!primary) {
+        primary = state;
+        primaryActor = actor;
+      }
+    }
+    if (primaryActor && (this._gizmoSpace || 'world') === 'local') {
+      const wt = getWorldTransform(primaryActor, world || primaryActor.world);
+      this.gizmo.setLocalRotation?.(wt.rotation);
+    } else {
+      this.gizmo.setLocalRotation?.(null);
     }
     this.gizmo.update(brushStates, primary);
   }

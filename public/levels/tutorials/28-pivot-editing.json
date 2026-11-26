@@ -1,0 +1,1197 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance — Pivot Editing",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
+  "scene": {
+    "background": "#0e1218",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0,
+    "backgroundType": "color",
+    "backgroundRotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "environmentRotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "lightProbeEnabled": false,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 2,
+      "rayleigh": 1,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 2,
+      "azimuth": 180,
+      "scale": 450000
+    },
+    "groundedSkybox": {
+      "enabled": false,
+      "height": 15,
+      "radius": 100
+    },
+    "fog": {
+      "type": "none",
+      "color": "#6a7380",
+      "near": 100,
+      "far": 1500,
+      "density": 0.05,
+      "drift": true,
+      "driftSpeed": 0.12,
+      "driftAmount": 0.22,
+      "mist": false,
+      "mistCount": 400,
+      "mistSpeed": 0.15,
+      "mistOpacity": 0.35,
+      "mistSize": 0.6,
+      "noise": false,
+      "noiseStrength": 0.35,
+      "noiseScale": 0.45,
+      "noiseSpeed": 0.08,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "postProcessing": {
+    "version": 1,
+    "enabled": false,
+    "multisampling": 0,
+    "exposure": 0.95,
+    "effects": {
+      "ssao": {
+        "enabled": false,
+        "samples": 9,
+        "rings": 7,
+        "radius": 0.1825,
+        "intensity": 1,
+        "luminanceInfluence": 0.7,
+        "distanceScaling": true,
+        "depthAwareUpsampling": true,
+        "color": "#000000"
+      },
+      "bloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 1,
+        "luminanceSmoothing": 0.03,
+        "kernelSize": "LARGE",
+        "mipmapBlur": true,
+        "radius": 0.85
+      },
+      "selectiveBloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 0.1,
+        "luminanceSmoothing": 0.025,
+        "kernelSize": "LARGE",
+        "inverted": false,
+        "ignoreBackground": false,
+        "actorIds": []
+      },
+      "godRays": {
+        "enabled": false,
+        "lightActorId": null,
+        "density": 0.96,
+        "decay": 0.9,
+        "weight": 0.4,
+        "exposure": 0.6,
+        "clampMax": 1,
+        "samples": 60,
+        "blur": true,
+        "kernelSize": "SMALL"
+      },
+      "depthOfField": {
+        "enabled": false,
+        "focusDistance": 0.1,
+        "focalLength": 0.1,
+        "bokehScale": 1,
+        "resolutionScale": 0.5
+      },
+      "realisticBokeh": {
+        "enabled": false,
+        "focus": 1,
+        "focalLength": 24,
+        "fStop": 0.9,
+        "luminanceThreshold": 0.5,
+        "luminanceGain": 2,
+        "bias": 0.5,
+        "fringe": 0.7,
+        "maxBlur": 1,
+        "rings": 3,
+        "samples": 2,
+        "showFocus": false,
+        "manualDoF": false,
+        "pentagon": false
+      },
+      "tiltShift": {
+        "enabled": false,
+        "offset": 0,
+        "rotation": 0,
+        "focusArea": 0.4,
+        "feather": 0.3,
+        "kernelSize": "MEDIUM",
+        "resolutionScale": 0.5
+      },
+      "brightnessContrast": {
+        "enabled": false,
+        "brightness": 0,
+        "contrast": 0
+      },
+      "hueSaturation": {
+        "enabled": false,
+        "hue": 0,
+        "saturation": 0
+      },
+      "gammaCorrection": {
+        "enabled": false,
+        "gamma": 2
+      },
+      "colorAverage": {
+        "enabled": false
+      },
+      "sepia": {
+        "enabled": false,
+        "intensity": 1
+      },
+      "colorDepth": {
+        "enabled": false,
+        "bitDepth": 16
+      },
+      "lut": {
+        "enabled": false,
+        "textureAssetId": null,
+        "tetrahedralInterpolation": false
+      },
+      "vignette": {
+        "enabled": false,
+        "technique": "DEFAULT",
+        "offset": 0.5,
+        "darkness": 0.5
+      },
+      "chromaticAberration": {
+        "enabled": false,
+        "offsetX": 0.002,
+        "offsetY": 0.002,
+        "radialModulation": false,
+        "modulationOffset": 0.15
+      },
+      "lensDistortion": {
+        "enabled": false,
+        "distortionX": 0,
+        "distortionY": 0,
+        "principalPointX": 0,
+        "principalPointY": 0,
+        "focalLengthX": 1,
+        "focalLengthY": 1,
+        "skew": 0
+      },
+      "noise": {
+        "enabled": false,
+        "premultiply": false,
+        "opacity": 0.2
+      },
+      "pixelation": {
+        "enabled": false,
+        "granularity": 30
+      },
+      "dotScreen": {
+        "enabled": false,
+        "angle": 1.57,
+        "scale": 1
+      },
+      "scanlines": {
+        "enabled": false,
+        "density": 1.25,
+        "scrollSpeed": 0
+      },
+      "grid": {
+        "enabled": false,
+        "scale": 1,
+        "lineWidth": 0
+      },
+      "glitch": {
+        "enabled": false,
+        "mode": "SPORADIC",
+        "minDelay": 0.5,
+        "maxDelay": 1,
+        "minDuration": 0.05,
+        "maxDuration": 0.2,
+        "minStrength": 0.05,
+        "maxStrength": 0.2,
+        "columns": 0.05,
+        "ratio": 0.85
+      },
+      "outline": {
+        "enabled": false,
+        "actorIds": [],
+        "edgeStrength": 3,
+        "visibleEdgeColor": "#ffffff",
+        "hiddenEdgeColor": "#22090a",
+        "pulseSpeed": 0,
+        "xRay": true,
+        "blur": false,
+        "kernelSize": "VERY_SMALL",
+        "multisampling": 0,
+        "resolutionScale": 0.5
+      },
+      "textureOverlay": {
+        "enabled": false,
+        "textureAssetId": null,
+        "aspectCorrection": false
+      },
+      "shockWave": {
+        "enabled": false,
+        "epicenter": {
+          "x": 0,
+          "y": 100,
+          "z": 0
+        },
+        "speed": 2,
+        "maxRadius": 1,
+        "waveSize": 0.2,
+        "amplitude": 0.05
+      },
+      "toneMapping": {
+        "enabled": true,
+        "mode": "ACES_FILMIC",
+        "resolution": 256,
+        "whitePoint": 4,
+        "middleGrey": 0.6,
+        "averageLuminance": 1,
+        "minLuminance": 0.01,
+        "adaptationRate": 1
+      },
+      "fxaa": {
+        "enabled": false,
+        "minEdgeThreshold": 0.0312,
+        "maxEdgeThreshold": 0.125,
+        "subpixelQuality": 0.75,
+        "samples": 12
+      },
+      "smaa": {
+        "enabled": false
+      }
+    }
+  },
+  "actors": [
+    {
+      "id": "actor_4d16fec4-79ef-47b6-8555-bc21d5ea6559",
+      "name": "Floor",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": -12.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "brush",
+        "floor"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fa710f12-30e3-4ca0-8643-586ae7a7729c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 25,
+            "z": 800
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_bc9b8993-b19c-4026-9142-5b7529d36309",
+      "name": "Door (hinge pivot)",
+      "transform": {
+        "position": {
+          "x": -206,
+          "y": 100,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "brush",
+        "door"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_daba168b-3592-415d-bcb8-0bba6f8477ec",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 12,
+            "y": 200,
+            "z": 90
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "contentOffset": {
+        "x": 6,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_d8156df9-6435-47d1-b359-c63e7b861f30",
+      "name": "Table (bottom pivot)",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 0,
+          "z": 80
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "primitive"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_46844402-da20-40d3-a89b-9e1789297ebb",
+          "type": "PrimitiveMesh",
+          "enabled": true,
+          "primitive": "box",
+          "width": 120,
+          "height": 80,
+          "depth": 80,
+          "radius": 50,
+          "radiusTop": 50,
+          "radiusBottom": 50,
+          "length": 100,
+          "tube": 15,
+          "tubularSegments": 48,
+          "radialSegments": 24,
+          "p": 2,
+          "q": 3,
+          "widthSegments": 1,
+          "heightSegments": 1,
+          "depthSegments": 1,
+          "detail": 0,
+          "phiStart": 0,
+          "phiLength": 360,
+          "thetaStart": 0,
+          "thetaLength": 180,
+          "openEnded": false,
+          "radiusSegments": 4,
+          "profile": [
+            {
+              "x": -50,
+              "y": -40
+            },
+            {
+              "x": 50,
+              "y": -40
+            },
+            {
+              "x": 40,
+              "y": 40
+            },
+            {
+              "x": -40,
+              "y": 40
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            {
+              "x": 80,
+              "y": 40,
+              "z": 0
+            },
+            {
+              "x": 160,
+              "y": 0,
+              "z": 40
+            },
+            {
+              "x": 240,
+              "y": -20,
+              "z": 0
+            }
+          ],
+          "points": [
+            {
+              "x": -40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": -40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": 0,
+              "y": 50,
+              "z": 0
+            }
+          ],
+          "extrudeDepth": 40,
+          "bevelEnabled": true,
+          "bevelThickness": 4,
+          "bevelSize": 4,
+          "bevelOffset": 0,
+          "bevelSegments": 2,
+          "tubeRadius": 12,
+          "closed": false,
+          "text": "BloodBound",
+          "fontId": "helvetiker_regular",
+          "textSize": 40,
+          "textHeight": 8,
+          "curveSegments": 12,
+          "parametricFn": "klein",
+          "parametricSlices": 32,
+          "parametricStacks": 32,
+          "materialId": null,
+          "collidable": true,
+          "collisionType": "box",
+          "castShadow": true,
+          "receiveShadow": true,
+          "displacementSegments": 0
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 40,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_e50f5a31-b3ec-4955-8b38-f759614094a6",
+      "name": "Crate (custom pivot)",
+      "transform": {
+        "position": {
+          "x": 220,
+          "y": 10,
+          "z": -60
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "primitive"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_8bd91a9d-0877-44f0-bc91-7e2c5798c56c",
+          "type": "PrimitiveMesh",
+          "enabled": true,
+          "primitive": "box",
+          "width": 60,
+          "height": 60,
+          "depth": 60,
+          "radius": 50,
+          "radiusTop": 50,
+          "radiusBottom": 50,
+          "length": 100,
+          "tube": 15,
+          "tubularSegments": 48,
+          "radialSegments": 24,
+          "p": 2,
+          "q": 3,
+          "widthSegments": 1,
+          "heightSegments": 1,
+          "depthSegments": 1,
+          "detail": 0,
+          "phiStart": 0,
+          "phiLength": 360,
+          "thetaStart": 0,
+          "thetaLength": 180,
+          "openEnded": false,
+          "radiusSegments": 4,
+          "profile": [
+            {
+              "x": -50,
+              "y": -40
+            },
+            {
+              "x": 50,
+              "y": -40
+            },
+            {
+              "x": 40,
+              "y": 40
+            },
+            {
+              "x": -40,
+              "y": 40
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            {
+              "x": 80,
+              "y": 40,
+              "z": 0
+            },
+            {
+              "x": 160,
+              "y": 0,
+              "z": 40
+            },
+            {
+              "x": 240,
+              "y": -20,
+              "z": 0
+            }
+          ],
+          "points": [
+            {
+              "x": -40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": -40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": 0,
+              "y": 50,
+              "z": 0
+            }
+          ],
+          "extrudeDepth": 40,
+          "bevelEnabled": true,
+          "bevelThickness": 4,
+          "bevelSize": 4,
+          "bevelOffset": 0,
+          "bevelSegments": 2,
+          "tubeRadius": 12,
+          "closed": false,
+          "text": "BloodBound",
+          "fontId": "helvetiker_regular",
+          "textSize": 40,
+          "textHeight": 8,
+          "curveSegments": 12,
+          "parametricFn": "klein",
+          "parametricSlices": 32,
+          "parametricStacks": 32,
+          "materialId": null,
+          "collidable": true,
+          "collisionType": "box",
+          "castShadow": true,
+          "receiveShadow": true,
+          "displacementSegments": 0
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 30,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_a197614e-148b-4748-8406-d969d614c8c3",
+      "name": "Parent Prop",
+      "transform": {
+        "position": {
+          "x": -80,
+          "y": 50,
+          "z": 160
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "primitive"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c8fe0e9f-70bb-4dd7-9848-10520632d9ff",
+          "type": "PrimitiveMesh",
+          "enabled": true,
+          "primitive": "box",
+          "width": 100,
+          "height": 40,
+          "depth": 60,
+          "radius": 50,
+          "radiusTop": 50,
+          "radiusBottom": 50,
+          "length": 100,
+          "tube": 15,
+          "tubularSegments": 48,
+          "radialSegments": 24,
+          "p": 2,
+          "q": 3,
+          "widthSegments": 1,
+          "heightSegments": 1,
+          "depthSegments": 1,
+          "detail": 0,
+          "phiStart": 0,
+          "phiLength": 360,
+          "thetaStart": 0,
+          "thetaLength": 180,
+          "openEnded": false,
+          "radiusSegments": 4,
+          "profile": [
+            {
+              "x": -50,
+              "y": -40
+            },
+            {
+              "x": 50,
+              "y": -40
+            },
+            {
+              "x": 40,
+              "y": 40
+            },
+            {
+              "x": -40,
+              "y": 40
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            {
+              "x": 80,
+              "y": 40,
+              "z": 0
+            },
+            {
+              "x": 160,
+              "y": 0,
+              "z": 40
+            },
+            {
+              "x": 240,
+              "y": -20,
+              "z": 0
+            }
+          ],
+          "points": [
+            {
+              "x": -40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": -40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": 0,
+              "y": 50,
+              "z": 0
+            }
+          ],
+          "extrudeDepth": 40,
+          "bevelEnabled": true,
+          "bevelThickness": 4,
+          "bevelSize": 4,
+          "bevelOffset": 0,
+          "bevelSegments": 2,
+          "tubeRadius": 12,
+          "closed": false,
+          "text": "BloodBound",
+          "fontId": "helvetiker_regular",
+          "textSize": 40,
+          "textHeight": 8,
+          "curveSegments": 12,
+          "parametricFn": "klein",
+          "parametricSlices": 32,
+          "parametricStacks": 32,
+          "materialId": null,
+          "collidable": true,
+          "collisionType": "box",
+          "castShadow": true,
+          "receiveShadow": true,
+          "displacementSegments": 0
+        }
+      ]
+    },
+    {
+      "id": "actor_cc58e0b2-d397-4532-8efe-fc361e4fb729",
+      "name": "Child Prop",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "primitive"
+      ],
+      "parentId": "actor_a197614e-148b-4748-8406-d969d614c8c3",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b32505c4-cbb9-4d4f-822f-3a8d073bc337",
+          "type": "PrimitiveMesh",
+          "enabled": true,
+          "primitive": "box",
+          "width": 40,
+          "height": 40,
+          "depth": 40,
+          "radius": 50,
+          "radiusTop": 50,
+          "radiusBottom": 50,
+          "length": 100,
+          "tube": 15,
+          "tubularSegments": 48,
+          "radialSegments": 24,
+          "p": 2,
+          "q": 3,
+          "widthSegments": 1,
+          "heightSegments": 1,
+          "depthSegments": 1,
+          "detail": 0,
+          "phiStart": 0,
+          "phiLength": 360,
+          "thetaStart": 0,
+          "thetaLength": 180,
+          "openEnded": false,
+          "radiusSegments": 4,
+          "profile": [
+            {
+              "x": -50,
+              "y": -40
+            },
+            {
+              "x": 50,
+              "y": -40
+            },
+            {
+              "x": 40,
+              "y": 40
+            },
+            {
+              "x": -40,
+              "y": 40
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            {
+              "x": 80,
+              "y": 40,
+              "z": 0
+            },
+            {
+              "x": 160,
+              "y": 0,
+              "z": 40
+            },
+            {
+              "x": 240,
+              "y": -20,
+              "z": 0
+            }
+          ],
+          "points": [
+            {
+              "x": -40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": -40
+            },
+            {
+              "x": 40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": -40,
+              "y": -40,
+              "z": 40
+            },
+            {
+              "x": 0,
+              "y": 50,
+              "z": 0
+            }
+          ],
+          "extrudeDepth": 40,
+          "bevelEnabled": true,
+          "bevelThickness": 4,
+          "bevelSize": 4,
+          "bevelOffset": 0,
+          "bevelSegments": 2,
+          "tubeRadius": 12,
+          "closed": false,
+          "text": "BloodBound",
+          "fontId": "helvetiker_regular",
+          "textSize": 40,
+          "textHeight": 8,
+          "curveSegments": 12,
+          "parametricFn": "klein",
+          "parametricSlices": 32,
+          "parametricStacks": 32,
+          "materialId": null,
+          "collidable": true,
+          "collisionType": "box",
+          "castShadow": true,
+          "receiveShadow": true,
+          "displacementSegments": 0
+        }
+      ]
+    },
+    {
+      "id": "actor_80393784-efae-439e-a6b2-def0325c1291",
+      "name": "Wall",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 100,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "brush",
+        "wall"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a1aa6e0d-8861-4f7f-a305-edba99472500",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 400,
+            "y": 200,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_3f44e11c-bf57-470c-b243-dd5b1b3ba7ae",
+      "name": "Subtractive Opening",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 90,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "brush",
+        "opening"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_df144008-a747-49c1-8b45-99e791880e1e",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 80,
+            "y": 140,
+            "z": 40
+          },
+          "color": "#c44",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8e1f3e5d-308e-4f24-8ffb-26b78c86494e",
+      "name": "Static Cube",
+      "transform": {
+        "position": {
+          "x": 300,
+          "y": 0,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_396dd1ef-2fbf-4c5a-938d-af0d12331302",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    }
+  ]
+}

@@ -35,6 +35,7 @@ import {
   AddActorsCommand,
   RemoveActorsCommand,
   SetTransformsCommand,
+  SetPivotCommand,
   SetBrushGeometryCommand,
   RenameActorCommand,
   SetBrushColorCommand,
@@ -116,6 +117,15 @@ import {
   WALL_ENDPOINT_SNAP_DIST,
 } from '../runtime/wallEndpoints.js';
 import { createStaticMeshActor } from './meshFactory.js';
+import {
+  applyPivotPreset,
+  actorSupportsPivotEdit,
+} from '../rules/pivotEdit.js';
+import {
+  applyActorLocalPivotDelta,
+  normalizeContentOffset,
+  snapshotPivotState,
+} from '../core/contentOffset.js';
 import { createLightActor } from './lightFactory.js';
 import { createEnvironmentActor } from './environmentFactory.js';
 import { createPrimitiveMeshActor } from './primitiveMeshFactory.js';
@@ -227,6 +237,10 @@ export function EditorProvider({ children }) {
   const faceMovePreviewRef = useRef(null);
   /** Gizmo mode: move (W) | rotate (E) | scale (R). */
   const [transformMode, setTransformModeState] = useState('move');
+  /** Batch 7.1 — pivot edit mode (uses translation gizmo on the actor origin). */
+  const [pivotEditMode, setPivotEditModeState] = useState(false);
+  /** Gizmo axis space: world (default) | local. */
+  const [gizmoSpace, setGizmoSpaceState] = useState('world');
   /**
    * Scale sub-mode (R toggles while already in scale):
    * face = brush face resize · gizmo = Unreal-style axis scale.
@@ -235,7 +249,22 @@ export function EditorProvider({ children }) {
   const setTransformMode = useCallback((mode) => {
     const next = mode === 'rotate' || mode === 'scale' ? mode : 'move';
     setTransformModeState(next);
+    if (next !== 'move') setPivotEditModeState(false);
     runtimeRef.current?.sceneView?.setTransformMode?.(next);
+  }, []);
+  const setPivotEditMode = useCallback((enabled) => {
+    const on = Boolean(enabled);
+    setPivotEditModeState(on);
+    if (on) {
+      setTransformModeState('move');
+      runtimeRef.current?.sceneView?.setTransformMode?.('move');
+    }
+    runtimeRef.current?.sceneView?.setPivotEditMode?.(on);
+  }, []);
+  const setGizmoSpace = useCallback((space) => {
+    const next = space === 'local' ? 'local' : 'world';
+    setGizmoSpaceState(next);
+    runtimeRef.current?.sceneView?.setGizmoSpace?.(next);
   }, []);
   const setScaleHandleStyle = useCallback((style) => {
     const next = style === 'gizmo' ? 'gizmo' : 'face';
@@ -1245,6 +1274,50 @@ export function EditorProvider({ children }) {
     runtimeRef.current?.setSelection(selectedRef.current);
   }, [world, mode, executeCommand, buildPrefabOverrideCommands, rejectSubtractIfTooComplex]);
 
+  const commitPivotChanges = useCallback((changes, label = 'Edit pivot') => {
+    if (!world || mode === 'play' || !changes?.length) return;
+    const meaningful = changes.filter((c) =>
+      JSON.stringify(c.before) !== JSON.stringify(c.after),
+    );
+    if (!meaningful.length) return;
+    for (const c of meaningful) {
+      const actor = world.getActor(c.after.actorId);
+      if (!actor) continue;
+      actor.transform.copyFrom(c.after.transform);
+      actor.contentOffset = { ...c.after.contentOffset };
+      for (const row of c.after.children || []) {
+        const child = world.getActor(row.actorId);
+        if (child) child.transform.copyFrom(row.transform);
+      }
+    }
+    const complexity = validateWorldSubtractComplexity(world);
+    if (rejectSubtractIfTooComplex(complexity)) {
+      for (const c of meaningful) {
+        const actor = world.getActor(c.before.actorId);
+        if (!actor) continue;
+        actor.transform.copyFrom(c.before.transform);
+        actor.contentOffset = { ...c.before.contentOffset };
+        for (const row of c.before.children || []) {
+          const child = world.getActor(row.actorId);
+          if (child) child.transform.copyFrom(row.transform);
+        }
+      }
+      runtimeRef.current?.resyncWorld();
+      runtimeRef.current?.setSelection(selectedRef.current);
+      return;
+    }
+    const pivotCmd = new SetPivotCommand({ world, changes: meaningful, label });
+    const ids = meaningful.map((c) => c.after.actorId);
+    const overrideCmds = buildPrefabOverrideCommands(ids);
+    executeCommand(
+      overrideCmds.length
+        ? new CompositeCommand({ commands: [pivotCmd, ...overrideCmds], label })
+        : pivotCmd,
+      { resync: true },
+    );
+    setDirty(true);
+  }, [world, mode, executeCommand, buildPrefabOverrideCommands, rejectSubtractIfTooComplex]);
+
   const commitBrushGeometry = useCallback((changes, label = 'Resize') => {
     if (!world || mode === 'play' || !changes?.length) return;
     const meaningful = changes.filter((c) =>
@@ -1630,6 +1703,79 @@ export function EditorProvider({ children }) {
     }
     commitTransforms([{ actorId, before, after }], 'Edit transform');
   }, [world, mode, commitTransforms]);
+
+  const applyPivotPresetToSelected = useCallback((preset) => {
+    if (!world || mode === 'play' || !selectedRef.current.length) return;
+    const resolver = {
+      getMeshBoundsMeters: (assetId) => assetResolver?.getMeshBoundsMeters?.(assetId)
+        || runtimeRef.current?.assetResolver?.getMeshBoundsMeters?.(assetId),
+      getMeshBoundsCenterMeters: (assetId) => assetResolver?.getMeshBoundsCenterMeters?.(assetId)
+        || runtimeRef.current?.assetResolver?.getMeshBoundsCenterMeters?.(assetId),
+    };
+    const changes = [];
+    for (const actorId of selectedRef.current) {
+      const actor = world.getActor(actorId);
+      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (!actorSupportsPivotEdit(actor)) continue;
+      const { before, after } = applyPivotPreset(actor, world, preset, resolver);
+      if (JSON.stringify(before) === JSON.stringify(after)) continue;
+      changes.push({ before, after });
+    }
+    if (changes.length) {
+      // applyPivotPreset already mutated; restore before so command.do applies after.
+      for (const c of changes) {
+        const actor = world.getActor(c.before.actorId);
+        if (!actor) continue;
+        actor.transform.copyFrom(c.before.transform);
+        actor.contentOffset = { ...c.before.contentOffset };
+        for (const row of c.before.children || []) {
+          const child = world.getActor(row.actorId);
+          if (child) child.transform.copyFrom(row.transform);
+        }
+      }
+      commitPivotChanges(changes, `Pivot: ${preset}`);
+    }
+  }, [world, mode, commitPivotChanges, assetResolver]);
+
+  const updateSelectedContentOffset = useCallback((partial, { snap = false } = {}) => {
+    if (!world || mode === 'play' || selectedRef.current.length !== 1) return;
+    const actorId = selectedRef.current[0];
+    const actor = world.getActor(actorId);
+    if (!actor || isEffectivelyLocked(actor, world)) return;
+    if (!actorSupportsPivotEdit(actor)) return;
+    const before = snapshotPivotState(actor, world);
+    const next = {
+      ...normalizeContentOffset(actor.contentOffset),
+      ...partial,
+    };
+    if (snap) {
+      const g = gridRef.current;
+      if (partial.x !== undefined) next.x = snapToGrid(next.x, g);
+      if (partial.y !== undefined) next.y = snapToGrid(next.y, g);
+      if (partial.z !== undefined) next.z = snapToGrid(next.z, g);
+    }
+    // Changing contentOffset alone moves visuals — convert to pivot delta so
+    // content stays put: newOffset = next ⇒ deltaLocal = oldOffset - next? 
+    // User edits "Pivot offset" as contentOffset (content relative to pivot).
+    // Setting contentOffset numerically without moving actor WOULD move content.
+    // Spec: numeric XYZ offsets for pivot — treat as setting contentOffset while
+    // compensating actor position so content world pose stays fixed.
+    const old = normalizeContentOffset(actor.contentOffset);
+    const deltaLocal = {
+      x: old.x - next.x,
+      y: old.y - next.y,
+      z: old.z - next.z,
+    };
+    const { after } = applyActorLocalPivotDelta(actor, deltaLocal, world);
+    // applyActorLocalPivotDelta moves pivot by deltaLocal and sets contentOffset = old - delta = next ✓
+    actor.transform.copyFrom(before.transform);
+    actor.contentOffset = { ...before.contentOffset };
+    for (const row of before.children || []) {
+      const child = world.getActor(row.actorId);
+      if (child) child.transform.copyFrom(row.transform);
+    }
+    commitPivotChanges([{ before, after }], 'Edit pivot offset');
+  }, [world, mode, commitPivotChanges]);
 
   const reparentSelected = useCallback((newParentId) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -2757,6 +2903,7 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || !asset?.id) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
+    const metaOffset = asset?.meta?.defaultContentOffset;
     const actor = createStaticMeshActor({
       assetId: asset.id,
       name: asset.name || 'Static Mesh',
@@ -2766,6 +2913,7 @@ export function EditorProvider({ children }) {
       snapY: options.snapY ?? false,
       collidable: options.collidable,
       collisionType: options.collisionType,
+      contentOffset: options.contentOffset ?? metaOffset ?? null,
     });
     executeCommand(
       new AddActorsCommand({
@@ -3973,9 +4121,16 @@ export function EditorProvider({ children }) {
     cancelFaceMove,
     transformMode,
     setTransformMode,
+    pivotEditMode,
+    setPivotEditMode,
+    gizmoSpace,
+    setGizmoSpace,
     scaleHandleStyle,
     setScaleHandleStyle,
     cycleScaleTransform,
+    commitPivotChanges,
+    applyPivotPresetToSelected,
+    updateSelectedContentOffset,
     levelName,
     setLevelName,
     levels,

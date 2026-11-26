@@ -57,7 +57,7 @@ function makeView(definitions = {}) {
   for (const key of [
     'clearWorldMeshes', '_createLight', '_stampActorVisual', '_detachChildActorGroups',
     '_isActorVisualCurrent', 'updateActorTransform', 'removeActorVisual', 'rebuildActorVisual',
-    '_populateActorComponents', '_syncActorHierarchy', 'resetSyncStats', 'getSyncStats',
+    '_populateActorComponents', '_syncContentRoot', '_syncActorHierarchy', 'resetSyncStats', 'getSyncStats',
     'syncIncremental', 'syncFromWorld', '_addActorVisual', '_addBrushVisual',
     '_addBatchedWorldSolidMesh', '_getSharedCutterMaterials', '_applySurfaceMaterials',
     '_applyBrushMaterials', '_applyHiddenHullFaces', '_addStairVisual',
@@ -346,7 +346,10 @@ describe('SceneView batched World Solid visual', () => {
     await settle();
 
     const group = view._actorMeshes.get(solid.id).group;
-    const mesh = group.children.find((c) => c.userData.batchedWorldSolid);
+    let mesh = null;
+    group.traverse((c) => {
+      if (!mesh && c.userData?.batchedWorldSolid) mesh = c;
+    });
     const geomSpy = vi.spyOn(mesh.geometry, 'dispose');
     const matSpies = mesh.material.map((m) => vi.spyOn(m, 'dispose'));
     disposeObjectTree(group);

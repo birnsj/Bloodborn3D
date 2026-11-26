@@ -104,6 +104,7 @@ function makeHarness() {
     'removeActorVisual',
     'rebuildActorVisual',
     '_populateActorComponents',
+    '_syncContentRoot',
     '_syncActorHierarchy',
     'resetSyncStats',
     'getSyncStats',
@@ -141,9 +142,12 @@ function makeHarness() {
 /** Solid count baked into an actor's last-built visual. */
 function builtSolids(view, actor) {
   let count = null;
-  view._actorMeshes.get(actor.id).group.traverse((obj) => {
-    if (obj.userData?.actorId === actor.id && obj.userData.solidCount != null) {
-      count = obj.userData.solidCount;
+  const group = view._actorMeshes.get(actor.id)?.group;
+  if (!group) return null;
+  group.traverse((obj) => {
+    const n = obj.userData?.solidCount;
+    if (obj.userData?.actorId === actor.id && typeof n === 'number') {
+      count = n;
     }
   });
   return count;
@@ -552,7 +556,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
 
   it('all shipped levels pass geometry validation', () => {
     const files = readdirSync(LEVELS_DIR).filter((f) => f.endsWith('.json'));
-    expect(files).toHaveLength(23);
+    expect(files).toHaveLength(24);
     for (const file of files) {
       const raw = JSON.parse(readFileSync(path.join(LEVELS_DIR, file), 'utf8'));
       const result = validateLevelGeometry(raw);

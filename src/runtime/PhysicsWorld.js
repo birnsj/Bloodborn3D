@@ -1,6 +1,10 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { toMeters } from '../core/units.js';
 import { getWorldTransform } from '../core/hierarchy.js';
+import {
+  getContentWorldTransform,
+  contentOffsetToMeters,
+} from '../core/contentOffset.js';
 import { getBrushRenderSolids } from './brushGeometry.js';
 import { getRampSlopeCollider } from './rampGeometry.js';
 import {
@@ -194,7 +198,7 @@ export class PhysicsWorld {
 
     const box = this._resolveMeshCollisionBox(f.assetId);
     const dims = resolveStaticCollisionDims(f, box.size, box.center);
-    const worldXform = getWorldTransform(actor, actor.world || null);
+    const worldXform = getContentWorldTransform(actor, actor.world || null);
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
     const sx = Math.abs(scale.x || 1);
     const sy = Math.abs(scale.y || 1);
@@ -300,7 +304,7 @@ export class PhysicsWorld {
     let mode = f.collisionType === 'auto' ? autoCollisionMode(f.primitive) : f.collisionType;
     if (mode === 'none') return;
 
-    const worldXform = getWorldTransform(actor, actor.world || null);
+    const worldXform = getContentWorldTransform(actor, actor.world || null);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -425,7 +429,7 @@ export class PhysicsWorld {
 
   _addConvexBrushCollider(actor, convex, gameWorld = null) {
     const world = gameWorld || actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -455,7 +459,7 @@ export class PhysicsWorld {
       && !(brush.openings?.length)
       && isWallBrush(actor)
     ) {
-      const worldXform = getWorldTransform(actor, world);
+      const worldXform = getContentWorldTransform(actor, world);
       const pos = worldXform.position;
       const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
       const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -483,7 +487,7 @@ export class PhysicsWorld {
     const { solids } = getBrushRenderSolids(brush, world ? { world, actor } : null);
     if (!solids.length) return;
 
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -517,7 +521,7 @@ export class PhysicsWorld {
     const steps = getStairSteps(stair);
     if (!steps.length) return;
     const world = actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -558,7 +562,7 @@ export class PhysicsWorld {
    */
   _addRampCollider(actor, ramp) {
     const world = actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -585,7 +589,7 @@ export class PhysicsWorld {
 
   _addColumnCollider(actor, column) {
     const world = actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -626,7 +630,7 @@ export class PhysicsWorld {
     const solids = getArchColliderSolids(arch);
     if (!solids.length) return;
     const world = actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -659,7 +663,7 @@ export class PhysicsWorld {
     const solids = getCurvedWallColliderSolids(curvedWall);
     if (!solids.length) return;
     const world = actor.world || null;
-    const worldXform = getWorldTransform(actor, world);
+    const worldXform = getContentWorldTransform(actor, world);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
     const scale = worldXform.scale || { x: 1, y: 1, z: 1 };
@@ -694,6 +698,7 @@ export class PhysicsWorld {
    * @param {{ x: number, y: number, z: number }} [localCenterMeters] mesh-local AABB center offset
    */
   _addBoxCollider(actor, halfMeters, localCenterMeters = null) {
+    // Body at actor pivot; contentOffset is folded into the local collider center.
     const worldXform = getWorldTransform(actor, actor.world || null);
     const pos = worldXform.position;
     const rot = worldXform.rotation || { x: 0, y: 0, z: 0 };
@@ -705,17 +710,17 @@ export class PhysicsWorld {
     const sx = scale.x || 1;
     const sy = scale.y || 1;
     const sz = scale.z || 1;
+    const content = contentOffsetToMeters(actor?.contentOffset);
+    const cx = (localCenterMeters?.x || 0) + content.x;
+    const cy = (localCenterMeters?.y || 0) + content.y;
+    const cz = (localCenterMeters?.z || 0) + content.z;
     const colliderDesc = RAPIER.ColliderDesc.cuboid(
       Math.max(0.01, halfMeters.x * Math.abs(sx)),
       Math.max(0.01, halfMeters.y * Math.abs(sy)),
       Math.max(0.01, halfMeters.z * Math.abs(sz)),
     );
-    if (localCenterMeters) {
-      colliderDesc.setTranslation(
-        localCenterMeters.x * sx,
-        localCenterMeters.y * sy,
-        localCenterMeters.z * sz,
-      );
+    if (cx || cy || cz) {
+      colliderDesc.setTranslation(cx * sx, cy * sy, cz * sz);
     }
     const collider = this.world.createCollider(colliderDesc, body);
     this._bodies.set(actor.id, { body, colliders: [collider], actor });

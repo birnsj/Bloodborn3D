@@ -40,7 +40,9 @@ export function actorTransformFingerprint(actor) {
   const t = typeof actor.transform.toJSON === 'function'
     ? actor.transform.toJSON()
     : actor.transform;
-  return JSON.stringify(stable(t));
+  // Content offset shifts the visual/CSG frame relative to the pivot.
+  const contentOffset = actor.contentOffset || { x: 0, y: 0, z: 0 };
+  return JSON.stringify(stable({ transform: t, contentOffset }));
 }
 
 /** Parent id fingerprint for hierarchy re-linking without mesh rebuild. */

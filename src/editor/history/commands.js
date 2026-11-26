@@ -127,6 +127,48 @@ export class SetTransformsCommand {
 }
 
 /**
+ * Batch 7.1 — pivot edit: actor transform + contentOffset + compensated children.
+ * changes: [{ before: snapshotPivotState, after: snapshotPivotState }]
+ */
+export class SetPivotCommand {
+  constructor({ world, changes, label = 'Edit pivot' }) {
+    this.world = world;
+    this.label = label;
+    this.changes = (changes || []).map((c) => ({
+      before: structuredClone(c.before),
+      after: structuredClone(c.after),
+    }));
+  }
+
+  do() {
+    this._apply('after');
+  }
+
+  undo() {
+    this._apply('before');
+  }
+
+  _apply(key) {
+    for (const c of this.changes) {
+      const state = c[key];
+      if (!state?.actorId) continue;
+      const actor = this.world.getActor(state.actorId);
+      if (!actor) continue;
+      actor.transform.copyFrom(state.transform);
+      actor.contentOffset = {
+        x: Number(state.contentOffset?.x) || 0,
+        y: Number(state.contentOffset?.y) || 0,
+        z: Number(state.contentOffset?.z) || 0,
+      };
+      for (const row of state.children || []) {
+        const child = this.world.getActor(row.actorId);
+        if (child) child.transform.copyFrom(row.transform);
+      }
+    }
+  }
+}
+
+/**
  * Set brush size (and optional compensating position) for actors.
  */
 export class SetBrushGeometryCommand {

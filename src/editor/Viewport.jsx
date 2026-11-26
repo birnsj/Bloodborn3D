@@ -13,6 +13,12 @@ import {
   WALL_MODULE_SIZE,
 } from '../core/units.js';
 import { getBrushSnapSize, snapMovedAxis } from './gridSnap.js';
+import {
+  applyActorWorldPivotPosition,
+  snapshotPivotState,
+  restorePivotState,
+} from '../core/contentOffset.js';
+import { actorSupportsPivotEdit } from '../rules/pivotEdit.js';
 import { resizeBrushFace } from './brushFactory.js';
 import { findAsset } from '../assets/AssetRegistry.js';
 import { ASSET_DRAG_MIME_MATERIAL } from '../assets/assetCatalog.js';
@@ -107,9 +113,14 @@ export function Viewport() {
     alignSurfaceToReference,
     setStatus,
     transformMode,
+    pivotEditMode,
+    setPivotEditMode,
+    gizmoSpace,
+    setGizmoSpace,
     scaleHandleStyle,
     setTransformMode,
     cycleScaleTransform,
+    commitPivotChanges,
     selectActor,
     selectAllActors,
     deselectAllActors,
@@ -867,6 +878,14 @@ export function Viewport() {
   }, [runtimeRef, transformMode]);
 
   useEffect(() => {
+    runtimeRef.current?.sceneView?.setPivotEditMode?.(pivotEditMode);
+  }, [runtimeRef, pivotEditMode]);
+
+  useEffect(() => {
+    runtimeRef.current?.sceneView?.setGizmoSpace?.(gizmoSpace);
+  }, [runtimeRef, gizmoSpace]);
+
+  useEffect(() => {
     runtimeRef.current?.sceneView?.setScaleHandleStyle?.(scaleHandleStyle);
   }, [runtimeRef, scaleHandleStyle]);
 
@@ -1004,10 +1023,27 @@ export function Viewport() {
           cancelClipSession?.();
         } else if (placeSessionRef.current) {
           clearPlacementSession();
+        } else if (dragRef.current?.type === 'pivot') {
+          runtimeRef.current?.sceneView?.gizmo?.endDrag?.();
+          for (const s of dragRef.current.beforeStates || []) {
+            restorePivotState(world, s.before);
+            const actor = world.getActor(s.actorId);
+            if (actor) runtimeRef.current?.sceneView?.updateActorTransform?.(actor);
+            for (const row of s.before.children || []) {
+              const child = world.getActor(row.actorId);
+              if (child) runtimeRef.current?.sceneView?.updateActorTransform?.(child);
+            }
+          }
+          dragRef.current = null;
+          runtimeRef.current?.sceneView?.setSelection?.(selectedActorIds, world);
+          setStatus('Pivot edit cancelled');
         } else if (dragRef.current?.type === 'faceMove') {
           runtimeRef.current?.sceneView?.gizmo?.endDrag?.();
           cancelFaceMove?.();
           dragRef.current = null;
+        } else if (pivotEditMode) {
+          setPivotEditMode(false);
+          setStatus('Pivot edit off');
         } else if (tool === 'align') {
           setAlignReferenceSurface(null);
           setSelectedSurface(null);
@@ -1046,18 +1082,27 @@ export function Viewport() {
         return;
       }
 
-      // W/E/R — transform · F — focus · G — game view · [ ] — grid · Shift+G — snap
+      // W/E/R — transform · P — pivot · F — focus · G — game view · [ ] — grid · Shift+G — snap
       // R enters scale; pressing R again toggles face-resize ↔ Unreal axis gizmo.
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         const k = e.key.toLowerCase();
         if (k === 'w') {
+          setPivotEditMode(false);
           setTransformMode('move');
           setTool('select');
         } else if (k === 'e') {
+          setPivotEditMode(false);
           setTransformMode('rotate');
           setTool('select');
+        } else if (k === 'p') {
+          e.preventDefault();
+          setTool('select');
+          const next = !pivotEditMode;
+          setPivotEditMode(next);
+          setStatus(next ? 'Pivot edit on — drag the gizmo' : 'Pivot edit off');
         } else if (k === 'r') {
           e.preventDefault();
+          setPivotEditMode(false);
           setTool('select');
           const style = cycleScaleTransform();
           setStatus(
@@ -1146,6 +1191,10 @@ export function Viewport() {
     updatePlacementPreview,
     focusSelected,
     setStatus,
+    pivotEditMode,
+    setPivotEditMode,
+    world,
+    selectedActorIds,
   ]);
 
   const pointerNorm = (e, { activate = true } = {}) => {
@@ -1673,46 +1722,77 @@ export function Viewport() {
       }
 
       if (gizmoHit.kind === 'move') {
-        const beforeStates = transformIds.map((id) => {
-          const actor = world.getActor(id);
-          if (!actor) return null;
-          const worldPos = runtimeRef.current
-            ? // use hierarchy helper via editor — fall back to local if missing
-              (actor.parentId
-                ? null
-                : { ...actor.transform.position })
-            : { ...actor.transform.position };
-          // Capture world start via Details helper: compute from runtime scene group
-          const entry = runtimeRef.current?.sceneView?._actorMeshes?.get(id);
-          let startPos;
-          if (entry?.group) {
-            const p = new THREE.Vector3();
-            entry.group.getWorldPosition(p);
-            startPos = { x: p.x * 100, y: p.y * 100, z: p.z * 100 };
-          } else {
-            startPos = worldPos || { ...actor.transform.position };
+        if (pivotEditMode) {
+          const beforeStates = transformIds.map((id) => {
+            const actor = world.getActor(id);
+            if (!actor || !actorSupportsPivotEdit(actor)) return null;
+            const entry = runtimeRef.current?.sceneView?._actorMeshes?.get(id);
+            let startPos;
+            if (entry?.group) {
+              const p = new THREE.Vector3();
+              entry.group.getWorldPosition(p);
+              startPos = { x: p.x * 100, y: p.y * 100, z: p.z * 100 };
+            } else {
+              startPos = { ...actor.transform.position };
+            }
+            return {
+              actorId: id,
+              before: snapshotPivotState(actor, world),
+              startPos,
+            };
+          }).filter(Boolean);
+          if (!beforeStates.length) {
+            sceneView.gizmo.endDrag?.();
+            setStatus('Pivot edit: select a mesh, primitive, or brush');
+            return;
           }
-          // Brushes: edge snap via AABB size. Props: pivot snap (size null).
-          const snapSize = getBrushSnapSize(actor);
-          return {
-            actorId: id,
-            before: actor.transform.toJSON(),
-            startPos,
-            snapSize,
+          dragRef.current = {
+            type: 'pivot',
+            axis: gizmoHit.axis,
+            beforeStates,
           };
-        }).filter(Boolean);
+        } else {
+          const beforeStates = transformIds.map((id) => {
+            const actor = world.getActor(id);
+            if (!actor) return null;
+            const worldPos = runtimeRef.current
+              ? // use hierarchy helper via editor — fall back to local if missing
+                (actor.parentId
+                  ? null
+                  : { ...actor.transform.position })
+              : { ...actor.transform.position };
+            // Capture world start via Details helper: compute from runtime scene group
+            const entry = runtimeRef.current?.sceneView?._actorMeshes?.get(id);
+            let startPos;
+            if (entry?.group) {
+              const p = new THREE.Vector3();
+              entry.group.getWorldPosition(p);
+              startPos = { x: p.x * 100, y: p.y * 100, z: p.z * 100 };
+            } else {
+              startPos = worldPos || { ...actor.transform.position };
+            }
+            // Brushes: edge snap via AABB size. Props: pivot snap (size null).
+            const snapSize = getBrushSnapSize(actor);
+            return {
+              actorId: id,
+              before: actor.transform.toJSON(),
+              startPos,
+              snapSize,
+            };
+          }).filter(Boolean);
 
-        if (!beforeStates.length) {
-          sceneView.gizmo.endDrag?.();
-          return;
+          if (!beforeStates.length) {
+            sceneView.gizmo.endDrag?.();
+            return;
+          }
+
+          dragRef.current = {
+            type: 'move',
+            axis: gizmoHit.axis,
+            beforeStates,
+            duplicated: Boolean(e.altKey),
+          };
         }
-
-        dragRef.current = {
-          type: 'move',
-          axis: gizmoHit.axis,
-          beforeStates,
-          duplicated: Boolean(e.altKey),
-        };
       } else if (gizmoHit.kind === 'resize') {
         const actorId = selectedActorIds[selectedActorIds.length - 1];
         const actor = world.getActor(actorId);
@@ -1900,6 +1980,44 @@ export function Viewport() {
       return;
     }
 
+    if (drag.type === 'pivot') {
+      const raycaster = sceneView.getRaycaster(nx, ny, cam);
+      const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
+      if (!sample) return;
+      const altFine = e.altKey;
+      const freeMove = !gridSnap && !altFine;
+      const snapStep = altFine ? 1 : gridSize;
+      let scalar = sample.deltaEditor;
+      if (!freeMove) {
+        scalar = Math.round(scalar / snapStep) * snapStep;
+      }
+      const dir = sample.dir
+        ? { x: sample.dir[0], y: sample.dir[1], z: sample.dir[2] }
+        : {
+          x: drag.axis === 'x' ? 1 : 0,
+          y: drag.axis === 'y' ? 1 : 0,
+          z: drag.axis === 'z' ? 1 : 0,
+        };
+      for (const s of drag.beforeStates) {
+        restorePivotState(world, s.before);
+        const target = {
+          x: s.startPos.x + dir.x * scalar,
+          y: s.startPos.y + dir.y * scalar,
+          z: s.startPos.z + dir.z * scalar,
+        };
+        const actor = world.getActor(s.actorId);
+        if (!actor) continue;
+        applyActorWorldPivotPosition(actor, target, world);
+        runtimeRef.current?.sceneView?.updateActorTransform?.(actor);
+        for (const row of s.before.children || []) {
+          const child = world.getActor(row.actorId);
+          if (child) runtimeRef.current?.sceneView?.updateActorTransform?.(child);
+        }
+      }
+      runtimeRef.current?.sceneView?.setSelection?.(selectedActorIds, world);
+      return;
+    }
+
     if (drag.type === 'move') {
       const raycaster = sceneView.getRaycaster(nx, ny, cam);
       const sample = sceneView.gizmo.sampleDrag(raycaster.ray);
@@ -1910,18 +2028,29 @@ export function Viewport() {
       const freeMove = !gridSnap && !altFine && !drag.duplicated;
       const snapStep = altFine ? 1 : gridSize;
       const delta = sample.deltaEditor;
+      const dir = sample.dir
+        ? { x: sample.dir[0], y: sample.dir[1], z: sample.dir[2] }
+        : null;
       const updates = drag.beforeStates.map((s) => {
         const position = { ...s.startPos };
-        const sizeAlong = s.snapSize?.[drag.axis] ?? null;
-        if (freeMove) {
-          position[drag.axis] = s.startPos[drag.axis] + delta;
+        if (dir && gizmoSpace === 'local') {
+          let scalar = delta;
+          if (!freeMove) scalar = Math.round(scalar / snapStep) * snapStep;
+          position.x = s.startPos.x + dir.x * scalar;
+          position.y = s.startPos.y + dir.y * scalar;
+          position.z = s.startPos.z + dir.z * scalar;
         } else {
-          position[drag.axis] = snapMovedAxis({
-            startValue: s.startPos[drag.axis],
-            delta,
-            gridSize: snapStep,
-            sizeAlongAxis: sizeAlong,
-          });
+          const sizeAlong = s.snapSize?.[drag.axis] ?? null;
+          if (freeMove) {
+            position[drag.axis] = s.startPos[drag.axis] + delta;
+          } else {
+            position[drag.axis] = snapMovedAxis({
+              startValue: s.startPos[drag.axis],
+              delta,
+              gridSize: snapStep,
+              sizeAlongAxis: sizeAlong,
+            });
+          }
         }
         return { actorId: s.actorId, position };
       });
@@ -2131,6 +2260,16 @@ export function Viewport() {
             : drag.current.y,
         z: drag.current.z,
       });
+    } else if (drag.type === 'pivot') {
+      runtimeRef.current?.sceneView.gizmo.endDrag();
+      const changes = drag.beforeStates.map((s) => {
+        const actor = world.getActor(s.actorId);
+        return {
+          before: s.before,
+          after: actor ? snapshotPivotState(actor, world) : s.before,
+        };
+      });
+      commitPivotChanges(changes, 'Edit pivot');
     } else if (drag.type === 'move' || drag.type === 'rotate' || drag.type === 'scale') {
       runtimeRef.current?.sceneView.gizmo.endDrag();
       const label = drag.type === 'move' ? 'Move' : drag.type === 'rotate' ? 'Rotate' : 'Scale';

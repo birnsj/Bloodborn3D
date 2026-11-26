@@ -244,6 +244,10 @@ export function DetailsPanel({ docked = false } = {}) {
     gridSize,
     world,
     updateSelectedTransform,
+    updateSelectedContentOffset,
+    applyPivotPresetToSelected,
+    pivotEditMode,
+    setPivotEditMode,
     updateSelectedBrush,
     updateSelectedConvexBrush,
     convertSelectedToConvexBrush,
@@ -708,6 +712,46 @@ export function DetailsPanel({ docked = false } = {}) {
                 helpId="details.transform.scale"
                 onChange={(partial) => updateSelectedTransform({ scale: partial }, { snap: false })}
               />
+            </Collapsible>
+
+            <Collapsible title="Pivot" storageKey="details.pivot">
+              <p className="bb-muted" {...helpProps('details.pivot')}>
+                Content offset is relative to the actor origin. Editing the pivot
+                moves the origin without moving visible geometry or children.
+              </p>
+              <div className="bb-field-caption">Content offset</div>
+              <AxisInputs
+                values={selectedActor.contentOffset || { x: 0, y: 0, z: 0 }}
+                step={gridSize}
+                disabled={disabled}
+                helpId="details.pivot.offset"
+                onChange={(partial) => updateSelectedContentOffset?.(partial)}
+              />
+              <div className="bb-row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                <button
+                  type="button"
+                  className={`bb-btn${pivotEditMode ? ' bb-btn--active' : ''}`}
+                  disabled={disabled}
+                  onClick={() => setPivotEditMode?.(!pivotEditMode)}
+                  {...helpProps('details.pivot.editMode')}
+                >
+                  {pivotEditMode ? 'Exit Pivot Edit' : 'Pivot Edit'}
+                </button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('original')}>Reset</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('center')}>Center</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('bottomCenter')}>Bottom</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('topCenter')}>Top</button>
+              </div>
+              <div className="bb-row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNx')}>−X</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePx')}>+X</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNy')}>−Y</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePy')}>+Y</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNz')}>−Z</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePz')}>+Z</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMin')}>Corner −</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMax')}>Corner +</button>
+              </div>
             </Collapsible>
 
             {brush && (

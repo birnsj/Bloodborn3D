@@ -12,7 +12,8 @@
 **Batch 5 status:** **Implemented** (native PrimitiveMesh + procedural props).  
 **Batch 6 status:** **Implemented** (StaticMesh collision / materials / LOD / opt-in InstancedMesh).  
 **Batch 7 status:** **Complete** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.  
-**Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.
+**Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.  
+**Batch 7.1 status:** **Complete** — actor + asset pivot editing (`contentOffset`), presets, gizmo local/world, undo, acceptance level. See `docs/ACCEPTANCE_PIVOT_EDITING.md`.
 
 ### Principles
 
@@ -283,7 +284,7 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 | computeVertexNormals / tangents | BufferGeometry / utils | Internal ad hoc | Tool buttons + helpers | S | H | **Partial** |
 | VertexNormalsHelper / VertexTangentsHelper | addons | N | Viewport diagnostic | S | M | **Missing** |
 | Box3Helper / bounds display | core | Selection + inspect bounds | Mesh diagnostics | S | M | **Partial** |
-| Geometry center / pivot | utils / manual | N | Asset tool | S | H | **Deferred** |
+| Geometry center / pivot | Actor.contentOffset + presets | Y | Details / toolbar / Asset Viewer | S | H | **Done** (Batch 7.1) |
 | HDR/EXR import | HDRLoader/EXRLoader | Y | Asset Viewer → Environment | M | H | **Done** (Batch 1) |
 
 ---
@@ -526,7 +527,7 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | P1 | GLTFExporter / OBJExporter (+ STL/PLY/USDZ) | exporters | **Complete** — USDZ via `parseAsync`; GLTF/USDZ reimport verified |
 | P2 | FBX/OBJ/STL/PLY/Collada/USDZ import → GLB normalize | loaders | **Complete** — USDLoader; fixtures + CDP evidence |
 | P2 | Normals/tangents helpers + bounds viz | helpers | **Partial** — bounds/inspect in Asset Viewer; dedicated helpers deferred |
-| P2 | Pivot/center utilities | utils | **Deferred** — no dedicated UI this batch |
+| P2 | Pivot/center utilities | Actor.contentOffset + Asset Viewer | **Done** (Batch 7.1) |
 | P1 | Auto LOD generation → Batch 6 `lodLevels` | SimplifyModifier | **Done** |
 | — | Compression **encode** (Draco/Basis/meshopt) | encoders | **Deferred** — no official encoders bundled; decode-only documented |
 

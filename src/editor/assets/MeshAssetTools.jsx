@@ -14,11 +14,17 @@ import {
 import { simplifySceneRoot } from '../../assets/meshSimplify.js';
 import { generateLodLevelsFromRoot, DEFAULT_LOD_RATIOS, DEFAULT_LOD_DISTANCES_EU } from '../../assets/meshLodGenerate.js';
 import { describeCompressionSupport } from '../../runtime/gltfCompression.js';
+import {
+  assetPivotPresetOffset,
+  PIVOT_PRESET_LABELS,
+} from '../../rules/pivotEdit.js';
+import { normalizeContentOffset } from '../../core/contentOffset.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 
 export function MeshAssetTools({
   asset,
   importDerivedMeshGlb,
+  updateMeshMeta,
   notify,
 }) {
   const [report, setReport] = useState(() => buildMeshAssetReport(asset));
@@ -26,12 +32,15 @@ export function MeshAssetTools({
   const [ratio, setRatio] = useState(0.5);
   const [previewCompare, setPreviewCompare] = useState(null);
   const [exportFormat, setExportFormat] = useState('glb');
+  const [pivotDraft, setPivotDraft] = useState(() =>
+    normalizeContentOffset(asset?.meta?.defaultContentOffset));
   const compression = describeCompressionSupport();
 
   useEffect(() => {
     let cancelled = false;
     setReport(buildMeshAssetReport(asset));
     setPreviewCompare(null);
+    setPivotDraft(normalizeContentOffset(asset?.meta?.defaultContentOffset));
     (async () => {
       if (!asset?.path) return;
       const url = publicAssetUrl(asset.path);
@@ -41,7 +50,27 @@ export function MeshAssetTools({
       setReport(buildMeshAssetReport(asset, live));
     })();
     return () => { cancelled = true; };
-  }, [asset?.id, asset?.path, asset?.meta?.bytes]);
+  }, [asset?.id, asset?.path, asset?.meta?.bytes, asset?.meta?.defaultContentOffset]);
+
+  const saveAssetPivot = useCallback(async (offset, label = 'Saved asset default pivot') => {
+    if (!asset?.id || !updateMeshMeta) return;
+    setBusy('pivot');
+    try {
+      const next = normalizeContentOffset(offset);
+      await updateMeshMeta(asset.id, { defaultContentOffset: next });
+      setPivotDraft(next);
+      notify(`${label}. Existing placed actors are unchanged.`);
+    } catch (err) {
+      notify(err.message || String(err));
+    } finally {
+      setBusy(null);
+    }
+  }, [asset, updateMeshMeta, notify]);
+
+  const applyAssetPivotPreset = useCallback(async (preset) => {
+    const offset = assetPivotPresetOffset(preset, asset?.meta || report);
+    await saveAssetPivot(offset, `Asset pivot: ${PIVOT_PRESET_LABELS[preset] || preset}`);
+  }, [asset, report, saveAssetPivot]);
 
   const runSimplifyPreview = useCallback(async () => {
     if (!asset?.path) return;
@@ -255,6 +284,40 @@ export function MeshAssetTools({
           ))}
         </ul>
       )}
+
+      <h4 className="bb-mesh-tools__title" {...helpProps('assetViewer.pivot')}>Default Placement Pivot</h4>
+      <p className="bb-muted">
+        Saved as asset meta for future placements only. Source GLB is never rewritten.
+        Existing actors keep their own pivots unless you apply explicitly in the level.
+      </p>
+      <div className="bb-field-caption">Content offset (eu)</div>
+      <div className="bb-mesh-tools__row">
+        {['x', 'y', 'z'].map((axis) => (
+          <label key={axis} className="bb-field">
+            <span className="bb-field__label">{axis.toUpperCase()}</span>
+            <input
+              className="bb-input"
+              type="number"
+              step={1}
+              value={pivotDraft[axis]}
+              disabled={Boolean(busy)}
+              onChange={(e) => setPivotDraft((prev) => ({
+                ...prev,
+                [axis]: Number(e.target.value) || 0,
+              }))}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="bb-mesh-tools__row">
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => saveAssetPivot(pivotDraft)}>
+          {busy === 'pivot' ? 'Saving…' : 'Save default pivot'}
+        </button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('original')}>Reset</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('center')}>Center</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('bottomCenter')}>Bottom</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('topCenter')}>Top</button>
+      </div>
 
       <h4 className="bb-mesh-tools__title">Export</h4>
       <label className="bb-field">

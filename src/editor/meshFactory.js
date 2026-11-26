@@ -19,6 +19,8 @@ export function createStaticMeshActor({
   snapY = true,
   collidable = false,
   collisionType = 'none',
+  /** Placement pivot offset from asset meta (editor units). */
+  contentOffset = null,
 } = {}) {
   if (!assetId) throw new Error('assetId required');
 
@@ -32,6 +34,7 @@ export function createStaticMeshActor({
     id: createId('actor'),
     name,
     transform: new Transform({ position: pos, rotation: { ...rotation }, scale: { ...scale } }),
+    contentOffset: contentOffset || null,
     tags: ['mesh', 'prop'],
     components: [
       new StaticMeshComponent({

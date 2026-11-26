@@ -153,8 +153,18 @@ export const HELP_CONTENT = {
   },
   'toolbar.select': {
     title: 'Select',
-    body: 'Select actors in the viewport and use the transform gizmo. Drag on empty space for a marquee. Switch modes with W (move), E (rotate), or R (scale).',
-    tips: 'W/E/R · R again toggles face-resize ↔ Unreal scale gizmo · F focus · Alt+gizmo = duplicate.',
+    body: 'Select actors in the viewport and use the transform gizmo. Drag on empty space for a marquee. Switch modes with W (move), E (rotate), or R (scale). P enters Pivot Edit.',
+    tips: 'W/E/R · P pivot · R again toggles face-resize ↔ Unreal scale gizmo · F focus · Alt+gizmo = duplicate.',
+  },
+  'toolbar.pivotEdit': {
+    title: 'Pivot Edit',
+    body: 'Move the actor origin (pivot) with the translation gizmo without moving visible geometry, collision, or child actors. Subsequent rotate/scale use the new pivot. Escape cancels an active drag or exits the mode.',
+    shortcut: 'P',
+    tips: 'Works on StaticMesh, PrimitiveMesh, and brushes. Details → Pivot has presets (center, bottom, faces, corners) and numeric content offset.',
+  },
+  'toolbar.gizmoSpace': {
+    title: 'Gizmo Space',
+    body: 'World: axes align to the world. Local: axes follow the selected actor’s rotation. Applies to Move and Pivot Edit.',
   },
   'toolbar.surface': {
     title: 'Surface Selection',
@@ -561,6 +571,18 @@ export const HELP_CONTENT = {
   'details.transform.scale': {
     title: 'Scale',
     body: 'Local scale relative to the parent. Brush collision and mesh box colliders use world scale.',
+  },
+  'details.pivot': {
+    title: 'Pivot',
+    body: 'Content offset is where geometry sits relative to the actor origin. Editing the pivot (gizmo, presets, or numeric offset) keeps world geometry fixed while changing the origin used for rotate/scale.',
+  },
+  'details.pivot.offset': {
+    title: 'Content Offset',
+    body: 'Editor-unit offset of the content frame from the pivot. Changing these values compensates the actor location so the mesh does not jump.',
+  },
+  'details.pivot.editMode': {
+    title: 'Pivot Edit Mode',
+    body: 'Same as the toolbar Pivot button (P). Drag the translation gizmo to reposition the origin.',
   },
 
   // —— Details: Brush / Material / Collision ——
@@ -1020,6 +1042,10 @@ export const HELP_CONTENT = {
     title: 'Mesh Asset Tools',
     body: 'Batch 7 tools: inspection (tris/verts/materials/bounds/relationships), non-destructive SimplifyModifier preview/save, auto LOD derived assets, and format export (GLB/GLTF/OBJ/STL/PLY/USDZ). Compression decode (DRACO/Meshopt/KTX2) is local; encode authoring is deferred.',
     tips: 'Simplified and LOD meshes are always new derived assets — the source GLB stays intact.',
+  },
+  'assetViewer.pivot': {
+    title: 'Default Placement Pivot',
+    body: 'Stores meta.defaultContentOffset for future mesh placements. Does not rewrite the source GLB and does not move actors already in levels. Use Bottom/Center presets for furniture and characters.',
   },
   'details.staticMesh.autoLod': {
     title: 'Generate Auto LOD',

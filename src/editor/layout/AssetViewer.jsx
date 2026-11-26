@@ -34,6 +34,7 @@ export function AssetViewer({ docked = false } = {}) {
     importTexture,
     importMesh,
     importDerivedMeshGlb,
+    updateMeshMeta,
     createNewMaterial,
     dragMime,
     notify,
@@ -346,6 +347,7 @@ export function AssetViewer({ docked = false } = {}) {
           asset={previewAsset}
           onClose={() => setPreviewAsset(null)}
           importDerivedMeshGlb={importDerivedMeshGlb}
+          updateMeshMeta={updateMeshMeta}
           notify={notify}
         />
       ) : null}
@@ -353,7 +355,7 @@ export function AssetViewer({ docked = false } = {}) {
   );
 }
 
-function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, notify }) {
+function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMeta, notify }) {
   const [meshMeta, setMeshMeta] = useState(null);
 
   useEffect(() => {
@@ -464,6 +466,7 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, notify }) {
                   meta: asset.meta,
                 }}
                 importDerivedMeshGlb={importDerivedMeshGlb}
+                updateMeshMeta={updateMeshMeta}
                 notify={notify}
               />
             )}

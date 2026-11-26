@@ -1,5 +1,9 @@
 import { ensureId } from './ids.js';
 import { Transform } from './Transform.js';
+import {
+  normalizeContentOffset,
+  contentOffsetIsIdentity,
+} from './contentOffset.js';
 
 function normalizePrefabLink(prefab) {
   if (!prefab?.prefabId) return null;
@@ -33,12 +37,18 @@ export class Actor {
     visible = true,
     locked = false,
     prefab = null,
+    contentOffset = null,
   } = {}) {
     this.id = ensureId(id, 'actor');
     this.name = name;
     this.transform = transform instanceof Transform
       ? transform
       : Transform.fromJSON(transform);
+    /**
+     * Content frame relative to pivot (Actor.transform origin), editor units.
+     * Pivot editing moves transform and compensates this offset so visuals stay put.
+     */
+    this.contentOffset = normalizeContentOffset(contentOffset);
     this.components = [];
     this.tags = [...tags];
     this.parentId = parentId || null;
@@ -93,6 +103,10 @@ export class Actor {
       locked: this.locked,
       components: this.components.map((c) => c.toJSON()),
     };
+    // Backward compatible: omit identity offset so legacy levels stay unchanged.
+    if (!contentOffsetIsIdentity(this.contentOffset)) {
+      json.contentOffset = normalizeContentOffset(this.contentOffset);
+    }
     if (this.prefab?.prefabId) {
       json.prefab = normalizePrefabLink(this.prefab);
     }
@@ -112,6 +126,7 @@ export class Actor {
       visible: data.visible !== false,
       locked: Boolean(data.locked),
       prefab: data.prefab || null,
+      contentOffset: data.contentOffset || null,
       components,
     });
   }

@@ -3,7 +3,7 @@
  * No general CSG — only AABB partition (same spirit as wallOpenings.js).
  */
 
-import { getWorldMatrix } from '../core/hierarchy.js';
+import { getContentWorldMatrix } from '../core/contentOffset.js';
 import { mat4Invert, mat4Multiply, mat4TransformPoint } from '../core/math3d.js';
 
 /** Product solid budget after Phase 2G rendering integration (was 64). */
@@ -416,8 +416,9 @@ export function cutterHoleInBrushLocal(targetActor, cutterActor, world) {
     return { ok: false, unsupportedReason: 'Missing brush component' };
   }
 
-  const targetWorld = getWorldMatrix(targetActor, world);
-  const cutterWorld = getWorldMatrix(cutterActor, world);
+  // Content frame (pivot × contentOffset) — brush geometry lives there.
+  const targetWorld = getContentWorldMatrix(targetActor, world);
+  const cutterWorld = getContentWorldMatrix(cutterActor, world);
   const targetInv = mat4Invert(targetWorld);
   const relative = mat4Multiply(targetInv, cutterWorld);
 

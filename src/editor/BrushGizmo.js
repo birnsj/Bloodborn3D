@@ -94,6 +94,8 @@ export class BrushGizmo {
      * - gizmo: Unreal-style axis scale cubes
      */
     this.scaleHandleStyle = 'face';
+    /** Axis orientation: world (identity) | local (actor rotation). */
+    this.space = 'world';
     this._handles = [];
     this._primaryBrush = null;
     this._selectionCenter = new THREE.Vector3();
@@ -105,6 +107,8 @@ export class BrushGizmo {
     this._normalHandle = null;
     /** Last screen-constant scale applied to axis handles (not face resize). */
     this._screenScale = 1;
+    /** Optional local-space quaternion (radians) for axis orientation. */
+    this._localQuat = new THREE.Quaternion();
 
     this._buildMoveHandles();
     this._buildRotateHandles();
@@ -143,6 +147,37 @@ export class BrushGizmo {
     if (this.mode === next) return;
     this.mode = next;
     this._applyModeVisibility();
+  }
+
+  /** @param {'world'|'local'} space */
+  setSpace(space) {
+    this.space = space === 'local' ? 'local' : 'world';
+    this._applySpaceOrientation();
+  }
+
+  /**
+   * @param {{ x:number, y:number, z:number }|null} rotationDeg actor world/local euler degrees
+   */
+  setLocalRotation(rotationDeg) {
+    if (!rotationDeg) {
+      this._localQuat.identity();
+    } else {
+      this._localQuat.setFromEuler(new THREE.Euler(
+        THREE.MathUtils.degToRad(rotationDeg.x || 0),
+        THREE.MathUtils.degToRad(rotationDeg.y || 0),
+        THREE.MathUtils.degToRad(rotationDeg.z || 0),
+        'XYZ',
+      ));
+    }
+    this._applySpaceOrientation();
+  }
+
+  _applySpaceOrientation() {
+    if (this.space === 'local') {
+      this.root.quaternion.copy(this._localQuat);
+    } else {
+      this.root.quaternion.identity();
+    }
   }
 
   /** @param {'face'|'gizmo'} style */
@@ -557,11 +592,15 @@ export class BrushGizmo {
       return new THREE.Vector3(1, 0, 0);
     }
     const axis = handle?.axis;
-    return new THREE.Vector3(
+    const local = new THREE.Vector3(
       axis === 'x' ? 1 : 0,
       axis === 'y' ? 1 : 0,
       axis === 'z' ? 1 : 0,
     );
+    if (this.space === 'local') {
+      local.applyQuaternion(this._localQuat);
+    }
+    return local;
   }
 
   endDrag() {

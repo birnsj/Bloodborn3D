@@ -45,6 +45,10 @@ export function LevelToolBar() {
     play,
     stop,
     status,
+    pivotEditMode,
+    setPivotEditMode,
+    gizmoSpace,
+    setGizmoSpace,
   } = useEditor();
   const { settings, patchSettings } = useEditorSettings();
 
@@ -267,6 +271,31 @@ export function LevelToolBar() {
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        className={`bb-btn${pivotEditMode ? ' bb-btn--active' : ''}`}
+        disabled={isPlay}
+        title="Pivot Edit (P) — move the actor origin without moving geometry"
+        onClick={() => {
+          const next = !pivotEditMode;
+          setPivotEditMode(next);
+          setStatus(next ? 'Pivot edit on — drag the gizmo' : 'Pivot edit off');
+        }}
+        {...helpProps('toolbar.pivotEdit', playReason)}
+      >
+        Pivot
+      </button>
+      <button
+        type="button"
+        className="bb-btn"
+        disabled={isPlay}
+        title={`Gizmo space: ${gizmoSpace} (click to toggle local/world)`}
+        onClick={() => setGizmoSpace(gizmoSpace === 'local' ? 'world' : 'local')}
+        {...helpProps('toolbar.gizmoSpace', playReason)}
+      >
+        {gizmoSpace === 'local' ? 'Local' : 'World'}
+      </button>
+      <div className="bb-toolbar-divider" />
       <label
         className="bb-toolbar-field"
         {...helpProps('toolbar.gridSnap', playReason)}
