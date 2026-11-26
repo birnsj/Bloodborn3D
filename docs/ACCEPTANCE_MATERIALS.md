@@ -66,7 +66,12 @@ Stored under `docs/acceptance-materials/`:
 
 ## Known / residual
 
-- Light maps need a second UV set on geometry for full effect; brushes currently share UV0 (map still assigns).
-- Displacement is authorable; brush tessellation is not increased automatically — relief is subtle on low-poly brushes.
-- `alphaToCoverage` requires MSAA-friendly framebuffer settings; harmless when unsupported.
-- Material draft Undo is workspace-local (not level `HistoryStack`); intentional for asset editing.
+Formal tracking (status, dependency, acceptance criteria, batch cross-refs):  
+`docs/THREEJS_CAPABILITY_INVENTORY.md` → **Batch 2 residuals**. Batch 2 remains **Implemented**.
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Dedicated lightmap UV channel | Deferred | Until baked lighting; Batch 8 may feed UV-channel UI |
+| Geometry subdivision for displacement | Tracked → Batch 5 | Evaluate/address with primitives / denser geo |
+| Alpha-to-coverage × MSAA / post-processing | Pending verification | Authoring Complete; rendering matrix still needed |
+| Draft-local material undo | Accepted architecture | Not a defect — assets vs level `HistoryStack` |

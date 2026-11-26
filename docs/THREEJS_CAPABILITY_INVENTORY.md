@@ -190,10 +190,10 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 | MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | — | Materials Workspace | MaterialDefinition | — | H | **Complete** |
 | aoMap / aoMapIntensity | Standard | Y | map id + intensity | — | Materials | fields | S | H | **Complete** |
 | bumpMap / bumpScale | Standard | Y | map + scale | — | Materials | fields | S | M | **Complete** |
-| displacementMap / scale / bias | Standard | Y | map + scale/bias | — | Materials | fields | S | M | **Complete** |
+| displacementMap / scale / bias | Standard | Y | map + scale/bias | Tessellation / subdivision for visible relief — see Batch 2 residuals → **Batch 5** | Materials | fields | S | M | **Complete** (maps); relief fidelity **tracked** |
 | alphaMap | Standard | Y | map id | — | Materials | fields | S | H | **Complete** |
-| lightMap / intensity | Standard | Y | map + intensity | — | Materials | fields | S | M | **Complete** |
-| alphaTest / alphaHash / alphaToCoverage | Material | Y | cutoff + toggles | — | Materials | fields | S | H | **Complete** |
+| lightMap / intensity | Standard | Y | map + intensity on UV0 | Dedicated lightmap UV channel — see Batch 2 residuals (baked lighting) | Materials | fields | S | M | **Complete** (assign); UV2 **Deferred** |
+| alphaTest / alphaHash / alphaToCoverage | Material | Y | cutoff + toggles | A2C × MSAA/PP interaction — see Batch 2 residuals | Materials | fields | S | H | **Complete** (authored); A2C verify **Pending** |
 | side / flatShading / wireframe / fog / toneMapped | Material | Y | front/back/double + flags | — | Materials | fields | S | H | **Complete** |
 | transparent / opacity / depthWrite | Material | Y | opacity/transparent/depthWrite | — | Materials | fields | S | M | **Complete** |
 | MeshPhysicalMaterial | core | Y | clearcoat*, transmission*, thickness, attenuation*, ior, sheen*, specular*, iridescence*, anisotropy*, dispersion + maps | — | Materials | `shadingModel: physical` | M | H | **Complete** |
@@ -395,6 +395,17 @@ Priorities **P0–P2 within each batch**. Implement batches in order where possi
 **Depends on:** Batch 1 env for Physical transmission/clearcoat to look correct.  
 **Unlocks:** Decals/Water materials; richer StaticMesh overrides.
 
+#### Batch 2 residuals (tracked — Batch 2 remains **Implemented**)
+
+These are known follow-ups or accepted design decisions. They do **not** reopen Batch 2 scope.
+
+| Item | Status | Dependency | Acceptance criteria | Cross-ref |
+|------|--------|------------|---------------------|-----------|
+| Dedicated lightmap UV channel (`geometry.attributes.uv2` / second UV set for `lightMap`) | **Deferred** | Baked lighting implementation (not in current Batch 1–9 geometry/env milestone until baking lands); texture UV-channel authoring in **Batch 8** may feed sampling UI | Brushes/meshes expose an authored or generated lightmap UV set; `createThreeMaterial` binds `lightMap` to UV2 without stealing UV0 albedo; acceptance level shows non-overlapping lightmap vs base UV | Future baked-lighting work; **Batch 8** (UV channel selection); material assign path already **Complete** |
+| Geometry subdivision for displacement | **Tracked → Batch 5** | **Batch 5** native primitives / procedural geometry (evaluate subdivision or denser tessellation where displacement is authored) | With a displacement map + non-zero scale, subdivided or denser geo shows visible height relief vs low-poly brush boxes; dispose/rebuild stays GPU-safe; no silent change to existing brush density defaults | **Batch 5**; displacement maps remain **Complete** in Batch 2 |
+| Alpha-to-coverage compatibility with MSAA and post-processing | **Pending** (rendering verification) | Shared WebGL renderer + pmndrs post-processing path (Batch 1 world/renderer + existing PP stack); may need MSAA/RT policy documented or adjusted | Documented pass/fail matrix: `alphaToCoverage` on/off × MSAA on/off × Fog/PP pane toggles; foliage/alpha materials show no unexplained discard or edge artifacts; multi-pane isolation unchanged | Rendering verify (not a new materials feature); Batch 2 A2C authoring **Complete** |
+| Draft-local material undo (Materials Workspace scrub stack, not level `HistoryStack`) | **Accepted** (architectural decision — not a defect) | Materials are project assets edited as drafts until Save; level history owns actor/world commands only | One undo entry per finished numeric scrub in Materials; Cancel restores saved baseline; level Undo does not mutate material JSON; documented in Academy/help | Batch 2 editor design; keep — do not “fix” by wiring materials into `HistoryStack` |
+
 ### Batch 3 — Lighting
 
 | Pri | Item | API | Schema |
@@ -439,9 +450,11 @@ Priorities **P0–P2 within each batch**. Implement batches in order where possi
 | P2 | TextGeometry | addon + font |
 | P2 | ParametricGeometry | addon |
 | P2 | ConvexGeometry prop tool | addon — not a ConvexBrush replacement |
+| P1 | Evaluate / address geometry subdivision (or denser tessellation) for displacement relief | Batch 2 residual — displacement maps already authored |
 
 **Depends on:** Batch 2 for materials; collision via Batch 6 patterns.  
-**Do not** replace Brush/ConvexBrush workflows.
+**Do not** replace Brush/ConvexBrush workflows.  
+**Batch 2 residual:** displacement map fidelity — see Batch 2 residuals table.
 
 ### Batch 6 — Static meshes (render + collision)
 
@@ -477,12 +490,13 @@ Priorities **P0–P2 within each batch**. Implement batches in order where possi
 | Pri | Item |
 |-----|------|
 | P0 | Texture inspector: wrap, min/mag filter, anisotropy, colorSpace, generateMipmaps |
-| P1 | UV channel selection |
+| P1 | UV channel selection (incl. feeding lightmap UV2 when baked lighting exists — Batch 2 residual) |
 | P1 | Texture-level offset/repeat/rotation (optional vs material UV) |
 | P0 | KTX2 compressed texture import | 
 | P2 | VideoTexture authoring (optional env screens) — *include with note: useful for diegetic screens; low priority* |
 
-**Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.
+**Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.  
+**Note:** Dedicated lightmap UV channel remains **Deferred** until baked lighting; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking.
 
 ### Batch 9 — Editor organization & viewport tools
 
