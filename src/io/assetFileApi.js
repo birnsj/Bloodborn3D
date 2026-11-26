@@ -105,6 +105,18 @@ export async function createMaterial(definition) {
   return res.json();
 }
 
+/** Bake sphere PNGs for materials that still use the diagonal swatch fallback. */
+export async function bakeMissingMaterialPreviews() {
+  const res = await fetch('/api/assets?action=bake-missing-material-previews', {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Material preview bake failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function updateMaterial(id, definition) {
   const res = await fetch(`/api/assets?action=material&id=${encodeURIComponent(id)}`, {
     method: 'PUT',

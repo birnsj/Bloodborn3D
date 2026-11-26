@@ -5,6 +5,7 @@ import { ColumnComponent } from './ColumnComponent.js';
 import { ConvexBrushComponent } from './ConvexBrushComponent.js';
 import { CurvedWallComponent } from './CurvedWallComponent.js';
 import { LightComponent } from './LightComponent.js';
+import { EnvironmentComponent } from './EnvironmentComponent.js';
 import { PlayerSpawnComponent } from './PlayerSpawnComponent.js';
 import { RampComponent } from './RampComponent.js';
 import { StairComponent } from './StairComponent.js';
@@ -19,6 +20,7 @@ const REGISTRY = {
   [ConvexBrushComponent.componentType]: ConvexBrushComponent,
   [CurvedWallComponent.componentType]: CurvedWallComponent,
   [LightComponent.componentType]: LightComponent,
+  [EnvironmentComponent.componentType]: EnvironmentComponent,
   [PlayerSpawnComponent.componentType]: PlayerSpawnComponent,
   [RampComponent.componentType]: RampComponent,
   [StairComponent.componentType]: StairComponent,

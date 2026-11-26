@@ -324,6 +324,34 @@ export const HELP_CONTENT = {
     title: 'Ambient Light (actor)',
     body: 'Places an AmbientLight actor. Separate from World Settings ambient fill — both can contribute.',
   },
+  'toolbar.water2': {
+    title: 'Water 2',
+    body: 'Planar Water2 surface with flow, normal maps, and reflection/refraction render targets. Perspective-only RT; ortho shows a proxy.',
+  },
+  'toolbar.water': {
+    title: 'Water',
+    body: 'Simpler Water.js reflective plane with distortion and sun direction. Use for ponds and basins.',
+  },
+  'toolbar.reflector': {
+    title: 'Mirror',
+    body: 'Official Reflector plane. Editable size, tint, and RT resolution. Nested mirror recursion is blocked.',
+  },
+  'toolbar.refractor': {
+    title: 'Refractor',
+    body: 'Official Refractor plane for refractive glass-like surfaces. Same RT lifecycle rules as mirrors.',
+  },
+  'toolbar.decal': {
+    title: 'Decal',
+    body: 'Projects DecalGeometry onto a target brush or static mesh. Set target actor, texture, size, and depth offset in Details.',
+  },
+  'toolbar.sprite': {
+    title: 'Billboard',
+    body: 'Authored Sprite (not an editor helper). Texture, color, opacity, size attenuation, and fog. Always faces the camera.',
+  },
+  'toolbar.skyPlaceable': {
+    title: 'Placeable Sky',
+    body: 'Sky.js actor. While present and enabled it suppresses the World Settings procedural sky mesh; authored world.scene.sky JSON is kept.',
+  },
   'toolbar.spotLight': {
     title: 'Spot Light',
     body: 'Drag onto a wall or surface, or click then click to place. Prefers vertical surfaces so the spot faces outward from the wall.',
@@ -374,6 +402,10 @@ export const HELP_CONTENT = {
   'creation.geometry': {
     title: 'Geometry',
     body: 'Structural tools: box, wall, curved wall, floor, ceiling, ramp, stairs, column, arches, and subtract. Click to enter drag-to-size mode, or drag onto a surface for a default footprint.',
+  },
+  'creation.environment': {
+    title: 'Environment',
+    body: 'Water 2, Water, Mirror, Refractor, Decal, Billboard, and placeable Sky. RT surfaces update in perspective; ortho panes use proxy planes.',
   },
   'creation.lights': {
     title: 'Lights',
@@ -584,6 +616,14 @@ export const HELP_CONTENT = {
   'details.openings.fields': {
     title: 'Opening Fields',
     body: 'Offset is the opening center along wall length. Bottom is height from the wall base. Width and height are in editor units and snap to the grid.',
+  },
+  'details.environment': {
+    title: 'Environment Properties',
+    body: 'Type-specific water / mirror / refractor / decal / billboard / sky fields. Numeric scrub = live preview + one Undo entry. RT quality and perspective-only controls limit cost.',
+  },
+  'details.environment.sky': {
+    title: 'Placeable Sky vs World Sky',
+    body: 'A placeable Sky actor drives the procedural dome and hides WorldSky. Remove or disable the actor to restore World Settings sky when backgroundType is sky.',
   },
   'details.light': {
     title: 'Light Properties',
@@ -911,7 +951,7 @@ export const HELP_CONTENT = {
   },
   'content.newMaterial': {
     title: 'New Material',
-    body: 'Creates a material asset. If a texture is selected, it becomes the base color map.',
+    body: 'Creates a material asset and bakes a lit-sphere thumbnail for the Asset Viewer grid. If a texture is selected, it becomes the base color map. Materials missing a preview (for example seeded Batch assets) are backfilled automatically when the registry loads.',
   },
   'content.createPrefab': {
     title: 'Create Prefab',

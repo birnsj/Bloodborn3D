@@ -1,7 +1,9 @@
 /**
  * Backfill lit sphere previews for materials missing previewPath.
- * Usage: node scripts/bakeMaterialPreviews.mjs
+ * Usage: node scripts/bakeMaterialPreviews.mjs [--force]
+ *   --force  rebake even when previewPath already exists
  */
+const force = process.argv.includes('--force');
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +33,7 @@ for (const entry of registry.assets || []) {
   const matPath = join(assetsDir, entry.path);
   const definition = JSON.parse(readFileSync(matPath, 'utf8'));
   const hasPreview = Boolean(definition.previewPath || entry.meta?.previewPath);
-  if (hasPreview) {
+  if (hasPreview && !force) {
     skipped += 1;
     continue;
   }

@@ -61,7 +61,7 @@
         "previewPath": "previews/mat_verify_wall_sphere.png"
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795650848404
+      "updatedAt": 1795721516228
     },
     {
       "id": "prefab_e16f8cfa-6020-4b4c-a36c-2976f113f56d",
@@ -336,10 +336,12 @@
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
-        "previewPath": "previews/mat_hall_stone_sphere.png"
+        "previewPath": "previews/mat_hall_stone_sphere.png",
+        "roughness": 1,
+        "metalness": 0.02
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795449232038
+      "updatedAt": 1795721516590
     },
     {
       "id": "mat_hall_floor",
@@ -358,10 +360,12 @@
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
-        "previewPath": "previews/mat_hall_floor_sphere.png"
+        "previewPath": "previews/mat_hall_floor_sphere.png",
+        "roughness": 1,
+        "metalness": 0
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795449232038
+      "updatedAt": 1795721516970
     },
     {
       "id": "mat_hall_ceiling",
@@ -380,10 +384,12 @@
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
-        "previewPath": "previews/mat_hall_ceiling_sphere.png"
+        "previewPath": "previews/mat_hall_ceiling_sphere.png",
+        "roughness": 1,
+        "metalness": 0
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795449232038
+      "updatedAt": 1795721517280
     },
     {
       "id": "mat_hall_wood",
@@ -402,10 +408,12 @@
         "hasBaseMap": true,
         "hasNormalMap": true,
         "hasRoughnessMap": true,
-        "previewPath": "previews/mat_hall_wood_sphere.png"
+        "previewPath": "previews/mat_hall_wood_sphere.png",
+        "roughness": 1,
+        "metalness": 0.05
       },
       "createdAt": 1795449232038,
-      "updatedAt": 1795449232038
+      "updatedAt": 1795721517627
     },
     {
       "id": "mat_0d7229acc49d",
@@ -423,7 +431,7 @@
         "previewPath": "previews/mat_0d7229acc49d_sphere.png"
       },
       "createdAt": 1795496202588,
-      "updatedAt": 1795650848423
+      "updatedAt": 1795721517644
     },
     {
       "id": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
@@ -476,7 +484,7 @@
         "previewPath": "previews/mat_8609cf1b090a_sphere.png"
       },
       "createdAt": 1795581403650,
-      "updatedAt": 1795650848483
+      "updatedAt": 1795721517702
     },
     {
       "id": "tex_bed0f902ccaa",
@@ -530,7 +538,7 @@
         "previewPath": "previews/mat_a64e6e8fecee_sphere.png"
       },
       "createdAt": 1795650000888,
-      "updatedAt": 1795650848548
+      "updatedAt": 1795721517763
     },
     {
       "id": "tex_c62b419b178b",
@@ -574,7 +582,7 @@
         "normalScale": 4
       },
       "createdAt": 1795665630908,
-      "updatedAt": 1795674630263
+      "updatedAt": 1795721517883
     },
     {
       "id": "tex_b24283819269",
@@ -618,7 +626,7 @@
         "normalScale": 5.5
       },
       "createdAt": 1795665950910,
-      "updatedAt": 1795674630891
+      "updatedAt": 1795721518002
     },
     {
       "id": "tex_7e918f2f33af",
@@ -1171,10 +1179,14 @@
         "baseColor": "#cfd6e0",
         "roughness": 0.12,
         "metalness": 1,
-        "hasBaseMap": false
+        "shadingModel": "standard",
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch1_metal_sphere.png"
       },
       "createdAt": 1795718430764,
-      "updatedAt": 1795718430764
+      "updatedAt": 1795721518022
     },
     {
       "id": "mat_batch1_rough",
@@ -1191,10 +1203,14 @@
         "baseColor": "#7a8494",
         "roughness": 0.95,
         "metalness": 0,
-        "hasBaseMap": false
+        "shadingModel": "standard",
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch1_rough_sphere.png"
       },
       "createdAt": 1795718430764,
-      "updatedAt": 1795718430764
+      "updatedAt": 1795721518038
     },
     {
       "id": "tex_batch2_toon_gradient",
@@ -1267,10 +1283,13 @@
         "roughness": 0.78,
         "metalness": 0.02,
         "shadingModel": "standard",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_standard_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518054
     },
     {
       "id": "mat_batch2_metal",
@@ -1288,10 +1307,13 @@
         "roughness": 0.08,
         "metalness": 1,
         "shadingModel": "standard",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_metal_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518070
     },
     {
       "id": "mat_batch2_glass",
@@ -1309,10 +1331,13 @@
         "roughness": 0.05,
         "metalness": 0,
         "shadingModel": "physical",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_glass_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518094
     },
     {
       "id": "mat_batch2_clearcoat",
@@ -1330,10 +1355,13 @@
         "roughness": 0.35,
         "metalness": 0.15,
         "shadingModel": "physical",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_clearcoat_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518115
     },
     {
       "id": "mat_batch2_foliage",
@@ -1351,10 +1379,13 @@
         "roughness": 0.85,
         "metalness": 0,
         "shadingModel": "standard",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_foliage_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518148
     },
     {
       "id": "mat_batch2_basic",
@@ -1372,10 +1403,13 @@
         "roughness": 0.75,
         "metalness": 0.05,
         "shadingModel": "basic",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_basic_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518165
     },
     {
       "id": "mat_batch2_toon",
@@ -1393,10 +1427,13 @@
         "roughness": 0.75,
         "metalness": 0.05,
         "shadingModel": "toon",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_toon_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518191
     },
     {
       "id": "mat_batch2_matcap",
@@ -1414,10 +1451,13 @@
         "roughness": 0.75,
         "metalness": 0.05,
         "shadingModel": "matcap",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_matcap_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518225
     },
     {
       "id": "mat_batch2_sheen",
@@ -1435,10 +1475,13 @@
         "roughness": 0.7,
         "metalness": 0,
         "shadingModel": "physical",
-        "hasBaseMap": false
+        "hasBaseMap": false,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch2_sheen_sphere.png"
       },
       "createdAt": 1795719251101,
-      "updatedAt": 1795719251101
+      "updatedAt": 1795721518247
     },
     {
       "id": "tex_flare_main",
@@ -1519,6 +1562,50 @@
       },
       "createdAt": 1795720148748,
       "updatedAt": 1795720148748
+    },
+    {
+      "id": "tex_water_normal_0",
+      "kind": "texture",
+      "name": "Water Normal A",
+      "folder": "Textures",
+      "path": "textures/tex_water_normal_0.png",
+      "originalName": "tex_water_normal_0.png",
+      "tags": [
+        "batch4",
+        "water",
+        "normal",
+        "cc0"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "normalMap": true,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795721996021,
+      "updatedAt": 1795721996021
+    },
+    {
+      "id": "tex_water_normal_1",
+      "kind": "texture",
+      "name": "Water Normal B",
+      "folder": "Textures",
+      "path": "textures/tex_water_normal_1.png",
+      "originalName": "tex_water_normal_1.png",
+      "tags": [
+        "batch4",
+        "water",
+        "normal",
+        "cc0"
+      ],
+      "meta": {
+        "width": 256,
+        "height": 256,
+        "normalMap": true,
+        "license": "CC0 procedural BloodBound"
+      },
+      "createdAt": 1795721996021,
+      "updatedAt": 1795721996021
     }
   ]
 }

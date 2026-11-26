@@ -7,7 +7,8 @@
 **Milestone:** Complete the base **geometry and environment authoring** layer.  
 **Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).  
 **Batch 2 status:** **Implemented** (Materials Workspace shading models + full Standard/Physical maps/flags; Basic/Toon/Matcap).  
-**Batch 3 status:** **Implemented** (Hemisphere/RectArea/Ambient toolbar, shadow bias/camera, targets, spot map, Lensflare, helpers).
+**Batch 3 status:** **Implemented** (Hemisphere/RectArea/Ambient toolbar, shadow bias/camera, targets, spot map, Lensflare, helpers).  
+**Batch 4 status:** **Implemented** (Water/Water2, Reflector, Refractor, Decal, Sprite billboard, placeable Sky).
 
 ### Principles
 
@@ -436,21 +437,34 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | Lensflare occlusion fidelity | **Accepted** | Official Lensflare depth test vs scene | Perspective visibility + ortho hide verified; deep occlusion edge cases follow Three.js addon | Batch 3 Lensflare |
 | World Ambient Undo | **Done** | Same World Settings `HistoryStack` as Scene/Renderer (`SetWorldAmbientCommand`) | Live preview while scrubbing; one undo entry per completed intensity gesture; Escape cancels; color changes undoable; dirty + save/reload verified | Batch 3 Acceptance Correction |
 
-### Batch 4 — Environmental objects
+### Batch 4 — Environmental objects — **Implemented**
 
-| Pri | Item | API | Notes |
-|-----|------|-----|-------|
-| P0 | Decal tool | DecalGeometry | project onto brushes/meshes |
-| P0 | Reflector (mirror) | Reflector | RT lifecycle; perspective-first |
-| P1 | Refractor | Refractor | same RT rules |
-| P0 | Water2 creation tool | Water2.js | asset normals |
-| P1 | Water (simpler) | Water.js | fallback |
-| P0 | Sprite / billboard | Sprite | props/fx |
-| P1 | Sky as placeable or world toggle | Sky.js | overlap Batch 1 — coordinate |
-| P2 | GroundedSkybox | objects/ | |
+| Pri | Item | API | Schema | Status |
+|-----|------|-----|--------|--------|
+| P0 | Decal tool | DecalGeometry | Environment.decal | **Done** |
+| P0 | Reflector (mirror) | Reflector | Environment.reflector | **Done** |
+| P1 | Refractor | Refractor | Environment.refractor | **Done** |
+| P0 | Water2 creation tool | Water2.js shader + Reflector/Refractor | Environment.water2 | **Done** |
+| P1 | Water (simpler) | Water.js | Environment.water | **Done** |
+| P0 | Sprite / billboard | Sprite / SpriteMaterial | Environment.sprite | **Done** |
+| P1 | Sky as placeable | Sky.js | Environment.sky | **Done** |
+| P2 | GroundedSkybox placeable | objects/ | — | **Deferred** (world-only) |
 
-**Depends on:** Batch 2 materials; Batch 8 textures for water normals.  
-**Multi-view:** mirrors/refractors expensive — document pane policy (e.g. active perspective only).
+**Acceptance:** `public/levels/acceptance-environment.json` + `docs/ACCEPTANCE_ENVIRONMENT.md`  
+**Academy:** lesson 24 (`environmental-objects`)  
+**Depends on:** Batch 1 sky fields; Batch 2 materials; local CC0 water normals (`tex_water_normal_*`).  
+**Multi-view:** RT surfaces perspective-only; ortho uses proxies; nested env RT recursion blocked.
+
+#### Batch 4 residuals / native limits
+
+| Item | Status | Dependency | Acceptance criteria | Cross-ref |
+|------|--------|------------|---------------------|-----------|
+| Nested mirror recursion | **Accepted** | Env RT pass depth guard | Secondary mirrors/water hidden during RT update | Reflector/Water2 |
+| Ortho RT | **N/A (policy)** | Multi-pane shared scene | Proxy planes in ortho; RT in perspective | Pane isolation |
+| Decal corner distortion | **Accepted** | Three.js DecalGeometry | Documented; stains/signage still usable | DecalGeometry issue |
+| Placeable vs World Sky | **Done** | WorldEnvironmentController | Placeable suppresses WorldSky; JSON preserved | Batch 1 sky |
+| GroundedSkybox placeable | **Deferred** | Batch 4 P2 | Remains world setting | Batch 1 |
+| Gameplay water | **Out of scope** | — | No swimming/buoyancy | Batch 4 brief |
 
 ### Batch 5 — Geometry (native primitives & procedural)
 

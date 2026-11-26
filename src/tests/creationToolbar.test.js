@@ -21,7 +21,7 @@ describe('creation toolbar catalog', () => {
       { id: 'prefab.door', name: 'Door', kind: 'prefab' },
       { id: 'mat.stone', name: 'Stone', kind: 'material' },
     ]);
-    expect(cats.map((c) => c.id)).toEqual(['geometry', 'lights', 'actors', 'assets']);
+    expect(cats.map((c) => c.id)).toEqual(['geometry', 'environment', 'lights', 'actors', 'assets']);
     const geo = cats.find((c) => c.id === 'geometry');
     expect(geo.tools.map((t) => t.id)).toContain('box');
     expect(geo.tools.map((t) => t.id)).toContain('subtract');
@@ -53,6 +53,18 @@ describe('creation toolbar catalog', () => {
     ]));
     expect(findCreationTool(cats, 'hemiLight').tool.lightType).toBe('hemisphere');
     expect(findCreationTool(cats, 'rectAreaLight').tool.lightType).toBe('rectArea');
+  });
+
+  it('exposes Batch 4 environment tools', () => {
+    const cats = buildCreationCategories([]);
+    const env = cats.find((c) => c.id === 'environment');
+    expect(env).toBeTruthy();
+    const ids = env.tools.map((t) => t.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      'water2', 'water', 'reflector', 'refractor', 'decal', 'sprite', 'skyPlaceable',
+    ]));
+    expect(findCreationTool(cats, 'water2').tool.envType).toBe('water2');
+    expect(findCreationTool(cats, 'reflector').tool.placeKind).toBe('environment');
   });
 });
 

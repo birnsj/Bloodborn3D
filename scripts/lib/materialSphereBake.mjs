@@ -1,12 +1,17 @@
 /**
  * Shared CPU bake for material sphere thumbnails (Asset Viewer globes).
  * No external deps — PNG encode/decode via node:zlib.
+ *
+ * Approximates Standard/Physical cues (metalness, clearcoat, sheen, transmission),
+ * plus Basic/Toon/Matcap shading and alpha cutout — not a full Three.js path.
  */
 import { deflateSync, inflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export const DEFAULT_SPHERE_SIZE = 256;
+
+const BG = [18, 20, 24];
 
 function crc32(buf) {
   let c = ~0;
@@ -52,6 +57,12 @@ export function writePngBuffer(path, width, height, rgba) {
 
 function clamp(v, lo = 0, hi = 255) {
   return Math.max(lo, Math.min(hi, Math.round(v)));
+}
+
+function clamp01(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
 }
 
 function lerp(a, b, t) {
@@ -210,8 +221,80 @@ function solidMap(size, rgb, alpha = 255) {
   return buf;
 }
 
-/** Soft lit sphere using albedo + normal + roughness maps (square). */
-export function bakeSphere(albedo, normal, roughness, mapSize, outSize) {
+/** Soft checker used behind glass / alpha-cut materials so transmission reads. */
+function backdropRgb(px, py, outSize) {
+  const cell = Math.max(8, Math.floor(outSize / 16));
+  const c = (Math.floor(px / cell) + Math.floor(py / cell)) % 2 === 0;
+  return c ? [42, 46, 54] : [28, 30, 36];
+}
+
+function sampleMatcap(matcap, nx, ny, mapSize) {
+  if (!matcap) return null;
+  const u = (nx * 0.5 + 0.5) * (mapSize - 1);
+  const v = (1 - (ny * 0.5 + 0.5)) * (mapSize - 1);
+  return sampleMapBilinear(matcap, u, v, mapSize);
+}
+
+function sampleGradient1D(gradient, t, mapSize) {
+  if (!gradient) return null;
+  const x = Math.max(0, Math.min(mapSize - 1, t * (mapSize - 1)));
+  const y = Math.floor(mapSize / 2);
+  return sampleMapBilinear(gradient, x, y, mapSize);
+}
+
+/**
+ * Soft lit sphere using albedo + normal + roughness (+ optional material cues).
+ * Also accepts legacy positional form:
+ *   bakeSphere(albedo, normal, roughness, mapSize, outSize)
+ */
+export function bakeSphere(mapsOrAlbedo, mapSizeOrNormal, outSizeOrRoughness, maybeMapSize, maybeOutSize) {
+  if (Buffer.isBuffer(mapsOrAlbedo)) {
+    return bakeSphere(
+      {
+        albedo: mapsOrAlbedo,
+        normal: mapSizeOrNormal,
+        roughness: outSizeOrRoughness,
+        matcap: null,
+        gradient: null,
+        alpha: null,
+      },
+      maybeMapSize,
+      maybeOutSize,
+      {},
+    );
+  }
+
+  const maps = mapsOrAlbedo;
+  const mapSize = mapSizeOrNormal;
+  const outSize = outSizeOrRoughness;
+  const params = maybeMapSize && typeof maybeMapSize === 'object' ? maybeMapSize : {};
+
+  const {
+    albedo,
+    normal,
+    roughness,
+    matcap = null,
+    gradient = null,
+    alpha = null,
+  } = maps;
+
+  const shadingModel = String(params.shadingModel || 'standard').toLowerCase();
+  const metalness = clamp01(params.metalness ?? 0);
+  const transmission = clamp01(params.transmission ?? 0);
+  const opacity = clamp01(params.opacity ?? 1);
+  const clearcoat = clamp01(params.clearcoat ?? 0);
+  const clearcoatRoughness = clamp01(params.clearcoatRoughness ?? 0);
+  const sheen = clamp01(params.sheen ?? 0);
+  const sheenRoughness = clamp01(params.sheenRoughness ?? 1);
+  const sheenRgb = params.sheenRgb || [0, 0, 0];
+  const emissiveRgb = params.emissiveRgb || [0, 0, 0];
+  const emissiveIntensity = Math.max(0, Number(params.emissiveIntensity) || 0);
+  const attenRgb = params.attenuationRgb || [255, 255, 255];
+  const alphaTest = clamp01(params.alphaTest ?? 0);
+  const isBasic = shadingModel === 'basic';
+  const isToon = shadingModel === 'toon';
+  const isMatcap = shadingModel === 'matcap';
+
   const out = Buffer.alloc(outSize * outSize * 4);
   const key = [0.55, 0.75, 0.45];
   const keyLen = Math.hypot(...key);
@@ -230,9 +313,9 @@ export function bakeSphere(albedo, normal, roughness, mapSize, outSize) {
       const r2 = u * u + v * v;
       const i = (py * outSize + px) * 4;
       if (r2 > 1) {
-        out[i] = 18;
-        out[i + 1] = 20;
-        out[i + 2] = 24;
+        out[i] = BG[0];
+        out[i + 1] = BG[1];
+        out[i + 2] = BG[2];
         out[i + 3] = 255;
         continue;
       }
@@ -245,6 +328,21 @@ export function bakeSphere(albedo, normal, roughness, mapSize, outSize) {
       const alb = sampleMapBilinear(albedo, su * mapSize, sv * mapSize, mapSize);
       const nrm = sampleMapBilinear(normal, su * mapSize, sv * mapSize, mapSize);
       const rgh = sampleMapBilinear(roughness, su * mapSize, sv * mapSize, mapSize)[0] / 255;
+      let alphaSample = 1;
+      if (alpha) {
+        const aPix = sampleMapBilinear(alpha, su * mapSize, sv * mapSize, mapSize);
+        // Foliage/cutout maps are often green-on-black; use luminance, not R alone.
+        alphaSample = (aPix[0] * 0.2126 + aPix[1] * 0.7152 + aPix[2] * 0.0722) / 255;
+      }
+
+      if (alpha && alphaSample < 0.04) {
+        const bg = backdropRgb(px, py, outSize);
+        out[i] = bg[0];
+        out[i + 1] = bg[1];
+        out[i + 2] = bg[2];
+        out[i + 3] = 255;
+        continue;
+      }
 
       const tnx = (nrm[0] / 255) * 2 - 1;
       const tny = (nrm[1] / 255) * 2 - 1;
@@ -260,19 +358,126 @@ export function bakeSphere(albedo, normal, roughness, mapSize, outSize) {
       const ndotK = Math.max(0, nx * kd[0] + ny * kd[1] + nz * kd[2]);
       const ndotF = Math.max(0, nx * fd[0] + ny * fd[1] + nz * fd[2]);
       const ndotR = Math.max(0, nx * rd[0] + ny * rd[1] + nz * rd[2]);
-      const ambient = 0.34;
-      const diff = ambient + ndotK * 1.15 + ndotF * 0.48 + ndotR * 0.26;
-      const gloss = Math.pow(1 - rgh, 2.2);
-      const hx = kd[0];
-      const hy = kd[1] + 1;
-      const hz = kd[2];
-      const hl = Math.hypot(hx, hy, hz) || 1;
-      const spec = Math.pow(Math.max(0, (nx * hx + ny * hy + nz * hz) / hl), 12 + gloss * 72) * gloss * 1.25;
+      const fresnel = Math.pow(1 - Math.max(0, nz), 2.2);
 
-      const exposure = 1.2;
-      out[i] = clamp(alb[0] * diff * exposure + spec * 255);
-      out[i + 1] = clamp(alb[1] * diff * exposure + spec * 255);
-      out[i + 2] = clamp(alb[2] * diff * exposure + spec * 245);
+      let rr;
+      let gg;
+      let bb;
+
+      if (isMatcap) {
+        const mc = sampleMatcap(matcap, nx, ny, mapSize) || [180, 180, 190, 255];
+        rr = (mc[0] / 255) * alb[0];
+        gg = (mc[1] / 255) * alb[1];
+        bb = (mc[2] / 255) * alb[2];
+      } else if (isBasic) {
+        // Unlit: albedo with a light sphere vignette so the ball still reads as 3D.
+        const shade = 0.72 + nz * 0.28;
+        rr = alb[0] * shade;
+        gg = alb[1] * shade;
+        bb = alb[2] * shade;
+      } else if (isToon) {
+        const lit = Math.max(0, Math.min(1, ndotK * 0.85 + 0.15));
+        const bands = lit > 0.66 ? 1 : lit > 0.33 ? 0.55 : 0.28;
+        const grad = sampleGradient1D(gradient, lit, mapSize);
+        const shade = grad ? Math.max(0.18, grad[0] / 255) : bands;
+        rr = alb[0] * shade;
+        gg = alb[1] * shade;
+        bb = alb[2] * shade;
+        if (fresnel > 0.72) {
+          rr = Math.min(255, rr + 40);
+          gg = Math.min(255, gg + 40);
+          bb = Math.min(255, bb + 50);
+        }
+      } else {
+        const ambient = 0.34;
+        let diff = ambient + ndotK * 1.15 + ndotF * 0.48 + ndotR * 0.26;
+        // Metals keep some lit albedo so chrome doesn't collapse to a dark ball.
+        diff *= (1 - metalness * 0.45);
+        const gloss = Math.pow(1 - rgh, 2.2);
+        const hx = kd[0];
+        const hy = kd[1] + 1;
+        const hz = kd[2];
+        const hl = Math.hypot(hx, hy, hz) || 1;
+        const ndoth = Math.max(0, (nx * hx + ny * hy + nz * hz) / hl);
+        const spec = Math.pow(ndoth, 10 + gloss * 80) * gloss * (1.25 + metalness * 2.2);
+
+        const specR = lerp(1, alb[0] / 255, metalness);
+        const specG = lerp(1, alb[1] / 255, metalness);
+        const specB = lerp(1, alb[2] / 255, metalness);
+
+        const exposure = 1.2 + metalness * 0.35;
+        rr = alb[0] * diff * exposure + spec * 255 * specR;
+        gg = alb[1] * diff * exposure + spec * 255 * specG;
+        bb = alb[2] * diff * exposure + spec * 245 * specB;
+
+        if (metalness > 0.05) {
+          // Fake env reflection: bright rim + cool sky wash.
+          const env = fresnel * metalness;
+          rr += env * lerp(210, alb[0], 0.35) + (1 - fresnel) * metalness * 28;
+          gg += env * lerp(220, alb[1], 0.35) + (1 - fresnel) * metalness * 30;
+          bb += env * lerp(235, alb[2], 0.35) + (1 - fresnel) * metalness * 36;
+        }
+
+        if (clearcoat > 0.01) {
+          const coatGloss = Math.pow(1 - clearcoatRoughness, 2.4);
+          // Low exponents: CPU sphere lighting rarely hits ndoth≈1, so sharp lobes vanish.
+          const coat = Math.pow(ndoth, 2 + coatGloss * 6) * clearcoat * (0.7 + coatGloss);
+          const coatHot = Math.pow(ndoth, 6 + coatGloss * 10) * clearcoat * coatGloss;
+          rr += coat * 140 + coatHot * 255;
+          gg += coat * 155 + coatHot * 255;
+          bb += coat * 175 + coatHot * 255;
+          rr += fresnel * clearcoat * 72;
+          gg += fresnel * clearcoat * 82;
+          bb += fresnel * clearcoat * 100;
+        }
+
+        if (sheen > 0.01) {
+          const sheenGloss = Math.pow(1 - sheenRoughness, 1.6);
+          const sheenTerm = Math.pow(Math.max(fresnel, 1 - ndotK), 0.55 + sheenRoughness * 0.5)
+            * sheen * (0.9 + sheenGloss);
+          rr += sheenTerm * sheenRgb[0];
+          gg += sheenTerm * sheenRgb[1];
+          bb += sheenTerm * sheenRgb[2];
+        }
+
+        if (transmission > 0.05 || opacity < 0.98) {
+          const bg = backdropRgb(px, py, outSize);
+          // Glass body = lit tinted albedo; checker only peeks in the center.
+          const see = Math.min(0.38, Math.max(transmission, 1 - opacity) * 0.32);
+          const bodyLit = 0.42 + ndotK * 0.55 + fresnel * 0.35;
+          const bodyR = alb[0] * bodyLit * (attenRgb[0] / 255);
+          const bodyG = alb[1] * bodyLit * (attenRgb[1] / 255);
+          const bodyB = alb[2] * bodyLit * (attenRgb[2] / 255);
+          const edge = Math.min(1, fresnel * 1.6 + spec * 0.65);
+          rr = lerp(bodyR, bg[0], see * (1 - edge));
+          gg = lerp(bodyG, bg[1], see * (1 - edge));
+          bb = lerp(bodyB, bg[2], see * (1 - edge));
+          rr += edge * 110 + spec * 200;
+          gg += edge * 130 + spec * 220;
+          bb += edge * 150 + spec * 240;
+        }
+      }
+
+      if (emissiveIntensity > 0) {
+        rr += emissiveRgb[0] * emissiveIntensity;
+        gg += emissiveRgb[1] * emissiveIntensity;
+        bb += emissiveRgb[2] * emissiveIntensity;
+      }
+
+      // Soft alpha preview: leaf cutouts blend to backdrop instead of vanishing.
+      if (alpha && alphaSample < 0.98) {
+        const bg = backdropRgb(px, py, outSize);
+        const cover = alphaTest > 0
+          ? (alphaSample >= alphaTest ? 1 : Math.max(0, alphaSample / Math.max(alphaTest, 0.001)))
+          : alphaSample;
+        rr = lerp(bg[0], rr, cover);
+        gg = lerp(bg[1], gg, cover);
+        bb = lerp(bg[2], bb, cover);
+      }
+
+      out[i] = clamp(rr);
+      out[i + 1] = clamp(gg);
+      out[i + 2] = clamp(bb);
       out[i + 3] = 255;
     }
   }
@@ -314,9 +519,26 @@ function downscaleSquare(rgba, width, height, size) {
   return out;
 }
 
-function loadMapOrSolid(filePath, solidRgb, mapSize) {
+function loadMapOrSolid(filePath, solidRgb, mapSize, { asGradient = false } = {}) {
   if (filePath && existsSync(filePath)) {
     const decoded = decodePngRgba(filePath);
+    // 1D toon gradients are often a wide short strip — expand by sampling X across.
+    if (asGradient || decoded.height * 4 < decoded.width) {
+      const square = Buffer.alloc(mapSize * mapSize * 4);
+      const midY = Math.floor(decoded.height / 2);
+      for (let y = 0; y < mapSize; y++) {
+        for (let x = 0; x < mapSize; x++) {
+          const sx = Math.min(decoded.width - 1, Math.floor((x / (mapSize - 1)) * (decoded.width - 1)));
+          const si = (midY * decoded.width + sx) * 4;
+          const di = (y * mapSize + x) * 4;
+          square[di] = decoded.rgba[si];
+          square[di + 1] = decoded.rgba[si + 1];
+          square[di + 2] = decoded.rgba[si + 2];
+          square[di + 3] = decoded.rgba[si + 3];
+        }
+      }
+      return square;
+    }
     // Bake assumes square maps; crop/pad to min side then downscale.
     const side = Math.min(decoded.width, decoded.height);
     const square = Buffer.alloc(side * side * 4);
@@ -367,12 +589,45 @@ export function bakeAndWriteMaterialSpherePreview({
   const roughPath = definition?.roughnessMapId
     ? resolveTexturePath(definition.roughnessMapId)
     : null;
+  const matcapPath = definition?.matcapMapId
+    ? resolveTexturePath(definition.matcapMapId)
+    : null;
+  const gradientPath = definition?.gradientMapId
+    ? resolveTexturePath(definition.gradientMapId)
+    : null;
+  const alphaPath = definition?.alphaMapId
+    ? resolveTexturePath(definition.alphaMapId)
+    : null;
 
   const albedo = loadMapOrSolid(albedoPath, baseRgb, mapSize);
   const normal = loadMapOrSolid(normalPath, [128, 128, 255], mapSize);
   const roughness = loadMapOrSolid(roughPath, [roughByte, roughByte, roughByte], mapSize);
+  const matcap = matcapPath ? loadMapOrSolid(matcapPath, [180, 180, 190], mapSize) : null;
+  const gradient = gradientPath
+    ? loadMapOrSolid(gradientPath, [128, 128, 128], mapSize, { asGradient: true })
+    : null;
+  const alpha = alphaPath ? loadMapOrSolid(alphaPath, [255, 255, 255], mapSize) : null;
 
-  const sphere = bakeSphere(albedo, normal, roughness, mapSize, sphereSize);
+  const sphere = bakeSphere(
+    { albedo, normal, roughness, matcap, gradient, alpha },
+    mapSize,
+    sphereSize,
+    {
+      shadingModel: definition?.shadingModel || 'standard',
+      metalness: definition?.metalness,
+      transmission: definition?.transmission,
+      opacity: definition?.opacity,
+      clearcoat: definition?.clearcoat,
+      clearcoatRoughness: definition?.clearcoatRoughness,
+      sheen: definition?.sheen,
+      sheenRoughness: definition?.sheenRoughness,
+      sheenRgb: parseHexColor(definition?.sheenColor, [0, 0, 0]),
+      emissiveRgb: parseHexColor(definition?.emissive, [0, 0, 0]),
+      emissiveIntensity: definition?.emissiveIntensity,
+      attenuationRgb: parseHexColor(definition?.attenuationColor, [255, 255, 255]),
+      alphaTest: definition?.alphaTest,
+    },
+  );
   writePngBuffer(previewAbsPath, sphereSize, sphereSize, sphere);
 
   return {

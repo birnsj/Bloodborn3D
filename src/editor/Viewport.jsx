@@ -148,6 +148,7 @@ export function Viewport() {
     placeMeshAsset,
     placePrefabAsset,
     placeLight,
+    placeEnvironment,
     placePlayerSpawn,
     createCell,
     reparentSelected,
@@ -2039,6 +2040,7 @@ export function Viewport() {
     await commitCreatePlacement(session.payload, pose, {
       createBrushAtBounds,
       placeLight,
+      placeEnvironment,
       placePlayerSpawn,
       createCell,
       placeMeshAsset,
@@ -2274,6 +2276,7 @@ export function Viewport() {
       await commitCreatePlacement(createPayload, pose, {
         createBrushAtBounds,
         placeLight,
+        placeEnvironment,
         placePlayerSpawn,
         createCell,
         placeMeshAsset,
@@ -2330,6 +2333,7 @@ export function Viewport() {
     await commitCreatePlacement(placePayload, pose, {
       createBrushAtBounds,
       placeLight,
+      placeEnvironment,
       placePlayerSpawn,
       createCell,
       placeMeshAsset,

@@ -41,6 +41,7 @@ import {
   SetBrushMaterialCommand,
   SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
+  SetEnvironmentPropertiesCommand,
   SetWorldPostProcessingCommand,
   SetWorldSceneCommand,
   SetWorldAmbientCommand,
@@ -115,6 +116,7 @@ import {
 } from '../runtime/wallEndpoints.js';
 import { createStaticMeshActor } from './meshFactory.js';
 import { createLightActor } from './lightFactory.js';
+import { createEnvironmentActor } from './environmentFactory.js';
 import { createCellActor } from './cellFactory.js';
 import { createPlayerSpawnActor } from './spawnFactory.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
@@ -1940,6 +1942,52 @@ export function EditorProvider({ children }) {
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
+  const updateSelectedEnvironment = useCallback((partial, options = {}) => {
+    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
+    const { undoable = true, label = 'Edit environment' } = options;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const env = world.getActor(actorId)?.getComponent('Environment');
+    if (!env) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(partial)) {
+      before[key] = structuredClone(env[key]);
+      after[key] = structuredClone(partial[key]);
+    }
+    if (!undoable) {
+      for (const key of Object.keys(after)) {
+        env[key] = after[key];
+      }
+      const actor = world.getActor(actorId);
+      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
+      bump();
+      return;
+    }
+    executeCommand(
+      new SetEnvironmentPropertiesCommand({ world, actorId, before, after, label }),
+      { resync: true },
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+
+  const commitEnvironmentGesture = useCallback((beforeSnapshot, label = 'Edit environment') => {
+    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
+    const actorId = selectedRef.current[selectedRef.current.length - 1];
+    const env = world.getActor(actorId)?.getComponent('Environment');
+    if (!env) return;
+    const before = {};
+    const after = {};
+    for (const key of Object.keys(beforeSnapshot)) {
+      before[key] = structuredClone(beforeSnapshot[key]);
+      after[key] = structuredClone(env[key]);
+    }
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    recordCommand(
+      new SetEnvironmentPropertiesCommand({ world, actorId, before, after, label }),
+    );
+    autoCapturePrefabOverrides([actorId]);
+  }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
+
   /**
    * Level-authored scene fill (World Settings). Not an actor light.
    * @param {object} partial
@@ -2650,6 +2698,30 @@ export function EditorProvider({ children }) {
         world,
         actorsJson: [actor.toJSON()],
         label: `Place ${lightType} light`,
+      }),
+      { selectIds: [actor.id] },
+    );
+    return actor;
+  }, [world, mode, executeCommand]);
+
+  const placeEnvironment = useCallback((envType = 'water2', position, options = {}) => {
+    if (!world || mode === 'play') return null;
+    const snap = options.gridSnap ?? gridSnapRef.current;
+    const g = snap ? (options.gridSize ?? gridRef.current) : 1;
+    const actor = createEnvironmentActor({
+      envType,
+      position: position || { x: 0, y: 0, z: 0 },
+      rotation: options.rotation,
+      gridSize: g,
+      snapY: options.snapY ?? snap,
+      targetActorId: options.targetActorId,
+      mapId: options.mapId,
+    });
+    executeCommand(
+      new AddActorsCommand({
+        world,
+        actorsJson: [actor.toJSON()],
+        label: `Place ${envType}`,
       }),
       { selectIds: [actor.id] },
     );
@@ -3845,6 +3917,8 @@ export function EditorProvider({ children }) {
     removeBrushOpening,
     updateSelectedLight,
     commitLightGesture,
+    updateSelectedEnvironment,
+    commitEnvironmentGesture,
     updateWorldAmbient,
     commitWorldAmbientGesture,
     updateWorldScene,
@@ -3863,6 +3937,7 @@ export function EditorProvider({ children }) {
     joinSelectedWallToNearest,
     placeMeshAsset,
     placeLight,
+    placeEnvironment,
     placePlayerSpawn,
     placePrefabAsset,
     createPrefabFromSelection,

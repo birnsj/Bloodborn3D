@@ -21,6 +21,7 @@ import { worldFogAtmosphereLesson } from './20-world-fog-atmosphere.js';
 import { worldEnvironmentLesson } from './21-world-environment.js';
 import { materialsShadingLesson } from './22-materials-shading.js';
 import { lightingAdvancedLesson } from './23-lighting-advanced.js';
+import { environmentalObjectsLesson } from './24-environmental-objects.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -46,6 +47,7 @@ export const LESSONS = [
   worldEnvironmentLesson,
   materialsShadingLesson,
   lightingAdvancedLesson,
+  environmentalObjectsLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

@@ -165,6 +165,12 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'bake-missing-material-previews') {
+            const result = await bakeMissingMaterialPreviews();
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'PUT' && action === 'material') {
             const id = url.searchParams.get('id');
             const body = JSON.parse(await readBody(req));
@@ -521,6 +527,58 @@ export async function importMeshBuffer(buffer, {
 /** Public helper for OpenArt (and other) server-side material creation. */
 export async function createMaterialAssetFromDefinition(body) {
   return createMaterialAsset(body);
+}
+
+/**
+ * Backfill lit-sphere PNGs for materials missing previewPath
+ * (seeded/legacy assets that never went through create-material).
+ */
+export async function bakeMissingMaterialPreviews() {
+  return mutateRegistry(async (registry) => {
+    let baked = 0;
+    let skipped = 0;
+    let failed = 0;
+    const updatedDefs = {};
+
+    for (const entry of registry.assets) {
+      if (entry.kind !== 'material') continue;
+      const full = resolveSafeAssetPath(entry.path);
+      let current;
+      try {
+        current = JSON.parse(await fs.readFile(full, 'utf8'));
+      } catch {
+        failed += 1;
+        continue;
+      }
+      const definition = normalizeMaterialDefinition(current);
+      if (definition.previewPath || entry.meta?.previewPath) {
+        skipped += 1;
+        continue;
+      }
+      const previewPath = bakeMaterialSpherePreview(definition, registry);
+      if (!previewPath) {
+        failed += 1;
+        continue;
+      }
+      definition.previewPath = previewPath;
+      definition.updatedAt = Date.now();
+      await atomicWriteJson(full, materialDefinitionForDisk(definition));
+      entry.name = definition.name || entry.name;
+      entry.updatedAt = definition.updatedAt;
+      entry.meta = materialRegistryMeta(definition);
+      updatedDefs[definition.id] = definition;
+      baked += 1;
+    }
+
+    return {
+      ok: true,
+      baked,
+      skipped,
+      failed,
+      registry,
+      definitions: updatedDefs,
+    };
+  });
 }
 
 function resolveTextureAbsPath(registry, textureId) {

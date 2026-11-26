@@ -75,6 +75,13 @@ import {
   ensureRectAreaLightUniforms,
 } from './createThreeLight.js';
 import {
+  createThreeEnvironmentFromComponent,
+  setEnvironmentPerspectiveVisible,
+  rebuildDecalGeometry,
+  tickEnvironmentVisuals,
+} from './createThreeEnvironment.js';
+import { normalizeEnvironmentFields } from '../components/EnvironmentComponent.js';
+import {
   BOX_SURFACE_IDS,
   getStructuralComponent,
   resolveSurfaceMaterialId,
@@ -636,6 +643,7 @@ export class SceneView {
         // Soft wall occlusion for mist / noise / volumetric (perspective only).
         this.atmosphere?.captureDepth?.(this.renderer, camera);
       }
+      tickEnvironmentVisuals(this.scene);
 
       if (usePostProcess && this.postProcessingController?.isActive) {
         try {
@@ -953,6 +961,8 @@ export class SceneView {
         this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
         // Lensflare is a screen-space effect — hide in ortho construction panes.
         setLensflarePerspectiveVisible(this.scene, !ortho);
+        setEnvironmentSurfacesPerspectiveVisible(this.scene, !ortho);
+        this._syncPlaceableSkyPrecedence();
         if (showAtmosphere) this.atmosphere?.update?.(cam, dt);
 
         try {
@@ -998,6 +1008,8 @@ export class SceneView {
     this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
     this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
     setLensflarePerspectiveVisible(this.scene, !ortho);
+    setEnvironmentSurfacesPerspectiveVisible(this.scene, !ortho);
+    this._syncPlaceableSkyPrecedence();
     if (showAtmosphere) this.atmosphere?.update?.(camera, dt);
     this.renderer.setScissorTest(false);
     const fullW = Math.max(1, Math.round(this._size.width || 1));
@@ -1500,6 +1512,8 @@ export class SceneView {
         group.add(marker);
       } else if (comp.type === 'Light') {
         this._addLightVisual(group, actor, comp, syncToken, world);
+      } else if (comp.type === 'Environment') {
+        this._addEnvironmentVisual(group, actor, comp, syncToken, world);
       } else if (comp.type === 'StaticMesh') {
         this._addStaticMeshVisual(group, actor, comp, syncToken);
       } else if (comp.type === 'PlayerSpawn' && this.editMode) {
@@ -2238,6 +2252,126 @@ export class SceneView {
     // Target lives as a sibling of the light under built.root when present.
     this._applyLightTargetAim(built.light.parent || holder, built.light, comp, world);
     built.helper?.update?.();
+  }
+
+  _addEnvironmentVisual(group, actor, comp, syncToken, world = actor.world) {
+    const holder = new THREE.Group();
+    holder.userData.bbEnvHolder = true;
+    holder.userData.actorId = actor.id;
+    holder.userData.pickable = true;
+    group.add(holder);
+    if (this.editMode && (comp.envType === 'decal' || comp.envType === 'sky')) {
+      const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.MeshBasicMaterial({
+          color: comp.envType === 'sky' ? 0x88ccff : 0xcc8844,
+          depthTest: false,
+          transparent: true,
+          opacity: 0.85,
+        }),
+      );
+      marker.userData.actorId = actor.id;
+      marker.userData.pickable = true;
+      marker.userData.editorOnly = true;
+      group.add(marker);
+    }
+    void this._finishEnvironmentVisual(holder, actor, comp, syncToken, world);
+  }
+
+  async _finishEnvironmentVisual(holder, actor, comp, syncToken, world) {
+    const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
+    const resolveTextureUrl = (assetId) => {
+      const path = this.assetResolver?.getTextureUrl?.(assetId);
+      return path ? (assetUrl(path) || path) : null;
+    };
+    let built;
+    try {
+      built = await createThreeEnvironmentFromComponent(comp, {
+        resolveTextureUrl,
+        maxAnisotropy: this.maxAnisotropy,
+        world,
+        actor,
+      });
+    } catch (err) {
+      console.warn('[BloodBound] environment build failed', actor?.id, err);
+      return;
+    }
+    if (!this._isActorVisualCurrent(actor.id, syncToken, visualEpoch)) {
+      built.dispose?.();
+      if (built.root) disposeObject(built.root);
+      return;
+    }
+    while (holder.children.length) {
+      const child = holder.children[0];
+      holder.remove(child);
+      disposeObject(child);
+    }
+    holder.add(built.root);
+    holder.userData.bbEnvDispose = built.dispose;
+    holder.userData.bbEnvKind = built.kind;
+    built.root.userData.bbEnvDispose = built.dispose;
+    if (built.kind === 'decal') {
+      this._projectDecal(built.root, actor, comp, world);
+    }
+    if (built.kind === 'sky') {
+      holder.userData.bbPlaceableSky = true;
+      built.root.userData.bbPlaceableSky = true;
+      this._syncPlaceableSkyPrecedence();
+    }
+  }
+
+  _projectDecal(decalRoot, actor, comp, world = actor.world) {
+    const def = normalizeEnvironmentFields(comp);
+    if (!def.targetActorId || !world) return;
+    const targetEntry = this._actorMeshes.get(def.targetActorId);
+    if (!targetEntry?.group) return;
+    let targetMesh = null;
+    targetEntry.group.traverse((obj) => {
+      if (targetMesh) return;
+      if (obj.isMesh && obj.userData?.pickable !== false && !obj.userData?.editorOnly) {
+        targetMesh = obj;
+      }
+    });
+    if (!targetMesh) return;
+    const worldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    // Projector pose = decal actor world transform.
+    const entry = this._actorMeshes.get(actor.id);
+    if (entry?.group) {
+      entry.group.updateWorldMatrix(true, false);
+      entry.group.getWorldPosition(worldPos);
+      entry.group.getWorldQuaternion(worldQuat);
+    } else {
+      const p = actor.transform.position;
+      worldPos.set(toMeters(p.x), toMeters(p.y), toMeters(p.z));
+      const r = actor.transform.rotation;
+      worldQuat.setFromEuler(new THREE.Euler(
+        THREE.MathUtils.degToRad(r.x),
+        THREE.MathUtils.degToRad(r.y),
+        THREE.MathUtils.degToRad(r.z),
+      ));
+    }
+    // DecalGeometry expects world-space projector pose; verts are mesh-local.
+    const orient = new THREE.Euler().setFromQuaternion(worldQuat);
+    targetMesh.updateWorldMatrix(true, false);
+    rebuildDecalGeometry(decalRoot, targetMesh, worldPos, orient, def.decalSize);
+  }
+
+  /**
+   * Placeable Sky wins over World Settings procedural sky when any enabled
+   * placeable Sky actor exists. World.scene.sky JSON is preserved.
+   */
+  _syncPlaceableSkyPrecedence() {
+    let hasPlaceable = false;
+    this.scene?.traverse((obj) => {
+      if (obj.userData?.bbPlaceableSky && obj.visible !== false) hasPlaceable = true;
+    });
+    const worldSky = this.scene?.getObjectByName?.('WorldSky');
+    if (worldSky) {
+      worldSky.userData.bbSuppressedByPlaceableSky = hasPlaceable;
+      if (hasPlaceable) worldSky.visible = false;
+    }
+    this.worldEnvironment?.setPlaceableSkyActive?.(hasPlaceable);
   }
 
   /** Sync factory for tests/benches that stub or call `_createLight` directly. */
@@ -3506,7 +3640,26 @@ function closestParamOnSegment2D(p, a, b) {
 }
 
 function disposeObject(obj) {
+  if (!obj) return;
+  obj.traverse?.((child) => {
+    if (typeof child.userData?.bbEnvDispose === 'function') {
+      try { child.userData.bbEnvDispose(); } catch { /* ignore */ }
+      child.userData.bbEnvDispose = null;
+    }
+    // Decal mesh may be parented under a brush/static mesh host.
+    if (child.userData?.bbDecalDetached && child.parent) {
+      child.parent.remove(child);
+    }
+  });
   disposeObjectTree(obj);
+}
+
+function setEnvironmentSurfacesPerspectiveVisible(scene, perspective) {
+  scene?.traverse((obj) => {
+    if (obj.userData?.bbEnvPerspectiveMesh || obj.userData?.bbEnvOrthoMesh || obj.userData?.bbPlaceableSky) {
+      setEnvironmentPerspectiveVisible(obj, perspective);
+    }
+  });
 }
 
 function disposeMaterial(mat) {

@@ -92,10 +92,22 @@ export class WorldEnvironmentController {
   setPerspectiveVisible(visible) {
     this._perspectiveVisible = Boolean(visible);
     const show = this._perspectiveVisible;
-    if (this._sky) this._sky.visible = show && this._settings.backgroundType === 'sky';
+    if (this._sky) {
+      const suppressed = Boolean(this._placeableSkyActive);
+      this._sky.visible = show && !suppressed && this._settings.backgroundType === 'sky';
+    }
     if (this._grounded) {
       this._grounded.visible = show && Boolean(this._settings.groundedSkybox?.enabled);
     }
+  }
+
+  /**
+   * When a placeable Sky actor is active, suppress the World Settings Sky mesh
+   * (authored world.scene.sky JSON is kept).
+   */
+  setPlaceableSkyActive(active) {
+    this._placeableSkyActive = Boolean(active);
+    this.setPerspectiveVisible(this._perspectiveVisible !== false);
   }
 
   dispose() {

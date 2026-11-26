@@ -18,6 +18,7 @@ import { normalizeRegistry, findAsset } from '../../assets/AssetRegistry.js';
 import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
 import { materialDraftForDuplicate } from '../materials/materialDraft.js';
 import {
+  bakeMissingMaterialPreviews,
   createMaterial,
   createPrefab,
   fetchAssetRegistry,
@@ -141,6 +142,36 @@ export function AssetBrowserProvider({ children }) {
             } catch {
               /* ignore — glyph thumbs remain until next refresh */
             }
+          });
+      }
+      // Dev server: backfill lit-sphere thumbs for materials missing previewPath
+      // (New Material already bakes on create; this covers seeded/legacy assets).
+      const missingMaterialThumbs = next.assets.some(
+        (a) => a.kind === 'material' && !a.meta?.previewPath,
+      );
+      if (missingMaterialThumbs) {
+        void bakeMissingMaterialPreviews()
+          .then(async (result) => {
+            if (!result?.baked) return;
+            if (result.definitions) {
+              const defs = { ...materialCacheRef.current };
+              for (const [id, def] of Object.entries(result.definitions)) {
+                const normalized = normalizeMaterialDefinition(def);
+                if (normalized) defs[id] = normalized;
+              }
+              materialCacheRef.current = defs;
+              setMaterialDefs({ ...defs });
+            }
+            if (result.registry) {
+              setRegistry(normalizeRegistry(result.registry));
+            } else {
+              const data = await fetchAssetRegistry();
+              setRegistry(normalizeRegistry(data));
+            }
+            setRevision((r) => r + 1);
+          })
+          .catch(() => {
+            /* ignore — diagonal swatches remain until next refresh */
           });
       }
       return next;

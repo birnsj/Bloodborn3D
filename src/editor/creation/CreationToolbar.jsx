@@ -36,6 +36,7 @@ import {
 
 const CATEGORY_ICONS = {
   geometry: IconBox,
+  environment: IconLight,
   lights: IconLight,
   actors: IconActors,
   assets: IconFolder,
@@ -56,6 +57,11 @@ const TOOL_ICONS = {
   pointLight: IconLight,
   spotLight: IconLight,
   dirLight: IconLight,
+  water: IconFloor,
+  mirror: IconWall,
+  decal: IconMesh,
+  billboard: IconActors,
+  sky: IconLight,
   spawn: IconSpawn,
   cell: IconCell,
   mesh: IconMesh,

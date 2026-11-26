@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 2,
+  "name": "acceptance-environment",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#2a3348",
+    "intensity": 0.1,
+    "playIntensity": 0.1
+  },
+  "scene": {
+    "background": "#101820",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0.05,
+    "backgroundType": "environment",
+    "backgroundRotation": { "x": 0, "y": 20, "z": 0 },
+    "environmentAssetId": "tex_batch1_studio",
+    "environmentIntensity": 0.9,
+    "environmentRotation": { "x": 0, "y": 40, "z": 0 },
+    "lightProbeEnabled": true,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 6,
+      "rayleigh": 1.5,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 14,
+      "azimuth": 160,
+      "scale": 450000
+    },
+    "groundedSkybox": { "enabled": false, "height": 12, "radius": 80 },
+    "fog": {
+      "type": "linear",
+      "color": "#4a5565",
+      "near": 500,
+      "far": 3600,
+      "density": 0.04,
+      "drift": false,
+      "driftSpeed": 0.1,
+      "driftAmount": 0.1,
+      "mist": false,
+      "mistCount": 200,
+      "mistSpeed": 0.1,
+      "mistOpacity": 0.3,
+      "mistSize": 0.5,
+      "noise": false,
+      "noiseStrength": 0.3,
+      "noiseScale": 0.4,
+      "noiseSpeed": 0.06,
+      "volumetric": false,
+      "volumetricDensity": 0.3,
+      "volumetricExtent": 10,
+      "volumetricSteps": 10
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "actors": [
+    {
+      "id": "actor_env_floor",
+      "name": "Pool Deck",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor"],
+      "components": [
+        {
+          "id": "comp_env_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1600, "y": 20, "z": 1000 },
+          "color": "#5a6270",
+          "materialId": "mat_batch2_standard",
+          "collidable": true,
+          "operation": "add"
+        }
+      ]
+    },
+    {
+      "id": "actor_env_wall",
+      "name": "Mirror Wall",
+      "transform": {
+        "position": { "x": 0, "y": 200, "z": -450 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall"],
+      "components": [
+        {
+          "id": "comp_env_wall",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 900, "y": 400, "z": 20 },
+          "color": "#6a7080",
+          "materialId": "mat_batch2_standard",
+          "collidable": true,
+          "operation": "add"
+        }
+      ]
+    },
+    {
+      "id": "actor_env_pillar",
+      "name": "Decal Pillar",
+      "transform": {
+        "position": { "x": 350, "y": 150, "z": 100 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush"],
+      "components": [
+        {
+          "id": "comp_env_pillar",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 80, "y": 300, "z": 80 },
+          "color": "#7a8090",
+          "materialId": "mat_batch2_metal",
+          "collidable": true,
+          "operation": "add"
+        }
+      ]
+    },
+    {
+      "id": "actor_env_mesh",
+      "name": "Decal Mesh",
+      "transform": {
+        "position": { "x": -350, "y": 50, "z": 80 },
+        "rotation": { "x": 0, "y": 25, "z": 0 },
+        "scale": { "x": 1.5, "y": 1.5, "z": 1.5 }
+      },
+      "tags": ["mesh"],
+      "components": [
+        {
+          "id": "comp_env_mesh",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "box"
+        }
+      ]
+    },
+    {
+      "id": "actor_env_water2",
+      "name": "Pool Water",
+      "transform": {
+        "position": { "x": -200, "y": 25, "z": 150 },
+        "rotation": { "x": -90, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "water2"],
+      "components": [
+        {
+          "id": "comp_env_water2",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "water2",
+          "width": 500,
+          "height": 350,
+          "color": "#001e0f",
+          "flowSpeed": 0.05,
+          "reflectivity": 0.12,
+          "textureResolution": 512,
+          "quality": "medium",
+          "normalMap0Id": "tex_water_normal_0",
+          "normalMap1Id": "tex_water_normal_1",
+          "perspectiveOnly": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_water",
+      "name": "Fountain Basin",
+      "transform": {
+        "position": { "x": 250, "y": 30, "z": -100 },
+        "rotation": { "x": -90, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "water"],
+      "components": [
+        {
+          "id": "comp_env_water",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "water",
+          "width": 220,
+          "height": 220,
+          "color": "#003344",
+          "distortionScale": 3.2,
+          "flowSpeed": 0.04,
+          "textureResolution": 256,
+          "normalMap0Id": "tex_water_normal_0",
+          "perspectiveOnly": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_mirror",
+      "name": "Wall Mirror",
+      "transform": {
+        "position": { "x": 0, "y": 220, "z": -430 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "reflector"],
+      "components": [
+        {
+          "id": "comp_env_mirror",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "reflector",
+          "width": 400,
+          "height": 280,
+          "color": "#8899aa",
+          "textureResolution": 512,
+          "clipBias": 0.003,
+          "quality": "medium",
+          "perspectiveOnly": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_refractor",
+      "name": "Glass Panel",
+      "transform": {
+        "position": { "x": 400, "y": 180, "z": 0 },
+        "rotation": { "x": 0, "y": -35, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "refractor"],
+      "components": [
+        {
+          "id": "comp_env_refractor",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "refractor",
+          "width": 200,
+          "height": 260,
+          "color": "#a8c8d8",
+          "textureResolution": 256,
+          "perspectiveOnly": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_decal_brush",
+      "name": "Stain Decal",
+      "transform": {
+        "position": { "x": 350, "y": 180, "z": 145 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "decal"],
+      "components": [
+        {
+          "id": "comp_env_decal_brush",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "decal",
+          "targetActorId": "actor_env_pillar",
+          "mapId": "tex_verify_wall",
+          "color": "#ffffff",
+          "opacity": 0.85,
+          "decalSize": { "x": 70, "y": 70, "z": 35 },
+          "polygonOffset": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_decal_mesh",
+      "name": "Sign Decal",
+      "transform": {
+        "position": { "x": -350, "y": 80, "z": 120 },
+        "rotation": { "x": 0, "y": 25, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "decal"],
+      "components": [
+        {
+          "id": "comp_env_decal_mesh",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "decal",
+          "targetActorId": "actor_env_mesh",
+          "mapId": "tex_flare_main",
+          "color": "#ffcc88",
+          "opacity": 0.9,
+          "decalSize": { "x": 60, "y": 60, "z": 40 },
+          "polygonOffset": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_sprite",
+      "name": "Billboard Sign",
+      "transform": {
+        "position": { "x": -100, "y": 220, "z": 300 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "sprite"],
+      "components": [
+        {
+          "id": "comp_env_sprite",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "sprite",
+          "width": 120,
+          "height": 80,
+          "mapId": "tex_verify_wall",
+          "color": "#ffffff",
+          "opacity": 1,
+          "sizeAttenuation": true,
+          "fog": true
+        }
+      ]
+    },
+    {
+      "id": "actor_env_sky",
+      "name": "Placeable Sky",
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["environment", "sky"],
+      "components": [
+        {
+          "id": "comp_env_sky",
+          "type": "Environment",
+          "enabled": true,
+          "envType": "sky",
+          "turbidity": 8,
+          "rayleigh": 2.2,
+          "mieCoefficient": 0.005,
+          "mieDirectionalG": 0.75,
+          "elevation": 22,
+          "azimuth": 170,
+          "skyScale": 450000
+        }
+      ]
+    },
+    {
+      "id": "actor_env_key",
+      "name": "Key Light",
+      "transform": {
+        "position": { "x": 200, "y": 400, "z": 200 },
+        "rotation": { "x": -50, "y": 30, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light", "directional"],
+      "components": [
+        {
+          "id": "comp_env_key",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "directional",
+          "color": "#fff5e6",
+          "intensity": 1.4,
+          "castShadow": true
+        }
+      ]
+    }
+  ]
+}

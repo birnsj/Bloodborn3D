@@ -16,6 +16,7 @@ export async function commitCreatePlacement(payload, pose, api) {
   const {
     createBrushAtBounds,
     placeLight,
+    placeEnvironment,
     placePlayerSpawn,
     createCell,
     placeMeshAsset,
@@ -63,6 +64,13 @@ export async function commitCreatePlacement(payload, pose, api) {
   if (payload.placeKind === 'light') {
     return placeLight(payload.lightType || 'point', pose.position, opts);
   }
+  if (payload.placeKind === 'environment') {
+    return placeEnvironment(payload.envType || 'water2', pose.position, {
+      ...opts,
+      targetActorId: pose.targetActorId || payload.targetActorId,
+      mapId: payload.mapId,
+    });
+  }
   if (payload.placeKind === 'spawn') {
     return placePlayerSpawn(pose.position, opts);
   }
@@ -99,6 +107,15 @@ export function previewSizeForPayload(payload, gridSize = 25) {
     return { x: gridSize * 2, y: gridSize * 2, z: gridSize * 2 };
   }
   if (payload?.placeKind === 'light') return { x: 30, y: 30, z: 30 };
+  if (payload?.placeKind === 'environment') {
+    const t = payload.envType || 'water2';
+    if (t === 'water' || t === 'water2') return { x: 600, y: 4, z: 600 };
+    if (t === 'reflector' || t === 'refractor') return { x: 300, y: 400, z: 8 };
+    if (t === 'decal') return { x: 80, y: 80, z: 40 };
+    if (t === 'sprite') return { x: 100, y: 100, z: 4 };
+    if (t === 'sky') return { x: 80, y: 80, z: 80 };
+    return { x: 200, y: 40, z: 200 };
+  }
   if (payload?.placeKind === 'spawn') return { x: 40, y: 80, z: 40 };
   if (payload?.placeKind === 'cell') return { x: 40, y: 40, z: 40 };
   return { x: 50, y: 50, z: 50 };

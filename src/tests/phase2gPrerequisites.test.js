@@ -552,7 +552,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
 
   it('all shipped levels pass geometry validation', () => {
     const files = readdirSync(LEVELS_DIR).filter((f) => f.endsWith('.json'));
-    expect(files).toHaveLength(20);
+    expect(files).toHaveLength(21);
     for (const file of files) {
       const raw = JSON.parse(readFileSync(path.join(LEVELS_DIR, file), 'utf8'));
       const result = validateLevelGeometry(raw);

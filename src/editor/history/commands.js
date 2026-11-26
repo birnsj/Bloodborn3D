@@ -351,6 +351,35 @@ export class SetLightPropertiesCommand {
 }
 
 /**
+ * Patch EnvironmentComponent properties (Batch 4).
+ */
+export class SetEnvironmentPropertiesCommand {
+  constructor({ world, actorId, before, after, label = 'Edit environment' }) {
+    this.world = world;
+    this.actorId = actorId;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    const env = this.world.getActor(this.actorId)?.getComponent('Environment');
+    if (!env) return;
+    for (const key of Object.keys(state)) {
+      env[key] = state[key];
+    }
+  }
+}
+
+/**
  * Replace map-authored world.scene settings (background, fog, environment, sky).
  */
 export class SetWorldSceneCommand {
