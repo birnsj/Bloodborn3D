@@ -14,7 +14,8 @@
 **Batch 7 status:** **Complete** (multi-format import/export, SimplifyModifier, auto LOD, local DRACO/Meshopt/KTX2 decode, Asset Viewer tools). Encode authoring deferred.  
 **Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.  
 **Batch 7.1 status:** **Complete** — actor + asset pivot editing (`contentOffset`), Asset Viewer interactive pivot gizmo, presets, local/world, undo, acceptance level. See `docs/ACCEPTANCE_PIVOT_EDITING.md`.  
-**Pre-Batch 8 performance:** **Stabilized** — multi-viewport shadow reuse, lit display short-circuit, ortho RT skip, profiling median/p95 + `info.reset`. Quad ≥30 FPS target not met (architectural). See `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`.
+**Pre-Batch 8 performance:** **Stabilized** — multi-viewport shadow reuse, lit display short-circuit, ortho RT skip, profiling median/p95 + `info.reset`. Quad ≥30 FPS target not met (architectural). See `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`.  
+**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`.
 
 ### Principles
 
@@ -130,7 +131,7 @@
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
 | Geometry | Constructive brushes + ConvexBrush + PrimitiveMesh props | — | Batch 5 complete (native + procedural props); brushes unchanged |
 | Static meshes | GLTF + full collision / LOD / opt-in InstancedMesh | Batch 6 Done | BatchedMesh deferred |
-| Textures | Asset refs; KTX2 decode via Batch 7 | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform (Batch 8) |
+| Textures | Asset refs; KTX2 decode; Batch 8 sampler/transform/channel | Asset meta.sampler/transform + material mapChannels | VideoTexture authoring (Deferred) |
 | Asset tools | Multi-format I/O, Simplify, auto LOD, decode DRACO/Meshopt/KTX2, inspect | Encode deferred | BufferGeometryUtils center/merge P1 residual |
 | Editor organization | Cells/prefabs/hierarchy | — | Authoring layers + solo/lock/vis |
 | Viewport | Multi-pane, fog/PP chips, ortho clear | — | ViewHelper, light helpers as opt-in |
@@ -537,18 +538,19 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 **Fixtures:** `public/assets/fixtures/` — Meshopt + Khronos DRACO Box/Duck + three.js KTX2 + FBX/Collada/GLTF samples  
 **Depends on:** none hard; **feeds** Batches 1, 4, 6, 8.
 
-### Batch 8 — Textures
+### Batch 8 — Textures — **Complete**
 
-| Pri | Item |
-|-----|------|
-| P0 | Texture inspector: wrap, min/mag filter, anisotropy, colorSpace, generateMipmaps |
-| P1 | UV channel selection (incl. feeding lightmap UV2 when baked lighting exists — Batch 2 residual) |
-| P1 | Texture-level offset/repeat/rotation (optional vs material UV) |
-| P0 | KTX2 compressed texture import | 
-| P2 | VideoTexture authoring (optional env screens) — *include with note: useful for diegetic screens; low priority* |
+| Pri | Item | Status |
+|-----|------|--------|
+| P0 | Texture inspector: wrap, min/mag filter, anisotropy, colorSpace, generateMipmaps | **Complete** |
+| P1 | UV channel selection (incl. feeding lightmap UV2 when baked lighting exists — Batch 2 residual) | **Complete** (sampling UI; baking still Deferred) |
+| P1 | Texture-level offset/repeat/rotation (optional vs material UV) | **Complete** |
+| P0 | KTX2 compressed texture import / decode | **Complete** (encode still Deferred from Batch 7) |
+| P2 | VideoTexture authoring (optional env screens) | **Deferred** |
 
+**Acceptance:** `docs/ACCEPTANCE_TEXTURES.md`, `public/levels/acceptance-textures.json`, Academy lesson 29 (`textures`).  
 **Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.  
-**Note:** Dedicated lightmap UV channel remains **Deferred** until baked lighting; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking.
+**Note:** Dedicated lightmap UV channel baking remains **Deferred**; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking. VideoTexture deferred.
 
 ### Batch 9 — Editor organization & viewport tools
 

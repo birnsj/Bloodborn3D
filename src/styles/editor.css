@@ -2090,6 +2090,87 @@ select {
   pointer-events: auto;
 }
 
+.bb-map-channels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+
+.bb-texture-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  max-height: 52vh;
+  overflow: auto;
+}
+.bb-texture-preview {
+  width: 100%;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #12151a;
+}
+.bb-texture-inspector__stats dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 12px;
+}
+.bb-texture-inspector__stats dt {
+  opacity: 0.65;
+}
+.bb-texture-inspector__stats dd {
+  margin: 0;
+}
+.bb-texture-inspector__est-note,
+.bb-texture-inspector__hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.bb-texture-inspector__warnings {
+  margin: 0;
+  padding-left: 18px;
+  color: #e0b35a;
+  font-size: 12px;
+}
+.bb-texture-inspector__fieldset {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+.bb-texture-inspector__fieldset legend {
+  padding: 0 4px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+.bb-texture-inspector__fieldset label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+.bb-texture-inspector__check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+}
+.bb-texture-inspector__actions {
+  display: flex;
+  gap: 8px;
+}
+.bb-texture-inspector__fieldset select,
+.bb-texture-inspector__fieldset input[type='number'] {
+  background: #0e1218;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  padding: 3px 6px;
+}
+
 .bb-asset-preview__pivot-badge {
   margin-right: auto;
   padding: 4px 8px;

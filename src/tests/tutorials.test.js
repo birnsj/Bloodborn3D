@@ -80,7 +80,9 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(28);
+    expect(LESSONS).toHaveLength(29);
+    expect(listLessons().map((l) => l.id)).toContain('textures');
+    expect(listLessons().map((l) => l.id)).toContain('pivot-editing');
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');

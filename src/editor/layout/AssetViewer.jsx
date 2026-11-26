@@ -7,6 +7,9 @@ import { useLayout } from './LayoutContext.jsx';
 import { useEditor } from '../EditorContext.jsx';
 import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewCanvas.jsx';
 import { MeshAssetTools } from '../assets/MeshAssetTools.jsx';
+import { TextureInspector } from '../assets/TextureInspector.jsx';
+import { TexturePreviewCanvas } from '../assets/TexturePreviewCanvas.jsx';
+import { isCompressedTextureMeta, isCompressedTexturePath } from '../../assets/textureSampling.js';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { uploadMaterialPreview, uploadMeshPreview } from '../../io/assetFileApi.js';
 import { isSupportedMeshImportName } from '../../assets/meshFormatIO.js';
@@ -36,6 +39,7 @@ export function AssetViewer({ docked = false } = {}) {
     importMesh,
     importDerivedMeshGlb,
     updateMeshMeta,
+    updateTextureMeta,
     createNewMaterial,
     dragMime,
     notify,
@@ -72,7 +76,7 @@ export function AssetViewer({ docked = false } = {}) {
     for (const file of files) {
       const lower = file.name.toLowerCase();
       try {
-        if (/\.(png|jpe?g|webp|gif)$/i.test(lower)) {
+        if (/\.(png|jpe?g|webp|gif|ktx2)$/i.test(lower)) {
           await importTexture(file);
           patch({ contentFolder: 'Textures' });
         } else if (isSupportedMeshImportName(file.name)) {
@@ -349,6 +353,7 @@ export function AssetViewer({ docked = false } = {}) {
           onClose={() => setPreviewAsset(null)}
           importDerivedMeshGlb={importDerivedMeshGlb}
           updateMeshMeta={updateMeshMeta}
+          updateTextureMeta={updateTextureMeta}
           notify={notify}
         />
       ) : null}
@@ -362,7 +367,7 @@ function offsetsEqual(a, b) {
   return aa.x === bb.x && aa.y === bb.y && aa.z === bb.z;
 }
 
-function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMeta, notify }) {
+function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMeta, updateTextureMeta, notify }) {
   const [meshMeta, setMeshMeta] = useState(null);
   const [pivotDraft, setPivotDraft] = useState(() =>
     normalizeContentOffset(asset?.meta?.defaultContentOffset));
@@ -555,6 +560,13 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
                 pivotDirty={pivotDirty}
               />
             )}
+            {asset.type === 'texture' && (
+              <TextureInspector
+                asset={asset}
+                updateTextureMeta={updateTextureMeta}
+                notify={notify}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -590,15 +602,16 @@ function PreviewSurface({
     );
   }
 
-  if (asset.type === 'texture' && asset.url) {
+  if (asset.type === 'texture' && (asset.url || asset.path)) {
+    // WebGL preview (supports KTX2); raster <img> cannot decode compressed fixtures.
     return (
       <div className="bb-asset-preview__surface bb-asset-preview__surface--image">
-        <img
-          src={asset.url}
-          alt={asset.name}
-          className="bb-asset-preview__image"
-          draggable={false}
-          onContextMenu={suppressNativeImageMenu}
+        <TexturePreviewCanvas
+          url={asset.url}
+          path={asset.path}
+          sampler={asset.meta?.sampler}
+          transform={asset.meta?.transform}
+          compressed={isCompressedTexturePath(asset.path || asset.url) || isCompressedTextureMeta(asset.meta)}
         />
       </div>
     );

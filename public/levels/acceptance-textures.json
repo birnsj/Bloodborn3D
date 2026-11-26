@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance — Textures",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.14,
+    "playIntensity": 0.14
+  },
+  "scene": {
+    "background": "#12161c",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0,
+    "backgroundType": "color",
+    "backgroundRotation": { "x": 0, "y": 0, "z": 0 },
+    "environmentAssetId": "tex_batch1_studio",
+    "environmentIntensity": 1,
+    "environmentRotation": { "x": 0, "y": 20, "z": 0 },
+    "lightProbeEnabled": true,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 2,
+      "rayleigh": 1,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 8,
+      "azimuth": 160,
+      "scale": 450000
+    },
+    "groundedSkybox": { "enabled": false, "height": 15, "radius": 100 },
+    "fog": {
+      "type": "none",
+      "color": "#6a7380",
+      "near": 100,
+      "far": 1500,
+      "density": 0.05,
+      "drift": false,
+      "driftSpeed": 0.12,
+      "driftAmount": 0.22,
+      "mist": false,
+      "mistCount": 400,
+      "mistSpeed": 0.15,
+      "mistOpacity": 0.35,
+      "mistSize": 0.6,
+      "noise": false,
+      "noiseStrength": 0.35,
+      "noiseScale": 0.45,
+      "noiseSpeed": 0.08,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "postProcessing": {
+    "version": 1,
+    "enabled": false,
+    "multisampling": 0,
+    "exposure": 0.95,
+    "effects": {}
+  },
+  "actors": [
+    {
+      "id": "actor_b8_floor",
+      "name": "Aniso Floor",
+      "transform": {
+        "position": { "x": 0, "y": 10, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "floor", "batch8"],
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1400, "y": 20, "z": 900 },
+          "color": "#8e8478",
+          "materialId": "mat_batch8_tiled",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_back",
+      "name": "Back Wall",
+      "transform": {
+        "position": { "x": 0, "y": 170, "z": -420 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "wall", "batch8"],
+      "components": [
+        {
+          "id": "comp_back",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 1400, "y": 320, "z": 20 },
+          "color": "#9a9690",
+          "materialId": "mat_hall_ceiling",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_nearest",
+      "name": "Nearest Demo",
+      "transform": {
+        "position": { "x": -420, "y": 150, "z": -80 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch8", "filter"],
+      "components": [
+        {
+          "id": "comp_nearest",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 200, "y": 260, "z": 24 },
+          "color": "#6e4a32",
+          "materialId": "mat_batch8_nearest",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_linear",
+      "name": "Linear Demo",
+      "transform": {
+        "position": { "x": -180, "y": 150, "z": -80 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch8", "filter"],
+      "components": [
+        {
+          "id": "comp_linear",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 200, "y": 260, "z": 24 },
+          "color": "#6e4a32",
+          "materialId": "mat_batch8_linear",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_shared_a",
+      "name": "Shared Image A",
+      "transform": {
+        "position": { "x": 120, "y": 150, "z": -80 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch8", "shared"],
+      "components": [
+        {
+          "id": "comp_shared_a",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 180, "y": 260, "z": 24 },
+          "color": "#a8a098",
+          "materialId": "mat_batch8_shared_a",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_shared_b",
+      "name": "Shared Image B",
+      "transform": {
+        "position": { "x": 360, "y": 150, "z": -80 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch8", "shared"],
+      "components": [
+        {
+          "id": "comp_shared_b",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 180, "y": 260, "z": 24 },
+          "color": "#a8a098",
+          "materialId": "mat_batch8_shared_b",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_ktx2",
+      "name": "KTX2 Panel",
+      "transform": {
+        "position": { "x": 580, "y": 140, "z": -40 },
+        "rotation": { "x": 0, "y": -25, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "batch8", "ktx2"],
+      "components": [
+        {
+          "id": "comp_ktx2",
+          "type": "Brush",
+          "enabled": true,
+          "size": { "x": 160, "y": 160, "z": 16 },
+          "color": "#ffffff",
+          "materialId": "mat_batch8_ktx2",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_subtract",
+      "name": "Door Cut (subtract)",
+      "transform": {
+        "position": { "x": 0, "y": 110, "z": -420 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["structure", "brush", "subtractive", "batch8"],
+      "components": [
+        {
+          "id": "comp_subtract",
+          "type": "Brush",
+          "enabled": true,
+          "operation": "subtract",
+          "size": { "x": 120, "y": 200, "z": 40 },
+          "color": "#ff4444",
+          "materialId": null,
+          "collidable": false
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_furniture",
+      "name": "Furniture Cube",
+      "transform": {
+        "position": { "x": -80, "y": 50, "z": 180 },
+        "rotation": { "x": 0, "y": 20, "z": 0 },
+        "scale": { "x": 1.4, "y": 1, "z": 1.4 }
+      },
+      "tags": ["mesh", "furniture", "batch8"],
+      "components": [
+        {
+          "id": "comp_furniture",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": { "x": 0, "y": 0, "z": 0 },
+          "collisionOffset": { "x": 0, "y": 0, "z": 0 },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "Cube:0": "mat_batch8_linear"
+          },
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_import",
+      "name": "Imported Mesh",
+      "transform": {
+        "position": { "x": 220, "y": 20, "z": 200 },
+        "rotation": { "x": 0, "y": -30, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["mesh", "import", "batch8"],
+      "components": [
+        {
+          "id": "comp_import",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": { "x": 0, "y": 0, "z": 0 },
+          "collisionOffset": { "x": 0, "y": 0, "z": 0 },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_key",
+      "name": "Key Light",
+      "transform": {
+        "position": { "x": 200, "y": 360, "z": 280 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light"],
+      "components": [
+        {
+          "id": "comp_key",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#fff2e0",
+          "intensity": 2.6,
+          "range": 1800,
+          "castShadow": true
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_fill",
+      "name": "Fill Light",
+      "transform": {
+        "position": { "x": -360, "y": 260, "z": 300 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["light"],
+      "components": [
+        {
+          "id": "comp_fill",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#d8e6ff",
+          "intensity": 1.2,
+          "range": 1400,
+          "castShadow": false
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": { "x": 0, "y": 20, "z": 380 },
+        "rotation": { "x": 0, "y": 180, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "tags": ["spawn"],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

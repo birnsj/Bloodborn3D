@@ -1064,6 +1064,23 @@ export const HELP_CONTENT = {
     title: 'Thumbnail Size',
     body: 'Scales Asset Viewer grid thumbnails. Preference is saved with the workspace layout.',
   },
+  'texture.inspector': {
+    title: 'Texture Inspector',
+    body: 'Asset-level sampling (wrap, mag/min filter, mipmaps, anisotropy, color space) and transform (repeat, offset, rotation, center, flipY). Draft changes preview live; Apply writes texture meta and clears the GPU texture cache. GPU memory shown is an estimate, not a live query.',
+    tips: 'Compressed KTX2 disables generateMipmaps and flipY. Sampling is shared by texture asset id — duplicate the asset for independent filters.',
+  },
+  'texture.transform': {
+    title: 'Texture Transform',
+    body: 'Asset-default UV matrix on the texture (repeat/offset/rotation/center). Distinct from surface face UV (Layer 1) and material UV (Layer 2). Material UV multiplies on top of the asset transform once.',
+  },
+  'materials.uvChannels': {
+    title: 'UV Channels',
+    body: 'Per-map geometry UV set (Three.js Texture.channel, UV0–UV3). AO and light maps default to UV1. Missing channels warn at bind time. Does not bake lighting.',
+  },
+  'materials.uvLayers': {
+    title: 'Material UV Layers',
+    body: 'Layer 0 = authored geometry UVs. Layer 1 = per-face/surface UV. Layer 2 = material uvScale/offset/rotation applied to all maps. Texture Asset Viewer transform sits under Layer 2 and must not be double-applied.',
+  },
 
   // —— Viewport chrome ——
   'viewport.camera': {

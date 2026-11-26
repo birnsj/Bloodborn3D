@@ -29,6 +29,7 @@ import {
   replaceTextureFile,
   storeMeshSourceOriginal,
   patchMeshAssetMeta,
+  patchTextureAssetMeta,
   updateMaterial,
   updatePrefab,
   uploadMaterialPreview,
@@ -287,6 +288,22 @@ export function AssetBrowserProvider({ children }) {
     return `${base}${sep}v=${v}`;
   }, [registry, revision]);
 
+  /** Rich texture source for materialFactory (url + sampler/transform meta). */
+  const getTextureAsset = useCallback((id) => {
+    const entry = findAsset(registry, id);
+    if (!entry || entry.kind !== 'texture') return null;
+    const url = getTextureUrl(id);
+    if (!url) return null;
+    return {
+      id: entry.id,
+      url,
+      path: entry.path,
+      meta: entry.meta || {},
+      format: entry.meta?.format || null,
+      name: entry.name,
+    };
+  }, [registry, revision, getTextureUrl]);
+
   const getMeshBoundsMeters = useCallback((id) => {
     const entry = findAsset(registry, id);
     const box = entry?.meta?.boundingBoxMeters;
@@ -467,6 +484,15 @@ export function AssetBrowserProvider({ children }) {
     return result.asset;
   }, []);
 
+  const updateTextureMeta = useCallback(async (assetId, metaPatch) => {
+    const result = await patchTextureAssetMeta(assetId, metaPatch);
+    setRegistry(normalizeRegistry(result.registry));
+    setRevision((r) => r + 1);
+    // Sampler changes invalidate cached GPU textures for this asset URL family.
+    clearTextureCache();
+    return result.asset;
+  }, []);
+
   const createNewMaterial = useCallback(async (partial = {}) => {
     setStatus('Creating material…');
     const result = await createMaterial(partial);
@@ -616,6 +642,7 @@ export function AssetBrowserProvider({ children }) {
 
   const assetResolver = useMemo(() => ({
     getTextureUrl,
+    getTextureAsset,
     getMeshUrl,
     getMeshBoundsMeters,
     getMeshBoundsCenterMeters,
@@ -624,6 +651,7 @@ export function AssetBrowserProvider({ children }) {
     getPrefabDefinitionSync,
   }), [
     getTextureUrl,
+    getTextureAsset,
     getMeshUrl,
     getMeshBoundsMeters,
     getMeshBoundsCenterMeters,
@@ -652,6 +680,8 @@ export function AssetBrowserProvider({ children }) {
     importMesh,
     importDerivedMeshGlb,
     updateMeshMeta,
+    updateTextureMeta,
+    getTextureAsset,
     createNewMaterial,
     duplicateMaterial,
     saveMaterialDefinition,
@@ -681,6 +711,8 @@ export function AssetBrowserProvider({ children }) {
     importMesh,
     importDerivedMeshGlb,
     updateMeshMeta,
+    updateTextureMeta,
+    getTextureAsset,
     createNewMaterial,
     duplicateMaterial,
     saveMaterialDefinition,

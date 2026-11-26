@@ -1,4 +1,5 @@
 import { createId } from '../core/ids.js';
+import { normalizeMapChannels } from '../assets/textureUvChannels.js';
 
 /**
  * Engine-neutral material definition (schema v1, additive fields).
@@ -126,6 +127,9 @@ export function createMaterialDefinition(partial = {}) {
       y: Number(partial.uvOffset?.y) || 0,
     },
     uvRotation: Number(partial.uvRotation) || 0,
+
+    // —— Batch 8: per-slot UV channel (0 = uv, 1 = uv1/uv2, …) ——
+    mapChannels: normalizeMapChannels(partial.mapChannels),
 
     previewPath: partial.previewPath || null,
     pbrGenerator: normalizePbrGeneratorField(partial.pbrGenerator),

@@ -26,6 +26,7 @@ import { nativeGeometryLesson } from './25-native-geometry.js';
 import { staticMeshesLesson } from './26-static-meshes.js';
 import { assetToolsLesson } from './27-asset-tools.js';
 import { pivotEditingLesson } from './28-pivot-editing.js';
+import { texturesLesson } from './29-textures.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -56,6 +57,7 @@ export const LESSONS = [
   staticMeshesLesson,
   assetToolsLesson,
   pivotEditingLesson,
+  texturesLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

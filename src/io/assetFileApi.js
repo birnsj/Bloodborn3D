@@ -124,6 +124,23 @@ export async function patchMeshAssetMeta(assetId, metaPatch = {}) {
   return res.json();
 }
 
+/** Patch texture asset meta (sampler / transform) without replacing bytes. */
+export async function patchTextureAssetMeta(assetId, metaPatch = {}) {
+  const res = await fetch(
+    `/api/assets?action=patch-texture-meta&id=${encodeURIComponent(assetId)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meta: metaPatch }),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Texture meta patch failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 /** Upload a browser-baked PNG thumbnail for a mesh asset. */
 export async function uploadMeshPreview(id, blob) {
   const res = await fetch(

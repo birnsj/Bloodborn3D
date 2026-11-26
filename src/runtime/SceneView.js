@@ -2148,6 +2148,11 @@ export class SceneView {
       || null;
 
     const mapResolver = (assetId) => {
+      if (resolver?.getTextureAsset) {
+        const src = resolver.getTextureAsset(assetId);
+        if (!src?.url) return null;
+        return { url: assetUrl(src.url) || src.url, meta: src.meta, path: src.path };
+      }
       if (!resolver?.getTextureUrl) return null;
       return assetUrl(resolver.getTextureUrl(assetId));
     };
@@ -2216,6 +2221,11 @@ export class SceneView {
     const visualEpoch = mesh.userData?.visualEpoch;
     const stillCurrent = () => this._isActorVisualCurrent(actorId, syncToken, visualEpoch);
     const mapResolver = (assetId) => {
+      if (resolver?.getTextureAsset) {
+        const src = resolver.getTextureAsset(assetId);
+        if (!src?.url) return null;
+        return { url: assetUrl(src.url) || src.url, meta: src.meta, path: src.path };
+      }
       if (!resolver?.getTextureUrl) return null;
       return assetUrl(resolver.getTextureUrl(assetId));
     };
@@ -2285,6 +2295,11 @@ export class SceneView {
     const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
     const resolver = this.assetResolver;
     const mapResolver = (assetId) => {
+      if (resolver?.getTextureAsset) {
+        const src = resolver.getTextureAsset(assetId);
+        if (!src?.url) return null;
+        return { url: assetUrl(src.url) || src.url, meta: src.meta, path: src.path };
+      }
       const path = resolver?.getTextureUrl?.(assetId);
       return path ? (assetUrl(path) || path) : null;
     };
@@ -2516,6 +2531,11 @@ export class SceneView {
     const visualEpoch = this._actorMeshes.get(actor.id)?.visualEpoch;
     const resolver = this.assetResolver;
     const mapResolver = (assetId) => {
+      if (resolver?.getTextureAsset) {
+        const src = resolver.getTextureAsset(assetId);
+        if (!src?.url) return null;
+        return { url: assetUrl(src.url) || src.url, meta: src.meta, path: src.path };
+      }
       const path = resolver?.getTextureUrl?.(assetId);
       return path ? (assetUrl(path) || path) : null;
     };

@@ -5,6 +5,11 @@ import {
   normalizeMaterialDefinition,
 } from '../../materials/MaterialDefinition.js';
 import { ASSET_KINDS, listByKind } from '../../assets/AssetRegistry.js';
+import {
+  DEFAULT_MAP_CHANNELS,
+  MAP_ID_TO_CHANNEL_KEY,
+  normalizeMapChannels,
+} from '../../assets/textureUvChannels.js';
 import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
 import { ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
@@ -318,6 +323,10 @@ export function MaterialDefinitionForm({
         </Collapsible>
 
         <Collapsible title="Material UV (Layer 2)" storageKey="materials.form.uv">
+          <p className="bb-muted" {...helpProps('materials.uvLayers')}>
+            Layer 2 scales/offsets/rotates all maps together. Texture Asset Viewer
+            transform (repeat/offset/rotation) applies first; surface face UV is Layer 1.
+          </p>
           <div className="bb-field-row">
             {scrub('Scale U', 'uvScale.x', {
               step: 0.05,
@@ -343,6 +352,46 @@ export function MaterialDefinitionForm({
             })}
           </div>
           {scrub('UV Rotation°', 'uvRotation', { step: 1 })}
+        </Collapsible>
+
+        <Collapsible title="UV Channels" storageKey="materials.form.mapChannels">
+          <p className="bb-muted" {...helpProps('materials.uvChannels')}>
+            Select which geometry UV set each assigned map samples (Three.js Texture.channel).
+            AO and light maps default to UV1. Missing channels warn at bind time — baking is not included.
+          </p>
+          <div className="bb-map-channels">
+            {Object.entries(MAP_ID_TO_CHANNEL_KEY)
+              .filter(([mapIdField]) => draft[mapIdField])
+              .map(([mapIdField, channelKey]) => {
+                const channels = normalizeMapChannels(draft.mapChannels);
+                const value = channels[channelKey] ?? DEFAULT_MAP_CHANNELS[channelKey] ?? 0;
+                return (
+                  <label className="bb-field" key={mapIdField}>
+                    <span className="bb-field__label">{channelKey} UV</span>
+                    <select
+                      className="bb-select"
+                      disabled={disabled}
+                      value={String(value)}
+                      onChange={(e) => {
+                        const next = normalizeMapChannels({
+                          ...draft.mapChannels,
+                          [channelKey]: Number(e.target.value),
+                        });
+                        patch({ mapChannels: next });
+                      }}
+                    >
+                      <option value="0">UV0</option>
+                      <option value="1">UV1</option>
+                      <option value="2">UV2</option>
+                      <option value="3">UV3</option>
+                    </select>
+                  </label>
+                );
+              })}
+            {!Object.keys(MAP_ID_TO_CHANNEL_KEY).some((f) => draft[f]) && (
+              <p className="bb-muted">Assign a texture map above to choose its UV channel.</p>
+            )}
+          </div>
         </Collapsible>
       </CollapsibleGroup>
     </div>

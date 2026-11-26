@@ -285,7 +285,16 @@
       "meta": {
         "width": 2048,
         "height": 2048,
-        "mapType": "albedo"
+        "mapType": "albedo",
+        "sampler": {
+          "wrapS": "repeat",
+          "wrapT": "repeat",
+          "magFilter": "linear",
+          "minFilter": "linearMipmapLinear",
+          "generateMipmaps": true,
+          "anisotropy": 8,
+          "colorSpace": "auto"
+        }
       },
       "createdAt": 1795449232038,
       "updatedAt": 1795449232038
@@ -1894,6 +1903,318 @@
       },
       "createdAt": 1795734474715,
       "updatedAt": 1795734474725
+    },
+    {
+      "id": "tex_batch8_wood_nearest",
+      "kind": "texture",
+      "name": "Batch8 Wood Nearest",
+      "folder": "Textures",
+      "path": "textures/tex_hall_wood.png",
+      "originalName": "tex_hall_wood.png",
+      "tags": [
+        "batch8",
+        "albedo",
+        "nearest"
+      ],
+      "meta": {
+        "width": 2048,
+        "height": 2048,
+        "mapType": "albedo",
+        "sampler": {
+          "wrapS": "repeat",
+          "wrapT": "repeat",
+          "magFilter": "nearest",
+          "minFilter": "nearest",
+          "generateMipmaps": false,
+          "anisotropy": 1,
+          "colorSpace": "srgb"
+        },
+        "transform": {
+          "repeatU": 1,
+          "repeatV": 1,
+          "offsetU": 0,
+          "offsetV": 0,
+          "rotation": 0,
+          "centerU": 0.5,
+          "centerV": 0.5,
+          "flipY": true
+        }
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1796100000000
+    },
+    {
+      "id": "tex_batch8_wood_linear",
+      "kind": "texture",
+      "name": "Batch8 Wood Linear",
+      "folder": "Textures",
+      "path": "textures/tex_hall_wood.png",
+      "originalName": "tex_hall_wood.png",
+      "tags": [
+        "batch8",
+        "albedo",
+        "linear"
+      ],
+      "meta": {
+        "width": 2048,
+        "height": 2048,
+        "mapType": "albedo",
+        "sampler": {
+          "wrapS": "repeat",
+          "wrapT": "repeat",
+          "magFilter": "linear",
+          "minFilter": "linearMipmapLinear",
+          "generateMipmaps": true,
+          "anisotropy": 8,
+          "colorSpace": "srgb"
+        },
+        "transform": {
+          "repeatU": 1,
+          "repeatV": 1,
+          "offsetU": 0,
+          "offsetV": 0,
+          "rotation": 0,
+          "centerU": 0.5,
+          "centerV": 0.5,
+          "flipY": true
+        }
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1796100000000
+    },
+    {
+      "id": "tex_batch8_floor_aniso",
+      "kind": "texture",
+      "name": "Batch8 Floor Aniso",
+      "folder": "Textures",
+      "path": "textures/tex_hall_floor.png",
+      "originalName": "tex_hall_floor.png",
+      "tags": [
+        "batch8",
+        "albedo",
+        "aniso"
+      ],
+      "meta": {
+        "width": 2048,
+        "height": 2048,
+        "mapType": "albedo",
+        "sampler": {
+          "wrapS": "repeat",
+          "wrapT": "repeat",
+          "magFilter": "linear",
+          "minFilter": "linearMipmapLinear",
+          "generateMipmaps": true,
+          "anisotropy": 16,
+          "colorSpace": "srgb"
+        },
+        "transform": {
+          "repeatU": 2,
+          "repeatV": 2,
+          "offsetU": 0,
+          "offsetV": 0,
+          "rotation": 0,
+          "centerU": 0.5,
+          "centerV": 0.5,
+          "flipY": true
+        }
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1796100000000
+    },
+    {
+      "id": "tex_batch8_ktx2",
+      "kind": "texture",
+      "name": "Batch8 KTX2 Fixture",
+      "folder": "Textures",
+      "path": "fixtures/ktx2/2d_uastc.ktx2",
+      "originalName": "2d_uastc.ktx2",
+      "tags": [
+        "batch8",
+        "ktx2",
+        "compressed"
+      ],
+      "meta": {
+        "format": "ktx2",
+        "mapType": "albedo",
+        "sampler": {
+          "wrapS": "repeat",
+          "wrapT": "repeat",
+          "magFilter": "linear",
+          "minFilter": "linearMipmapLinear",
+          "generateMipmaps": false,
+          "anisotropy": 4,
+          "colorSpace": "srgb"
+        },
+        "transform": {
+          "repeatU": 1,
+          "repeatV": 1,
+          "offsetU": 0,
+          "offsetV": 0,
+          "rotation": 0,
+          "centerU": 0.5,
+          "centerV": 0.5,
+          "flipY": false
+        }
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1796100000000
+    },
+    {
+      "id": "mat_batch8_nearest",
+      "kind": "material",
+      "name": "Batch8 Nearest Wood",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_nearest.json",
+      "originalName": "mat_batch8_nearest.json",
+      "tags": [
+        "batch8"
+      ],
+      "meta": {
+        "baseColor": "#6e4a32",
+        "roughness": 1,
+        "metalness": 0.05,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_batch8_nearest_sphere.png",
+        "previewBytes": 134340,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736231464
+    },
+    {
+      "id": "mat_batch8_linear",
+      "kind": "material",
+      "name": "Batch8 Linear Wood",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_linear.json",
+      "originalName": "mat_batch8_linear.json",
+      "tags": [
+        "batch8"
+      ],
+      "meta": {
+        "baseColor": "#6e4a32",
+        "roughness": 1,
+        "metalness": 0.05,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_batch8_linear_sphere.png",
+        "previewBytes": 134340,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736231711
+    },
+    {
+      "id": "mat_batch8_tiled",
+      "kind": "material",
+      "name": "Batch8 Tiled Floor",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_tiled.json",
+      "originalName": "mat_batch8_tiled.json",
+      "tags": [
+        "batch8"
+      ],
+      "meta": {
+        "baseColor": "#8e8478",
+        "roughness": 1,
+        "metalness": 0,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_batch8_tiled_sphere.png",
+        "previewBytes": 118689,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736232005
+    },
+    {
+      "id": "mat_batch8_shared_a",
+      "kind": "material",
+      "name": "Batch8 Shared Image A",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_shared_a.json",
+      "originalName": "mat_batch8_shared_a.json",
+      "tags": [
+        "batch8"
+      ],
+      "meta": {
+        "baseColor": "#a8a098",
+        "roughness": 1,
+        "metalness": 0.02,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_batch8_shared_a_sphere.png",
+        "previewBytes": 107936,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736232330
+    },
+    {
+      "id": "mat_batch8_shared_b",
+      "kind": "material",
+      "name": "Batch8 Shared Image B",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_shared_b.json",
+      "originalName": "mat_batch8_shared_b.json",
+      "tags": [
+        "batch8"
+      ],
+      "meta": {
+        "baseColor": "#a8a098",
+        "roughness": 1,
+        "metalness": 0.02,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": true,
+        "hasRoughnessMap": true,
+        "previewPath": "previews/mat_batch8_shared_b_sphere.png",
+        "previewBytes": 102163,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736232566
+    },
+    {
+      "id": "mat_batch8_ktx2",
+      "kind": "material",
+      "name": "Batch8 KTX2 Panel",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_ktx2.json",
+      "originalName": "mat_batch8_ktx2.json",
+      "tags": [
+        "batch8",
+        "ktx2"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.85,
+        "metalness": 0,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch8_ktx2_sphere.png",
+        "previewBytes": 22610,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796100000000,
+      "updatedAt": 1795736232675
     }
   ]
 }

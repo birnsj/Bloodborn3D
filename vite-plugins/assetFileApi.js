@@ -167,6 +167,14 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'patch-texture-meta') {
+            const id = url.searchParams.get('id');
+            const body = JSON.parse(await readBody(req));
+            const result = await patchTextureAssetMeta(id, body?.meta || {});
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'POST' && action === 'mesh-preview') {
             const id = url.searchParams.get('id');
             const buffer = await readBodyBuffer(req, DEFAULT_UPLOAD_LIMIT);
@@ -505,6 +513,22 @@ export async function patchMeshAssetMeta(id, metaPatch = {}) {
       throw err;
     }
     entry.meta = { ...(entry.meta || {}), ...metaPatch };
+    entry.updatedAt = Date.now();
+    return { ok: true, asset: entry, registry };
+  });
+}
+
+export async function patchTextureAssetMeta(id, metaPatch = {}) {
+  if (!id) throw new Error('Missing texture id');
+  const { mergeTextureMetaPatch } = await import('../src/assets/textureSampling.js');
+  return mutateRegistry(async (registry) => {
+    const entry = registry.assets.find((a) => a.id === id && a.kind === 'texture');
+    if (!entry) {
+      const err = new Error('Texture not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    entry.meta = mergeTextureMetaPatch(entry.meta || {}, metaPatch || {});
     entry.updatedAt = Date.now();
     return { ok: true, asset: entry, registry };
   });
