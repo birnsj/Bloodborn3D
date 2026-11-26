@@ -130,6 +130,20 @@ export function ViewportLayout({
                   ));
                   onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
                 }}
+                onToggleShowFog={() => {
+                  const panes = prefs.panes.map((p) => (
+                    p.id === pane.id ? { ...p, showFog: p.showFog === false } : p
+                  ));
+                  onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
+                }}
+                onToggleShowPostProcessing={() => {
+                  const panes = prefs.panes.map((p) => (
+                    p.id === pane.id
+                      ? { ...p, showPostProcessing: p.showPostProcessing === false }
+                      : p
+                  ));
+                  onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
+                }}
                 onLayoutMode={(layoutMode) => {
                   onChangePrefs({
                     ...prefs,

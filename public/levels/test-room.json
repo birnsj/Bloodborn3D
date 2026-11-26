@@ -7,6 +7,40 @@
     "intensity": 0.12,
     "playIntensity": 0.12
   },
+  "scene": {
+    "background": "#5b708f",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0,
+    "fog": {
+      "type": "linear",
+      "color": "#3c7dd7",
+      "near": 0,
+      "far": 1150,
+      "density": 0.05,
+      "drift": true,
+      "driftSpeed": 0.18,
+      "driftAmount": 0.32,
+      "mist": true,
+      "mistCount": 50,
+      "mistSpeed": 0.58,
+      "mistOpacity": 0.91,
+      "mistSize": 0.95,
+      "noise": false,
+      "noiseStrength": 0.26999999999999996,
+      "noiseScale": 0.54,
+      "noiseSpeed": 0.2,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCFSoft"
+  },
   "postProcessing": {
     "version": 1,
     "enabled": false,

@@ -79,6 +79,7 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['Ctrl'], action: 'Orbit (perspective)', note: 'hold + move mouse · no button · ortho: RMB' },
       { keys: ['MMB'], action: 'Pan', note: 'speed in Edit → Settings' },
       { keys: ['Wheel'], action: 'Zoom', note: 'ortho zooms frustum' },
+      { keys: ['Space'], action: 'Maximize active pane', note: 'toggle · multi-view only · Play uses Space to jump' },
     ],
   },
   {

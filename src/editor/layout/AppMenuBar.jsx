@@ -468,6 +468,7 @@ export function AppMenuBar() {
             <Sep />
             <Item
               label="Maximize Active View"
+              shortcut="Space"
               close={close}
               onClick={() => toggleMaximizeViewport()}
             />

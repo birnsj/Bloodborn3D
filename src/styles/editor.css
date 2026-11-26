@@ -1005,6 +1005,10 @@ select {
   margin-left: 1px;
 }
 
+.bb-viewport-pane-chip--action.is-active {
+  color: var(--bb-accent, #7eb8ff);
+  border-color: color-mix(in srgb, var(--bb-accent, #7eb8ff) 45%, transparent);
+}
 .bb-viewport-pane-chip--action {
   font-weight: 600;
 }

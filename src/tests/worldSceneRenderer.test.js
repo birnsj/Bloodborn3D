@@ -7,6 +7,7 @@ import {
   normalizeWorldScene,
   normalizeWorldFog,
   normalizeWorldRenderer,
+  fogDriftFactor,
 } from '../core/World.js';
 import { serializeLevel } from '../serialization/LevelSerializer.js';
 import { deserializeLevel } from '../serialization/LevelDeserializer.js';
@@ -20,13 +21,57 @@ describe('normalizeWorldScene / fog', () => {
       backgroundBlurriness: DEFAULT_WORLD_SCENE.backgroundBlurriness,
       fog: { ...DEFAULT_WORLD_SCENE.fog },
     });
-    expect(normalizeWorldFog({ type: 'nope', near: -5, far: 2, density: -1 })).toEqual({
+    expect(DEFAULT_WORLD_SCENE.fog.near).toBe(100);
+    expect(DEFAULT_WORLD_SCENE.fog.far).toBe(1500);
+    expect(normalizeWorldFog({ type: 'nope', near: -5, far: 2, density: -1 })).toMatchObject({
       type: 'none',
       color: DEFAULT_WORLD_SCENE.fog.color,
       near: 0,
       far: 2,
       density: 0,
+      drift: true,
+      mist: false,
+      noise: false,
+      volumetric: false,
     });
+  });
+
+  it('clamps atmosphere mist / noise / volumetric fields', () => {
+    const fog = normalizeWorldFog({
+      mist: true,
+      mistCount: 99999,
+      mistOpacity: 2,
+      noise: true,
+      noiseScale: 0.01,
+      volumetric: true,
+      volumetricSteps: 12,
+      volumetricExtent: 0.5,
+    });
+    expect(fog.mist).toBe(true);
+    expect(fog.mistCount).toBe(4000);
+    expect(fog.mistOpacity).toBe(1);
+    expect(fog.noiseScale).toBe(0.05);
+    expect(fog.volumetric).toBe(true);
+    expect(fog.volumetricSteps).toBe(12);
+    expect(fog.volumetricExtent).toBe(1);
+  });
+
+  it('migrates first-pass meter fog defaults to room-scale editor units', () => {
+    const fog = normalizeWorldScene({
+      fog: { type: 'linear', color: '#0e1218', near: 10, far: 100, density: 0.02 },
+    }).fog;
+    expect(fog.near).toBe(100);
+    expect(fog.far).toBe(1500);
+    expect(fog.density).toBe(0.05);
+    expect(fog.color).toBe('#6a7380');
+  });
+
+  it('fogDriftFactor stays near 1 and respects drift off', () => {
+    expect(fogDriftFactor(1.5, { drift: false, driftAmount: 0.5 })).toBe(1);
+    expect(fogDriftFactor(0, { drift: true, driftSpeed: 0.12, driftAmount: 0.22 })).toBe(1);
+    const a = fogDriftFactor(8, { drift: true, driftSpeed: 0.12, driftAmount: 0.22 });
+    expect(a).toBeGreaterThan(0.7);
+    expect(a).toBeLessThan(1.3);
   });
 
   it('clamps blurriness and swaps far below near', () => {
@@ -39,12 +84,15 @@ describe('normalizeWorldScene / fog', () => {
     expect(s.background).toBe('#aabbcc');
     expect(s.backgroundIntensity).toBe(2.5);
     expect(s.backgroundBlurriness).toBe(1);
-    expect(s.fog).toEqual({
+    expect(s.fog).toMatchObject({
       type: 'linear',
       color: '#112233',
       near: 50,
       far: 50,
       density: 0.5,
+      drift: true,
+      mist: false,
+      volumetric: false,
     });
   });
 });
@@ -137,20 +185,20 @@ describe('SceneView applyWorldScene / applyWorldRenderer', () => {
     return view;
   }
 
-  it('applies background and linear fog', () => {
+  it('applies background and linear fog (editor units → meters)', () => {
     const view = makeView();
     view.applyWorldScene({
       background: '#ff00aa',
       backgroundIntensity: 2,
       backgroundBlurriness: 0.5,
-      fog: { type: 'linear', color: '#00ff00', near: 5, far: 40 },
+      fog: { type: 'linear', color: '#00ff00', near: 500, far: 4000 },
     });
     expect(view.scene.background.getHexString()).toBe('ff00aa');
     expect(view.scene.backgroundIntensity).toBe(2);
     expect(view.scene.backgroundBlurriness).toBe(0.5);
     expect(view.scene.fog).toBeInstanceOf(THREE.Fog);
-    expect(view.scene.fog.near).toBe(5);
-    expect(view.scene.fog.far).toBe(40);
+    expect(view.scene.fog.near).toBeCloseTo(5, 5);
+    expect(view.scene.fog.far).toBeCloseTo(40, 5);
   });
 
   it('applies exp2 fog and clears fog for none', () => {

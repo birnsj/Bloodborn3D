@@ -13,10 +13,15 @@ import {
   migrateLegacyWorldAmbient,
   normalizeWorldScene,
   normalizeWorldRenderer,
+  fogDriftFactor,
   worldAmbientFillStrength,
 } from '../core/World.js';
 import { PostProcessingController } from './postprocessing/PostProcessingController.js';
 import { normalizePostProcessing } from './postprocessing/postProcessingState.js';
+import {
+  AtmosphereController,
+  syncCameraAtmosphereLayer,
+} from './atmosphere/AtmosphereController.js';
 
 const EDIT_FILL_BASE_INTENSITY = 0.06;
 const EDIT_FILL2_BASE_INTENSITY = 0.03;
@@ -101,7 +106,12 @@ import {
   updatePerspectiveAspect,
   gridPlaneForCameraMode,
 } from '../editor/viewport/viewportCameras.js';
-import { normalizeCameraMode } from '../editor/viewport/viewportPrefs.js';
+import {
+  isOrthographicMode,
+  normalizeCameraMode,
+  resolvePaneShowFog,
+  resolvePaneShowPostProcessing,
+} from '../editor/viewport/viewportPrefs.js';
 import { paneScissorFromDomRect } from '../editor/viewport/paneScissor.js';
 
 const DEFAULT_VIEWPORT_COLORS = {
@@ -127,6 +137,7 @@ export class SceneView {
     this.scene.background = new THREE.Color(this.viewportColors.background);
 
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.05, 500);
+    syncCameraAtmosphereLayer(this.camera, true);
     this.camera.position.set(6, 5, 8);
     this.camera.lookAt(0, 1.5, 0);
 
@@ -135,7 +146,9 @@ export class SceneView {
       antialias: true,
       alpha: false,
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    /** Multiplier for CSS UI scale (EditorShell transform) so the buffer stays sharp. */
+    this._uiScale = 1;
+    this._applyOutputPixelRatio();
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -226,6 +239,9 @@ export class SceneView {
       resolveLightMesh: (actorId) => this._resolveLightMeshForPost(actorId),
       resolveTexture: (assetId) => this._resolveTextureForPost(assetId),
     });
+
+    this.atmosphere = new AtmosphereController({ scene: this.scene });
+    this._atmosphereLastTime = performance.now() * 0.001;
 
     if (editMode) {
       this._createEditHelpers();
@@ -331,6 +347,7 @@ export class SceneView {
   /** Level-authored Three.js Scene look (background + fog). */
   applyWorldScene(settings) {
     this._worldScene = normalizeWorldScene(settings);
+    this._fogDriftTime0 = performance.now() * 0.001;
     this._syncSceneFromWorld();
   }
 
@@ -358,7 +375,38 @@ export class SceneView {
     } else if (fog.type === 'exp2') {
       this.scene.fog = new THREE.FogExp2(fog.color, fog.density);
     } else {
-      this.scene.fog = new THREE.Fog(fog.color, fog.near, fog.far);
+      // Authored near/far are editor units; Three.js Fog is meters.
+      this.scene.fog = new THREE.Fog(fog.color, toMeters(fog.near), toMeters(fog.far));
+    }
+    this.atmosphere?.applyFogSettings?.(fog || { type: 'none' });
+  }
+
+  _atmosphereDt() {
+    const now = performance.now() * 0.001;
+    const last = this._atmosphereLastTime ?? now;
+    this._atmosphereLastTime = now;
+    return Math.min(0.1, Math.max(0, now - last));
+  }
+
+  /**
+   * Subtle drifting atmosphere: modulate live fog density / far from authored base.
+   * Called each frame before draw when fog + drift are enabled.
+   */
+  _updateFogDrift() {
+    const fog = this._worldScene?.fog;
+    if (!fog || fog.type === 'none' || !fog.drift || !this.scene?.fog) return;
+    const t0 = this._fogDriftTime0 ?? (this._fogDriftTime0 = performance.now() * 0.001);
+    const factor = fogDriftFactor(performance.now() * 0.001 - t0, fog);
+    if (fog.type === 'exp2' && this.scene.fog.isFogExp2) {
+      this.scene.fog.density = Math.max(0, fog.density * factor);
+      this.scene.fog.color.set(fog.color);
+    } else if (this.scene.fog.isFog) {
+      const nearM = toMeters(fog.near);
+      const farM = toMeters(fog.far);
+      // Keep near stable; breathe the far plane so interiors feel like drifting mist.
+      this.scene.fog.near = nearM;
+      this.scene.fog.far = Math.max(nearM + 0.01, farM * factor);
+      this.scene.fog.color.set(fog.color);
     }
   }
 
@@ -507,7 +555,12 @@ export class SceneView {
   /**
    * Whether this frame/pane should run the EffectComposer.
    */
-  _shouldUsePostProcessing({ cameraMode, displayMode, paneCount = 1 } = {}) {
+  _shouldUsePostProcessing({
+    cameraMode,
+    displayMode,
+    paneCount = 1,
+    showPostProcessing = true,
+  } = {}) {
     if (!this._postProcessing?.enabled) return false;
     if (!this.postProcessingController) return false;
 
@@ -515,38 +568,71 @@ export class SceneView {
     if (!this.editMode) return true;
 
     if (!this.postProcessingPreview) return false;
+    if (showPostProcessing === false) return false;
     if ((cameraMode || 'perspective') !== 'perspective') return false;
     if ((displayMode || 'lit') !== 'lit') return false;
     if (!this._postProcessingMultiPane && paneCount > 1) return false;
     return true;
   }
 
-  _drawScene(camera, { usePostProcess = false } = {}) {
-    // Keep exposure in sync when PP is on but composer is bypassed (ACES-only).
-    if (usePostProcess && this._postProcessing?.enabled) {
-      const exposure = this._postProcessing.exposure;
-      if (Number.isFinite(exposure)) {
-        this.renderer.toneMappingExposure = exposure;
-      }
-    } else if (!this.postProcessingController?.isActive) {
-      // Restore level-authored tone mapping when PP is not composing.
-      const r = this._worldRenderer;
-      if (r) {
-        this.renderer.toneMapping = this._toneMappingFromName(r.toneMapping);
-        this.renderer.toneMappingExposure = r.toneMappingExposure;
-      }
-    }
+  /**
+   * @param {THREE.Camera} camera
+   * @param {{
+   *   usePostProcess?: boolean,
+   *   atmosphere?: boolean,
+   *   scissor?: { x:number, y:number, width:number, height:number }|null,
+   * }} [options]
+   */
+  _drawScene(camera, {
+    usePostProcess = false,
+    atmosphere = true,
+    scissor = null,
+  } = {}) {
+    const renderer = this.renderer;
+    const prevToneMapping = renderer.toneMapping;
+    const prevExposure = renderer.toneMappingExposure;
+    const prevAutoClear = renderer.autoClear;
 
-    if (usePostProcess && this.postProcessingController?.isActive) {
-      try {
-        const ok = this.postProcessingController.render(camera);
-        if (ok) return;
-      } catch (err) {
-        console.error('[BloodBound] post-processing render failed', err);
+    try {
+      // Keep exposure in sync when PP is on but composer is bypassed (ACES-only).
+      if (usePostProcess && this._postProcessing?.enabled) {
+        const exposure = this._postProcessing.exposure;
+        if (Number.isFinite(exposure)) {
+          renderer.toneMappingExposure = exposure;
+        }
+      } else if (!this.postProcessingController?.isActive) {
+        // Restore level-authored tone mapping when PP is not composing.
+        const r = this._worldRenderer;
+        if (r) {
+          renderer.toneMapping = this._toneMappingFromName(r.toneMapping);
+          renderer.toneMappingExposure = r.toneMappingExposure;
+        }
       }
-      // Fall through to a normal draw if compose fails or is inactive.
+
+      const showAtmosphere = Boolean(atmosphere) && !camera?.isOrthographicCamera;
+      syncCameraAtmosphereLayer(camera, showAtmosphere);
+      if (!showAtmosphere) {
+        this.atmosphere?.setPerspectiveVisible?.(false);
+      } else {
+        // Soft wall occlusion for mist / noise / volumetric (perspective only).
+        this.atmosphere?.captureDepth?.(this.renderer, camera);
+      }
+
+      if (usePostProcess && this.postProcessingController?.isActive) {
+        try {
+          const ok = this.postProcessingController.render(camera, undefined, { scissor });
+          if (ok) return;
+        } catch (err) {
+          console.error('[BloodBound] post-processing render failed', err);
+        }
+        // Fall through to a normal draw if compose fails or is inactive.
+      }
+      this.renderer.render(this.scene, camera);
+    } finally {
+      renderer.toneMapping = prevToneMapping;
+      renderer.toneMappingExposure = prevExposure;
+      renderer.autoClear = prevAutoClear;
     }
-    this.renderer.render(this.scene, camera);
   }
 
   _syncAmbientFromWorld() {
@@ -656,8 +742,29 @@ export class SceneView {
     this._applyEditorOverlayVisibility();
   }
 
-  setSize(width, height) {
+  /**
+   * Keep drawing-buffer density matched to on-screen size.
+   * EditorShell uses CSS `transform: scale(uiScale)`, so layout clientWidth is
+   * smaller than the painted size when UI scale > 100% — boost pixelRatio.
+   */
+  _applyOutputPixelRatio() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ui = Number.isFinite(this._uiScale) && this._uiScale > 0 ? this._uiScale : 1;
+    // Cap so 150% UI × 2 DPR does not explode VRAM.
+    this.renderer.setPixelRatio(Math.min(dpr * ui, 3));
+  }
+
+  /**
+   * @param {number} width layout CSS px (shell.clientWidth)
+   * @param {number} height layout CSS px (shell.clientHeight)
+   * @param {{ uiScale?: number }} [options]
+   */
+  setSize(width, height, options = {}) {
     if (width <= 0 || height <= 0) return;
+    if (options.uiScale != null) {
+      const next = Number(options.uiScale);
+      if (Number.isFinite(next) && next > 0) this._uiScale = next;
+    }
     this._size.width = width;
     this._size.height = height;
     if (this.camera.isPerspectiveCamera) {
@@ -669,6 +776,7 @@ export class SceneView {
         || 12;
       updateOrthoFrustum(this.camera, frustum, width / height);
     }
+    this._applyOutputPixelRatio();
     this.renderer.setSize(width, height, false);
     this.postProcessingController?.setSize(width, height);
   }
@@ -690,6 +798,8 @@ export class SceneView {
       this._paneCameras.set(paneId, cam);
       if (paneState) applyPanePose(cam, { ...paneState, cameraMode: mode });
     }
+    // Atmosphere lives on a dedicated layer — ortho cameras must never enable it.
+    syncCameraAtmosphereLayer(cam, mode === 'perspective' && !cam.isOrthographicCamera);
     return cam;
   }
 
@@ -742,62 +852,140 @@ export class SceneView {
       return;
     }
 
+    this._updateFogDrift();
+    const dt = this._atmosphereDt();
+
     // Three.js setViewport/setScissor take CSS/logical pixels and multiply by
     // pixelRatio internally — do NOT pre-scale by DPR (double-scale breaks HiDPI).
     const canvasH = this._size.height || 1;
+    const fullW = Math.max(1, Math.round(this._size.width || 1));
+    const fullH = Math.max(1, Math.round(this._size.height || 1));
     this._ensureActorEdgesOverlays();
 
-    this.renderer.setScissorTest(true);
+    const renderer = this.renderer;
     const lights = [this.ambient, this.editFill, this.editFill2];
     const paneCount = panes.length;
 
-    for (const pane of panes) {
-      const rect = pane.rect;
-      if (!rect || rect.width <= 0 || rect.height <= 0) continue;
-
-      const cam = this.ensurePaneCamera(pane.paneId, pane.cameraMode, pane.paneState);
-      this.updatePaneCameraProjection(cam, rect);
-
-      const scissor = paneScissorFromDomRect(rect, canvasH);
-      this.renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
-      this.renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
-
-      if (this._showEditorOverlays() && this.gridHelper) {
-        this._applyGridPlane(gridPlaneForCameraMode(pane.cameraMode));
-      }
-
-      // Axis gizmo screen size follows this pane’s camera; face-resize stays object-sized.
-      this.gizmo?.updateScreenScale?.(cam);
-
-      const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
-      const usePostProcess = this._shouldUsePostProcessing({
-        cameraMode: pane.cameraMode,
-        displayMode: pane.displayMode,
-        paneCount,
-      });
-      this._drawScene(cam, { usePostProcess });
-      restoreDisplayMode(displayState);
+    // Shared scene fog/background are authored World state — never mutate the
+    // authored objects; only swap scene references per pane and restore afterward.
+    const authoredFog = this.scene.fog;
+    const authoredBackground = this.scene.background;
+    const authoredBgIntensity = this.scene.backgroundIntensity;
+    const authoredBgBlurriness = this.scene.backgroundBlurriness;
+    if (!this._editorClearColor) {
+      this._editorClearColor = new THREE.Color(DEFAULT_VIEWPORT_COLORS.background);
+    } else {
+      this._editorClearColor.setHex(DEFAULT_VIEWPORT_COLORS.background);
     }
+    const prevToneMapping = renderer.toneMapping;
+    const prevExposure = renderer.toneMappingExposure;
+    const prevAutoClear = renderer.autoClear;
+    const prevScissorTest = renderer.getScissorTest();
 
-    this.renderer.setScissorTest(false);
-    // Reset full-canvas viewport for any follow-up readbacks (logical px).
-    const fullW = Math.max(1, Math.round(this._size.width || 1));
-    const fullH = Math.max(1, Math.round(this._size.height || 1));
-    this.renderer.setViewport(0, 0, fullW, fullH);
+    renderer.setScissorTest(true);
+
+    try {
+      for (const pane of panes) {
+        const rect = pane.rect;
+        if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+
+        const cam = this.ensurePaneCamera(pane.paneId, pane.cameraMode, pane.paneState);
+        this.updatePaneCameraProjection(cam, rect);
+
+        const scissor = paneScissorFromDomRect(rect, canvasH);
+        renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
+        renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
+
+        if (this._showEditorOverlays() && this.gridHelper) {
+          this._applyGridPlane(gridPlaneForCameraMode(pane.cameraMode));
+        }
+
+        // Axis gizmo screen size follows this pane’s camera; face-resize stays object-sized.
+        this.gizmo?.updateScreenScale?.(cam);
+
+        const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
+        const ortho = isOrthographicMode(pane.cameraMode) || cam?.isOrthographicCamera;
+        // Pane Show Fog is independent of World Settings. Ortho defaults off in prefs;
+        // atmosphere (mist/volume) stays perspective-only even if ortho fog is forced on.
+        const wantFog = resolvePaneShowFog(pane);
+        const showAtmosphere = wantFog && !ortho;
+        const wantPp = resolvePaneShowPostProcessing(pane);
+        const usePostProcess = this._shouldUsePostProcessing({
+          cameraMode: pane.cameraMode,
+          displayMode: pane.displayMode,
+          paneCount,
+          showPostProcessing: wantPp,
+        });
+
+        this.scene.fog = wantFog ? authoredFog : null;
+        // Ortho / isometric construction views use the editor clear color — not the
+        // level-authored background (that stays on perspective + Play).
+        if (ortho) {
+          this.scene.background = this._editorClearColor;
+          this.scene.backgroundIntensity = 1;
+          this.scene.backgroundBlurriness = 0;
+        } else {
+          this.scene.background = authoredBackground;
+          this.scene.backgroundIntensity = authoredBgIntensity;
+          this.scene.backgroundBlurriness = authoredBgBlurriness;
+        }
+        syncCameraAtmosphereLayer(cam, showAtmosphere);
+        this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
+        if (showAtmosphere) this.atmosphere?.update?.(cam, dt);
+
+        try {
+          this._drawScene(cam, {
+            usePostProcess,
+            atmosphere: showAtmosphere,
+            scissor: usePostProcess ? scissor : null,
+          });
+        } catch (err) {
+          console.error('[BloodBound] viewport pane render failed', err);
+        } finally {
+          this.scene.fog = authoredFog;
+          this.scene.background = authoredBackground;
+          this.scene.backgroundIntensity = authoredBgIntensity;
+          this.scene.backgroundBlurriness = authoredBgBlurriness;
+          restoreDisplayMode(displayState);
+        }
+      }
+    } finally {
+      this.scene.fog = authoredFog;
+      this.scene.background = authoredBackground;
+      this.scene.backgroundIntensity = authoredBgIntensity;
+      this.scene.backgroundBlurriness = authoredBgBlurriness;
+      renderer.toneMapping = prevToneMapping;
+      renderer.toneMappingExposure = prevExposure;
+      renderer.autoClear = prevAutoClear;
+      renderer.setScissorTest(prevScissorTest);
+      renderer.setViewport(0, 0, fullW, fullH);
+      renderer.setScissor(0, 0, fullW, fullH);
+      // Keep composer buffers matched to the full canvas between frames.
+      this.postProcessingController?._syncComposerBuffers?.();
+    }
   }
 
   render(camera = this.camera) {
+    this._updateFogDrift();
+    const dt = this._atmosphereDt();
+    const ortho = Boolean(camera?.isOrthographicCamera);
+    // Play / single-canvas path: always use authored fog + atmosphere in perspective.
+    const showAtmosphere = !ortho;
+    syncCameraAtmosphereLayer(camera, showAtmosphere);
+    this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
+    if (showAtmosphere) this.atmosphere?.update?.(camera, dt);
     this.renderer.setScissorTest(false);
     const fullW = Math.max(1, Math.round(this._size.width || 1));
     const fullH = Math.max(1, Math.round(this._size.height || 1));
     this.renderer.setViewport(0, 0, fullW, fullH);
     this.gizmo?.updateScreenScale?.(camera);
     const usePostProcess = this._shouldUsePostProcessing({
-      cameraMode: 'perspective',
+      cameraMode: ortho ? 'top' : 'perspective',
       displayMode: 'lit',
       paneCount: 1,
+      showPostProcessing: true,
     });
-    this._drawScene(camera, { usePostProcess });
+    this._drawScene(camera, { usePostProcess, atmosphere: showAtmosphere, scissor: null });
   }
 
   clearWorldMeshes() {
@@ -3138,6 +3326,8 @@ export class SceneView {
     this.clearWorldMeshes();
     this.setCreatePreview(null);
     this.setPlacementPreview(null);
+    this.atmosphere?.dispose?.();
+    this.atmosphere = null;
     if (this.gizmo) {
       this.gizmo.dispose();
       this.gizmo = null;

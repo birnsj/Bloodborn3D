@@ -25,6 +25,7 @@ import {
   DEFAULT_WORLD_SCENE,
   DEFAULT_WORLD_RENDERER,
   WORLD_FOG_TYPES,
+  WORLD_FOG_VOLUMETRIC_STEPS,
   WORLD_TONE_MAPPINGS,
   WORLD_SHADOW_MAP_TYPES,
 } from '../../core/World.js';
@@ -2139,70 +2140,288 @@ function WorldSettings() {
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Fog</span>
-          <select
-            className="bb-select"
+          <input
+            type="checkbox"
             disabled={disabled}
-            value={fog.type}
-            onChange={(e) => updateWorldScene?.({ fog: { type: e.target.value } })}
-          >
-            {WORLD_FOG_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type === 'none' ? 'None' : type === 'exp2' ? 'Exp2' : 'Linear'}
-              </option>
-            ))}
-          </select>
+            checked={fog.type !== 'none'}
+            onChange={(e) => updateWorldScene?.({
+              fog: { type: e.target.checked ? (fog.type !== 'none' ? fog.type : 'linear') : 'none' },
+            })}
+          />
         </label>
         {fog.type !== 'none' && (
-          <label className="bb-field">
-            <span className="bb-field__label">Fog color</span>
-            <input
-              className="bb-input"
-              type="color"
-              disabled={disabled}
-              value={normalizeHex(fog.color)}
-              onChange={(e) => updateWorldScene?.({ fog: { color: e.target.value } })}
-            />
-          </label>
-        )}
-        {fog.type === 'linear' && (
           <>
             <label className="bb-field">
-              <span className="bb-field__label">Fog near</span>
-              <ScrubNumberInput
-                className="bb-input"
-                step={0.5}
-                min={0}
+              <span className="bb-field__label">Fog type</span>
+              <select
+                className="bb-select"
                 disabled={disabled}
-                value={fog.near}
-                onChange={(v) => updateWorldScene?.({ fog: { near: v } })}
-              />
+                value={fog.type}
+                onChange={(e) => updateWorldScene?.({ fog: { type: e.target.value } })}
+              >
+                {WORLD_FOG_TYPES.filter((type) => type !== 'none').map((type) => (
+                  <option key={type} value={type}>
+                    {type === 'exp2' ? 'Exp2' : 'Linear'}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="bb-field">
-              <span className="bb-field__label">Fog far</span>
-              <ScrubNumberInput
+              <span className="bb-field__label">Fog color</span>
+              <input
                 className="bb-input"
-                step={0.5}
-                min={0}
+                type="color"
                 disabled={disabled}
-                value={fog.far}
-                onChange={(v) => updateWorldScene?.({ fog: { far: v } })}
+                value={normalizeHex(fog.color)}
+                onChange={(e) => updateWorldScene?.({ fog: { color: e.target.value } })}
               />
             </label>
+            {fog.type === 'linear' && (
+              <>
+                <label className="bb-field">
+                  <span className="bb-field__label">Fog near (eu)</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={25}
+                    min={0}
+                    disabled={disabled}
+                    value={fog.near}
+                    onChange={(v) => updateWorldScene?.({ fog: { near: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Fog far (eu)</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={25}
+                    min={0}
+                    disabled={disabled}
+                    value={fog.far}
+                    onChange={(v) => updateWorldScene?.({ fog: { far: v } })}
+                  />
+                </label>
+                <p className="bb-muted">100 editor units = 1 meter. Defaults (~1–15 m) suit interiors.</p>
+              </>
+            )}
+            {fog.type === 'exp2' && (
+              <label className="bb-field">
+                <span className="bb-field__label">Fog density</span>
+                <ScrubNumberInput
+                  className="bb-input"
+                  step={0.001}
+                  min={0}
+                  max={1}
+                  disabled={disabled}
+                  value={fog.density}
+                  onChange={(v) => updateWorldScene?.({ fog: { density: v } })}
+                />
+              </label>
+            )}
+            <label className="bb-field">
+              <span className="bb-field__label">Drift</span>
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={Boolean(fog.drift)}
+                onChange={(e) => updateWorldScene?.({ fog: { drift: e.target.checked } })}
+              />
+            </label>
+            {fog.drift && (
+              <>
+                <label className="bb-field">
+                  <span className="bb-field__label">Drift speed</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={2}
+                    disabled={disabled}
+                    value={fog.driftSpeed}
+                    onChange={(v) => updateWorldScene?.({ fog: { driftSpeed: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Drift amount</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={1}
+                    disabled={disabled}
+                    value={fog.driftAmount}
+                    onChange={(v) => updateWorldScene?.({ fog: { driftAmount: v } })}
+                  />
+                </label>
+                <p className="bb-muted">Slow breathe on fog depth/density.</p>
+              </>
+            )}
+            <p className="bb-muted" {...helpProps('world.scene.atmosphere')}>
+              Moving atmosphere (perspective / Play only; hidden in ortho).
+            </p>
+            <label className="bb-field">
+              <span className="bb-field__label">Mist</span>
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={Boolean(fog.mist)}
+                onChange={(e) => updateWorldScene?.({ fog: { mist: e.target.checked } })}
+              />
+            </label>
+            {fog.mist && (
+              <>
+                <label className="bb-field">
+                  <span className="bb-field__label">Mist count</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={50}
+                    min={0}
+                    max={4000}
+                    disabled={disabled}
+                    value={fog.mistCount}
+                    onChange={(v) => updateWorldScene?.({ fog: { mistCount: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Mist speed</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={2}
+                    disabled={disabled}
+                    value={fog.mistSpeed}
+                    onChange={(v) => updateWorldScene?.({ fog: { mistSpeed: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Mist opacity</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={1}
+                    disabled={disabled}
+                    value={fog.mistOpacity}
+                    onChange={(v) => updateWorldScene?.({ fog: { mistOpacity: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Mist size (m)</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.05}
+                    min={0.05}
+                    max={4}
+                    disabled={disabled}
+                    value={fog.mistSize}
+                    onChange={(v) => updateWorldScene?.({ fog: { mistSize: v } })}
+                  />
+                </label>
+              </>
+            )}
+            <label className="bb-field">
+              <span className="bb-field__label">Noise</span>
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={Boolean(fog.noise)}
+                onChange={(e) => updateWorldScene?.({ fog: { noise: e.target.checked } })}
+              />
+            </label>
+            {fog.noise && (
+              <>
+                <label className="bb-field">
+                  <span className="bb-field__label">Noise strength</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={1}
+                    disabled={disabled}
+                    value={fog.noiseStrength}
+                    onChange={(v) => updateWorldScene?.({ fog: { noiseStrength: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Noise scale</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0.05}
+                    max={4}
+                    disabled={disabled}
+                    value={fog.noiseScale}
+                    onChange={(v) => updateWorldScene?.({ fog: { noiseScale: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Noise speed</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={2}
+                    disabled={disabled}
+                    value={fog.noiseSpeed}
+                    onChange={(v) => updateWorldScene?.({ fog: { noiseSpeed: v } })}
+                  />
+                </label>
+              </>
+            )}
+            <label className="bb-field">
+              <span className="bb-field__label">Volumetric</span>
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={Boolean(fog.volumetric)}
+                onChange={(e) => updateWorldScene?.({ fog: { volumetric: e.target.checked } })}
+              />
+            </label>
+            {fog.volumetric && (
+              <>
+                <label className="bb-field">
+                  <span className="bb-field__label">Volume density</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.01}
+                    min={0}
+                    max={2}
+                    disabled={disabled}
+                    value={fog.volumetricDensity}
+                    onChange={(v) => updateWorldScene?.({ fog: { volumetricDensity: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Volume extent (m)</span>
+                  <ScrubNumberInput
+                    className="bb-input"
+                    step={0.5}
+                    min={1}
+                    max={80}
+                    disabled={disabled}
+                    value={fog.volumetricExtent}
+                    onChange={(v) => updateWorldScene?.({ fog: { volumetricExtent: v } })}
+                  />
+                </label>
+                <label className="bb-field">
+                  <span className="bb-field__label">Volume steps</span>
+                  <select
+                    className="bb-select"
+                    disabled={disabled}
+                    value={fog.volumetricSteps}
+                    onChange={(e) => updateWorldScene?.({
+                      fog: { volumetricSteps: Number(e.target.value) },
+                    })}
+                  >
+                    {WORLD_FOG_VOLUMETRIC_STEPS.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="bb-muted">Higher steps look denser but cost more GPU.</p>
+              </>
+            )}
           </>
-        )}
-        {fog.type === 'exp2' && (
-          <label className="bb-field">
-            <span className="bb-field__label">Fog density</span>
-            <ScrubNumberInput
-              className="bb-input"
-              step={0.001}
-              min={0}
-              max={1}
-              disabled={disabled}
-              value={fog.density}
-              onChange={(v) => updateWorldScene?.({ fog: { density: v } })}
-            />
-          </label>
         )}
       </Collapsible>
       <Collapsible title="Renderer" storageKey="world.renderer" defaultOpen>

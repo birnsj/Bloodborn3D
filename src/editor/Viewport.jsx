@@ -41,6 +41,7 @@ import {
   viewportViewFromPrefs,
 } from './viewport/viewportPrefs.js';
 import { useLayout } from './layout/LayoutContext.jsx';
+import { viewScaleFactor } from './layout/viewScale.js';
 import { ViewportLayout } from './viewport/ViewportLayout.jsx';
 import {
   buildViewportPanes,
@@ -441,10 +442,13 @@ export function Viewport() {
     };
 
     const applySize = () => {
+      // Layout CSS px (pre-transform). Pixel ratio is boosted by UI scale so the
+      // WebGL buffer matches the on-screen size after EditorShell's CSS scale.
       const width = shell.clientWidth;
       const height = shell.clientHeight;
+      const uiScale = viewScaleFactor(layout.uiScale);
       if (width > 0 && height > 0) {
-        runtime.setSize(width, height);
+        runtime.setSize(width, height, { uiScale });
         shellSizeRef.current = { width, height };
         setShellSize({ width, height });
         if (runtime.mode === 'play') {
@@ -784,6 +788,24 @@ export function Viewport() {
     }
   }, [mode]);
 
+  // Re-apply drawing-buffer density when UI scale changes, and refresh Play
+  // camera aspect when entering Play (shell size often does not resize).
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    const shell = shellRef.current;
+    if (!runtime || !shell) return;
+    const width = shell.clientWidth;
+    const height = shell.clientHeight;
+    if (width <= 0 || height <= 0) return;
+    const uiScale = viewScaleFactor(layout.uiScale);
+    runtime.setSize(width, height, { uiScale });
+    shellSizeRef.current = { width, height };
+    setShellSize({ width, height });
+    if (mode === 'play') {
+      runtime.setViewportPanes(null);
+    }
+  }, [layout.uiScale, mode, runtimeRef]);
+
   useEffect(() => {
     const controls = orbitRef.current;
     if (!controls) return;
@@ -1060,6 +1082,10 @@ export function Viewport() {
         } else if (e.key === ']') {
           e.preventDefault();
           cycleGridSize(1);
+        } else if (e.code === 'Space' && !e.repeat) {
+          // Toggle maximize active viewport pane (multi-view). Space = jump in Play.
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('bb:toggle-pane-maximize'));
         }
       }
 

@@ -12,6 +12,7 @@ import {
   pointerToPaneNdc,
   viewportViewFromPrefs,
 } from '../editor/viewport/viewportPrefs.js';
+import { resolvePointerInPanes } from '../editor/viewport/viewportRuntimeBridge.js';
 
 describe('viewportPrefs', () => {
   it('defaults to a single perspective viewport', () => {
@@ -115,6 +116,17 @@ describe('viewportPrefs', () => {
     expect(ndc.y).toBeCloseTo(0);
   });
 
+  it('maps pointer through UI-scaled shellRect into layout pane space', () => {
+    const prefs = clampViewportPrefs({ layoutMode: 'dual-h', splitX: 0.5 });
+    // Layout 200×100, painted at 1.25× → visual 250×125.
+    const shellRect = { left: 0, top: 0, width: 250, height: 125 };
+    const left = resolvePointerInPanes(prefs, 200, 100, 50, 40, shellRect);
+    expect(left.paneId).toBe('pane-0');
+    expect(left.localX).toBeCloseTo(40, 5);
+    const right = resolvePointerInPanes(prefs, 200, 100, 200, 40, shellRect);
+    expect(right.paneId).toBe('pane-1');
+  });
+
   it('reports ortho plane axes', () => {
     expect(orthoPlaneAxes('top')).toEqual(['x', 'z']);
     expect(orthoPlaneAxes('front')).toEqual(['x', 'y']);
@@ -138,6 +150,8 @@ describe('viewportPrefs', () => {
       id: 'pane-0',
       cameraMode: 'perspective',
       displayMode: 'lit',
+      showFog: true,
+      showPostProcessing: true,
     });
     expect(view.panes[0].position).toBeUndefined();
   });

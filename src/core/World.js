@@ -110,7 +110,8 @@ function clampNonNeg(value, fallback) {
 
 /**
  * Level-authored Three.js Scene look (background + fog).
- * Defaults match SceneView hardcodes so missing fields keep the current look.
+ * Fog near/far are editor units (100 eu = 1 m); SceneView converts to meters.
+ * Defaults are room-scale so Linear fog is visible indoors.
  */
 export const DEFAULT_WORLD_SCENE = Object.freeze({
   background: '#0e1218',
@@ -118,14 +119,60 @@ export const DEFAULT_WORLD_SCENE = Object.freeze({
   backgroundBlurriness: 0,
   fog: Object.freeze({
     type: 'none',
-    color: '#0e1218',
-    near: 10,
-    far: 100,
-    density: 0.02,
+    color: '#6a7380',
+    near: 100,
+    far: 1500,
+    density: 0.05,
+    /** Slow multi-sine modulation of density / far — subtle drifting atmosphere. */
+    drift: true,
+    driftSpeed: 0.12,
+    driftAmount: 0.22,
+    /** Particle mist / noise sheets / volumetric volume (AtmosphereController). */
+    mist: false,
+    mistCount: 400,
+    mistSpeed: 0.15,
+    mistOpacity: 0.35,
+    mistSize: 0.6,
+    noise: false,
+    noiseStrength: 0.35,
+    noiseScale: 0.45,
+    noiseSpeed: 0.08,
+    volumetric: false,
+    volumetricDensity: 0.35,
+    volumetricExtent: 12,
+    volumetricSteps: 12,
   }),
 });
 
 export const WORLD_FOG_TYPES = Object.freeze(['none', 'linear', 'exp2']);
+export const WORLD_FOG_VOLUMETRIC_STEPS = Object.freeze([8, 12, 16]);
+
+/** First-pass fog used meter distances (near 10 / far 100); promote to editor units. */
+export function migrateLegacyWorldFog(value) {
+  const raw = value && typeof value === 'object' ? value : null;
+  if (
+    raw
+    && Number(raw.near) === 10
+    && Number(raw.far) === 100
+  ) {
+    return normalizeWorldFog({
+      ...raw,
+      near: DEFAULT_WORLD_SCENE.fog.near,
+      far: DEFAULT_WORLD_SCENE.fog.far,
+      color: raw.color === '#0e1218' ? DEFAULT_WORLD_SCENE.fog.color : raw.color,
+      density: Number(raw.density) === 0.02
+        ? DEFAULT_WORLD_SCENE.fog.density
+        : raw.density,
+    });
+  }
+  return normalizeWorldFog(value);
+}
+
+function clampRange(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
 
 export function normalizeWorldFog(value) {
   const d = DEFAULT_WORLD_SCENE.fog;
@@ -135,6 +182,22 @@ export function normalizeWorldFog(value) {
     near: d.near,
     far: d.far,
     density: d.density,
+    drift: d.drift,
+    driftSpeed: d.driftSpeed,
+    driftAmount: d.driftAmount,
+    mist: d.mist,
+    mistCount: d.mistCount,
+    mistSpeed: d.mistSpeed,
+    mistOpacity: d.mistOpacity,
+    mistSize: d.mistSize,
+    noise: d.noise,
+    noiseStrength: d.noiseStrength,
+    noiseScale: d.noiseScale,
+    noiseSpeed: d.noiseSpeed,
+    volumetric: d.volumetric,
+    volumetricDensity: d.volumetricDensity,
+    volumetricExtent: d.volumetricExtent,
+    volumetricSteps: d.volumetricSteps,
   };
   if (!value || typeof value !== 'object') return out;
   if (WORLD_FOG_TYPES.includes(value.type)) out.type = value.type;
@@ -143,7 +206,44 @@ export function normalizeWorldFog(value) {
   out.far = clampNonNeg(value.far, out.far);
   if (out.far < out.near) out.far = out.near;
   out.density = clampNonNeg(value.density, out.density);
+  if (typeof value.drift === 'boolean') out.drift = value.drift;
+  out.driftSpeed = clampRange(value.driftSpeed, 0, 2, out.driftSpeed);
+  out.driftAmount = clampRange(value.driftAmount, 0, 1, out.driftAmount);
+
+  if (typeof value.mist === 'boolean') out.mist = value.mist;
+  out.mistCount = Math.round(clampRange(value.mistCount, 0, 4000, out.mistCount));
+  out.mistSpeed = clampRange(value.mistSpeed, 0, 2, out.mistSpeed);
+  out.mistOpacity = clampRange(value.mistOpacity, 0, 1, out.mistOpacity);
+  out.mistSize = clampRange(value.mistSize, 0.05, 4, out.mistSize);
+
+  if (typeof value.noise === 'boolean') out.noise = value.noise;
+  out.noiseStrength = clampRange(value.noiseStrength, 0, 1, out.noiseStrength);
+  out.noiseScale = clampRange(value.noiseScale, 0.05, 4, out.noiseScale);
+  out.noiseSpeed = clampRange(value.noiseSpeed, 0, 2, out.noiseSpeed);
+
+  if (typeof value.volumetric === 'boolean') out.volumetric = value.volumetric;
+  out.volumetricDensity = clampRange(value.volumetricDensity, 0, 2, out.volumetricDensity);
+  out.volumetricExtent = clampRange(value.volumetricExtent, 1, 80, out.volumetricExtent);
+  const steps = Math.round(Number(value.volumetricSteps));
+  if (WORLD_FOG_VOLUMETRIC_STEPS.includes(steps)) out.volumetricSteps = steps;
+
   return out;
+}
+
+/**
+ * Multi-sine drift factor for subtle atmosphere (≈1 ± amount).
+ * @param {number} timeSec
+ * @param {{ drift?: boolean, driftSpeed?: number, driftAmount?: number }} fog
+ */
+export function fogDriftFactor(timeSec, fog = {}) {
+  if (!fog?.drift) return 1;
+  const amount = Math.min(1, Math.max(0, Number(fog.driftAmount) || 0));
+  if (amount <= 1e-6) return 1;
+  const speed = Math.max(0, Number(fog.driftSpeed) || 0);
+  const t = (Number(timeSec) || 0) * speed;
+  // Incommensurate periods so the breathe doesn't loop obviously (starts at 1).
+  const wave = Math.sin(t) * 0.62 + Math.sin(t * 0.41) * 0.38;
+  return 1 + amount * wave;
 }
 
 export function normalizeWorldScene(value) {
@@ -161,7 +261,7 @@ export function normalizeWorldScene(value) {
   if (Number.isFinite(blurriness)) {
     out.backgroundBlurriness = Math.min(1, Math.max(0, blurriness));
   }
-  out.fog = normalizeWorldFog(value.fog);
+  out.fog = migrateLegacyWorldFog(value.fog);
   return out;
 }
 

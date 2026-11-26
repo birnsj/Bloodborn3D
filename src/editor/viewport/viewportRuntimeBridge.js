@@ -77,6 +77,8 @@ export function buildViewportPanes(prefs, width, height, sceneView) {
       rect,
       cameraMode: pane?.cameraMode || 'perspective',
       displayMode: pane?.displayMode || 'lit',
+      showFog: pane?.showFog,
+      showPostProcessing: pane?.showPostProcessing,
       paneState: pane || null,
     };
   }).map((desc) => {
@@ -92,8 +94,12 @@ export function buildViewportPanes(prefs, width, height, sceneView) {
 }
 
 export function resolvePointerInPanes(prefs, width, height, clientX, clientY, shellRect) {
-  const localX = clientX - shellRect.left;
-  const localY = clientY - shellRect.top;
+  // shellRect is post-CSS-transform (visual px). Pane layout uses layout CSS px
+  // (clientWidth/Height). Map visual → layout when UI scale ≠ 100%.
+  const visualW = Math.max(1, shellRect?.width || width);
+  const visualH = Math.max(1, shellRect?.height || height);
+  const localX = ((clientX - (shellRect?.left || 0)) * width) / visualW;
+  const localY = ((clientY - (shellRect?.top || 0)) * height) / visualH;
   const paneId = paneIdAtPoint(prefs, width, height, localX, localY);
   const rects = computePaneRects(prefs, width, height);
   const rect = rects.find((r) => r.paneId === paneId) || rects[0];

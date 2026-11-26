@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { normalizeCameraMode } from './viewportPrefs.js';
+import {
+  defaultShowFogForCameraMode,
+  defaultShowPostProcessingForCameraMode,
+  normalizeCameraMode,
+} from './viewportPrefs.js';
 
 /** World-space look directions for orthographic modes (camera looks toward -direction). */
 export const ORTHO_LOOK = {
@@ -127,6 +131,8 @@ export function orientPaneToCameraMode(pane, cameraMode) {
     return {
       ...pane,
       cameraMode: mode,
+      showFog: defaultShowFogForCameraMode(mode),
+      showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
       position: [position.x, position.y, position.z],
       target,
     };
@@ -137,6 +143,8 @@ export function orientPaneToCameraMode(pane, cameraMode) {
   return {
     ...pane,
     cameraMode: mode,
+    showFog: defaultShowFogForCameraMode(mode),
+    showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
     position: [position.x, position.y, position.z],
     target,
   };

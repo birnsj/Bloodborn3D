@@ -51,11 +51,48 @@ const DEFAULT_POSE = {
   frustumSize: 12,
 };
 
+/** Fog preview defaults: on for perspective, off for ortho/isometric. */
+export function defaultShowFogForCameraMode(cameraMode) {
+  return normalizeCameraMode(cameraMode) === 'perspective';
+}
+
+/** Post-processing preview defaults: on for perspective, off otherwise. */
+export function defaultShowPostProcessingForCameraMode(cameraMode) {
+  return normalizeCameraMode(cameraMode) === 'perspective';
+}
+
+/**
+ * Resolve whether a pane should show fog this frame.
+ * Explicit pane.showFog wins; otherwise camera-mode default (ortho off).
+ */
+export function resolvePaneShowFog(pane) {
+  if (typeof pane?.showFog === 'boolean') return pane.showFog;
+  if (typeof pane?.paneState?.showFog === 'boolean') return pane.paneState.showFog;
+  const mode = pane?.cameraMode || pane?.paneState?.cameraMode;
+  return defaultShowFogForCameraMode(mode);
+}
+
+/**
+ * Resolve whether a pane should run the post-processing preview.
+ * Explicit pane.showPostProcessing wins; otherwise camera-mode default.
+ */
+export function resolvePaneShowPostProcessing(pane) {
+  if (typeof pane?.showPostProcessing === 'boolean') return pane.showPostProcessing;
+  if (typeof pane?.paneState?.showPostProcessing === 'boolean') {
+    return pane.paneState.showPostProcessing;
+  }
+  const mode = pane?.cameraMode || pane?.paneState?.cameraMode;
+  return defaultShowPostProcessingForCameraMode(mode);
+}
+
 function defaultPane(id, cameraMode) {
+  const mode = normalizeCameraMode(cameraMode);
   return {
     id,
-    cameraMode,
+    cameraMode: mode,
     displayMode: 'lit',
+    showFog: defaultShowFogForCameraMode(mode),
+    showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
     position: [...DEFAULT_POSE.position],
     target: [...DEFAULT_POSE.target],
     frustumSize: DEFAULT_POSE.frustumSize,
@@ -144,10 +181,17 @@ export function clampViewportPrefs(partial = {}) {
   for (let i = 0; i < 4; i += 1) {
     const src = srcPanes[i] || {};
     const fallbackCam = DEFAULT_QUAD_CAMERAS[i] || 'perspective';
+    const cameraMode = normalizeCameraMode(src.cameraMode || fallbackCam);
     panes.push({
       id: typeof src.id === 'string' && src.id ? src.id : `pane-${i}`,
-      cameraMode: normalizeCameraMode(src.cameraMode || fallbackCam),
+      cameraMode,
       displayMode: normalizeDisplayMode(src.displayMode),
+      showFog: typeof src.showFog === 'boolean'
+        ? src.showFog
+        : defaultShowFogForCameraMode(cameraMode),
+      showPostProcessing: typeof src.showPostProcessing === 'boolean'
+        ? src.showPostProcessing
+        : defaultShowPostProcessingForCameraMode(cameraMode),
       position: clampVec3(src.position, DEFAULT_POSE.position),
       target: clampVec3(src.target, DEFAULT_POSE.target),
       frustumSize: clampFrustum(src.frustumSize),
@@ -241,6 +285,8 @@ export function viewportViewFromPrefs(prefs) {
       id: pane.id,
       cameraMode: pane.cameraMode,
       displayMode: pane.displayMode,
+      showFog: pane.showFog,
+      showPostProcessing: pane.showPostProcessing,
     })),
   };
 }
@@ -255,11 +301,18 @@ export function mergeViewportViewIntoPrefs(prefs, view) {
   const normalized = normalizeViewportView(view);
   const panes = current.panes.map((pane, i) => {
     const fromView = normalized.panes[i] || {};
+    const cameraMode = fromView.cameraMode || pane.cameraMode;
     return {
       ...pane,
       id: fromView.id || pane.id,
-      cameraMode: fromView.cameraMode || pane.cameraMode,
+      cameraMode,
       displayMode: fromView.displayMode || pane.displayMode,
+      showFog: typeof fromView.showFog === 'boolean'
+        ? fromView.showFog
+        : pane.showFog,
+      showPostProcessing: typeof fromView.showPostProcessing === 'boolean'
+        ? fromView.showPostProcessing
+        : pane.showPostProcessing,
     };
   });
   return clampViewportPrefs({

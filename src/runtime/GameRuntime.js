@@ -108,8 +108,8 @@ export class GameRuntime {
     if (this.world) this.sceneView.syncFromWorld(this.world);
   }
 
-  setSize(width, height) {
-    this.sceneView.setSize(width, height);
+  setSize(width, height, options = {}) {
+    this.sceneView.setSize(width, height, options);
     if (this.player?.camera) {
       this.player.camera.aspect = width / Math.max(height, 1);
       this.player.camera.updateProjectionMatrix();
@@ -313,6 +313,11 @@ export class GameRuntime {
     this.sceneView.setEditMode(false);
     this.sceneView.setSelection([], this.world);
     if (this.sceneView.gizmo) this.sceneView.gizmo.setVisible(false);
+    // Sync FPS camera aspect to the current full-bleed shell (edit multi-pane
+    // aspect must not stick). Re-apply size with current UI scale compensation.
+    const w = this.sceneView._size?.width || 1;
+    const h = this.sceneView._size?.height || 1;
+    this.setSize(w, h, { uiScale: this.sceneView._uiScale });
     this.onModeChange(this.mode);
 
     this._startLoop();

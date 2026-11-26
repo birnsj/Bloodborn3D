@@ -31,7 +31,12 @@ export const HELP_CONTENT = {
   'world.scene': {
     title: 'World Scene',
     body: 'Level-authored Three.js scene look: clear/background color, background intensity/blurriness, and fog. Saved with the map and used in edit and play.',
-    tips: 'Background replaces the old editor-only viewport clear color. Fog: None, Linear (near/far), or Exp2 (density).',
+    tips: 'Enable Fog, then Linear (near/far in editor units) or Exp2 (density). Drift breathes depth/density. Mist / Noise / Volumetric add moving atmosphere. Hidden in ortho panes. 100 eu = 1 m.',
+  },
+  'world.scene.atmosphere': {
+    title: 'Moving Atmosphere',
+    body: 'Optional layers on top of distance fog: world-space particle Mist, lagged Noise sheets, and a local Volumetric volume. Soft depth fades stop fog at walls. Independent of post-processing.',
+    tips: 'Perspective and Play only. Mist drifts in world space (you move through it). Volumetric steps trade quality for cost. Noise alone uses soft sheets; with Volumetric on, noise drives the volume shader instead.',
   },
 
   'world.renderer': {
@@ -825,6 +830,16 @@ export const HELP_CONTENT = {
     title: 'Display Mode',
     body: 'Shading for this pane: Lit, Unlit, Textured, Wireframe, or Solid+Edges. Edit → Settings can set the default for all panes.',
   },
+  'viewport.showFog': {
+    title: 'Show Fog',
+    body: 'Toggles distance fog and moving atmosphere for this viewport only. Does not change World Settings fog.',
+    tips: 'Off by default in orthographic panes. Perspective and Play keep authored fog unless you turn this off.',
+  },
+  'viewport.showPostProcessing': {
+    title: 'Show Post-Processing',
+    body: 'Toggles map post-processing preview for this viewport only. Requires map Post Processing enabled and Editor Preview on.',
+    tips: 'Perspective Lit only. Ortho / Unlit / Wireframe stay raw. Multiple perspective panes can preview PP at once.',
+  },
   'viewport.layout': {
     title: 'Viewport Layout',
     body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own camera and display mode.',
@@ -838,6 +853,8 @@ export const HELP_CONTENT = {
   'viewport.maximize': {
     title: 'Maximize Pane',
     body: 'Expands the active viewport pane to fill the viewport area, or restores the previous multi-pane layout.',
+    shortcut: 'Space',
+    tips: 'Also Window → Maximize Active View. Only applies in multi-pane layouts; Space jumps in Play.',
   },
   'viewport.focus': {
     title: 'Focus Selection',

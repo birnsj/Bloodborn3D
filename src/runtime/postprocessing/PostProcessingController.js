@@ -166,12 +166,15 @@ export class PostProcessingController {
     this._effectPasses = [];
     this._structureKey = '';
     this._size = { width: 1, height: 1 };
+    this._composerBuf = { width: 0, height: 0 };
     this._savedToneMapping = renderer.toneMapping;
     this._savedExposure = renderer.toneMappingExposure;
     this._savedAutoClear = renderer.autoClear;
     this._active = false;
     this._contextKey = '';
     this._pendingTextureLoads = new Set();
+    this._viewport = new THREE.Vector4();
+    this._scissor = new THREE.Vector4();
   }
 
   setResolvers({ resolveActorMeshes, resolveLightMesh, resolveTexture } = {}) {
@@ -228,8 +231,19 @@ export class PostProcessingController {
   _syncComposerBuffers() {
     if (!this.composer || !this.renderer) return;
     const drawing = this.renderer.getDrawingBufferSize(new THREE.Vector2());
-    const w = Math.max(1, drawing.x);
-    const h = Math.max(1, drawing.y);
+    this._setComposerBufferSize(Math.max(1, drawing.x), Math.max(1, drawing.y));
+  }
+
+  /**
+   * Resize composer RTs / passes without touching the canvas CSS size.
+   * @param {number} width drawing-buffer pixels
+   * @param {number} height drawing-buffer pixels
+   */
+  _setComposerBufferSize(width, height) {
+    if (!this.composer) return;
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    if (this._composerBuf.width === w && this._composerBuf.height === h) return;
     this.composer.inputBuffer?.setSize(w, h);
     this.composer.outputBuffer?.setSize(w, h);
     if (this.composer.depthRenderTarget) {
@@ -237,6 +251,44 @@ export class PostProcessingController {
     }
     for (const pass of this.composer.passes || []) {
       pass.setSize?.(w, h);
+    }
+    this.composer.copyPass?.setSize?.(w, h);
+    this._composerBuf.width = w;
+    this._composerBuf.height = h;
+  }
+
+  /**
+   * Toggle whether the final composer pass writes to the default framebuffer.
+   * When false, the result stays in composer.inputBuffer for a scissored blit.
+   */
+  _setComposerRenderToScreen(toScreen) {
+    if (!this.composer) return;
+    this.composer.autoRenderToScreen = Boolean(toScreen);
+    const passes = this.composer.passes || [];
+    for (let i = 0; i < passes.length; i += 1) {
+      passes[i].renderToScreen = false;
+    }
+    if (toScreen && passes.length > 0) {
+      passes[passes.length - 1].renderToScreen = true;
+    }
+  }
+
+  /**
+   * Copy composer.inputBuffer into the current viewport/scissor on the screen.
+   */
+  _blitComposerToScreen() {
+    const composer = this.composer;
+    const renderer = this.renderer;
+    if (!composer || !renderer) return;
+    const copyPass = composer.copyPass;
+    if (!copyPass) return;
+    const prevRenderToScreen = copyPass.renderToScreen;
+    copyPass.renderToScreen = true;
+    try {
+      // After passes with needsSwap, the resolved frame lives in inputBuffer.
+      copyPass.render(renderer, composer.inputBuffer, composer.outputBuffer, 0, false);
+    } finally {
+      copyPass.renderToScreen = prevRenderToScreen;
     }
   }
 
@@ -246,9 +298,16 @@ export class PostProcessingController {
 
   /**
    * Render through the composer for the given camera.
-   * Uses a full-canvas viewport; caller restores pane scissor afterward if needed.
+   *
+   * @param {THREE.Camera} camera
+   * @param {number} [deltaTime]
+   * @param {{ scissor?: { x:number, y:number, width:number, height:number }|null }} [options]
+   *   `scissor` is CSS/logical pixels (Three setViewport/setScissor space). When set and
+   *   smaller than the full canvas, the composer renders into a pane-sized RT and blits
+   *   only into that rectangle — adjacent panes are untouched.
+   * @returns {boolean}
    */
-  render(camera, deltaTime = 0.016) {
+  render(camera, deltaTime = 0.016, options = {}) {
     if (!this.composer || !this.settings.enabled || !camera) return false;
     if (!needsComposerPipeline(this.settings)) return false;
 
@@ -260,27 +319,58 @@ export class PostProcessingController {
     this._applyExposure(this.settings.exposure);
 
     const renderer = this.renderer;
-    const prevViewport = new THREE.Vector4();
-    const prevScissor = new THREE.Vector4();
-    renderer.getViewport(prevViewport);
-    renderer.getScissor(prevScissor);
+    renderer.getViewport(this._viewport);
+    renderer.getScissor(this._scissor);
     const hadScissor = renderer.getScissorTest();
     const prevAutoClear = renderer.autoClear;
     const prevToneMapping = renderer.toneMapping;
+    const prevTarget = renderer.getRenderTarget();
 
-    const size = renderer.getSize(new THREE.Vector2());
-    renderer.setViewport(0, 0, size.x, size.y);
-    renderer.setScissor(0, 0, size.x, size.y);
-    renderer.setScissorTest(false);
+    const canvasSize = renderer.getSize(new THREE.Vector2());
+    const pixelRatio = renderer.getPixelRatio() || 1;
+    const scissor = options?.scissor || null;
+    const fullFrame = !scissor
+      || (
+        scissor.x <= 0
+        && scissor.y <= 0
+        && scissor.width >= canvasSize.x - 0.5
+        && scissor.height >= canvasSize.y - 0.5
+      );
+
     // Composer manages clears via ClearPass; keep tone mapping off for HDR RTs.
     renderer.autoClear = false;
     renderer.toneMapping = THREE.NoToneMapping;
 
     try {
-      this.composer.render(deltaTime);
+      if (fullFrame) {
+        this._syncComposerBuffers();
+        this._setComposerRenderToScreen(true);
+        renderer.setRenderTarget(null);
+        renderer.setViewport(0, 0, canvasSize.x, canvasSize.y);
+        renderer.setScissor(0, 0, canvasSize.x, canvasSize.y);
+        renderer.setScissorTest(false);
+        this.composer.render(deltaTime);
+      } else {
+        const bufW = Math.max(1, Math.round(scissor.width * pixelRatio));
+        const bufH = Math.max(1, Math.round(scissor.height * pixelRatio));
+        this._setComposerBufferSize(bufW, bufH);
+        this._setComposerRenderToScreen(false);
+        renderer.setRenderTarget(null);
+        // Internal RT passes ignore screen viewport; keep a matching logical size handy.
+        renderer.setViewport(0, 0, scissor.width, scissor.height);
+        renderer.setScissorTest(false);
+        this.composer.render(deltaTime);
+
+        renderer.setRenderTarget(null);
+        renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
+        renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
+        renderer.setScissorTest(true);
+        this._blitComposerToScreen();
+      }
     } finally {
-      renderer.setViewport(prevViewport);
-      renderer.setScissor(prevScissor);
+      renderer.setRenderTarget(prevTarget);
+      renderer.setViewport(this._viewport);
+      renderer.setScissor(this._scissor);
       renderer.setScissorTest(hadScissor);
       renderer.autoClear = prevAutoClear;
       renderer.toneMapping = prevToneMapping;
@@ -328,6 +418,8 @@ export class PostProcessingController {
     this._renderPass = null;
     this._effectPasses = [];
     this._structureKey = '';
+    this._composerBuf.width = 0;
+    this._composerBuf.height = 0;
   }
 
   _rebuild(settings) {

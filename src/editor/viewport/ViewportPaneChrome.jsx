@@ -180,10 +180,14 @@ export function ViewportPaneChrome({
   layoutMode,
   onCameraMode,
   onDisplayMode,
+  onToggleShowFog,
+  onToggleShowPostProcessing,
   onLayoutMode,
   onResetCamera,
   onToggleMaximize,
 }) {
+  const fogOn = pane.showFog !== false;
+  const ppOn = pane.showPostProcessing !== false;
   return (
     <div
       className={`bb-viewport-pane-chrome${active ? ' is-active' : ''}`}
@@ -205,6 +209,34 @@ export function ViewportPaneChrome({
         helpId="viewport.display"
         onChange={onDisplayMode}
       />
+      <button
+        type="button"
+        className={`bb-viewport-pane-chip bb-viewport-pane-chip--action${fogOn ? ' is-active' : ''}`}
+        title={fogOn ? 'Hide fog in this viewport' : 'Show fog in this viewport'}
+        aria-pressed={fogOn}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleShowFog?.();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        {...helpProps('viewport.showFog')}
+      >
+        Fog
+      </button>
+      <button
+        type="button"
+        className={`bb-viewport-pane-chip bb-viewport-pane-chip--action${ppOn ? ' is-active' : ''}`}
+        title={ppOn ? 'Hide post-processing preview in this viewport' : 'Show post-processing preview in this viewport'}
+        aria-pressed={ppOn}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleShowPostProcessing?.();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        {...helpProps('viewport.showPostProcessing')}
+      >
+        PP
+      </button>
       <div data-bb-tutorial="viewport.layout">
         <LayoutModeButtons
           layoutMode={layoutMode}
