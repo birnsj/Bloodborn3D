@@ -21,6 +21,7 @@ import {
   listCutterConvexConflicts,
 } from '../../rules/convexBrushRules.js';
 import { DEFAULT_WORLD_AMBIENT } from '../../core/World.js';
+import { PostProcessingSettings } from '../postprocessing/PostProcessingSettings.jsx';
 
 function AxisInputs({ values, onChange, disabled, step, helpId }) {
   return (
@@ -2083,6 +2084,7 @@ function WorldSettings() {
           />
         </label>
       </Collapsible>
+      <PostProcessingSettings />
       <Collapsible title="Editor" storageKey="world.editor">
         <p className="bb-muted">Mode: {mode}</p>
         <p className="bb-muted">Grid: {gridSize} editor units</p>

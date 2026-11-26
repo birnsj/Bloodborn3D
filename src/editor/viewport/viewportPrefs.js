@@ -75,6 +75,8 @@ export const DEFAULT_VIEWPORT_PREFS = {
   maximizedPaneId: null,
   /** Snapshot taken when maximizing so restore is exact */
   maximizeRestore: null,
+  /** Editor-only: preview map post-processing in perspective lit panes. */
+  postProcessingPreview: true,
   panes: [
     defaultPane('pane-0', 'perspective'),
     defaultPane('pane-1', 'top'),
@@ -182,6 +184,7 @@ export function clampViewportPrefs(partial = {}) {
     activePaneId,
     maximizedPaneId,
     maximizeRestore: maximizedPaneId ? maximizeRestore : null,
+    postProcessingPreview: base.postProcessingPreview !== false,
     panes,
   };
 }

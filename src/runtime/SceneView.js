@@ -11,6 +11,8 @@ import {
   migrateLegacyWorldAmbient,
   worldAmbientFillStrength,
 } from '../core/World.js';
+import { PostProcessingController } from './postprocessing/PostProcessingController.js';
+import { normalizePostProcessing } from './postprocessing/postProcessingState.js';
 
 const EDIT_FILL_BASE_INTENSITY = 0.06;
 const EDIT_FILL2_BASE_INTENSITY = 0.03;
@@ -204,6 +206,21 @@ export class SceneView {
     this._gridPlane = 'xz';
     this._size = { width: 1, height: 1 };
 
+    /** Editor-only: preview map post-processing in perspective lit panes. */
+    this.postProcessingPreview = true;
+    /** Perspective+lit panes may compose; ortho/technical modes stay raw. */
+    this._postProcessingMultiPane = true;
+    this._postProcessing = normalizePostProcessing({ enabled: false });
+    this._textureLoader = new THREE.TextureLoader();
+    this._ppTextureCache = new Map();
+    this.postProcessingController = new PostProcessingController({
+      renderer: this.renderer,
+      scene: this.scene,
+      resolveActorMeshes: (actorId) => this._resolveActorMeshesForPost(actorId),
+      resolveLightMesh: (actorId) => this._resolveLightMeshForPost(actorId),
+      resolveTexture: (assetId) => this._resolveTextureForPost(assetId),
+    });
+
     if (editMode) {
       this._createEditHelpers();
       this.gizmo = new BrushGizmo(this.scene);
@@ -302,6 +319,132 @@ export class SceneView {
   applyWorldAmbient(settings) {
     this._worldAmbient = migrateLegacyWorldAmbient(settings);
     this._syncAmbientFromWorld();
+  }
+
+  /** Map-authored post-processing settings (live apply). */
+  applyPostProcessing(settings) {
+    this._postProcessing = normalizePostProcessing(settings);
+    const ctrl = this.postProcessingController;
+    if (!ctrl) return;
+    // Keep composer buffers matched to the canvas before rebuild/render.
+    ctrl.setSize(this._size.width || 1, this._size.height || 1);
+    try {
+      ctrl.applySettings(this._postProcessing);
+    } catch (err) {
+      console.error('[BloodBound] post-processing apply failed', err);
+      try {
+        ctrl.dispose();
+      } catch {
+        /* ignore */
+      }
+      this.postProcessingController = new PostProcessingController({
+        renderer: this.renderer,
+        scene: this.scene,
+        resolveActorMeshes: (actorId) => this._resolveActorMeshesForPost(actorId),
+        resolveLightMesh: (actorId) => this._resolveLightMeshForPost(actorId),
+        resolveTexture: (assetId) => this._resolveTextureForPost(assetId),
+      });
+      this.postProcessingController.setSize(this._size.width || 1, this._size.height || 1);
+    }
+  }
+
+  setPostProcessingPreview(enabled) {
+    this.postProcessingPreview = Boolean(enabled);
+  }
+
+  setPostProcessingMultiPane(enabled) {
+    this._postProcessingMultiPane = Boolean(enabled);
+  }
+
+  _resolveActorMeshesForPost(actorId) {
+    const entry = this._actorMeshes.get(actorId);
+    if (!entry?.group) return [];
+    const meshes = [];
+    entry.group.traverse((obj) => {
+      if (obj.isMesh && !obj.userData?.editorOnly) meshes.push(obj);
+    });
+    return meshes;
+  }
+
+  _resolveLightMeshForPost(actorId) {
+    const entry = this._actorMeshes.get(actorId);
+    if (!entry?.group) return null;
+    if (!entry.godRaysMesh) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      );
+      mesh.name = 'GodRaysSource';
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      entry.group.add(mesh);
+      entry.godRaysMesh = mesh;
+    }
+    return entry.godRaysMesh;
+  }
+
+  _resolveTextureForPost(assetId) {
+    if (!assetId) return null;
+    if (this._ppTextureCache.has(assetId)) {
+      return this._ppTextureCache.get(assetId);
+    }
+    const url = this.assetResolver?.getTextureUrl?.(assetId);
+    if (!url) return null;
+    const pending = new Promise((resolve) => {
+      this._textureLoader.load(
+        url,
+        (tex) => {
+          tex.colorSpace = THREE.NoColorSpace;
+          this._ppTextureCache.set(assetId, tex);
+          resolve(tex);
+        },
+        undefined,
+        () => {
+          this._ppTextureCache.delete(assetId);
+          resolve(null);
+        },
+      );
+    });
+    this._ppTextureCache.set(assetId, pending);
+    return pending;
+  }
+
+  /**
+   * Whether this frame/pane should run the EffectComposer.
+   */
+  _shouldUsePostProcessing({ cameraMode, displayMode, paneCount = 1 } = {}) {
+    if (!this._postProcessing?.enabled) return false;
+    if (!this.postProcessingController) return false;
+
+    // Play / full-canvas path: always when map PP enabled.
+    if (!this.editMode) return true;
+
+    if (!this.postProcessingPreview) return false;
+    if ((cameraMode || 'perspective') !== 'perspective') return false;
+    if ((displayMode || 'lit') !== 'lit') return false;
+    if (!this._postProcessingMultiPane && paneCount > 1) return false;
+    return true;
+  }
+
+  _drawScene(camera, { usePostProcess = false } = {}) {
+    // Keep exposure in sync when PP is on but composer is bypassed (ACES-only).
+    if (usePostProcess && this._postProcessing?.enabled) {
+      const exposure = this._postProcessing.exposure;
+      if (Number.isFinite(exposure)) {
+        this.renderer.toneMappingExposure = exposure;
+      }
+    }
+
+    if (usePostProcess && this.postProcessingController?.isActive) {
+      try {
+        const ok = this.postProcessingController.render(camera);
+        if (ok) return;
+      } catch (err) {
+        console.error('[BloodBound] post-processing render failed', err);
+      }
+      // Fall through to a normal draw if compose fails or is inactive.
+    }
+    this.renderer.render(this.scene, camera);
   }
 
   _syncAmbientFromWorld() {
@@ -425,6 +568,7 @@ export class SceneView {
       updateOrthoFrustum(this.camera, frustum, width / height);
     }
     this.renderer.setSize(width, height, false);
+    this.postProcessingController?.setSize(width, height);
   }
 
   /**
@@ -503,6 +647,7 @@ export class SceneView {
 
     this.renderer.setScissorTest(true);
     const lights = [this.ambient, this.editFill, this.editFill2];
+    const paneCount = panes.length;
 
     for (const pane of panes) {
       const rect = pane.rect;
@@ -523,7 +668,12 @@ export class SceneView {
       this.gizmo?.updateScreenScale?.(cam);
 
       const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
-      this.renderer.render(this.scene, cam);
+      const usePostProcess = this._shouldUsePostProcessing({
+        cameraMode: pane.cameraMode,
+        displayMode: pane.displayMode,
+        paneCount,
+      });
+      this._drawScene(cam, { usePostProcess });
       restoreDisplayMode(displayState);
     }
 
@@ -540,7 +690,12 @@ export class SceneView {
     const fullH = Math.max(1, Math.round(this._size.height || 1));
     this.renderer.setViewport(0, 0, fullW, fullH);
     this.gizmo?.updateScreenScale?.(camera);
-    this.renderer.render(this.scene, camera);
+    const usePostProcess = this._shouldUsePostProcessing({
+      cameraMode: 'perspective',
+      displayMode: 'lit',
+      paneCount: 1,
+    });
+    this._drawScene(camera, { usePostProcess });
   }
 
   clearWorldMeshes() {
@@ -564,6 +719,7 @@ export class SceneView {
     if (world) {
       world.ambient = migrateLegacyWorldAmbient(world.ambient);
       this.applyWorldAmbient(world.ambient);
+      this.applyPostProcessing(world.postProcessing);
     }
     this.clearWorldMeshes();
     // Build root-first so parents exist before children attach.
@@ -2885,6 +3041,12 @@ export class SceneView {
       this._sharedCutterMaterials.line.dispose();
       this._sharedCutterMaterials = null;
     }
+    this.postProcessingController?.dispose();
+    this.postProcessingController = null;
+    for (const tex of this._ppTextureCache.values()) {
+      if (tex && typeof tex.dispose === 'function') tex.dispose();
+    }
+    this._ppTextureCache.clear();
     this._studioEnv?.dispose?.();
     this.scene.environment = null;
     this._paneCameras.clear();

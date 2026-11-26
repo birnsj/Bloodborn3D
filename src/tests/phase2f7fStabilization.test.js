@@ -97,6 +97,24 @@ describe('Phase 2F.7F final — jump edge + grounding', () => {
     expect(physics.setPlayerVelocity.mock.calls[0][1]).toBeCloseTo(-0.1, 5);
     expect(physics.canStairAssist).not.toHaveBeenCalled();
   });
+
+  it('places the camera at authored eye height above the capsule center', () => {
+    const set = vi.fn();
+    const physics = {
+      getPlayerPositionMeters: () => ({ x: 1, y: 0.8, z: -2 }),
+    };
+    const cam = { position: { set }, rotation: { order: 'YXZ', set() {} } };
+    const canvas = { addEventListener() {}, removeEventListener() {} };
+    const player = new PlayerController({
+      camera: cam,
+      physics,
+      canvas,
+      eyeHeight: 160,
+    });
+    player._syncCameraFromPhysics();
+    // Capsule center at 0.8 m + half of 1.6 m eye height → camera at 1.6 m
+    expect(set).toHaveBeenCalledWith(1, 1.6, -2);
+  });
 });
 
 describe('Phase 2F.7F final — wall vs stair assist probes', () => {

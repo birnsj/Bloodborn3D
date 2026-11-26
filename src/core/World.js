@@ -3,7 +3,14 @@
  * No Three.js or React dependencies.
  */
 
+import {
+  normalizePostProcessing,
+  DEFAULT_POST_PROCESSING,
+} from '../runtime/postprocessing/postProcessingState.js';
+
 /** @typedef {'additive' | 'subtractive'} MapMode */
+
+export { normalizePostProcessing, DEFAULT_POST_PROCESSING };
 
 export function normalizeMapMode(value) {
   return value === 'subtractive' ? 'subtractive' : 'additive';
@@ -91,6 +98,7 @@ export class World {
     schemaVersion = 1,
     mapMode = 'additive',
     ambient = null,
+    postProcessing = null,
   } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
@@ -98,6 +106,8 @@ export class World {
     this.mapMode = normalizeMapMode(mapMode);
     /** Scene AmbientLight fill — not an actor light. */
     this.ambient = normalizeWorldAmbient(ambient);
+    /** Map-authored post-processing (pmndrs effects). Missing → disabled defaults. */
+    this.postProcessing = normalizePostProcessing(postProcessing);
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -144,6 +154,7 @@ export class World {
       name: this.name,
       mapMode: normalizeMapMode(this.mapMode),
       ambient: normalizeWorldAmbient(this.ambient),
+      postProcessing: normalizePostProcessing(this.postProcessing),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

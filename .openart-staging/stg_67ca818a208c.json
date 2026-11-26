@@ -1,0 +1,13 @@
+{
+  "stagingId": "stg_67ca818a208c",
+  "jobId": "job_8403e3af6b93",
+  "generationId": "XIeTmZ78gRb2Bm6OYMY3",
+  "prompt": "Recreate the complete wall shown in the selected reference image as a production-ready game environment texture. Preserve the architectural style, materials, colors, decorative details, proportions and weathering of the reference. Include the entire vertical wall structure from floor to ceiling, including baseboards, lower decorative paneling, main wall surface, ornamental trim and crown molding. The attached reference image is a cropped region from \"Master Bedroom\". Crop bounds: x 2%, y 8%, 22% × 78%. Perfectly straight-on orthographic view. No perspective distortion. Flat, uniform lighting suitable for a base-color texture. No baked shadows, reflections or highlights. No furniture, doors, windows, floor or ceiling surfaces. Wall texture fills the entire image, edge to edge. Consistent architectural proportions across the full width.\n\nSeamless horizontal tiling, with matching left and right edges. Vertical tiling is not required.",
+  "modelId": "nano-banana-2",
+  "sourceUrl": "https://cdn.openart.ai/openart-ai/production/2026-11/create-image/cLfVi12UFuE3GsJni6yh/image_1795665624996_117ef493_1795665625098_6987ef47.png",
+  "fileName": "stg_67ca818a208c.png",
+  "relativePath": "stg_67ca818a208c.png",
+  "absolutePath": "D:\\BloodBound3D\\.openart-staging\\stg_67ca818a208c.png",
+  "bytes": 1627224,
+  "createdAt": 1795665630805
+}

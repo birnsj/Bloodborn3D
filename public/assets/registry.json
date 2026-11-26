@@ -920,6 +920,216 @@
       },
       "createdAt": 1795673380114,
       "updatedAt": 1795673997075
+    },
+    {
+      "id": "mesh_34f557c0b8ee",
+      "kind": "mesh",
+      "name": "BEAUTY PAGEANT QUEEN 1966.jpg",
+      "folder": "Meshes",
+      "path": "meshes/mesh_34f557c0b8ee.glb",
+      "originalName": "BEAUTY PAGEANT QUEEN 1966.jpg.glb",
+      "tags": [
+        "meshy",
+        "ai-generated"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 9343924,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "meshyTaskId": "01a216a8-a7b4-75e0-8a7c-18679f531117",
+        "meshyJobId": "msj_01a216a8-a7b4-75e0-8a7c-",
+        "meshySettings": {
+          "model_type": "smart-topology",
+          "ai_model": "meshy-t2.5",
+          "target_polycount": 5000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_model": "meshy-7",
+          "texture_resolution": "2k",
+          "target_formats": [
+            "glb"
+          ],
+          "should_remesh": false,
+          "geometry_resolution": "standard"
+        },
+        "meshyCliArgv": [
+          "image-to-3d",
+          "create",
+          "--image-url",
+          "D:\\BloodBound3D\\.meshy-staging\\refs\\ref_d7a26c6add3a_BEAUTY_PAGEANT_QUEEN_1966.jpg.png",
+          "--model-type",
+          "smart-topology",
+          "--should-texture",
+          "true",
+          "--target-formats",
+          "glb",
+          "--ai-model",
+          "meshy-t2.5",
+          "--target-polycount",
+          "5000",
+          "--texture-model",
+          "meshy-7",
+          "--texture-resolution",
+          "2k",
+          "--enable-pbr",
+          "true",
+          "--async",
+          "--operation-id",
+          "op_afa534ed027b40ac"
+        ],
+        "provenance": {
+          "projectArtItemId": "gdrive:ext_84d7bfb00a09:1yERw4mRl1zWDNRrtPvlu_Fdy6drGYctz",
+          "relativePath": ".bb-art/gdrive-cache/1yERw4mRl1zWDNRrtPvlu_Fdy6drGYctz/BEAUTY_PAGEANT_QUEEN_1966.jpg",
+          "title": "BEAUTY PAGEANT QUEEN 1966.jpg",
+          "folderPath": "CHARACTER DESIGNS",
+          "openArtAssociation": null,
+          "source": "google-drive",
+          "driveFileId": "1yERw4mRl1zWDNRrtPvlu_Fdy6drGYctz",
+          "driveFileName": "BEAUTY PAGEANT QUEEN 1966.jpg",
+          "driveFolderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+          "driveLibraryId": "ext_84d7bfb00a09",
+          "driveLibraryName": "14 - BLOODBOUND",
+          "webViewLink": "https://drive.google.com/file/d/1yERw4mRl1zWDNRrtPvlu_Fdy6drGYctz/view?usp=drivesdk",
+          "materializedAt": "2026-11-26T07:01:07.154Z",
+          "referenceTitle": "BEAUTY PAGEANT QUEEN 1966.jpg",
+          "referenceSource": "project-art"
+        },
+        "creditsEstimated": 15,
+        "creditsConsumed": 15,
+        "generatedAt": 1795676487527,
+        "pivot": "bottom-center",
+        "pivotOffsetMeters": {
+          "x": -0.0009764879941940308,
+          "y": 0.47631800174713135,
+          "z": -0.001221001148223877
+        },
+        "importScale": 1.8370080425062787,
+        "sourceHeightMeters": 0.9526360034942627,
+        "targetHeightMeters": 1.75,
+        "boundingBoxMeters": {
+          "x": 1.195669949720258,
+          "y": 1.75,
+          "z": 0.581240387972405
+        },
+        "boundingBoxCenterMeters": {
+          "x": -5.551115123125783e-17,
+          "y": 0.875,
+          "z": 0
+        },
+        "authoredHeightMeters": 1.75,
+        "previewPath": "previews/mesh_34f557c0b8ee_mesh.png",
+        "previewBytes": 70768
+      },
+      "createdAt": 1795676577617,
+      "updatedAt": 1795676654807
+    },
+    {
+      "id": "mesh_b18711df23cd",
+      "kind": "mesh",
+      "name": "The Plague Doctor - Dr Pestilence.jpg",
+      "folder": "Meshes",
+      "path": "meshes/mesh_b18711df23cd.glb",
+      "originalName": "The Plague Doctor - Dr Pestilence.jpg.glb",
+      "tags": [
+        "meshy",
+        "ai-generated"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 8243336,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "meshyTaskId": "01a216b1-c16c-7745-a99c-1bb635d339b1",
+        "meshyJobId": "msj_01a216b1-c16c-7745-a99c-",
+        "meshySettings": {
+          "model_type": "smart-topology",
+          "ai_model": "meshy-t2.5",
+          "target_polycount": 5000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_model": "meshy-7",
+          "texture_resolution": "2k",
+          "target_formats": [
+            "glb"
+          ],
+          "should_remesh": false,
+          "geometry_resolution": "standard"
+        },
+        "meshyCliArgv": [
+          "image-to-3d",
+          "create",
+          "--image-url",
+          "D:\\BloodBound3D\\.meshy-staging\\refs\\ref_cc025ecc6f29_The_Plague_Doctor_-_Dr_Pestilence.jpg.png",
+          "--model-type",
+          "smart-topology",
+          "--should-texture",
+          "true",
+          "--target-formats",
+          "glb",
+          "--ai-model",
+          "meshy-t2.5",
+          "--target-polycount",
+          "5000",
+          "--texture-model",
+          "meshy-7",
+          "--texture-resolution",
+          "2k",
+          "--enable-pbr",
+          "true",
+          "--async",
+          "--operation-id",
+          "op_813d5246f90a42f3"
+        ],
+        "provenance": {
+          "projectArtItemId": "gdrive:ext_84d7bfb00a09:1BXBRtZ4lUZzDzwdT5BSHFAapgp5zloKO",
+          "relativePath": ".bb-art/gdrive-cache/1BXBRtZ4lUZzDzwdT5BSHFAapgp5zloKO/The_Plague_Doctor_-_Dr_Pestilence.jpg",
+          "title": "The Plague Doctor - Dr Pestilence.jpg",
+          "folderPath": "CHARACTER DESIGNS",
+          "openArtAssociation": null,
+          "source": "google-drive",
+          "driveFileId": "1BXBRtZ4lUZzDzwdT5BSHFAapgp5zloKO",
+          "driveFileName": "The Plague Doctor - Dr Pestilence.jpg",
+          "driveFolderId": "1YzUPmmxe8oFpy7IfiDBUtGqAbst0qE4p",
+          "driveLibraryId": "ext_84d7bfb00a09",
+          "driveLibraryName": "14 - BLOODBOUND",
+          "webViewLink": "https://drive.google.com/file/d/1BXBRtZ4lUZzDzwdT5BSHFAapgp5zloKO/view?usp=drivesdk",
+          "materializedAt": "2026-11-26T07:10:54.335Z",
+          "referenceTitle": "The Plague Doctor - Dr Pestilence.jpg",
+          "referenceSource": "project-art"
+        },
+        "creditsEstimated": 15,
+        "creditsConsumed": 15,
+        "generatedAt": 1795677083995,
+        "pivot": "bottom-center",
+        "pivotOffsetMeters": {
+          "x": 0.0009765028953552246,
+          "y": 0.47680699825286865,
+          "z": -0.00024399906396865845
+        },
+        "importScale": 1.8351240715975286,
+        "sourceHeightMeters": 0.9536139965057373,
+        "targetHeightMeters": 1.75,
+        "boundingBoxMeters": {
+          "x": 0.8109321664595286,
+          "y": 1.75,
+          "z": 0.8369156497585972
+        },
+        "boundingBoxCenterMeters": {
+          "x": 0,
+          "y": 0.875,
+          "z": 0
+        },
+        "authoredHeightMeters": 1.75,
+        "previewPath": "previews/mesh_b18711df23cd_mesh.png",
+        "previewBytes": 75032
+      },
+      "createdAt": 1795677128324,
+      "updatedAt": 1795677161808
     }
   ]
 }

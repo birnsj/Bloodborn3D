@@ -231,10 +231,50 @@ select {
   font-size: var(--bb-font-size-sm);
 }
 
+/* Submenu chevron — keep full-brightness so the row doesn't look disabled. */
+.bb-ctx-menu__caret {
+  flex: 0 0 auto;
+  color: var(--bb-text);
+  font-size: var(--bb-font-size-sm);
+  opacity: 0.85;
+}
+
 .bb-ctx-menu__sep {
   height: 1px;
   margin: 4px 0;
   background: var(--bb-border);
+}
+
+.bb-ctx-menu__submenu {
+  position: relative;
+}
+
+.bb-ctx-menu__submenu.is-open > .bb-ctx-menu__item--submenu,
+.bb-ctx-menu__item--submenu:hover:not(:disabled) {
+  background: #2a3340;
+}
+
+.bb-ctx-menu--flyout {
+  position: absolute;
+  top: -4px;
+  min-width: 180px;
+  z-index: 1;
+  /* Overlap the parent row so the mouse path into the flyout doesn't drop the submenu. */
+  padding-left: 4px;
+  margin-left: -4px;
+}
+
+.bb-ctx-menu--flyout-right {
+  left: calc(100% - 6px);
+}
+
+.bb-ctx-menu--flyout-left {
+  right: calc(100% - 6px);
+  left: auto;
+  padding-left: 0;
+  padding-right: 4px;
+  margin-left: 0;
+  margin-right: -4px;
 }
 
 .bb-menu-submenu {

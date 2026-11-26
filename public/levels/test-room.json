@@ -691,7 +691,7 @@
         "position": {
           "x": -175,
           "y": 20,
-          "z": -25
+          "z": 0
         },
         "rotation": {
           "x": 0,
@@ -728,13 +728,13 @@
       "name": "PRINCIPAL BUGGELSBY.jpg Copy",
       "transform": {
         "position": {
-          "x": -175,
+          "x": -150,
           "y": 20,
-          "z": -125
+          "z": -200
         },
         "rotation": {
           "x": 0,
-          "y": 45,
+          "y": 44.99999999999999,
           "z": 0
         },
         "scale": {
@@ -757,6 +757,124 @@
           "type": "StaticMesh",
           "enabled": true,
           "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_98b96dc8-14d8-46ee-b2c5-c0cbd7073059",
+      "name": "BEAUTY PAGEANT QUEEN 1966.jpg",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 20.000000149011612,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 50.00000000000001,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.9999999999999999,
+          "y": 1,
+          "z": 0.9999999999999999
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_024af646-4477-4421-a9e3-b1ec1418f201",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_34f557c0b8ee",
+          "collidable": false,
+          "collisionType": "none"
+        }
+      ]
+    },
+    {
+      "id": "actor_d69cf741-7ad6-49f2-a573-282788cc73e8",
+      "name": "Room Light Copy Copy",
+      "transform": {
+        "position": {
+          "x": 25,
+          "y": 200,
+          "z": -150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_638308cb-1147-412a-bbc2-1d772b07ea26",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#3e4c93",
+          "intensity": 3.4,
+          "range": 800,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25
+        }
+      ]
+    },
+    {
+      "id": "actor_d4ac207e-0d1e-40d8-83d3-3b85500ad5f3",
+      "name": "The Plague Doctor - Dr Pestilence.jpg",
+      "transform": {
+        "position": {
+          "x": -175,
+          "y": 20.00000014901157,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 140,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1d049416-fdd8-4229-9c6a-43762b01f8df",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_b18711df23cd",
           "collidable": false,
           "collisionType": "none"
         }

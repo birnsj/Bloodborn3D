@@ -1,0 +1,24 @@
+{
+  "materialId": "mat_0807fae227e1",
+  "baseColorMapId": "tex_c62b419b178b",
+  "normalMapId": "tex_c99ddcca74e2",
+  "roughnessMapId": "tex_3c7e68009065",
+  "uvScale": {
+    "y": 0.16666666666666666,
+    "x": 0.16666666666666666
+  },
+  "roughnessScalar": 1,
+  "metalness": 0,
+  "generateMs": 219,
+  "dimensions": {
+    "width": 1024,
+    "height": 1024
+  },
+  "outputs": {
+    "base": "D:\\BloodBound3D\\.openart-staging\\pbr-acceptance\\full-wall-base.png",
+    "normal": "D:\\BloodBound3D\\.openart-staging\\pbr-acceptance\\full-wall-normal.png",
+    "roughness": "D:\\BloodBound3D\\.openart-staging\\pbr-acceptance\\full-wall-roughness.png",
+    "normalTile3x1": "D:\\BloodBound3D\\.openart-staging\\pbr-acceptance\\full-wall-normal-3x1.png"
+  },
+  "uvPreserved": true
+}

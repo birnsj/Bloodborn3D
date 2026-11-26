@@ -1,0 +1,51 @@
+export const postProcessingLesson = {
+  id: 'post-processing',
+  title: 'Post Processing',
+  summary: 'Enable map-authored bloom, vignette, and tone mapping.',
+  order: 19,
+  starterPath: 'tutorials/openings.json',
+  steps: [
+    {
+      id: 'intro',
+      title: 'Image effects after lighting',
+      body: 'Post-processing sits after scene lights and World Ambient. Ambient fills the room, lights illuminate locally, exposure and tone mapping convert HDR to display color, and effects like bloom or vignette style the final image.',
+      terms: [
+        { term: 'World Ambient', def: 'Scene-wide fill (IBL + editor fills) authored in World Settings.' },
+        { term: 'Exposure', def: 'Scales HDR luminance before tone mapping when post-processing is on.' },
+        { term: 'Tone mapping', def: 'Maps HDR colors into displayable LDR (BloodBound defaults to ACES Filmic).' },
+        { term: 'Post effect', def: 'Fullscreen filter such as bloom, vignette, or film grain.' },
+      ],
+      highlight: ['world.postProcessing'],
+      verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'open-world-settings',
+      title: 'Open World Settings',
+      body: 'In the Details panel, switch to the World Settings tab. Expand Post Processing under Ambient Light.',
+      highlight: ['world.postProcessing', 'panel.details'],
+      verify: { type: 'manualConfirm', label: 'I opened Post Processing' },
+    },
+    {
+      id: 'enable-pp',
+      title: 'Enable post-processing',
+      body: 'Turn Enabled on. Keep Editor preview checked so the perspective Lit pane updates live. Ortho and wireframe panes stay raw on purpose.',
+      highlight: ['world.postProcessing'],
+      verify: { type: 'manualConfirm', label: 'Enabled' },
+      failHint: 'Check Enabled in Details → World Settings → Post Processing.',
+    },
+    {
+      id: 'try-bloom',
+      title: 'Try Bloom and Vignette',
+      body: 'Under Lighting enable Bloom and raise Intensity slightly. Under Camera and Lens enable Vignette. Watch the perspective viewport.',
+      highlight: ['world.postProcessing'],
+      verify: { type: 'manualConfirm', label: 'I see the change' },
+    },
+    {
+      id: 'presets',
+      title: 'Presets (optional)',
+      body: 'Apply Gothic Interior or Cinematic as a starting point, then tweak. Save your own preset to the project if you like. Reset all restores the disabled default.',
+      highlight: ['world.postProcessing'],
+      verify: { type: 'manualConfirm', label: 'Finish' },
+    },
+  ],
+};

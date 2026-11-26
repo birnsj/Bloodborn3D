@@ -153,12 +153,16 @@ export function Viewport() {
     createPrefabFromSelection,
     unpackSelectedPrefab,
     assignSelectedSurfaceMaterial,
+    assignSelectedSurfaceUv,
+    resetSelectedSurfaceUv,
+    fitSelectedSurfaceUv,
+    getSelectedSurfaceMaterialId,
     applySelectedMaterialToBrush,
     convertActorToConvexBrush,
   } = useEditor();
   const { settings: editorSettings } = useEditorSettings();
   const { layout, setViewportView } = useLayout();
-  const { dragMime, registry } = useAssetBrowser();
+  const { dragMime, registry, materialDefs } = useAssetBrowser();
   const { prompt, confirm } = useEditorDialogs();
   const { openContextMenu } = useEditorContextMenu();
 
@@ -809,6 +813,21 @@ export function Viewport() {
   ]);
 
   useEffect(() => {
+    runtimeRef.current?.sceneView?.setPostProcessingPreview?.(
+      viewportPrefs.postProcessingPreview !== false,
+    );
+  }, [runtimeRef, viewportPrefs.postProcessingPreview]);
+
+  useEffect(() => {
+    const onPreview = (e) => {
+      const enabled = e?.detail?.enabled !== false;
+      setViewportPrefs((prev) => ({ ...prev, postProcessingPreview: enabled }));
+    };
+    window.addEventListener('bb:post-processing-preview', onPreview);
+    return () => window.removeEventListener('bb:post-processing-preview', onPreview);
+  }, [setViewportPrefs]);
+
+  useEffect(() => {
     runtimeRef.current?.setPlayLookOptions?.({
       sensitivityMul: editorSettings.playLookSensitivity,
       invertY: editorSettings.cameraInvertY,
@@ -1148,23 +1167,113 @@ export function Viewport() {
     const cam = camera || sceneView.camera;
     const hits = sceneView.pickWorldHits?.(nx, ny, cam) || [];
     const hitActorId = hits.find((h) => h?.actorId)?.actorId || null;
+    const surfaceHit = sceneView.pickSurface?.(nx, ny, cam) || null;
 
-    if (hitActorId) {
-      if (!selectedActorIds.includes(hitActorId)) {
-        selectActor(hitActorId, { additive: false });
-      }
+    // Face pick / new hit force a single-actor selection. Menu enablement must
+    // use that post-pick selection — selectedActorIds in this closure is still stale.
+    let forcedSingleSelect = false;
+    if (surfaceHit?.actorId && surfaceHit?.surfaceId) {
+      // Always make the face's actor primary so brush UV writes hit the right mesh.
+      selectActor(surfaceHit.actorId, { additive: false });
+      setSelectedSurface({
+        actorId: surfaceHit.actorId,
+        surfaceId: surfaceHit.surfaceId,
+      });
+      forcedSingleSelect = true;
+    } else if (hitActorId && !selectedActorIds.includes(hitActorId)) {
+      selectActor(hitActorId, { additive: false });
+      forcedSingleSelect = true;
     }
 
-    const primaryId = hitActorId
+    const primaryId = surfaceHit?.actorId
+      || hitActorId
       || selectedActorIds[selectedActorIds.length - 1]
       || null;
     const primary = primaryId ? world.getActor(primaryId) : null;
-    const count = hitActorId && selectedActorIds.includes(hitActorId)
-      ? Math.max(1, selectedActorIds.length)
-      : (primary ? 1 : 0);
+    const count = forcedSingleSelect
+      ? 1
+      : (hitActorId && selectedActorIds.includes(hitActorId)
+        ? Math.max(1, selectedActorIds.length)
+        : (primary ? 1 : 0));
     const hasSelection = Boolean(primary);
 
     const isPrefabInstance = Boolean(primary?.prefab?.instanceId);
+    const faceTarget = surfaceHit?.actorId && surfaceHit?.surfaceId
+      ? { actorId: surfaceHit.actorId, surfaceId: surfaceHit.surfaceId }
+      : null;
+    const resolveFaceMaterialUvScale = () => {
+      const matId = getSelectedSurfaceMaterialId(faceTarget);
+      const def = matId ? materialDefs?.[matId] : null;
+      return def?.uvScale || { x: 1, y: 1 };
+    };
+    const runFaceFit = (axis, label) => {
+      const ok = fitSelectedSurfaceUv({
+        axis,
+        materialUvScale: resolveFaceMaterialUvScale(),
+        surfaceTarget: faceTarget,
+      });
+      setStatus(ok
+        ? `Face ${faceTarget.surfaceId}: ${label}`
+        : `${label} needs a box-brush or column face`);
+    };
+
+    const textureItems = faceTarget ? [
+      { id: 'sep-tex', separator: true },
+      {
+        id: 'face-texture',
+        label: `Face Texture (${faceTarget.surfaceId})`,
+        submenu: [
+          {
+            id: 'tex-scale-1',
+            label: 'Scale 1 × 1',
+            onSelect: () => {
+              assignSelectedSurfaceUv({ scale: { x: 1, y: 1 } }, faceTarget);
+              setStatus(`Face ${faceTarget.surfaceId}: scale 1×1`);
+            },
+          },
+          {
+            id: 'tex-scale-2',
+            label: 'Scale 2 × 2',
+            onSelect: () => {
+              assignSelectedSurfaceUv({ scale: { x: 2, y: 2 } }, faceTarget);
+              setStatus(`Face ${faceTarget.surfaceId}: scale 2×2`);
+            },
+          },
+          {
+            id: 'tex-scale-half',
+            label: 'Scale ½ × ½',
+            onSelect: () => {
+              assignSelectedSurfaceUv({ scale: { x: 0.5, y: 0.5 } }, faceTarget);
+              setStatus(`Face ${faceTarget.surfaceId}: scale ½×½`);
+            },
+          },
+          { id: 'tex-sep-fit', separator: true },
+          {
+            id: 'tex-fit-h',
+            label: 'Fit Horizontal',
+            // Keep clickable whenever we picked a face; report if measure fails.
+            disabled: false,
+            onSelect: () => runFaceFit('u', 'fit horizontal'),
+          },
+          {
+            id: 'tex-fit-v',
+            label: 'Fit Vertical',
+            disabled: false,
+            onSelect: () => runFaceFit('v', 'fit vertical'),
+          },
+          { id: 'tex-sep-reset', separator: true },
+          {
+            id: 'tex-reset',
+            label: 'Reset UV',
+            onSelect: () => {
+              resetSelectedSurfaceUv(faceTarget);
+              setStatus(`Face ${faceTarget.surfaceId}: UV reset`);
+            },
+          },
+        ],
+      },
+    ] : [];
+
     openContextMenu({
       clientX,
       clientY,
@@ -1226,6 +1335,7 @@ export function Viewport() {
           disabled: !hasSelection,
           onSelect: () => reparentSelected(null),
         },
+        ...textureItems,
         { id: 'sep-create', separator: true },
         {
           id: 'create-cell',

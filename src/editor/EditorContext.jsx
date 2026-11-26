@@ -41,6 +41,7 @@ import {
   SetBrushMaterialCommand,
   SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
+  SetWorldPostProcessingCommand,
   SetStaticMeshPropertiesCommand,
   SetRampPropertiesCommand,
   SetStairPropertiesCommand,
@@ -142,8 +143,23 @@ import {
 } from '../runtime/wallOpenings.js';
 import { validateWorldSubtractComplexity } from '../runtime/brushGeometry.js';
 import { migrateLegacyWorldAmbient, normalizeWorldAmbient } from '../core/World.js';
+import {
+  mergePostProcessing,
+  normalizePostProcessing,
+  resetAllPostProcessing,
+  resetEffectInPostProcessing,
+} from '../runtime/postprocessing/postProcessingState.js';
 import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
-import { patchFaceMaterial, patchFaceUv } from '../runtime/surfaces.js';
+import {
+  computeFitSurfaceUv,
+  structuralFaceSizeEditorUnits,
+} from '../rules/faceUvFit.js';
+import {
+  getStructuralComponent,
+  patchFaceMaterial,
+  patchFaceUv,
+  resolveSurfaceMaterialId,
+} from '../runtime/surfaces.js';
 import {
   nextSelectedSurfaceAfterActorChange,
   shouldApplyMaterialToSurface,
@@ -1890,6 +1906,65 @@ export function EditorProvider({ children }) {
     bump();
   }, [mode, bump]);
 
+  const applyPostProcessingToView = useCallback((settings) => {
+    runtimeRef.current?.sceneView?.applyPostProcessing?.(settings);
+  }, []);
+
+  /**
+   * Map-authored post-processing.
+   * @param {object} partial merge patch (or full replace when replace=true)
+   * @param {{ undoable?: boolean, replace?: boolean, label?: string }} [options]
+   *   undoable defaults true; set false while scrubbing, then commit with undoable true.
+   */
+  const updateWorldPostProcessing = useCallback((partial, options = {}) => {
+    const current = worldRef.current;
+    if (!current || mode === 'play') return;
+    const {
+      undoable = true,
+      replace = false,
+      label = 'Edit post-processing',
+    } = options;
+    const before = normalizePostProcessing(current.postProcessing);
+    const after = replace
+      ? normalizePostProcessing(partial)
+      : mergePostProcessing(before, partial);
+
+    if (undoable) {
+      executeCommand(
+        new SetWorldPostProcessingCommand({
+          world: current,
+          before,
+          after,
+          label,
+          onApply: applyPostProcessingToView,
+        }),
+      );
+      bump();
+      return;
+    }
+
+    current.postProcessing = after;
+    applyPostProcessingToView(after);
+    bump();
+  }, [mode, executeCommand, applyPostProcessingToView, bump]);
+
+  const resetWorldPostProcessingEffect = useCallback((effectId) => {
+    const current = worldRef.current;
+    if (!current || mode === 'play') return;
+    updateWorldPostProcessing(
+      resetEffectInPostProcessing(current.postProcessing, effectId),
+      { replace: true, label: `Reset ${effectId}` },
+    );
+  }, [mode, updateWorldPostProcessing]);
+
+  const resetWorldPostProcessingAll = useCallback(() => {
+    if (!worldRef.current || mode === 'play') return;
+    updateWorldPostProcessing(resetAllPostProcessing(), {
+      replace: true,
+      label: 'Reset post-processing',
+    });
+  }, [mode, updateWorldPostProcessing]);
+
   const updateSelectedStaticMesh = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
@@ -3130,9 +3205,19 @@ export function EditorProvider({ children }) {
     updateSelectedCurvedWall,
   ]);
 
-  const assignSelectedSurfaceUv = useCallback((uvPartial) => {
-    if (!world || mode === 'play' || !selectedSurface) return;
-    const actor = world.getActor(selectedSurface.actorId);
+  const resolveSurfaceTarget = useCallback((surfaceTarget = null) => {
+    const target = surfaceTarget?.actorId && surfaceTarget?.surfaceId
+      ? surfaceTarget
+      : selectedSurface;
+    if (!target?.actorId || !target?.surfaceId) return null;
+    return target;
+  }, [selectedSurface]);
+
+  const assignSelectedSurfaceUv = useCallback((uvPartial, surfaceTarget = null) => {
+    if (!world || mode === 'play') return;
+    const target = resolveSurfaceTarget(surfaceTarget);
+    if (!target) return;
+    const actor = world.getActor(target.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
     const convex = actor.getComponent('ConvexBrush');
@@ -3142,7 +3227,7 @@ export function EditorProvider({ children }) {
     const arch = actor.getComponent('Arch');
     const curved = actor.getComponent('CurvedWall');
     const patchUv = (comp, updateFn) => {
-      const sid = selectedSurface.surfaceId;
+      const sid = target.surfaceId;
       const current = comp.faceUVs?.[sid] || {
         scale: { x: 1, y: 1 },
         offset: { x: 0, y: 0 },
@@ -3166,7 +3251,14 @@ export function EditorProvider({ children }) {
       };
       const result = patchFaceUv(scratch, sid, nextUv);
       if (!result) return;
-      updateFn({ faceUVs: result.after });
+      // update*Brush helpers read selectedRef — pin the face's actor for this write.
+      const prevSel = selectedRef.current;
+      selectedRef.current = [target.actorId];
+      try {
+        updateFn({ faceUVs: result.after });
+      } finally {
+        selectedRef.current = prevSel;
+      }
     };
     if (brush) patchUv(brush, updateSelectedBrush);
     else if (convex) patchUv(convex, updateSelectedConvexBrush);
@@ -3178,7 +3270,7 @@ export function EditorProvider({ children }) {
   }, [
     world,
     mode,
-    selectedSurface,
+    resolveSurfaceTarget,
     updateSelectedBrush,
     updateSelectedConvexBrush,
     updateSelectedRamp,
@@ -3188,9 +3280,11 @@ export function EditorProvider({ children }) {
     updateSelectedCurvedWall,
   ]);
 
-  const resetSelectedSurfaceUv = useCallback(() => {
-    if (!world || mode === 'play' || !selectedSurface) return;
-    const actor = world.getActor(selectedSurface.actorId);
+  const resetSelectedSurfaceUv = useCallback((surfaceTarget = null) => {
+    if (!world || mode === 'play') return;
+    const target = resolveSurfaceTarget(surfaceTarget);
+    if (!target) return;
+    const actor = world.getActor(target.actorId);
     if (!actor) return;
     const brush = actor.getComponent('Brush');
     const convex = actor.getComponent('ConvexBrush');
@@ -3200,12 +3294,18 @@ export function EditorProvider({ children }) {
     const arch = actor.getComponent('Arch');
     const curved = actor.getComponent('CurvedWall');
     const clearUv = (comp, updateFn) => {
-      if (!comp.faceUVs?.[selectedSurface.surfaceId]) return;
+      if (!comp.faceUVs?.[target.surfaceId]) return;
       const next = { ...(comp.faceUVs || {}) };
-      delete next[selectedSurface.surfaceId];
-      updateFn({
-        faceUVs: Object.keys(next).length ? structuredClone(next) : null,
-      });
+      delete next[target.surfaceId];
+      const prevSel = selectedRef.current;
+      selectedRef.current = [target.actorId];
+      try {
+        updateFn({
+          faceUVs: Object.keys(next).length ? structuredClone(next) : null,
+        });
+      } finally {
+        selectedRef.current = prevSel;
+      }
     };
     if (brush) clearUv(brush, updateSelectedBrush);
     else if (convex) clearUv(convex, updateSelectedConvexBrush);
@@ -3217,7 +3317,7 @@ export function EditorProvider({ children }) {
   }, [
     world,
     mode,
-    selectedSurface,
+    resolveSurfaceTarget,
     updateSelectedBrush,
     updateSelectedConvexBrush,
     updateSelectedRamp,
@@ -3226,6 +3326,54 @@ export function EditorProvider({ children }) {
     updateSelectedArch,
     updateSelectedCurvedWall,
   ]);
+
+  /**
+   * Fit face UV so one material texture spans U, V, or both.
+   * @param {{ axis?: 'u'|'v'|'both', materialUvScale?: {x:number,y:number}, surfaceTarget?: {actorId:string,surfaceId:string} }} [opts]
+   * @returns {boolean}
+   */
+  const fitSelectedSurfaceUv = useCallback((opts = {}) => {
+    if (!world || mode === 'play') return false;
+    const target = resolveSurfaceTarget(opts.surfaceTarget);
+    if (!target) return false;
+    const actor = world.getActor(target.actorId);
+    if (!actor) return false;
+    const comp = getStructuralComponent(actor);
+    if (!comp) return false;
+    const faceSizeEu = structuralFaceSizeEditorUnits(comp, target.surfaceId);
+    if (!faceSizeEu) return false;
+    const fitted = computeFitSurfaceUv({
+      faceSizeEu,
+      actorUv: comp.uv,
+      materialUvScale: opts.materialUvScale,
+      axis: opts.axis || 'both',
+      currentSurfaceUv: comp.faceUVs?.[target.surfaceId],
+    });
+    if (!fitted) return false;
+    assignSelectedSurfaceUv(fitted, target);
+    return true;
+  }, [world, mode, resolveSurfaceTarget, assignSelectedSurfaceUv]);
+
+  /** True when Fit Horizontal / Vertical can measure the selected face. */
+  const canFitSelectedSurfaceUv = useCallback((surfaceTarget = null) => {
+    if (!world) return false;
+    const target = resolveSurfaceTarget(surfaceTarget);
+    if (!target) return false;
+    const actor = world.getActor(target.actorId);
+    const comp = getStructuralComponent(actor);
+    return Boolean(structuralFaceSizeEditorUnits(comp, target.surfaceId));
+  }, [world, resolveSurfaceTarget]);
+
+  /** Resolve material asset id for the selected surface (face override or actor). */
+  const getSelectedSurfaceMaterialId = useCallback((surfaceTarget = null) => {
+    if (!world) return null;
+    const target = resolveSurfaceTarget(surfaceTarget);
+    if (!target) return null;
+    const actor = world.getActor(target.actorId);
+    const comp = getStructuralComponent(actor);
+    if (!comp) return null;
+    return resolveSurfaceMaterialId(comp, target.surfaceId);
+  }, [world, resolveSurfaceTarget]);
 
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
@@ -3367,6 +3515,9 @@ export function EditorProvider({ children }) {
     assignSelectedSurfaceMaterial,
     assignSelectedSurfaceUv,
     resetSelectedSurfaceUv,
+    fitSelectedSurfaceUv,
+    canFitSelectedSurfaceUv,
+    getSelectedSurfaceMaterialId,
     geometryMode,
     setGeometryMode,
     geometrySelection,
@@ -3446,6 +3597,9 @@ export function EditorProvider({ children }) {
     removeBrushOpening,
     updateSelectedLight,
     updateWorldAmbient,
+    updateWorldPostProcessing,
+    resetWorldPostProcessingEffect,
+    resetWorldPostProcessingAll,
     updateSelectedStaticMesh,
     updateSelectedRamp,
     updateSelectedStair,

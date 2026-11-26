@@ -99,6 +99,7 @@ export class GameRuntime {
     if (this._playPending) this._playToken += 1;
     this.world = world;
     this.sceneView.syncFromWorld(world);
+    this.sceneView.applyPostProcessing?.(world?.postProcessing);
   }
 
   setAssetResolver(resolver) {
@@ -405,7 +406,7 @@ export class GameRuntime {
 
   /**
    * Replace the live world's authored fields from a serializeLevel snapshot.
-   * Restores mapMode and ambient as well as actors (Phase 2F.7E).
+   * Restores mapMode, ambient, and postProcessing as well as actors (Phase 2F.7E).
    */
   _applyAuthoredSnapshot(snapshot) {
     // Snapshot came from a world already validated at Play start.
@@ -415,6 +416,7 @@ export class GameRuntime {
     this.world.schemaVersion = restored.schemaVersion;
     this.world.mapMode = restored.mapMode;
     this.world.ambient = restored.ambient;
+    this.world.postProcessing = restored.postProcessing;
     for (const actor of restored.actors) {
       this.world.addActor(actor);
     }

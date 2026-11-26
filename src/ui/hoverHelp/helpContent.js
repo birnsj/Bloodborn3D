@@ -28,6 +28,21 @@ export const HELP_CONTENT = {
     tips: 'Black color or intensity 0 removes fill light. G = Game View. Ctrl+move = orbit. Alt+Move/Rotate/Scale = duplicate.',
   },
 
+  'world.postProcessing': {
+    title: 'Post Processing',
+    body: 'Map-authored fullscreen image effects (bloom, vignette, tone mapping, and more) applied after scene lighting. Uses the pmndrs postprocessing library on the shared Three.js renderer. Disabled maps keep the previous ACES look.',
+    tips: 'Ambient = scene fill. Lights = local illumination. Exposure / tone mapping = HDR→display. Post effects = artistic image filters. Ortho and wireframe panes stay raw.',
+  },
+  'world.postProcessingExposure': {
+    title: 'Exposure',
+    body: 'Scales HDR scene luminance before tone mapping when post-processing is enabled (ToneMappingEffect uses Three’s toneMappingExposure). Default 0.95 matches the legacy renderer.',
+    tips: 'Raise exposure to brighten the whole image without changing World Ambient or individual lights.',
+  },
+  'world.postProcessingPreview': {
+    title: 'Editor Preview',
+    body: 'When on, perspective Lit panes show map post-processing while editing. Play always uses map settings. This toggle is an editor preference, not saved in the level JSON.',
+  },
+
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
@@ -449,6 +464,10 @@ export const HELP_CONTENT = {
   'details.surface.resetUv': {
     title: 'Reset Surface UV',
     body: 'Removes the face UV override so the face inherits the actor UV again.',
+  },
+  'viewport.faceTexture': {
+    title: 'Face Texture',
+    body: 'Right-click a brush face, then open Face Texture for UV presets: Scale 1×1 / 2×2 / ½×½, Fit Horizontal, Fit Vertical, and Reset UV. Fit sizes one material tile across that axis (accounts for material UV scale).',
   },
   'details.convex.convert': {
     title: 'Convert to Convex Brush',

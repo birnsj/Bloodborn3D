@@ -117,6 +117,29 @@ describe('Editor context menu — Outliner / Viewport actor parity', () => {
     expect(viewport).toContain('unpackSelectedPrefab');
     expect(viewport).toContain('reparentSelected');
   });
+
+  it('Viewport face RMB nests texture scale / fit / reset in a submenu', () => {
+    expect(viewport).toContain("id: 'face-texture'");
+    expect(viewport).toContain('submenu:');
+    expect(viewport).toContain("label: 'Scale 1 × 1'");
+    expect(viewport).toContain("label: 'Scale 2 × 2'");
+    expect(viewport).toContain("label: 'Scale ½ × ½'");
+    expect(viewport).toContain("label: 'Fit Horizontal'");
+    expect(viewport).toContain("label: 'Fit Vertical'");
+    expect(viewport).toContain("label: 'Reset UV'");
+    expect(viewport).toContain('fitSelectedSurfaceUv');
+    expect(viewport).toContain('pickSurface');
+  });
+});
+
+describe('Editor context menu — submenu support', () => {
+  const menuSrc = readSrc('ui/contextMenu/EditorContextMenu.jsx');
+
+  it('renders flyout rows from item.submenu', () => {
+    expect(menuSrc).toContain('item.submenu');
+    expect(menuSrc).toContain('bb-ctx-menu--flyout');
+    expect(menuSrc).toContain('aria-haspopup');
+  });
 });
 
 describe('Editor context menu — OpenArt results', () => {

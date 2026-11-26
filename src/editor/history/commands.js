@@ -351,6 +351,40 @@ export class SetLightPropertiesCommand {
 }
 
 /**
+ * Replace map-authored post-processing settings on the World.
+ * `onApply` notifies the live SceneView (kept out of the command for testability).
+ */
+export class SetWorldPostProcessingCommand {
+  constructor({
+    world,
+    before,
+    after,
+    label = 'Edit post-processing',
+    onApply = null,
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+    this.onApply = onApply;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    if (!this.world) return;
+    this.world.postProcessing = structuredClone(state);
+    this.onApply?.(this.world.postProcessing);
+  }
+}
+
+/**
  * Patch StairComponent properties.
  */
 export class SetStairPropertiesCommand {

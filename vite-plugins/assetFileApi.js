@@ -176,6 +176,18 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'GET' && action === 'postprocessing-presets') {
+            sendJson(res, 200, await readPostProcessingPresets());
+            return;
+          }
+
+          if (req.method === 'PUT' && action === 'postprocessing-presets') {
+            const body = JSON.parse(await readBody(req));
+            const saved = await writePostProcessingPresets(body);
+            sendJson(res, 200, saved);
+            return;
+          }
+
           sendJson(res, 405, { error: 'Method or action not allowed' });
         } catch (err) {
           const status = err?.code === 'BODY_TOO_LARGE' ? 413
@@ -720,6 +732,42 @@ async function updatePrefabAsset(id, body) {
     };
     return { ok: true, asset: entry, definition, registry };
   });
+}
+
+function postProcessingPresetsPath() {
+  return path.join(ASSETS_DIR, 'postprocessing-presets.json');
+}
+
+async function readPostProcessingPresets() {
+  await ensureAssetDirs();
+  const full = postProcessingPresetsPath();
+  try {
+    const raw = await fs.readFile(full, 'utf8');
+    const parsed = JSON.parse(raw);
+    return {
+      schemaVersion: 1,
+      presets: Array.isArray(parsed.presets) ? parsed.presets : [],
+    };
+  } catch {
+    return { schemaVersion: 1, presets: [] };
+  }
+}
+
+async function writePostProcessingPresets(body) {
+  await ensureAssetDirs();
+  const presets = Array.isArray(body?.presets) ? body.presets : [];
+  const cleaned = presets
+    .filter((p) => p && typeof p === 'object' && typeof p.id === 'string' && p.id)
+    .map((p) => ({
+      id: String(p.id),
+      label: String(p.label || p.id),
+      builtin: false,
+      settings: p.settings && typeof p.settings === 'object' ? p.settings : {},
+      updatedAt: Number(p.updatedAt) || Date.now(),
+    }));
+  const payload = { schemaVersion: 1, presets: cleaned };
+  await atomicWriteJson(postProcessingPresetsPath(), payload);
+  return payload;
 }
 
 function stripExt(name) {

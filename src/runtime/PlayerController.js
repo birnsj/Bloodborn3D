@@ -160,8 +160,9 @@ export class PlayerController {
   _syncCameraFromPhysics() {
     const pos = this.physics.getPlayerPositionMeters();
     if (!pos) return;
-    // Body origin is capsule center; raise to approximate eye height
-    const eyeOffset = toMeters(this.eyeHeight) * 0.35;
+    // Capsule center is at spawnY + eyeHeight/2; offset by half height so the
+    // camera sits at the authored eye height (was 0.35 → ~chest, looking at necks).
+    const eyeOffset = toMeters(this.eyeHeight) * 0.5;
     this.camera.position.set(pos.x, pos.y + eyeOffset, pos.z);
     this.camera.rotation.order = 'YXZ';
     this.camera.rotation.set(this.pitch, this.yaw, 0);

@@ -35,6 +35,7 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     schemaVersion: data.schemaVersion,
     mapMode: normalizeMapMode(data.mapMode),
     ambient: migrateLegacyWorldAmbient(data.ambient),
+    postProcessing: data.postProcessing ?? null,
   });
 
   for (const actorData of data.actors) {

@@ -16,14 +16,18 @@ const EditorContextMenuContext = createContext(null);
  * Shared floating context menu for the editor.
  * Surfaces call openContextMenu({ clientX, clientY, items }).
  *
- * Item shape: { id, label, disabled?, danger?, separator?, shortcut?, onSelect? }
+ * Item shape:
+ *   { id, label, disabled?, danger?, separator?, shortcut?, onSelect? }
+ *   { id, label, submenu: Item[] } — hover/click flyout
  */
 export function EditorContextMenuProvider({ children }) {
   const [menu, setMenu] = useState(null);
   const menuRef = useRef(null);
   const [pos, setPos] = useState({ left: 0, top: 0 });
+  const [openSubmenuId, setOpenSubmenuId] = useState(null);
 
   const closeContextMenu = useCallback(() => {
+    setOpenSubmenuId(null);
     setMenu(null);
   }, []);
 
@@ -31,8 +35,10 @@ export function EditorContextMenuProvider({ children }) {
     const list = Array.isArray(items) ? items.filter(Boolean) : [];
     if (!list.length) {
       setMenu(null);
+      setOpenSubmenuId(null);
       return;
     }
+    setOpenSubmenuId(null);
     setMenu({
       clientX: Number(clientX) || 0,
       clientY: Number(clientY) || 0,
@@ -73,6 +79,10 @@ export function EditorContextMenuProvider({ children }) {
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (openSubmenuId) {
+          setOpenSubmenuId(null);
+          return;
+        }
         closeContextMenu();
       }
     };
@@ -97,7 +107,7 @@ export function EditorContextMenuProvider({ children }) {
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('resize', closeContextMenu);
     };
-  }, [menu, closeContextMenu]);
+  }, [menu, closeContextMenu, openSubmenuId]);
 
   const value = useMemo(() => ({
     openContextMenu,
@@ -105,6 +115,16 @@ export function EditorContextMenuProvider({ children }) {
     closeContextMenu,
     isOpen: Boolean(menu),
   }), [openContextMenu, openFromEvent, closeContextMenu, menu]);
+
+  const runSelect = useCallback((item) => {
+    if (item?.disabled) return;
+    closeContextMenu();
+    try {
+      item.onSelect?.();
+    } catch {
+      // Caller handles its own errors.
+    }
+  }, [closeContextMenu]);
 
   const menuTree = menu ? (
     <div
@@ -114,34 +134,16 @@ export function EditorContextMenuProvider({ children }) {
       style={{ left: pos.left, top: pos.top }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {menu.items.map((item, index) => {
-        if (item.separator) {
-          return <div key={item.id || `sep-${index}`} className="bb-ctx-menu__sep" role="separator" />;
-        }
-        return (
-          <button
-            key={item.id || `item-${index}`}
-            type="button"
-            role="menuitem"
-            className={`bb-ctx-menu__item${item.danger ? ' is-danger' : ''}`}
-            disabled={Boolean(item.disabled)}
-            onClick={() => {
-              if (item.disabled) return;
-              closeContextMenu();
-              try {
-                item.onSelect?.();
-              } catch {
-                // Caller handles its own errors.
-              }
-            }}
-          >
-            <span className="bb-ctx-menu__label">{item.label}</span>
-            {item.shortcut ? (
-              <span className="bb-ctx-menu__shortcut">{item.shortcut}</span>
-            ) : null}
-          </button>
-        );
-      })}
+      {menu.items.map((item, index) => (
+        <ContextMenuRow
+          key={item.id || `item-${index}`}
+          item={item}
+          index={index}
+          openSubmenuId={openSubmenuId}
+          setOpenSubmenuId={setOpenSubmenuId}
+          onSelect={runSelect}
+        />
+      ))}
     </div>
   ) : null;
 
@@ -152,6 +154,124 @@ export function EditorContextMenuProvider({ children }) {
         ? createPortal(menuTree, document.body)
         : null}
     </EditorContextMenuContext.Provider>
+  );
+}
+
+function ContextMenuRow({ item, index, openSubmenuId, setOpenSubmenuId, onSelect }) {
+  const rowRef = useRef(null);
+  const closeTimerRef = useRef(0);
+  const [flyoutSide, setFlyoutSide] = useState('right');
+  const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
+  const open = hasSubmenu && openSubmenuId === (item.id || `sub-${index}`);
+
+  useLayoutEffect(() => {
+    if (!open || !rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+    const flyoutWidth = 200;
+    const spaceRight = window.innerWidth - rect.right;
+    setFlyoutSide(spaceRight < flyoutWidth + 8 ? 'left' : 'right');
+  }, [open]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  }, []);
+
+  if (item.separator) {
+    return <div className="bb-ctx-menu__sep" role="separator" />;
+  }
+
+  if (hasSubmenu) {
+    const subId = item.id || `sub-${index}`;
+    const openNow = () => {
+      if (item.disabled) return;
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = 0;
+      }
+      setOpenSubmenuId(subId);
+    };
+    const scheduleClose = () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = window.setTimeout(() => {
+        setOpenSubmenuId((cur) => (cur === subId ? null : cur));
+        closeTimerRef.current = 0;
+      }, 180);
+    };
+    return (
+      <div
+        ref={rowRef}
+        className={`bb-ctx-menu__submenu${open ? ' is-open' : ''}`}
+        onMouseEnter={openNow}
+        onMouseLeave={scheduleClose}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          className="bb-ctx-menu__item bb-ctx-menu__item--submenu"
+          disabled={Boolean(item.disabled)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => {
+            if (item.disabled) return;
+            setOpenSubmenuId((cur) => (cur === subId ? null : subId));
+          }}
+        >
+          <span className="bb-ctx-menu__label">{item.label}</span>
+          <span className="bb-ctx-menu__caret" aria-hidden>▸</span>
+        </button>
+        {open ? (
+          <div
+            className={`bb-ctx-menu bb-ctx-menu--flyout bb-ctx-menu--flyout-${flyoutSide}`}
+            role="menu"
+            onMouseEnter={openNow}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {item.submenu.filter(Boolean).map((sub, subIndex) => {
+              if (sub.separator) {
+                return (
+                  <div
+                    key={sub.id || `sep-${subIndex}`}
+                    className="bb-ctx-menu__sep"
+                    role="separator"
+                  />
+                );
+              }
+              return (
+                <button
+                  key={sub.id || `subitem-${subIndex}`}
+                  type="button"
+                  role="menuitem"
+                  className={`bb-ctx-menu__item${sub.danger ? ' is-danger' : ''}`}
+                  disabled={Boolean(sub.disabled)}
+                  onClick={() => onSelect(sub)}
+                >
+                  <span className="bb-ctx-menu__label">{sub.label}</span>
+                  {sub.shortcut ? (
+                    <span className="bb-ctx-menu__shortcut">{sub.shortcut}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`bb-ctx-menu__item${item.danger ? ' is-danger' : ''}`}
+      disabled={Boolean(item.disabled)}
+      onMouseEnter={() => setOpenSubmenuId(null)}
+      onClick={() => onSelect(item)}
+    >
+      <span className="bb-ctx-menu__label">{item.label}</span>
+      {item.shortcut ? (
+        <span className="bb-ctx-menu__shortcut">{item.shortcut}</span>
+      ) : null}
+    </button>
   );
 }
 

@@ -80,7 +80,7 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(18);
+    expect(LESSONS).toHaveLength(19);
     expect(listLessons().map((l) => l.id)).toContain('getting-started');
     expect(listLessons().map((l) => l.id)).toContain('subtractive-geometry');
     expect(listLessons().map((l) => l.id)).toContain('ceilings-multilevel');
@@ -90,6 +90,7 @@ describe('lesson registry', () => {
     expect(listLessons().map((l) => l.id)).toContain('columns-arches-curves');
     expect(listLessons().map((l) => l.id)).toContain('project-art-library');
     expect(listLessons().map((l) => l.id)).toContain('asset-generation');
+    expect(listLessons().map((l) => l.id)).toContain('post-processing');
     expect(getLessonById('missing')).toBeNull();
   });
 

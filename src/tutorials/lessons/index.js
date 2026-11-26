@@ -16,6 +16,7 @@ import { surfaceAlignLesson } from './15-surface-align.js';
 import { columnsArchesCurvesLesson } from './16-columns-arches-curves.js';
 import { projectArtLibraryLesson } from './17-project-art-library.js';
 import { assetGenerationLesson } from './18-asset-generation.js';
+import { postProcessingLesson } from './19-post-processing.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -36,6 +37,7 @@ export const LESSONS = [
   columnsArchesCurvesLesson,
   projectArtLibraryLesson,
   assetGenerationLesson,
+  postProcessingLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

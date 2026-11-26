@@ -36,7 +36,7 @@ const SECTIONS = [
   {
     id: 'art',
     title: 'Art & generation',
-    ids: ['project-art-library', 'asset-generation'],
+    ids: ['project-art-library', 'asset-generation', 'post-processing'],
   },
 ];
 
