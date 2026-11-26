@@ -244,15 +244,16 @@ export function AssetViewer({ docked = false } = {}) {
         <input
           ref={textureInputRef}
           type="file"
-          accept=".png,.jpg,.jpeg,.webp,.gif"
+          accept=".png,.jpg,.jpeg,.webp,.gif,.hdr,.exr"
           hidden
           onChange={async (e) => {
             const file = e.target.files?.[0];
             e.target.value = '';
             if (!file) return;
             try {
-              await importTexture(file);
-              patch({ contentFolder: 'Textures' });
+              const result = await importTexture(file);
+              const folder = result?.asset?.folder || 'Textures';
+              patch({ contentFolder: folder });
             } catch (err) {
               notify(err.message);
             }

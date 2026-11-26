@@ -351,6 +351,72 @@ export class SetLightPropertiesCommand {
 }
 
 /**
+ * Replace map-authored world.scene settings (background, fog, environment, sky).
+ */
+export class SetWorldSceneCommand {
+  constructor({
+    world,
+    before,
+    after,
+    label = 'Edit world scene',
+    onApply = null,
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+    this.onApply = onApply;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    if (!this.world) return;
+    this.world.scene = structuredClone(state);
+    this.onApply?.(this.world.scene);
+  }
+}
+
+/**
+ * Replace map-authored world.renderer settings.
+ */
+export class SetWorldRendererCommand {
+  constructor({
+    world,
+    before,
+    after,
+    label = 'Edit world renderer',
+    onApply = null,
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+    this.onApply = onApply;
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(state) {
+    if (!this.world) return;
+    this.world.renderer = structuredClone(state);
+    this.onApply?.(this.world.renderer);
+  }
+}
+
+/**
  * Replace map-authored post-processing settings on the World.
  * `onApply` notifies the live SceneView (kept out of the command for testability).
  */

@@ -7,6 +7,7 @@ export const ASSET_FOLDERS = [
   'Meshes',
   'Materials',
   'Textures',
+  'Environments',
   'Prefabs',
   'Audio',
   'AI Assets',

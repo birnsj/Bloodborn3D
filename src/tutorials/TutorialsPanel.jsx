@@ -36,7 +36,13 @@ const SECTIONS = [
   {
     id: 'art',
     title: 'Art & generation',
-    ids: ['project-art-library', 'asset-generation', 'post-processing', 'world-fog-atmosphere'],
+    ids: [
+      'project-art-library',
+      'asset-generation',
+      'post-processing',
+      'world-fog-atmosphere',
+      'world-environment',
+    ],
   },
 ];
 
@@ -87,7 +93,7 @@ export function TutorialsPanel({ docked = false }) {
         <h2 className="bb-tutorials__title">Tutorials</h2>
         <p className="bb-tutorials__lead">
           BloodBound Academy — choose a lesson. A tip appears next to each control; finish the task to advance.
-          Art &amp; generation covers Project Art Library, Asset Generation, Post Processing, and World Fog &amp; Atmosphere.
+          Art &amp; generation covers Project Art, Asset Generation, Post Processing, Fog, and World Environment.
         </p>
       </header>
 

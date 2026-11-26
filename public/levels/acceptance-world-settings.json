@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 2,
+  "name": "acceptance-world-settings",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
+  "scene": {
+    "background": "#1a2030",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0.15,
+    "backgroundType": "environment",
+    "backgroundRotation": {
+      "x": 0,
+      "y": 25,
+      "z": 0
+    },
+    "environmentAssetId": "tex_batch1_studio",
+    "environmentIntensity": 1.1,
+    "environmentRotation": {
+      "x": 0,
+      "y": 40,
+      "z": 0
+    },
+    "lightProbeEnabled": true,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 4,
+      "rayleigh": 1.2,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 12,
+      "azimuth": 160,
+      "scale": 450000
+    },
+    "groundedSkybox": {
+      "enabled": true,
+      "height": 12,
+      "radius": 80
+    },
+    "fog": {
+      "type": "linear",
+      "color": "#6a7380",
+      "near": 200,
+      "far": 2500,
+      "density": 0.05,
+      "drift": true,
+      "driftSpeed": 0.12,
+      "driftAmount": 0.15,
+      "mist": false,
+      "mistCount": 400,
+      "mistSpeed": 0.15,
+      "mistOpacity": 0.35,
+      "mistSize": 0.6,
+      "noise": false,
+      "noiseStrength": 0.35,
+      "noiseScale": 0.45,
+      "noiseSpeed": 0.08,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "actors": [
+    {
+      "id": "actor_ws_floor",
+      "name": "Floor",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 10,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "floor"
+      ],
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 20,
+            "z": 800
+          },
+          "color": "#5a6270",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_ws_wall",
+      "name": "Reflective Wall",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 160,
+          "z": -350
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "components": [
+        {
+          "id": "comp_wall",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 700,
+            "y": 300,
+            "z": 20
+          },
+          "color": "#9aa4b4",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_ws_pillar",
+      "name": "Metal Pillar",
+      "transform": {
+        "position": {
+          "x": -180,
+          "y": 140,
+          "z": 40
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush"
+      ],
+      "components": [
+        {
+          "id": "comp_pillar",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 60,
+            "y": 260,
+            "z": 60
+          },
+          "color": "#c8d0dc",
+          "collidable": true
+        }
+      ]
+    },
+    {
+      "id": "actor_ws_light",
+      "name": "Key Light",
+      "transform": {
+        "position": {
+          "x": 120,
+          "y": 280,
+          "z": 160
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light"
+      ],
+      "components": [
+        {
+          "id": "comp_light",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#fff2e0",
+          "intensity": 2.2,
+          "range": 1200,
+          "castShadow": true
+        }
+      ]
+    },
+    {
+      "id": "actor_ws_spawn",
+      "name": "Player Start",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 20,
+          "z": 220
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn"
+      ],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    }
+  ]
+}

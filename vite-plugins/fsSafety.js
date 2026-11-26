@@ -94,7 +94,7 @@ export function readBodyLimited(req, limitBytes = DEFAULT_JSON_BODY_LIMIT) {
 
 /**
  * Detect common image formats from magic bytes (not filename).
- * @returns {'png'|'jpeg'|'webp'|'gif'|null}
+ * @returns {'png'|'jpeg'|'webp'|'gif'|'hdr'|'exr'|null}
  */
 export function detectImageMagic(buffer) {
   if (!buffer || buffer.length < 12) return null;
@@ -108,12 +108,19 @@ export function detectImageMagic(buffer) {
   ) {
     return 'webp';
   }
+  // OpenEXR magic: 76 2f 31 01
+  if (b[0] === 0x76 && b[1] === 0x2f && b[2] === 0x31 && b[3] === 0x01) return 'exr';
+  // Radiance HDR: "#?RADIANCE" or "#?RGBE"
+  const head = b.subarray(0, Math.min(16, b.length)).toString('ascii');
+  if (head.startsWith('#?RADIANCE') || head.startsWith('#?RGBE')) return 'hdr';
   return null;
 }
 
 export function extensionForImageMagic(kind) {
   if (kind === 'jpeg') return '.jpg';
-  if (kind === 'png' || kind === 'gif' || kind === 'webp') return `.${kind}`;
+  if (kind === 'png' || kind === 'gif' || kind === 'webp' || kind === 'hdr' || kind === 'exr') {
+    return `.${kind}`;
+  }
   return null;
 }
 

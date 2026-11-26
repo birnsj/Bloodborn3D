@@ -30,8 +30,45 @@ export const HELP_CONTENT = {
 
   'world.scene': {
     title: 'World Scene',
-    body: 'Level-authored scene look: background color/intensity/blurriness, distance fog, and optional moving atmosphere. Saved with the map for edit and Play.',
-    tips: 'Enable Fog → Linear (near/far, editor units) or Exp2 (density). Drift breathes depth/density. Mist / Noise / Volumetric add motion. Ortho panes hide fog and use a dark editor clear instead of the authored background. 100 eu = 1 m.',
+    body: 'Level-authored scene look: background mode (color / environment / sky), HDRI environment lighting, grounded skybox, distance fog, and moving atmosphere. Saved with the map for edit and Play.',
+    tips: 'Empty Environment map keeps RoomEnvironment studio IBL. Ortho panes hide fog/sky and use a dark editor clear. 100 eu = 1 m.',
+  },
+  'world.scene.backgroundType': {
+    title: 'Background Mode',
+    body: 'Solid color, environment map, or procedural sky as the scene backdrop. Blurriness and background rotation apply when the background is the environment texture.',
+    tips: 'Perspective and Play show the authored background; ortho panes keep the editor clear color.',
+  },
+  'world.scene.backgroundRotation': {
+    title: 'Background Rotation',
+    body: 'Euler degrees applied to texture/environment backgrounds (Three.js scene.backgroundRotation).',
+  },
+  'world.scene.environment': {
+    title: 'Environment Map',
+    body: 'HDR/EXR asset converted through PMREM into scene.environment for PBR reflections. Import via Asset Viewer or the World Settings file picker. Empty = RoomEnvironment fallback.',
+    tips: 'Assets live under Environments / Textures with .hdr or .exr. Independent of Ambient fill when an authored map is set.',
+  },
+  'world.scene.environmentIntensity': {
+    title: 'Environment Intensity',
+    body: 'First-class IBL gain for an authored HDRI/EXR (scene.environmentIntensity). Disabled while using RoomEnvironment — Ambient edit/play intensity drives that fallback.',
+  },
+  'world.scene.environmentRotation': {
+    title: 'Environment Rotation',
+    body: 'Euler degrees for the environment map (scene.environmentRotation). Does not rotate the camera.',
+  },
+  'world.scene.lightProbe': {
+    title: 'Light Probe',
+    body: 'Bakes a Three.js LightProbe from the authored PMREM cubemap (LightProbeGenerator). Adds diffuse irradiance on top of the environment map.',
+    tips: 'Requires an HDR/EXR environment asset. Rebuilds when the map changes.',
+  },
+  'world.scene.sky': {
+    title: 'Procedural Sky',
+    body: 'Preetham analytical sky (three/addons/objects/Sky.js). Set Background mode to Procedural sky. Turbidity, Rayleigh, Mie, and sun elevation/azimuth control the look.',
+    tips: 'Hidden in orthographic panes. WebGL Sky — not SkyMesh.',
+  },
+  'world.scene.groundedSkybox': {
+    title: 'Grounded Skybox',
+    body: 'Ground-projected env map mesh (GroundedSkybox). Uses the active environment texture. Height and radius are meters.',
+    tips: 'Requires an authored HDR/EXR. Hidden in ortho panes.',
   },
   'world.scene.atmosphere': {
     title: 'Moving Atmosphere',
@@ -56,8 +93,12 @@ export const HELP_CONTENT = {
 
   'world.renderer': {
     title: 'World Renderer',
-    body: 'Level-authored WebGLRenderer settings: tone mapping mode/exposure and shadow map on/off + type. Saved with the map.',
-    tips: 'When Post Processing is composing, PP owns tone mapping and exposure. Shadow map type: Basic, PCF, PCF Soft, or VSM.',
+    body: 'Level-authored WebGLRenderer settings: tone mapping mode/exposure, output color space, and shadow map on/off + type. Saved with the map.',
+    tips: 'When Post Processing is composing, PP owns tone mapping and exposure. Shadow types: Basic, PCF, VSM. Legacy PCF Soft loads as PCF.',
+  },
+  'world.renderer.outputColorSpace': {
+    title: 'Output Color Space',
+    body: 'Renderer outputColorSpace: sRGB (default display) or Linear sRGB. Independent of tone mapping.',
   },
 
   'world.postProcessing': {
@@ -788,7 +829,7 @@ export const HELP_CONTENT = {
   },
   'content.importTexture': {
     title: 'Import Texture',
-    body: 'Imports an image into public/assets/textures and registers it. Use textures when creating materials.',
+    body: 'Imports PNG/JPEG/WebP/GIF/KTX2 textures or HDR/EXR environment maps into the project registry. HDR/EXR go under Environments and can be assigned in World Settings → Scene.',
   },
   'content.importMesh': {
     title: 'Import Mesh',

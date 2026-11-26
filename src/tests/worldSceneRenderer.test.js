@@ -19,6 +19,15 @@ describe('normalizeWorldScene / fog', () => {
       background: DEFAULT_WORLD_SCENE.background,
       backgroundIntensity: DEFAULT_WORLD_SCENE.backgroundIntensity,
       backgroundBlurriness: DEFAULT_WORLD_SCENE.backgroundBlurriness,
+      backgroundType: DEFAULT_WORLD_SCENE.backgroundType,
+      backgroundRotation: { ...DEFAULT_WORLD_SCENE.backgroundRotation },
+      environmentAssetId: null,
+      environmentIntensity: DEFAULT_WORLD_SCENE.environmentIntensity,
+      environmentRotation: { ...DEFAULT_WORLD_SCENE.environmentRotation },
+      lightProbeEnabled: false,
+      lightProbeIntensity: DEFAULT_WORLD_SCENE.lightProbeIntensity,
+      sky: { ...DEFAULT_WORLD_SCENE.sky },
+      groundedSkybox: { ...DEFAULT_WORLD_SCENE.groundedSkybox },
       fog: { ...DEFAULT_WORLD_SCENE.fog },
     });
     expect(DEFAULT_WORLD_SCENE.fog.near).toBe(100);
@@ -34,6 +43,26 @@ describe('normalizeWorldScene / fog', () => {
       noise: false,
       volumetric: false,
     });
+  });
+
+  it('normalizes environment / sky / background type fields', () => {
+    const s = normalizeWorldScene({
+      backgroundType: 'sky',
+      environmentAssetId: 'tex_batch1_studio',
+      environmentIntensity: -2,
+      environmentRotation: { y: 45 },
+      lightProbeEnabled: true,
+      sky: { turbidity: 99, elevation: 15 },
+      groundedSkybox: { enabled: true, height: 0.01, radius: 50 },
+    });
+    expect(s.backgroundType).toBe('sky');
+    expect(s.environmentAssetId).toBe('tex_batch1_studio');
+    expect(s.environmentIntensity).toBe(0);
+    expect(s.environmentRotation).toEqual({ x: 0, y: 45, z: 0 });
+    expect(s.lightProbeEnabled).toBe(true);
+    expect(s.sky.turbidity).toBe(20);
+    expect(s.sky.elevation).toBe(15);
+    expect(s.groundedSkybox).toEqual({ enabled: true, height: 0.1, radius: 50 });
   });
 
   it('clamps atmosphere mist / noise / volumetric fields', () => {
@@ -109,21 +138,26 @@ describe('normalizeWorldRenderer', () => {
       toneMappingExposure: 0,
       shadowMapEnabled: false,
       shadowMapType: DEFAULT_WORLD_RENDERER.shadowMapType,
+      outputColorSpace: DEFAULT_WORLD_RENDERER.outputColorSpace,
     });
   });
 
-  it('accepts AgX and VSM', () => {
+  it('accepts AgX and VSM and migrates PCFSoft → PCF', () => {
     expect(normalizeWorldRenderer({
       toneMapping: 'AgX',
       toneMappingExposure: 1.2,
       shadowMapEnabled: true,
       shadowMapType: 'VSM',
+      outputColorSpace: 'srgb-linear',
     })).toEqual({
       toneMapping: 'AgX',
       toneMappingExposure: 1.2,
       shadowMapEnabled: true,
       shadowMapType: 'VSM',
+      outputColorSpace: 'srgb-linear',
     });
+    expect(normalizeWorldRenderer({ shadowMapType: 'PCFSoft' }).shadowMapType).toBe('PCF');
+    expect(DEFAULT_WORLD_RENDERER.shadowMapType).toBe('PCF');
   });
 });
 
@@ -168,20 +202,35 @@ describe('SceneView applyWorldScene / applyWorldRenderer', () => {
     view.scene.background = new THREE.Color(0x0e1218);
     view.viewportColors = { background: 0x0e1218 };
     view.renderer = {
-      shadowMap: { enabled: true, type: THREE.PCFSoftShadowMap },
+      shadowMap: { enabled: true, type: THREE.PCFShadowMap },
       toneMapping: THREE.ACESFilmicToneMapping,
       toneMappingExposure: 0.95,
+      outputColorSpace: THREE.SRGBColorSpace,
     };
     view._postProcessing = { enabled: false };
     view.postProcessingController = { isActive: false };
     view._worldScene = normalizeWorldScene(null);
     view._worldRenderer = normalizeWorldRenderer(null);
+    view.worldEnvironment = {
+      apply: (s) => {
+        if (!(view.scene.background instanceof THREE.Color)) {
+          view.scene.background = new THREE.Color(s.background);
+        } else {
+          view.scene.background.set(s.background);
+        }
+        view.scene.backgroundIntensity = s.backgroundIntensity;
+        view.scene.backgroundBlurriness = s.backgroundType === 'environment'
+          ? s.backgroundBlurriness
+          : 0;
+      },
+    };
     view.applyWorldScene = SceneView.prototype.applyWorldScene;
     view.applyWorldRenderer = SceneView.prototype.applyWorldRenderer;
     view._syncSceneFromWorld = SceneView.prototype._syncSceneFromWorld;
     view._syncRendererFromWorld = SceneView.prototype._syncRendererFromWorld;
     view._toneMappingFromName = SceneView.prototype._toneMappingFromName;
     view._shadowMapTypeFromName = SceneView.prototype._shadowMapTypeFromName;
+    view._outputColorSpaceFromName = SceneView.prototype._outputColorSpaceFromName;
     return view;
   }
 
@@ -195,7 +244,7 @@ describe('SceneView applyWorldScene / applyWorldRenderer', () => {
     });
     expect(view.scene.background.getHexString()).toBe('ff00aa');
     expect(view.scene.backgroundIntensity).toBe(2);
-    expect(view.scene.backgroundBlurriness).toBe(0.5);
+    expect(view.scene.backgroundBlurriness).toBe(0);
     expect(view.scene.fog).toBeInstanceOf(THREE.Fog);
     expect(view.scene.fog.near).toBeCloseTo(5, 5);
     expect(view.scene.fog.far).toBeCloseTo(40, 5);
@@ -219,11 +268,13 @@ describe('SceneView applyWorldScene / applyWorldRenderer', () => {
       toneMappingExposure: 1.4,
       shadowMapEnabled: false,
       shadowMapType: 'VSM',
+      outputColorSpace: 'srgb-linear',
     });
     expect(view.renderer.toneMapping).toBe(THREE.CineonToneMapping);
     expect(view.renderer.toneMappingExposure).toBe(1.4);
     expect(view.renderer.shadowMap.enabled).toBe(false);
     expect(view.renderer.shadowMap.type).toBe(THREE.VSMShadowMap);
+    expect(view.renderer.outputColorSpace).toBe(THREE.LinearSRGBColorSpace);
   });
 
   it('skips tone mapping when post-processing is active', () => {

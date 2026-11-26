@@ -86,7 +86,7 @@ import {
   isSubtractBrushActor,
 } from './actorVisualFingerprint.js';
 import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
-import { installStudioEnvironment } from './studioEnvironment.js';
+import { WorldEnvironmentController } from './WorldEnvironmentController.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import { createRampFromBounds } from '../editor/rampFactory.js';
 import { createStairFromBounds } from '../editor/stairFactory.js';
@@ -150,14 +150,16 @@ export class SceneView {
     this._uiScale = 1;
     this._applyOutputPixelRatio();
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
 
-    this._studioEnv = installStudioEnvironment(this.renderer, this.scene, {
+    this.worldEnvironment = new WorldEnvironmentController(this.renderer, this.scene, {
       intensity: DEFAULT_WORLD_AMBIENT.intensity,
     });
+    /** @deprecated use worldEnvironment.studioEnvironment — kept for older tests */
+    this._studioEnv = this.worldEnvironment.studioEnvironment;
 
     const maxAniso = this.renderer.capabilities.getMaxAnisotropy?.() || 8;
     this.maxAnisotropy = Math.min(16, maxAniso);
@@ -251,6 +253,9 @@ export class SceneView {
 
   setAssetResolver(resolver) {
     this.assetResolver = resolver || null;
+    this.setEnvironmentAssetResolver((assetId) => (
+      this.assetResolver?.getTextureUrl?.(assetId) || null
+    ));
   }
 
   _createEditHelpers() {
@@ -344,7 +349,7 @@ export class SceneView {
     this._syncAmbientFromWorld();
   }
 
-  /** Level-authored Three.js Scene look (background + fog). */
+  /** Level-authored Three.js Scene look (background + fog + environment). */
   applyWorldScene(settings) {
     this._worldScene = normalizeWorldScene(settings);
     this._fogDriftTime0 = performance.now() * 0.001;
@@ -357,17 +362,19 @@ export class SceneView {
     this._syncRendererFromWorld();
   }
 
+  /** Resolve `/assets/…` URL for an environment texture asset id (HDR/EXR). */
+  setEnvironmentAssetResolver(fn) {
+    this.worldEnvironment?.setAssetUrlResolver?.(fn);
+    // Re-apply so a late resolver can kick off HDR loads.
+    if (this._worldScene) this._syncSceneFromWorld();
+  }
+
   _syncSceneFromWorld() {
     const s = this._worldScene || normalizeWorldScene(null);
     if (!this.scene) return;
-    if (!(this.scene.background instanceof THREE.Color)) {
-      this.scene.background = new THREE.Color(s.background);
-    } else {
-      this.scene.background.set(s.background);
-    }
-    this.scene.backgroundIntensity = s.backgroundIntensity;
-    this.scene.backgroundBlurriness = s.backgroundBlurriness;
-    this.viewportColors.background = parseInt(s.background.slice(1), 16) >>> 0;
+    this.viewportColors.background = parseInt(String(s.background).slice(1), 16) >>> 0;
+
+    this.worldEnvironment?.apply?.(s);
 
     const fog = s.fog;
     if (!fog || fog.type === 'none') {
@@ -434,14 +441,20 @@ export class SceneView {
     switch (name) {
       case 'Basic':
         return THREE.BasicShadowMap;
-      case 'PCF':
-        return THREE.PCFShadowMap;
       case 'VSM':
         return THREE.VSMShadowMap;
       case 'PCFSoft':
+        // Deprecated in Three r187 — same as PCF.
+        return THREE.PCFShadowMap;
+      case 'PCF':
       default:
-        return THREE.PCFSoftShadowMap;
+        return THREE.PCFShadowMap;
     }
+  }
+
+  _outputColorSpaceFromName(name) {
+    if (name === 'srgb-linear') return THREE.LinearSRGBColorSpace;
+    return THREE.SRGBColorSpace;
   }
 
   _syncRendererFromWorld() {
@@ -449,6 +462,7 @@ export class SceneView {
     if (!this.renderer) return;
     this.renderer.shadowMap.enabled = r.shadowMapEnabled;
     this.renderer.shadowMap.type = this._shadowMapTypeFromName(r.shadowMapType);
+    this.renderer.outputColorSpace = this._outputColorSpaceFromName(r.outputColorSpace);
     // When post-processing is active it owns tone mapping / exposure.
     const ppActive = Boolean(
       this._postProcessing?.enabled && this.postProcessingController?.isActive,
@@ -637,18 +651,17 @@ export class SceneView {
 
   _syncAmbientFromWorld() {
     const { color } = this._worldAmbient;
-    // Black (or intensity 0) must kill fill: IBL + AmbientLight + editor fill dir lights.
+    // Black (or intensity 0) must kill fill: AmbientLight + editor fill dir lights.
     // Strength is intensity × luminance(color) normalized so the default color keeps look.
+    // Authored HDRI uses independent environmentIntensity; RoomEnvironment still follows fill.
     const fill = worldAmbientFillStrength(this._worldAmbient, { editMode: this.editMode });
     const defaultFill = DEFAULT_WORLD_AMBIENT.intensity || 0.12;
     const fillScale = defaultFill > 1e-8 ? fill / defaultFill : 0;
     const dark = fill < 1e-6;
 
-    if (this.scene) {
-      // Intensity 0 alone can still leave a faint IBL contribution — detach env when dark.
-      this.scene.environment = dark ? null : this._studioEnv;
-      this.scene.environmentIntensity = dark ? 0 : fill;
-    }
+    this.worldEnvironment?.setAmbient?.(this._worldAmbient, { editMode: this.editMode });
+    this._studioEnv = this.worldEnvironment?.studioEnvironment || this._studioEnv;
+
     if (this.ambient) {
       this.ambient.color.set(color);
       this.ambient.intensity = dark ? 0 : fill * WORLD_AMBIENT_LIGHT_RATIO;
@@ -931,6 +944,8 @@ export class SceneView {
         }
         syncCameraAtmosphereLayer(cam, showAtmosphere);
         this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
+        // Sky / grounded skybox follow perspective panes only (same as atmosphere).
+        this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
         if (showAtmosphere) this.atmosphere?.update?.(cam, dt);
 
         try {
@@ -954,6 +969,7 @@ export class SceneView {
       this.scene.background = authoredBackground;
       this.scene.backgroundIntensity = authoredBgIntensity;
       this.scene.backgroundBlurriness = authoredBgBlurriness;
+      this.worldEnvironment?.setPerspectiveVisible?.(true);
       renderer.toneMapping = prevToneMapping;
       renderer.toneMappingExposure = prevExposure;
       renderer.autoClear = prevAutoClear;
@@ -973,6 +989,7 @@ export class SceneView {
     const showAtmosphere = !ortho;
     syncCameraAtmosphereLayer(camera, showAtmosphere);
     this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
+    this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
     if (showAtmosphere) this.atmosphere?.update?.(camera, dt);
     this.renderer.setScissorTest(false);
     const fullW = Math.max(1, Math.round(this._size.width || 1));
@@ -3347,7 +3364,9 @@ export class SceneView {
       if (tex && typeof tex.dispose === 'function') tex.dispose();
     }
     this._ppTextureCache.clear();
-    this._studioEnv?.dispose?.();
+    this.worldEnvironment?.dispose?.();
+    this.worldEnvironment = null;
+    this._studioEnv = null;
     this.scene.environment = null;
     this._paneCameras.clear();
     this.renderer.dispose();

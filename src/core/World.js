@@ -109,14 +109,41 @@ function clampNonNeg(value, fallback) {
 }
 
 /**
- * Level-authored Three.js Scene look (background + fog).
+ * Level-authored Three.js Scene look (background + fog + environment).
  * Fog near/far are editor units (100 eu = 1 m); SceneView converts to meters.
  * Defaults are room-scale so Linear fog is visible indoors.
+ * Missing env fields keep RoomEnvironment fallback (visually unchanged).
  */
 export const DEFAULT_WORLD_SCENE = Object.freeze({
   background: '#0e1218',
   backgroundIntensity: 1,
   backgroundBlurriness: 0,
+  /** color | environment | sky */
+  backgroundType: 'color',
+  /** Euler degrees applied to texture/env backgrounds. */
+  backgroundRotation: Object.freeze({ x: 0, y: 0, z: 0 }),
+  /** HDR/EXR texture asset id; null → RoomEnvironment studio IBL. */
+  environmentAssetId: null,
+  /** First-class IBL gain when an authored env map is assigned. */
+  environmentIntensity: 1,
+  environmentRotation: Object.freeze({ x: 0, y: 0, z: 0 }),
+  lightProbeEnabled: false,
+  lightProbeIntensity: 1,
+  sky: Object.freeze({
+    turbidity: 2,
+    rayleigh: 1,
+    mieCoefficient: 0.005,
+    mieDirectionalG: 0.8,
+    elevation: 2,
+    azimuth: 180,
+    scale: 450000,
+  }),
+  groundedSkybox: Object.freeze({
+    enabled: false,
+    /** Meters (Three world units). */
+    height: 15,
+    radius: 100,
+  }),
   fog: Object.freeze({
     type: 'none',
     color: '#6a7380',
@@ -146,6 +173,7 @@ export const DEFAULT_WORLD_SCENE = Object.freeze({
 
 export const WORLD_FOG_TYPES = Object.freeze(['none', 'linear', 'exp2']);
 export const WORLD_FOG_VOLUMETRIC_STEPS = Object.freeze([8, 12, 16]);
+export const WORLD_BACKGROUND_TYPES = Object.freeze(['color', 'environment', 'sky']);
 
 /** First-pass fog used meter distances (near 10 / far 100); promote to editor units. */
 export function migrateLegacyWorldFog(value) {
@@ -246,11 +274,72 @@ export function fogDriftFactor(timeSec, fog = {}) {
   return 1 + amount * wave;
 }
 
+function normalizeEulerDegrees(value, fallback) {
+  const out = {
+    x: fallback.x,
+    y: fallback.y,
+    z: fallback.z,
+  };
+  if (!value || typeof value !== 'object') return out;
+  const x = Number(value.x);
+  const y = Number(value.y);
+  const z = Number(value.z);
+  if (Number.isFinite(x)) out.x = x;
+  if (Number.isFinite(y)) out.y = y;
+  if (Number.isFinite(z)) out.z = z;
+  return out;
+}
+
+export function normalizeWorldSky(value) {
+  const d = DEFAULT_WORLD_SCENE.sky;
+  const out = {
+    turbidity: d.turbidity,
+    rayleigh: d.rayleigh,
+    mieCoefficient: d.mieCoefficient,
+    mieDirectionalG: d.mieDirectionalG,
+    elevation: d.elevation,
+    azimuth: d.azimuth,
+    scale: d.scale,
+  };
+  if (!value || typeof value !== 'object') return out;
+  out.turbidity = clampRange(value.turbidity, 0, 20, out.turbidity);
+  out.rayleigh = clampRange(value.rayleigh, 0, 4, out.rayleigh);
+  out.mieCoefficient = clampRange(value.mieCoefficient, 0, 0.1, out.mieCoefficient);
+  out.mieDirectionalG = clampRange(value.mieDirectionalG, 0, 1, out.mieDirectionalG);
+  out.elevation = clampRange(value.elevation, -90, 90, out.elevation);
+  out.azimuth = clampRange(value.azimuth, -360, 360, out.azimuth);
+  out.scale = clampRange(value.scale, 10, 1e7, out.scale);
+  return out;
+}
+
+export function normalizeWorldGroundedSkybox(value) {
+  const d = DEFAULT_WORLD_SCENE.groundedSkybox;
+  const out = {
+    enabled: d.enabled,
+    height: d.height,
+    radius: d.radius,
+  };
+  if (!value || typeof value !== 'object') return out;
+  if (typeof value.enabled === 'boolean') out.enabled = value.enabled;
+  out.height = clampRange(value.height, 0.1, 500, out.height);
+  out.radius = clampRange(value.radius, 1, 5000, out.radius);
+  return out;
+}
+
 export function normalizeWorldScene(value) {
   const out = {
     background: DEFAULT_WORLD_SCENE.background,
     backgroundIntensity: DEFAULT_WORLD_SCENE.backgroundIntensity,
     backgroundBlurriness: DEFAULT_WORLD_SCENE.backgroundBlurriness,
+    backgroundType: DEFAULT_WORLD_SCENE.backgroundType,
+    backgroundRotation: { ...DEFAULT_WORLD_SCENE.backgroundRotation },
+    environmentAssetId: DEFAULT_WORLD_SCENE.environmentAssetId,
+    environmentIntensity: DEFAULT_WORLD_SCENE.environmentIntensity,
+    environmentRotation: { ...DEFAULT_WORLD_SCENE.environmentRotation },
+    lightProbeEnabled: DEFAULT_WORLD_SCENE.lightProbeEnabled,
+    lightProbeIntensity: DEFAULT_WORLD_SCENE.lightProbeIntensity,
+    sky: normalizeWorldSky(null),
+    groundedSkybox: normalizeWorldGroundedSkybox(null),
     fog: normalizeWorldFog(null),
   };
   if (!value || typeof value !== 'object') return out;
@@ -261,19 +350,48 @@ export function normalizeWorldScene(value) {
   if (Number.isFinite(blurriness)) {
     out.backgroundBlurriness = Math.min(1, Math.max(0, blurriness));
   }
+  if (WORLD_BACKGROUND_TYPES.includes(value.backgroundType)) {
+    out.backgroundType = value.backgroundType;
+  }
+  out.backgroundRotation = normalizeEulerDegrees(
+    value.backgroundRotation,
+    out.backgroundRotation,
+  );
+  if (value.environmentAssetId == null || value.environmentAssetId === '') {
+    out.environmentAssetId = null;
+  } else {
+    out.environmentAssetId = String(value.environmentAssetId);
+  }
+  const envIntensity = Number(value.environmentIntensity);
+  if (Number.isFinite(envIntensity)) out.environmentIntensity = Math.max(0, envIntensity);
+  out.environmentRotation = normalizeEulerDegrees(
+    value.environmentRotation,
+    out.environmentRotation,
+  );
+  if (typeof value.lightProbeEnabled === 'boolean') {
+    out.lightProbeEnabled = value.lightProbeEnabled;
+  }
+  const probeIntensity = Number(value.lightProbeIntensity);
+  if (Number.isFinite(probeIntensity)) {
+    out.lightProbeIntensity = Math.max(0, probeIntensity);
+  }
+  out.sky = normalizeWorldSky(value.sky);
+  out.groundedSkybox = normalizeWorldGroundedSkybox(value.groundedSkybox);
   out.fog = migrateLegacyWorldFog(value.fog);
   return out;
 }
 
 /**
- * Level-authored WebGLRenderer look (tone mapping + shadows).
+ * Level-authored WebGLRenderer look (tone mapping + shadows + output color space).
  * Tone mapping applies when post-processing is off; PP owns exposure/mode when active.
+ * PCFSoft is deprecated in Three r187 (behaves as PCF) — migrate on load.
  */
 export const DEFAULT_WORLD_RENDERER = Object.freeze({
   toneMapping: 'ACESFilmic',
   toneMappingExposure: 0.95,
   shadowMapEnabled: true,
-  shadowMapType: 'PCFSoft',
+  shadowMapType: 'PCF',
+  outputColorSpace: 'srgb',
 });
 
 export const WORLD_TONE_MAPPINGS = Object.freeze([
@@ -286,11 +404,16 @@ export const WORLD_TONE_MAPPINGS = Object.freeze([
   'Neutral',
 ]);
 
+/** Authored UI values (PCFSoft accepted on load → migrated to PCF). */
 export const WORLD_SHADOW_MAP_TYPES = Object.freeze([
   'Basic',
   'PCF',
-  'PCFSoft',
   'VSM',
+]);
+
+export const WORLD_OUTPUT_COLOR_SPACES = Object.freeze([
+  'srgb',
+  'srgb-linear',
 ]);
 
 export function normalizeWorldRenderer(value) {
@@ -299,6 +422,7 @@ export function normalizeWorldRenderer(value) {
     toneMappingExposure: DEFAULT_WORLD_RENDERER.toneMappingExposure,
     shadowMapEnabled: DEFAULT_WORLD_RENDERER.shadowMapEnabled,
     shadowMapType: DEFAULT_WORLD_RENDERER.shadowMapType,
+    outputColorSpace: DEFAULT_WORLD_RENDERER.outputColorSpace,
   };
   if (!value || typeof value !== 'object') return out;
   if (WORLD_TONE_MAPPINGS.includes(value.toneMapping)) {
@@ -309,8 +433,14 @@ export function normalizeWorldRenderer(value) {
   if (typeof value.shadowMapEnabled === 'boolean') {
     out.shadowMapEnabled = value.shadowMapEnabled;
   }
-  if (WORLD_SHADOW_MAP_TYPES.includes(value.shadowMapType)) {
+  if (value.shadowMapType === 'PCFSoft') {
+    // Three r186+ remaps Soft→PCF; keep levels silent and schema clean.
+    out.shadowMapType = 'PCF';
+  } else if (WORLD_SHADOW_MAP_TYPES.includes(value.shadowMapType)) {
     out.shadowMapType = value.shadowMapType;
+  }
+  if (WORLD_OUTPUT_COLOR_SPACES.includes(value.outputColorSpace)) {
+    out.outputColorSpace = value.outputColorSpace;
   }
   return out;
 }

@@ -5,7 +5,7 @@ import { useLayout } from './LayoutContext.jsx';
 import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
 import { ScrubAxisLabel, ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
-import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
+import { listByKind, ASSET_KINDS, isEnvironmentMapAsset } from '../../assets/AssetRegistry.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { isWallBrush, normalizeOpenings } from '../../runtime/wallOpenings.js';
@@ -26,8 +26,10 @@ import {
   DEFAULT_WORLD_RENDERER,
   WORLD_FOG_TYPES,
   WORLD_FOG_VOLUMETRIC_STEPS,
+  WORLD_BACKGROUND_TYPES,
   WORLD_TONE_MAPPINGS,
   WORLD_SHADOW_MAP_TYPES,
+  WORLD_OUTPUT_COLOR_SPACES,
 } from '../../core/World.js';
 import { PostProcessingSettings } from '../postprocessing/PostProcessingSettings.jsx';
 
@@ -2038,14 +2040,24 @@ function WorldSettings() {
     updateWorldScene,
     updateWorldRenderer,
   } = useEditor();
+  const { registry, importTexture, notify } = useAssetBrowser();
   const disabled = mode === 'play' || !world;
   // Touch revision so ambient field values refresh after scrub/type updates.
   void revision;
   const ambient = world?.ambient || DEFAULT_WORLD_AMBIENT;
   const scene = world?.scene || DEFAULT_WORLD_SCENE;
   const fog = scene.fog || DEFAULT_WORLD_SCENE.fog;
+  const sky = scene.sky || DEFAULT_WORLD_SCENE.sky;
+  const grounded = scene.groundedSkybox || DEFAULT_WORLD_SCENE.groundedSkybox;
   const renderer = world?.renderer || DEFAULT_WORLD_RENDERER;
   const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
+  const envAssets = useMemo(
+    () => listByKind(registry, ASSET_KINDS.texture).filter(isEnvironmentMapAsset),
+    [registry],
+  );
+  const mapModeHelp = world?.mapMode === 'subtractive'
+    ? ' — World Solid is invisible substrate; subtract boxes carve rooms'
+    : ' — place additive brushes to build';
   return (
     <div>
       <CollapsibleGroup storagePrefixes={['world.']}>
@@ -2054,16 +2066,15 @@ function WorldSettings() {
         <p className="bb-muted">File: {levelName}</p>
         <p className="bb-muted" {...helpProps('file.newMap')}>
           Map mode: {mapModeLabel}
-          {world?.mapMode === 'subtractive'
-            ? ' — World Solid is invisible substrate; subtract boxes carve rooms'
-            : ' — place additive brushes to build'}
+          {mapModeHelp}
         </p>
         <p className="bb-muted">Actors: {world?.actors?.length ?? 0}</p>
         <p className="bb-muted">Schema: {world?.schemaVersion ?? '—'}</p>
       </Collapsible>
       <Collapsible title="Ambient Light" storageKey="world.ambient" defaultOpen>
         <p className="bb-muted" {...helpProps('world.ambient')}>
-          Scene fill (IBL + editor fills). Black or 0 = no fill. G = Game View. Ctrl = orbit.
+          Scene fill (AmbientLight + editor fills). With RoomEnvironment fallback, also scales IBL.
+          Authored HDRI uses Environment intensity instead. G = Game View.
         </p>
         <label className="bb-field">
           <span className="bb-field__label">Color</span>
@@ -2102,10 +2113,25 @@ function WorldSettings() {
       </Collapsible>
       <Collapsible title="Scene" storageKey="world.scene" defaultOpen>
         <p className="bb-muted" {...helpProps('world.scene')}>
-          Background and fog for the level (saved with the map).
+          Background, environment lighting, sky, and fog (saved with the map).
         </p>
+        <label className="bb-field" {...helpProps('world.scene.backgroundType')}>
+          <span className="bb-field__label">Background mode</span>
+          <select
+            className="bb-select"
+            disabled={disabled}
+            value={scene.backgroundType || 'color'}
+            onChange={(e) => updateWorldScene?.({ backgroundType: e.target.value })}
+          >
+            {WORLD_BACKGROUND_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type === 'environment' ? 'Environment' : type === 'sky' ? 'Procedural sky' : 'Solid color'}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="bb-field">
-          <span className="bb-field__label">Background</span>
+          <span className="bb-field__label">Background color</span>
           <input
             className="bb-input"
             type="color"
@@ -2123,7 +2149,7 @@ function WorldSettings() {
             max={4}
             disabled={disabled}
             value={scene.backgroundIntensity}
-            onChange={(v) => updateWorldScene?.({ backgroundIntensity: v })}
+            onChange={(v) => updateWorldScene?.({ backgroundIntensity: v }, { undoable: false })}
           />
         </label>
         <label className="bb-field">
@@ -2133,11 +2159,267 @@ function WorldSettings() {
             step={0.05}
             min={0}
             max={1}
-            disabled={disabled}
+            disabled={disabled || scene.backgroundType === 'color' || scene.backgroundType === 'sky'}
             value={scene.backgroundBlurriness}
-            onChange={(v) => updateWorldScene?.({ backgroundBlurriness: v })}
+            onChange={(v) => updateWorldScene?.({ backgroundBlurriness: v }, { undoable: false })}
           />
         </label>
+        <p className="bb-muted">Blurriness applies when background is the environment map.</p>
+        <div className="bb-axis-row" {...helpProps('world.scene.backgroundRotation')}>
+          <span className="bb-field__label" style={{ width: '100%' }}>Background rotation (°)</span>
+          {['x', 'y', 'z'].map((axis) => (
+            <label key={axis} className="bb-field">
+              <span className="bb-field__label">{axis.toUpperCase()}</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={1}
+                disabled={disabled || scene.backgroundType === 'color' || scene.backgroundType === 'sky'}
+                value={scene.backgroundRotation?.[axis] ?? 0}
+                onChange={(v) => updateWorldScene?.({
+                  backgroundRotation: { [axis]: v },
+                }, { undoable: false })}
+              />
+            </label>
+          ))}
+        </div>
+
+        <p className="bb-muted" {...helpProps('world.scene.environment')}>
+          Environment lighting (HDRI/EXR → PMREM). Empty uses RoomEnvironment studio fallback.
+        </p>
+        <label className="bb-field" {...helpProps('world.scene.environment')}>
+          <span className="bb-field__label">Environment map</span>
+          <select
+            className="bb-select"
+            disabled={disabled}
+            value={scene.environmentAssetId || ''}
+            onChange={(e) => updateWorldScene?.({
+              environmentAssetId: e.target.value || null,
+            })}
+          >
+            <option value="">RoomEnvironment (default)</option>
+            {envAssets.map((asset) => (
+              <option key={asset.id} value={asset.id}>
+                {asset.name} ({asset.meta?.format || 'hdr'})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="bb-field">
+          <span className="bb-field__label">Import HDR / EXR</span>
+          <input
+            className="bb-input"
+            type="file"
+            accept=".hdr,.exr,image/vnd.radiance,image/x-exr"
+            disabled={disabled}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              try {
+                const result = await importTexture?.(file);
+                const id = result?.asset?.id;
+                if (id) updateWorldScene?.({ environmentAssetId: id });
+              } catch (err) {
+                notify?.(err.message || 'HDR/EXR import failed');
+              }
+            }}
+          />
+        </label>
+        <label className="bb-field" {...helpProps('world.scene.environmentIntensity')}>
+          <span className="bb-field__label">Environment intensity</span>
+          <ScrubNumberInput
+            className="bb-input"
+            step={0.05}
+            min={0}
+            max={8}
+            disabled={disabled || !scene.environmentAssetId}
+            value={scene.environmentIntensity}
+            onChange={(v) => updateWorldScene?.({ environmentIntensity: v }, { undoable: false })}
+          />
+        </label>
+        <div className="bb-axis-row" {...helpProps('world.scene.environmentRotation')}>
+          <span className="bb-field__label" style={{ width: '100%' }}>Environment rotation (°)</span>
+          {['x', 'y', 'z'].map((axis) => (
+            <label key={axis} className="bb-field">
+              <span className="bb-field__label">{axis.toUpperCase()}</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={1}
+                disabled={disabled || !scene.environmentAssetId}
+                value={scene.environmentRotation?.[axis] ?? 0}
+                onChange={(v) => updateWorldScene?.({
+                  environmentRotation: { [axis]: v },
+                }, { undoable: false })}
+              />
+            </label>
+          ))}
+        </div>
+        <label className="bb-field" {...helpProps('world.scene.lightProbe')}>
+          <span className="bb-field__label">Light probe</span>
+          <input
+            type="checkbox"
+            disabled={disabled || !scene.environmentAssetId}
+            checked={Boolean(scene.lightProbeEnabled)}
+            onChange={(e) => updateWorldScene?.({ lightProbeEnabled: e.target.checked })}
+          />
+        </label>
+        {scene.lightProbeEnabled && (
+          <label className="bb-field">
+            <span className="bb-field__label">Probe intensity</span>
+            <ScrubNumberInput
+              className="bb-input"
+              step={0.05}
+              min={0}
+              max={8}
+              disabled={disabled}
+              value={scene.lightProbeIntensity}
+              onChange={(v) => updateWorldScene?.({ lightProbeIntensity: v }, { undoable: false })}
+            />
+          </label>
+        )}
+        <button
+          type="button"
+          className="bb-btn bb-btn--ghost"
+          disabled={disabled}
+          onClick={() => updateWorldScene?.({
+            environmentAssetId: null,
+            environmentIntensity: DEFAULT_WORLD_SCENE.environmentIntensity,
+            environmentRotation: { ...DEFAULT_WORLD_SCENE.environmentRotation },
+            lightProbeEnabled: false,
+            lightProbeIntensity: DEFAULT_WORLD_SCENE.lightProbeIntensity,
+            backgroundType: 'color',
+            backgroundRotation: { ...DEFAULT_WORLD_SCENE.backgroundRotation },
+            groundedSkybox: { ...DEFAULT_WORLD_SCENE.groundedSkybox },
+            sky: { ...DEFAULT_WORLD_SCENE.sky },
+          }, { label: 'Reset environment' })}
+        >
+          Reset environment
+        </button>
+
+        <p className="bb-muted" {...helpProps('world.scene.sky')}>
+          Procedural sky (Preetham). Set Background mode to Procedural sky to use it as the backdrop.
+        </p>
+        {scene.backgroundType === 'sky' && (
+          <>
+            <label className="bb-field">
+              <span className="bb-field__label">Turbidity</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.1}
+                min={0}
+                max={20}
+                disabled={disabled}
+                value={sky.turbidity}
+                onChange={(v) => updateWorldScene?.({ sky: { turbidity: v } }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Rayleigh</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.05}
+                min={0}
+                max={4}
+                disabled={disabled}
+                value={sky.rayleigh}
+                onChange={(v) => updateWorldScene?.({ sky: { rayleigh: v } }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Mie coefficient</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.001}
+                min={0}
+                max={0.1}
+                disabled={disabled}
+                value={sky.mieCoefficient}
+                onChange={(v) => updateWorldScene?.({ sky: { mieCoefficient: v } }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Mie directional G</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.01}
+                min={0}
+                max={1}
+                disabled={disabled}
+                value={sky.mieDirectionalG}
+                onChange={(v) => updateWorldScene?.({ sky: { mieDirectionalG: v } }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Sun elevation (°)</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.5}
+                min={-90}
+                max={90}
+                disabled={disabled}
+                value={sky.elevation}
+                onChange={(v) => updateWorldScene?.({ sky: { elevation: v } }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Sun azimuth (°)</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={1}
+                min={-360}
+                max={360}
+                disabled={disabled}
+                value={sky.azimuth}
+                onChange={(v) => updateWorldScene?.({ sky: { azimuth: v } }, { undoable: false })}
+              />
+            </label>
+          </>
+        )}
+
+        <label className="bb-field" {...helpProps('world.scene.groundedSkybox')}>
+          <span className="bb-field__label">Grounded skybox</span>
+          <input
+            type="checkbox"
+            disabled={disabled || !scene.environmentAssetId}
+            checked={Boolean(grounded.enabled)}
+            onChange={(e) => updateWorldScene?.({
+              groundedSkybox: { enabled: e.target.checked },
+            })}
+          />
+        </label>
+        {grounded.enabled && (
+          <>
+            <label className="bb-field">
+              <span className="bb-field__label">Height (m)</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={0.5}
+                min={0.1}
+                max={500}
+                disabled={disabled}
+                value={grounded.height}
+                onChange={(v) => updateWorldScene?.({
+                  groundedSkybox: { height: v },
+                }, { undoable: false })}
+              />
+            </label>
+            <label className="bb-field">
+              <span className="bb-field__label">Radius (m)</span>
+              <ScrubNumberInput
+                className="bb-input"
+                step={1}
+                min={1}
+                max={5000}
+                disabled={disabled}
+                value={grounded.radius}
+                onChange={(v) => updateWorldScene?.({
+                  groundedSkybox: { radius: v },
+                }, { undoable: false })}
+              />
+            </label>
+          </>
+        )}
+
         <label className="bb-field">
           <span className="bb-field__label">Fog</span>
           <input
@@ -2426,7 +2708,7 @@ function WorldSettings() {
       </Collapsible>
       <Collapsible title="Renderer" storageKey="world.renderer" defaultOpen>
         <p className="bb-muted" {...helpProps('world.renderer')}>
-          Tone mapping and shadows. PP overrides tone mapping when composing.
+          Tone mapping, shadows, and output color space. PP overrides tone mapping when composing.
         </p>
         <label className="bb-field">
           <span className="bb-field__label">Tone mapping</span>
@@ -2450,8 +2732,23 @@ function WorldSettings() {
             max={4}
             disabled={disabled}
             value={renderer.toneMappingExposure}
-            onChange={(v) => updateWorldRenderer?.({ toneMappingExposure: v })}
+            onChange={(v) => updateWorldRenderer?.({ toneMappingExposure: v }, { undoable: false })}
           />
+        </label>
+        <label className="bb-field" {...helpProps('world.renderer.outputColorSpace')}>
+          <span className="bb-field__label">Output color space</span>
+          <select
+            className="bb-select"
+            disabled={disabled}
+            value={renderer.outputColorSpace || 'srgb'}
+            onChange={(e) => updateWorldRenderer?.({ outputColorSpace: e.target.value })}
+          >
+            {WORLD_OUTPUT_COLOR_SPACES.map((name) => (
+              <option key={name} value={name}>
+                {name === 'srgb-linear' ? 'Linear sRGB' : 'sRGB'}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="bb-field">
           <span className="bb-field__label">Shadow map</span>
@@ -2467,14 +2764,15 @@ function WorldSettings() {
           <select
             className="bb-select"
             disabled={disabled || !renderer.shadowMapEnabled}
-            value={renderer.shadowMapType}
+            value={renderer.shadowMapType === 'PCFSoft' ? 'PCF' : renderer.shadowMapType}
             onChange={(e) => updateWorldRenderer?.({ shadowMapType: e.target.value })}
           >
             {WORLD_SHADOW_MAP_TYPES.map((name) => (
-              <option key={name} value={name}>{name === 'PCFSoft' ? 'PCF Soft' : name}</option>
+              <option key={name} value={name}>{name}</option>
             ))}
           </select>
         </label>
+        <p className="bb-muted">PCF Soft was removed (Three r187 treats it as PCF).</p>
       </Collapsible>
       <PostProcessingSettings />
       <Collapsible title="Editor" storageKey="world.editor">

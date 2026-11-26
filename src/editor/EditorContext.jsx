@@ -42,6 +42,8 @@ import {
   SetBrushOpeningsCommand,
   SetLightPropertiesCommand,
   SetWorldPostProcessingCommand,
+  SetWorldSceneCommand,
+  SetWorldRendererCommand,
   SetStaticMeshPropertiesCommand,
   SetRampPropertiesCommand,
   SetStairPropertiesCommand,
@@ -1912,35 +1914,102 @@ export function EditorProvider({ children }) {
     bump();
   }, [mode, bump]);
 
-  /** Level-authored Three.js Scene look (background + fog). */
-  const updateWorldScene = useCallback((partial) => {
+  /** Level-authored Three.js Scene look (background + fog + environment). */
+  const updateWorldScene = useCallback((partial, options = {}) => {
     const current = worldRef.current;
     if (!current || mode === 'play') return;
-    const base = normalizeWorldScene(current.scene);
-    current.scene = normalizeWorldScene({
-      ...base,
+    const {
+      undoable = true,
+      label = 'Edit world scene',
+    } = options;
+    const before = normalizeWorldScene(current.scene);
+    const after = normalizeWorldScene({
+      ...before,
       ...partial,
       fog: normalizeWorldFog({
-        ...base.fog,
+        ...before.fog,
         ...(partial?.fog && typeof partial.fog === 'object' ? partial.fog : {}),
       }),
+      sky: {
+        ...before.sky,
+        ...(partial?.sky && typeof partial.sky === 'object' ? partial.sky : {}),
+      },
+      groundedSkybox: {
+        ...before.groundedSkybox,
+        ...(partial?.groundedSkybox && typeof partial.groundedSkybox === 'object'
+          ? partial.groundedSkybox
+          : {}),
+      },
+      backgroundRotation: {
+        ...before.backgroundRotation,
+        ...(partial?.backgroundRotation && typeof partial.backgroundRotation === 'object'
+          ? partial.backgroundRotation
+          : {}),
+      },
+      environmentRotation: {
+        ...before.environmentRotation,
+        ...(partial?.environmentRotation && typeof partial.environmentRotation === 'object'
+          ? partial.environmentRotation
+          : {}),
+      },
     });
-    runtimeRef.current?.sceneView?.applyWorldScene?.(current.scene);
+
+    const onApply = (scene) => {
+      runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
+    };
+
+    if (undoable) {
+      executeCommand(
+        new SetWorldSceneCommand({
+          world: current,
+          before,
+          after,
+          label,
+          onApply,
+        }),
+      );
+      bump();
+      return;
+    }
+
+    current.scene = after;
+    onApply(after);
     bump();
-  }, [mode, bump]);
+  }, [mode, bump, executeCommand]);
 
   /** Level-authored WebGLRenderer look (tone mapping + shadows). */
-  const updateWorldRenderer = useCallback((partial) => {
+  const updateWorldRenderer = useCallback((partial, options = {}) => {
     const current = worldRef.current;
     if (!current || mode === 'play') return;
-    const base = normalizeWorldRenderer(current.renderer);
-    current.renderer = normalizeWorldRenderer({
-      ...base,
+    const {
+      undoable = true,
+      label = 'Edit world renderer',
+    } = options;
+    const before = normalizeWorldRenderer(current.renderer);
+    const after = normalizeWorldRenderer({
+      ...before,
       ...partial,
     });
-    runtimeRef.current?.sceneView?.applyWorldRenderer?.(current.renderer);
+    const onApply = (renderer) => {
+      runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
+    };
+    if (undoable) {
+      executeCommand(
+        new SetWorldRendererCommand({
+          world: current,
+          before,
+          after,
+          label,
+          onApply,
+        }),
+      );
+      bump();
+      return;
+    }
+    current.renderer = after;
+    onApply(after);
     bump();
-  }, [mode, bump]);
+  }, [mode, bump, executeCommand]);
 
   const applyPostProcessingToView = useCallback((settings) => {
     runtimeRef.current?.sceneView?.applyPostProcessing?.(settings);

@@ -33,7 +33,8 @@ const KIND_DIRS = {
   prefab: 'prefabs',
 };
 
-const TEXTURE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ktx2']);
+const TEXTURE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ktx2', '.hdr', '.exr']);
+const ENV_MAP_EXTS = new Set(['.hdr', '.exr']);
 const MESH_EXTS = new Set(['.glb', '.gltf']);
 
 /** Test-only: redirect asset roots to a temp directory. */
@@ -267,11 +268,21 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
   }
 
   const magic = detectImageMagic(bytes);
-  // ktx2 is extension-only (no simple magic here); other textures require signatures.
+  // ktx2 is extension-only (no simple magic here); HDR/EXR prefer magic or extension.
   const base = path.basename(originalName || 'import.png');
   let ext = path.extname(base).toLowerCase() || '.png';
   if (ext === '.ktx2') {
     if (!TEXTURE_EXTS.has(ext)) throw Object.assign(new Error('Unsupported texture extension: .ktx2'), { code: 'INVALID_IMAGE' });
+  } else if (ENV_MAP_EXTS.has(ext) || magic === 'hdr' || magic === 'exr') {
+    if (magic === 'hdr' || magic === 'exr') {
+      ext = extensionForImageMagic(magic) || ext;
+    }
+    if (!ENV_MAP_EXTS.has(ext)) {
+      throw Object.assign(new Error(`Unsupported environment map extension: ${ext}`), { code: 'INVALID_IMAGE' });
+    }
+    if (!magic && !ENV_MAP_EXTS.has(ext)) {
+      throw Object.assign(new Error('Environment map rejected: unrecognized HDR/EXR signature'), { code: 'INVALID_IMAGE' });
+    }
   } else {
     if (!magic) {
       throw Object.assign(new Error('Texture rejected: unrecognized image signature'), { code: 'INVALID_IMAGE' });
@@ -293,6 +304,7 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
   const full = resolveSafeAssetPath(relPath);
   const originalRel = `${KIND_DIRS.texture}/originals/${storedName}`;
   const originalFull = resolveSafeAssetPath(originalRel);
+  const isEnvMap = ENV_MAP_EXTS.has(ext);
 
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, bytes);
@@ -300,18 +312,23 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
     await fs.mkdir(path.dirname(originalFull), { recursive: true });
     await fs.copyFile(full, originalFull);
 
+    const entryTags = Array.isArray(tags) ? [...tags] : [];
+    if (isEnvMap && !entryTags.includes('environment')) entryTags.push('environment');
+    if (isEnvMap && !entryTags.includes('hdri')) entryTags.push('hdri');
+
     const entry = {
       id,
       kind: 'texture',
       name: name || stripExt(base),
-      folder: 'Textures',
+      folder: isEnvMap ? 'Environments' : 'Textures',
       path: relPath,
       originalName: base,
-      tags: Array.isArray(tags) ? tags : [],
+      tags: entryTags,
       meta: {
         format: ext.replace('.', ''),
         bytes: bytes.length,
         magic: magic || null,
+        environmentMap: isEnvMap,
       },
       createdAt: Date.now(),
       updatedAt: Date.now(),

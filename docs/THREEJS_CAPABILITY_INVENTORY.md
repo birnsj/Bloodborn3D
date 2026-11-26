@@ -3,8 +3,9 @@
 **Audit date:** 2026-11-26 (revised)  
 **Installed Three.js:** `0.187.0` (`REVISION = '187'`)  
 **Related libraries:** `postprocessing@6.39.6` (pmndrs), `@dimforge/rapier3d-compat@0.21.0`  
-**Document type:** Audit and planning only. No application or dependency changes until this revision is approved.  
-**Milestone:** Complete the base **geometry and environment authoring** layer.
+**Document type:** Capability inventory + implementation status.  
+**Milestone:** Complete the base **geometry and environment authoring** layer.  
+**Batch 1 status:** **Implemented** (World Settings environment / sky / background / LightProbe / outputColorSpace / PCFSoft cleanup).
 
 ### Principles
 
@@ -114,7 +115,7 @@
 
 | Category | Complete | Partial | Missing (milestone-relevant) |
 |----------|----------|---------|------------------------------|
-| Map / World | BG color, fog, tone, shadows, ambient fill, atmosphere | Env via RoomEnvironment; blurriness on Color | HDRI/EXR env, env intensity/rotation, Sky, GroundedSkybox, LightProbe, outputColorSpace |
+| Map / World | BG modes, fog, tone, shadows, ambient, atmosphere, HDRI/EXR env, Sky, GroundedSkybox, LightProbe, outputColorSpace | — | — (Batch 1 done) |
 | Lighting | Point/Spot/Dir/Ambient | Shadow/decay hardcoded | Hemisphere, RectArea, Lensflare, shadow props, targets, spot map, helpers |
 | Materials | Standard core maps | — | Full Standard maps; Physical; Basic/Toon/Matcap; side/alpha |
 | Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
@@ -139,21 +140,21 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 | Capability | API | BB today | Files | Exposed | Missing | Editor | Schema | Ser | RT | Multi-view | GPU | WebGL | Cx | Val | Status |
 |------------|-----|----------|-------|---------|---------|--------|--------|-----|----|------------|-----|-------|----|-----|--------|
 | Background color | `Scene.background` Color | Yes | World, SceneView, DetailsPanel | color, intensity | — | World → Scene | `scene.background*` | Y | Y | Ortho uses editor clear | N/A | Y | S | H | **Complete** |
-| Background as env/sky texture | `background` Texture | No | — | — | equirect/cube as BG | World → Scene | `backgroundType` | — | — | Per-pane OK | tex dispose | Y | M | H | **Missing** |
-| Background blurriness | `backgroundBlurriness` | Schema+UI | World | 0–1 | Needs tex/env BG | World → Scene | exists | Y | Y | OK | N/A | Y | S | M | **Partial** |
-| Background rotation | `backgroundRotation` Euler | No | Scene.js confirmed | — | euler degrees | World → Scene | add | — | — | OK | N/A | Y | S | M | **Missing** |
-| Environment map (HDRI/EXR) | `HDRLoader`/`EXRLoader` + PMREM + `scene.environment` | Fixed RoomEnvironment | studioEnvironment.js | ambient-linked intensity only | Asset id, intensity, rotation | World → Environment | `environmentAssetId`, intensity, rotation | — | — | Shared env OK | PMREM RT dispose/rebuild | Y | M | H | **Missing** |
-| Environment intensity | `environmentIntensity` | Via ambient fill approx | SceneView | — | First-class | World → Environment | add | — | — | OK | N/A | Y | S | H | **Missing** |
-| Environment rotation | `environmentRotation` | No | — | — | euler | World → Environment | add | — | — | OK | N/A | Y | S | H | **Missing** |
-| Procedural sky | `addons/objects/Sky.js` | No | — | — | turbidity, mie, sun position | World / Creation | sky component or world.sky | — | — | Hide in ortho optional | mat dispose | Y (not SkyMesh) | M | H | **Missing** |
-| Grounded skybox | `addons/objects/GroundedSkybox.js` | No | — | — | height, radius, map | World | — | — | — | OK | geo/mat | Y | M | M | **Missing** |
-| Light probe (scene) | `LightProbe` + `LightProbeGenerator` | No | — | — | bake from env cubemap | World → Environment | probe SH coeffs or bake flag | — | — | OK | N/A | Y | M | M | **Missing** |
+| Background as env/sky texture | `background` Texture | Yes | WorldEnvironmentController | color/env/sky | — | World → Scene | `backgroundType` | Y | Y | Per-pane OK | tex dispose | Y | M | H | **Complete** |
+| Background blurriness | `backgroundBlurriness` | Schema+UI | World | 0–1 | Wired for env BG | World → Scene | exists | Y | Y | OK | N/A | Y | S | M | **Complete** |
+| Background rotation | `backgroundRotation` Euler | Yes | SceneView | degrees | — | World → Scene | `backgroundRotation` | Y | Y | OK | N/A | Y | S | M | **Complete** |
+| Environment map (HDRI/EXR) | `HDRLoader`/`EXRLoader` + PMREM + `scene.environment` | Authored + RoomEnvironment fallback | environmentMapCache, WorldEnvironmentController | asset id, intensity, rotation | — | World → Scene | `environmentAssetId`, intensity, rotation | Y | Y | Shared env OK | PMREM RT dispose/rebuild | Y | M | H | **Complete** |
+| Environment intensity | `environmentIntensity` | First-class when HDR assigned | WorldEnvironmentController | field | — | World → Scene | exists | Y | Y | OK | N/A | Y | S | H | **Complete** |
+| Environment rotation | `environmentRotation` | Yes | WorldEnvironmentController | euler degrees | — | World → Scene | exists | Y | Y | OK | N/A | Y | S | H | **Complete** |
+| Procedural sky | `addons/objects/Sky.js` | Yes (world) | WorldEnvironmentController | turbidity, mie, sun | placeable Sky actor = Batch 4 | World → Scene | `sky` | Y | Y | Hide in ortho | mat dispose | Y (not SkyMesh) | M | H | **Complete** |
+| Grounded skybox | `addons/objects/GroundedSkybox.js` | Yes | WorldEnvironmentController | height, radius, map | — | World → Scene | `groundedSkybox` | Y | Y | Hide in ortho | geo/mat | Y | M | M | **Complete** |
+| Light probe (scene) | `LightProbe` + `LightProbeGenerator` | Yes | WorldEnvironmentController | bake from PMREM | — | World → Scene | `lightProbeEnabled` | Y | Y | OK | N/A | Y | M | M | **Complete** |
 | Fog linear / exp2 | `Fog` / `FogExp2` | Yes | World, SceneView | full | — | World → Scene | Y | Y | Y | Pane toggle | N/A | Y | S | H | **Complete** |
 | Fog drift + atmosphere | custom | Yes | AtmosphereController | mist/noise/volumetric | True depth volume later | World → Scene | Y | Y | Y | Perspective layer | Y | Y | L | H | **Complete** |
 | World ambient | AmbientLight + IBL scale | Yes | World | color, edit/play intensity | — | World → Ambient | Y | Y | Y | OK | N/A | Y | S | H | **Complete** |
 | Tone mapping / exposure | renderer | Yes | World renderer | modes + exposure | PP override when active | World → Renderer | Y | Y | Y | Restored per pane | N/A | Y | S | H | **Complete** |
-| Shadow map global | `shadowMap` | Yes | World renderer | enabled, type | Drop Soft label | World → Renderer | Y | Y | Y | OK | N/A | Y | S | H | **Partial** |
-| Output color space | `outputColorSpace` | Assumed sRGB | SceneView | — | enum | World → Renderer | add | — | — | OK | N/A | Y | S | M | **Missing** |
+| Shadow map global | `shadowMap` | Yes | World renderer | enabled, type | Soft migrated→PCF | World → Renderer | Y | Y | Y | OK | N/A | Y | S | H | **Complete** |
+| Output color space | `outputColorSpace` | Authored | SceneView | srgb / srgb-linear | — | World → Renderer | `outputColorSpace` | Y | Y | OK | N/A | Y | S | M | **Complete** |
 | RoomEnvironment fallback | addon | Yes internal | studioEnvironment | — | Keep when no HDRI | — | — | — | — | rebuild on resize | Y | S | H | **Internal** |
 
 ---
@@ -355,21 +356,21 @@ Constructive brushes remain primary architecture tools. Native primitives are **
 
 Priorities **P0–P2 within each batch**. Implement batches in order where possible; dependencies noted.
 
-### Batch 1 — Map Settings (environment, sky, background)
+### Batch 1 — Map Settings (environment, sky, background) — **DONE**
 
-| Pri | Item | API | Schema | Deps |
-|-----|------|-----|--------|------|
-| P0 | Authored HDRI/EXR → PMREM → `scene.environment` | HDRLoader/EXRLoader | `environmentAssetId`, intensity, rotation | Asset import |
-| P0 | `environmentIntensity` / `environmentRotation` | Scene | fields | P0 HDRI |
-| P0 | Background type color \| env \| sky; wire blurriness/rotation when non-color | Scene | `backgroundType`, rotation | HDRI/Sky |
-| P0 | Keep RoomEnvironment fallback when no env | existing | — | — |
-| P1 | Procedural Sky actor/world | Sky.js | sky params | — |
-| P1 | GroundedSkybox option | GroundedSkybox.js | | HDRI map |
-| P2 | LightProbe bake from env | LightProbeGenerator | bake data | HDRI |
-| P2 | `outputColorSpace` | renderer | field | — |
-| P2 | Shadow type UI: remove Soft deprecation footgun | enum | — | — |
+| Pri | Item | API | Schema | Status |
+|-----|------|-----|--------|--------|
+| P0 | Authored HDRI/EXR → PMREM → `scene.environment` | HDRLoader/EXRLoader | `environmentAssetId`, intensity, rotation | **Done** |
+| P0 | `environmentIntensity` / `environmentRotation` | Scene | fields | **Done** |
+| P0 | Background type color \| env \| sky; wire blurriness/rotation when non-color | Scene | `backgroundType`, rotation | **Done** |
+| P0 | Keep RoomEnvironment fallback when no env | existing | — | **Done** |
+| P1 | Procedural Sky world | Sky.js | sky params | **Done** (world; placeable = Batch 4) |
+| P1 | GroundedSkybox option | GroundedSkybox.js | groundedSkybox | **Done** |
+| P2 | LightProbe bake from env | LightProbeGenerator | lightProbeEnabled | **Done** |
+| P2 | `outputColorSpace` | renderer | field | **Done** |
+| P2 | Shadow type UI: remove Soft deprecation footgun | enum | PCFSoft→PCF | **Done** |
 
-**Depends on:** Batch 8 (HDR asset) ideally parallel.  
+**Acceptance level:** `public/levels/acceptance-world-settings.json`  
 **Unlocks:** Physical materials response to real env; Batch 3 RectArea look.
 
 ### Batch 2 — Materials

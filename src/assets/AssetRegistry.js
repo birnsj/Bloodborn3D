@@ -59,6 +59,16 @@ export function folderForKind(kind) {
   }
 }
 
+/** True when a texture asset is an HDR/EXR environment map. */
+export function isEnvironmentMapAsset(entry) {
+  if (!entry || entry.kind !== ASSET_KINDS.texture) return false;
+  const format = String(entry.meta?.format || '').toLowerCase();
+  if (format === 'hdr' || format === 'exr') return true;
+  if (entry.meta?.environmentMap) return true;
+  const path = String(entry.path || entry.originalName || '').toLowerCase();
+  return path.endsWith('.hdr') || path.endsWith('.exr');
+}
+
 export function listByKind(registry, kind) {
   return (registry?.assets || []).filter((a) => a.kind === kind);
 }

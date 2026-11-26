@@ -1130,6 +1130,26 @@
       },
       "createdAt": 1795677128324,
       "updatedAt": 1795677161808
+    },
+    {
+      "id": "tex_batch1_studio",
+      "kind": "texture",
+      "name": "Batch1 Studio HDR",
+      "folder": "Environments",
+      "path": "textures/tex_batch1_studio.hdr",
+      "originalName": "tex_batch1_studio.hdr",
+      "tags": [
+        "environment",
+        "hdri",
+        "batch1"
+      ],
+      "meta": {
+        "format": "hdr",
+        "bytes": 53,
+        "environmentMap": true
+      },
+      "createdAt": 1795717842026,
+      "updatedAt": 1795717842026
     }
   ]
 }
