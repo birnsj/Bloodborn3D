@@ -81,6 +81,7 @@ import {
   tickEnvironmentVisuals,
 } from './createThreeEnvironment.js';
 import { createThreePrimitiveVisual } from './createThreePrimitive.js';
+import { normalizePrimitiveMeshFields } from '../components/PrimitiveMeshComponent.js';
 import { normalizeEnvironmentFields } from '../components/EnvironmentComponent.js';
 import {
   BOX_SURFACE_IDS,

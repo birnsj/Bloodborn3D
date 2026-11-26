@@ -192,7 +192,7 @@ Columns: **API** · purpose · BloodBound · files · exposed · missing · edit
 | MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | — | Materials Workspace | MaterialDefinition | — | H | **Complete** |
 | aoMap / aoMapIntensity | Standard | Y | map id + intensity | — | Materials | fields | S | H | **Complete** |
 | bumpMap / bumpScale | Standard | Y | map + scale | — | Materials | fields | S | M | **Complete** |
-| displacementMap / scale / bias | Standard | Y | map + scale/bias | Visible relief via Batch 5 PrimitiveMesh segment density (brushes not retessellated) | Materials | fields | S | M | **Complete** (maps + prop tessellation path) |
+| displacementMap / scale / bias | Standard | Y | map + scale/bias | Prop tessellation via Batch 5; **brush** displacement tessellation still outstanding — see Batch 2 residuals | Materials | fields | S | M | **Complete** (maps); brush density **Outstanding** |
 | alphaMap | Standard | Y | map id | — | Materials | fields | S | H | **Complete** |
 | lightMap / intensity | Standard | Y | map + intensity on UV0 | Dedicated lightmap UV channel — see Batch 2 residuals (baked lighting) | Materials | fields | S | M | **Complete** (assign); UV2 **Deferred** |
 | alphaTest / alphaHash / alphaToCoverage | Material | Y | cutoff + toggles | A2C × MSAA/PP interaction — see Batch 2 residuals | Materials | fields | S | H | **Complete** (authored); A2C verify **Pending** |
@@ -404,7 +404,7 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | Item | Status | Dependency | Acceptance criteria | Cross-ref |
 |------|--------|------------|---------------------|-----------|
 | Dedicated lightmap UV channel (`geometry.attributes.uv2` / second UV set for `lightMap`) | **Deferred** | Baked lighting implementation (not in current Batch 1–9 geometry/env milestone until baking lands); texture UV-channel authoring in **Batch 8** may feed sampling UI | Brushes/meshes expose an authored or generated lightmap UV set; `createThreeMaterial` binds `lightMap` to UV2 without stealing UV0 albedo; acceptance level shows non-overlapping lightmap vs base UV | Future baked-lighting work; **Batch 8** (UV channel selection); material assign path already **Complete** |
-| Geometry subdivision for displacement | **Done (props)** | Batch 5 `PrimitiveMesh` Plane/Sphere `displacementSegments` (+ width/height segments); brushes **not** retessellated | Dense prop meshes show displacement relief; vertex soft-caps; GPU dispose on rebuild; brush CSG topology unchanged | **Batch 5** complete; brush retessellation **Accepted limitation** |
+| Geometry subdivision for displacement | **Partial** — props **Done**; brush tessellation **Outstanding** | Batch 5 `PrimitiveMesh` Plane/Sphere `displacementSegments` (+ width/height segments). Architectural brushes remain fixed-topology BoxGeometry / parametric solids and are **not** retessellated | (1) Dense prop Plane/Sphere show usable displacement with Batch 2 maps; soft-caps + dispose verified. (2) Brush solids still will not show displacement relief without a future brush-density design that preserves CSG authorship | **Batch 5** props path; Batch 2 residual **not** fully resolved until brush path exists or is explicitly Accepted by design |
 | Alpha-to-coverage compatibility with MSAA and post-processing | **Pending** (rendering verification) | Shared WebGL renderer + pmndrs post-processing path (Batch 1 world/renderer + existing PP stack); may need MSAA/RT policy documented or adjusted | Documented pass/fail matrix: `alphaToCoverage` on/off × MSAA on/off × Fog/PP pane toggles; foliage/alpha materials show no unexplained discard or edge artifacts; multi-pane isolation unchanged | Rendering verify (not a new materials feature); Batch 2 A2C authoring **Complete** |
 | Draft-local material undo (Materials Workspace scrub stack, not level `HistoryStack`) | **Accepted** (architectural decision — not a defect) | Materials are project assets edited as drafts until Save; level history owns actor/world commands only | One undo entry per finished numeric scrub in Materials; Cancel restores saved baseline; level Undo does not mutate material JSON; documented in Academy/help | Batch 2 editor design; keep — do not “fix” by wiring materials into `HistoryStack` |
 
@@ -481,6 +481,15 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 **Acceptance:** `docs/ACCEPTANCE_GEOMETRY.md`, `public/levels/acceptance-geometry.json`, Academy lesson 25.  
 **Depends on:** Batch 2 materials. Collision integrated with Rapier (auto primitives + convex/trimesh).  
 **Do not** replace Brush/ConvexBrush workflows.
+
+#### Batch 5 residuals / accepted limits
+
+| Item | Status | Dependency | Acceptance criteria | Cross-ref |
+|------|--------|------------|---------------------|-----------|
+| Approximate auto collision shapes (cone→cylinder, polyhedra→sphere, text→AABB, complex→convex) | **Accepted** for Batch 5; richer controls → **Batch 6** | Rapier collider authoring on StaticMesh / PrimitiveMesh | Document visual vs collision table; optional explicit collider types remain; Batch 6 may add better defaults/tools | Batch 6 collision |
+| Brush displacement tessellation | **Outstanding** (Batch 2 residual) | Future brush-density design that preserves CSG | Brush solids show displacement without rewriting authored topology — **not** claimed Done by Batch 5 | Batch 2 residuals |
+| Full curve / path editor UI | **Deferred** | Dedicated editor UX | Profile/path/hull points editable in a first-class curve UI | Batch 5 schema fields exist |
+| Procedural subtractive geometry | **Accepted restriction** | CSG brush pipeline | Procedural PrimitiveMesh must not silently become valid subtractive brushes | Architecture |
 
 ### Batch 6 — Static meshes (render + collision)
 

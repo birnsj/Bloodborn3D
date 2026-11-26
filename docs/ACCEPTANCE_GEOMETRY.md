@@ -2,55 +2,98 @@
 
 **Level:** `public/levels/acceptance-geometry.json`  
 **Academy:** lesson 25 (`native-geometry`)  
-**Date:** 2026-11-26  
-**Baseline:** Batches 1–4 complete; 1,000+ unit tests green before implementation  
+**Verification date:** 2026-11-26  
+**Implementation commit:** `7592490`  
+**Acceptance correction commit:** (this commit)  
+**Baseline:** Batches 1–4 complete; Batch 4 acceptance docs on `main` at `d67345a`  
 **Three.js:** r187 · **Rapier:** `@dimforge/rapier3d-compat`
+
+## Defect corrected during verification
+
+| Issue | Result |
+| --- | --- |
+| `SceneView._finishPrimitiveMeshVisual` referenced `normalizePrimitiveMeshFields` without importing it → unhandled rejection after every PrimitiveMesh build | **Fixed** — import added in `src/runtime/SceneView.js` |
 
 ## Demonstrated
 
 | Feature | Notes |
 | --- | --- |
 | Native primitives | Box, Plane, Circle, Sphere, Capsule, Cylinder, Cone, Ring, Torus, TorusKnot, Tetra/Octa/Dodeca/Icosahedron, RoundedBox |
-| Procedural | Shape, Extrude (+ bevel), Lathe, Tube (path), Convex hull, Text (local Helvetiker), Parametric (klein/mobius/plane) |
-| Materials | Batch 1/2 + hall mats assigned per actor |
-| Displacement density | Plane/Sphere `displacementSegments` (demo “Displacement Plane” @ 64²) |
-| Collision | Auto + explicit box/sphere/capsule/cylinder/convex/trimesh |
-| Editor | Creation → Geometry tools; Details scrub + undo; serialize/reload |
+| Procedural | Shape, Extrude (+ bevel), Lathe, Tube (path), Convex hull, Text (local Helvetiker), Parametric |
+| Materials | Batch 1/2 + hall mats assigned; live Details showed torusKnot → Batch2 Glass |
+| Displacement density | Plane/Sphere `displacementSegments` (demo “Displacement Plane” @ 64²); brush solids not retessellated |
+| Collision | Auto + explicit box/sphere/capsule/cylinder/convex/trimesh; Play built **24** Rapier bodies |
+| Editor | Creation → Geometry tools; Details type-specific params; serialize/reload |
 
-Architectural brush tools (Wall, Floor, Subtract, …) remain unchanged and are still listed above the primitive tools.
+Architectural brush tools remain above primitive tools and are unchanged.
 
-## Browser checklist
+## Acceptance criteria
 
-| Check | Result |
-| --- | --- |
-| Place each primitive / procedural type from Geometry toolbar | Pass (unit + level) |
-| Edit type-specific params; one Undo per scrub gesture | Pass |
-| Grid snap + editor units (100 eu = 1 m) | Pass |
-| Material assignment on PrimitiveMesh | Pass |
-| Dense plane/sphere for displacement maps | Pass (segments exposed; brush topology untouched) |
-| Play-mode collision (auto primitives + convex fallback) | Pass (PhysicsWorld) |
-| Duplicate / parent / prefab / dirty tracking | Pass (shared actor pipeline) |
-| Save/reload + legacy levels without PrimitiveMesh | Pass |
-| Multi-viewport (same SceneView sync) | Pass |
-| Additive / subtractive brushes unchanged | Pass (primitives tagged `prop`, not brushes) |
-| Geometry rebuild disposes prior GPU buffers | Pass (`bbPrimitiveDispose` + `disposeObject`) |
-| Vertex budget reject over-limit allocations | Pass (`validatePrimitiveAllocation`) |
+| Check | Status | Evidence |
+| --- | --- | --- |
+| Visual render of every implemented type | **Pass** | 23 PrimitiveMesh types in outliner + scene (box…parametric + Displacement Plane); lit viewport + Top wireframe show ring/torus/polyhedra |
+| Parameter editing (type-specific Details) | **Pass** | torusKnot Details: radius/tube, radial segments (~833 verts), material, collision/shadows |
+| Profile / path editing | **Pass** (schema) / **Unverified** (dedicated UI) | Profile/path/hull points editable via component fields + JSON; no curve-editor UI (deferred) |
+| Material assignment + UV workflows | **Pass** | Material dropdown on PrimitiveMesh; shared UV L1 path; assigned Batch mats in level JSON |
+| Visible displacement relief | **Pass** (density path) / **Unverified** (pixel relief) | Segments/displacementSegments exposed and dense plane present; brush tessellation still outstanding — visual bump depends on material displacement maps |
+| Grid snap + transforms | **Pass** | Snap on, Grid 25; transform gizmo on selected knot; local transform fields |
+| Play-mode collision accuracy | **Pass** (pipeline) / **Unverified** (per-shape walk) | Play mode entered; Rapier world with 24 bodies; visual vs collision approximations documented below — no per-primitive walk test recorded |
+| Undo/redo + one history entry per scrub | **Pass** | Unit + shared `SetPrimitiveMeshPropertiesCommand` / gesture API |
+| Duplication / parenting / prefab | **Pass** (UI) / **Unverified** (live prefab round-trip) | Duplicate / Parent / Create Prefab From Selection present on selection; not exercised end-to-end in this pass |
+| Save/reload + backward compat | **Pass** | Level loads on schema v2; legacy levels without PrimitiveMesh still load (registry optional) |
+| All viewport layouts | **Pass** | Four-pane (Persp / Top / Front / Right) screenshot |
+| Additive / subtractive brushes | **Pass** (additive on level) / **Unverified** (subtractive on this level) | Floor brush present; primitives tagged `prop` not CSG; subtractive covered by existing `acceptance-subtractive` + brush code path |
+| Geometry rebuild disposes GPU resources | **Pass** | 10× sphere segment rebuild: `renderer.info.memory.geometries` stayed **22** (delta 0) |
+| Vertex budget / invalid params | **Pass** | Soft caps + `validatePrimitiveAllocation`; box 128³ estimate rejected in unit tests |
 
 ### Screenshots
 
 `docs/acceptance-geometry/` (live editor 2026-11-26):
 
-1. `01-primitive-lineup.png` — Acceptance — Geometry loaded; outliner shows PrimitiveMesh actors; Geometry toolbar includes Batch 5 tools  
-2. `02-procedural-overview.png` — maximized viewport with primitive props visible  
+1. `01-primitive-lineup.png` — Acceptance — Geometry loaded  
+2. `02-procedural-overview.png` — earlier overview capture  
+3. `03-torusknot-details.png` — selected torusKnot + Primitive Mesh Details (material, segments, collision)  
+4. `04-four-pane-layouts.png` — four viewport panes with primitives visible in ortho wireframe  
+5. `05-play-mode.png` — Play mode entered (PLAY badge; physics world active)
 
-**Live check:** Outliner lists box…parametric + Displacement Plane (25 actors). Creation → Geometry exposes Box Prim through Parametric.
+## Performance measurements
 
-## Performance notes
+### Live editor (`acceptance-geometry`, Fog+PP on)
 
-- Soft caps: `PRIMITIVE_MAX_SEGMENTS = 128`, `PRIMITIVE_MAX_VERTICES = 200_000`.  
-- Plane @ 64×64 ≈ 4.2k verts; sphere @ 48×32 ≈ 1.6k; rounded box default ≈ 2.9k.  
-- Editor acceptance pass with Fog+PP on; vsync-capped display ~60 FPS — use frame-time / `syncStats` for uncapped profiling.  
-- Trimesh collision on high-density meshes is expensive; prefer `auto` / convex for props.
+| Metric | Value |
+| --- | --- |
+| PrimitiveMesh actors / holders | 23 types / 23 holders |
+| Scene meshes / position verts | 44 meshes / **41,626** verts |
+| GPU geometries / textures | **22** / 18 |
+| Draw calls / triangles (post `info.reset`) | **44** / **39,806** |
+| Frame time (0.5 s sample, uncapped) | **5.55 ms** avg → **180.3 FPS** (`measureFrameTimes`) |
+| Rebuild disposal | geometries **22 → 22** after 10 sphere regenerations |
+| Play physics bodies | **24** |
+
+Do not treat display-capped ~60 FPS as the performance signal; use frame ms / `measureFrameTimes`.
+
+### CPU geometry generation (Node, 20-loop avg, defaults)
+
+| Primitive | Verts | ms/build |
+| --- | --- | --- |
+| box | 24 | 0.03 |
+| plane (default dens.) | 1089 | 0.21 |
+| sphere | 1089 | 0.20 |
+| roundedBox | 2916 | 0.76 |
+| tube | 1225 | 0.43 |
+| parametric | 1089 | 0.41 |
+| torusKnot | 833 | 0.20 |
+
+### Segment density sweep (plane / sphere)
+
+| Segs | Plane verts | Plane ms | Sphere verts | Sphere ms |
+| --- | --- | --- | --- | --- |
+| 8 | 81 | 0.02 | 81 | 0.04 |
+| 32 | 1089 | 0.13 | 1089 | 0.22 |
+| 64 | 4225 | 0.44 | 4225 | 0.39 |
+| 128 | 16641 | 1.87 | 16641 | 2.41 |
+
+Soft caps: `PRIMITIVE_MAX_SEGMENTS = 128`, `PRIMITIVE_MAX_VERTICES = 200_000`.
 
 ## Visual vs collision discrepancies
 
@@ -62,20 +105,25 @@ Architectural brush tools (Wall, Floor, Subtract, …) remain unchanged and are 
 | Torus / knot / tube / lathe / parametric | Convex hull of visual verts |
 | Plane / shape / circle / ring | Thin / footprint box |
 
+Improved StaticMesh / richer collision authoring is a **Batch 6** dependency — do not treat auto approximations as final production fidelity.
+
 ## Batch 2 displacement residual
 
-**Resolved for props:** raise `displacementSegments` (or width/height segments) on Plane/Sphere PrimitiveMesh actors.  
-**Accepted limitation:** architectural brush solids are **not** retessellated — changing brush topology for displacement would alter authored CSG. Use native planes/spheres where relief must be visible.
+| Scope | Status |
+| --- | --- |
+| Prop Plane/Sphere segment density (`displacementSegments`) | **Done** (Batch 5) |
+| Architectural **brush** displacement tessellation | **Outstanding** — brushes are not retessellated; do **not** mark the Batch 2 residual fully resolved |
 
 ## Remaining limitations
 
-- Profile/path/hull point editing is schema + defaults (JSON); no dedicated curve editor UI yet.  
-- ParametricGeometry scaled by radius; not a full authoring surface.  
-- Text requires local `public/assets/fonts/helvetiker_regular.typeface.json`.  
-- Nested subtractive use of procedural meshes is intentionally unsupported.  
-- Batch 6 static-mesh shadow/collision options remain separate.
+- Full curve / path editor UI — **Deferred**  
+- Procedural meshes as subtractive brushes — **Accepted architectural restriction**  
+- Approximate auto collision shapes — evaluate richer controls in **Batch 6**  
+- Brush displacement tessellation — **Outstanding** (Batch 2 residual)  
+- Text requires local `public/assets/fonts/helvetiker_regular.typeface.json`  
+- ParametricGeometry is scaled radius authoring, not a full surface tool  
 
 ## Dependencies for later batches
 
-- Batch 6: richer StaticMesh collision / shadows (primitives already expose cast/receive).  
-- Batch 7: BufferGeometryUtils / Simplify for heavy procedural meshes.
+- Batch 6: richer collision / shadow options on StaticMesh (+ optional improved primitive collision controls)  
+- Batch 7: BufferGeometryUtils / Simplify for heavy procedural meshes  
