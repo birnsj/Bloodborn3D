@@ -1,0 +1,6660 @@
+{
+  "schemaVersion": 2,
+  "name": "Integrated Editor Acceptance (Mansion Duplicate)",
+  "mapMode": "additive",
+  "ambient": {
+    "color": "#3a4a68",
+    "intensity": 0.12,
+    "playIntensity": 0.12
+  },
+  "scene": {
+    "background": "#0e1218",
+    "backgroundIntensity": 1,
+    "backgroundBlurriness": 0,
+    "backgroundType": "color",
+    "backgroundRotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "environmentRotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "lightProbeEnabled": false,
+    "lightProbeIntensity": 1,
+    "sky": {
+      "turbidity": 2,
+      "rayleigh": 1,
+      "mieCoefficient": 0.005,
+      "mieDirectionalG": 0.8,
+      "elevation": 2,
+      "azimuth": 180,
+      "scale": 450000
+    },
+    "groundedSkybox": {
+      "enabled": false,
+      "height": 15,
+      "radius": 100
+    },
+    "fog": {
+      "type": "linear",
+      "color": "#1a1520",
+      "near": 200,
+      "far": 2500,
+      "density": 0.05,
+      "drift": true,
+      "driftSpeed": 0.12,
+      "driftAmount": 0.22,
+      "mist": false,
+      "mistCount": 400,
+      "mistSpeed": 0.15,
+      "mistOpacity": 0.35,
+      "mistSize": 0.6,
+      "noise": false,
+      "noiseStrength": 0.35,
+      "noiseScale": 0.45,
+      "noiseSpeed": 0.08,
+      "volumetric": false,
+      "volumetricDensity": 0.35,
+      "volumetricExtent": 12,
+      "volumetricSteps": 12
+    }
+  },
+  "renderer": {
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 0.95,
+    "shadowMapEnabled": true,
+    "shadowMapType": "PCF",
+    "outputColorSpace": "srgb"
+  },
+  "postProcessing": {
+    "version": 1,
+    "enabled": false,
+    "multisampling": 0,
+    "exposure": 0.95,
+    "effects": {
+      "ssao": {
+        "enabled": false,
+        "samples": 9,
+        "rings": 7,
+        "radius": 0.1825,
+        "intensity": 1,
+        "luminanceInfluence": 0.7,
+        "distanceScaling": true,
+        "depthAwareUpsampling": true,
+        "color": "#000000"
+      },
+      "bloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 1,
+        "luminanceSmoothing": 0.03,
+        "kernelSize": "LARGE",
+        "mipmapBlur": true,
+        "radius": 0.85
+      },
+      "selectiveBloom": {
+        "enabled": false,
+        "intensity": 1,
+        "luminanceThreshold": 0.1,
+        "luminanceSmoothing": 0.025,
+        "kernelSize": "LARGE",
+        "inverted": false,
+        "ignoreBackground": false,
+        "actorIds": []
+      },
+      "godRays": {
+        "enabled": false,
+        "lightActorId": null,
+        "density": 0.96,
+        "decay": 0.9,
+        "weight": 0.4,
+        "exposure": 0.6,
+        "clampMax": 1,
+        "samples": 60,
+        "blur": true,
+        "kernelSize": "SMALL"
+      },
+      "depthOfField": {
+        "enabled": false,
+        "focusDistance": 0.1,
+        "focalLength": 0.1,
+        "bokehScale": 1,
+        "resolutionScale": 0.5
+      },
+      "realisticBokeh": {
+        "enabled": false,
+        "focus": 1,
+        "focalLength": 24,
+        "fStop": 0.9,
+        "luminanceThreshold": 0.5,
+        "luminanceGain": 2,
+        "bias": 0.5,
+        "fringe": 0.7,
+        "maxBlur": 1,
+        "rings": 3,
+        "samples": 2,
+        "showFocus": false,
+        "manualDoF": false,
+        "pentagon": false
+      },
+      "tiltShift": {
+        "enabled": false,
+        "offset": 0,
+        "rotation": 0,
+        "focusArea": 0.4,
+        "feather": 0.3,
+        "kernelSize": "MEDIUM",
+        "resolutionScale": 0.5
+      },
+      "brightnessContrast": {
+        "enabled": false,
+        "brightness": 0,
+        "contrast": 0
+      },
+      "hueSaturation": {
+        "enabled": false,
+        "hue": 0,
+        "saturation": 0
+      },
+      "gammaCorrection": {
+        "enabled": false,
+        "gamma": 2
+      },
+      "colorAverage": {
+        "enabled": false
+      },
+      "sepia": {
+        "enabled": false,
+        "intensity": 1
+      },
+      "colorDepth": {
+        "enabled": false,
+        "bitDepth": 16
+      },
+      "lut": {
+        "enabled": false,
+        "textureAssetId": null,
+        "tetrahedralInterpolation": false
+      },
+      "vignette": {
+        "enabled": false,
+        "technique": "DEFAULT",
+        "offset": 0.5,
+        "darkness": 0.5
+      },
+      "chromaticAberration": {
+        "enabled": false,
+        "offsetX": 0.002,
+        "offsetY": 0.002,
+        "radialModulation": false,
+        "modulationOffset": 0.15
+      },
+      "lensDistortion": {
+        "enabled": false,
+        "distortionX": 0,
+        "distortionY": 0,
+        "principalPointX": 0,
+        "principalPointY": 0,
+        "focalLengthX": 1,
+        "focalLengthY": 1,
+        "skew": 0
+      },
+      "noise": {
+        "enabled": false,
+        "premultiply": false,
+        "opacity": 0.2
+      },
+      "pixelation": {
+        "enabled": false,
+        "granularity": 30
+      },
+      "dotScreen": {
+        "enabled": false,
+        "angle": 1.57,
+        "scale": 1
+      },
+      "scanlines": {
+        "enabled": false,
+        "density": 1.25,
+        "scrollSpeed": 0
+      },
+      "grid": {
+        "enabled": false,
+        "scale": 1,
+        "lineWidth": 0
+      },
+      "glitch": {
+        "enabled": false,
+        "mode": "SPORADIC",
+        "minDelay": 0.5,
+        "maxDelay": 1,
+        "minDuration": 0.05,
+        "maxDuration": 0.2,
+        "minStrength": 0.05,
+        "maxStrength": 0.2,
+        "columns": 0.05,
+        "ratio": 0.85
+      },
+      "outline": {
+        "enabled": false,
+        "actorIds": [],
+        "edgeStrength": 3,
+        "visibleEdgeColor": "#ffffff",
+        "hiddenEdgeColor": "#22090a",
+        "pulseSpeed": 0,
+        "xRay": true,
+        "blur": false,
+        "kernelSize": "VERY_SMALL",
+        "multisampling": 0,
+        "resolutionScale": 0.5
+      },
+      "textureOverlay": {
+        "enabled": false,
+        "textureAssetId": null,
+        "aspectCorrection": false
+      },
+      "shockWave": {
+        "enabled": false,
+        "epicenter": {
+          "x": 0,
+          "y": 100,
+          "z": 0
+        },
+        "speed": 2,
+        "maxRadius": 1,
+        "waveSize": 0.2,
+        "amplitude": 0.05
+      },
+      "toneMapping": {
+        "enabled": true,
+        "mode": "ACES_FILMIC",
+        "resolution": 256,
+        "whitePoint": 4,
+        "middleGrey": 0.6,
+        "averageLuminance": 1,
+        "minLuminance": 0.01,
+        "adaptationRate": 1
+      },
+      "fxaa": {
+        "enabled": false,
+        "minEdgeThreshold": 0.0312,
+        "maxEdgeThreshold": 0.125,
+        "subpixelQuality": 0.75,
+        "samples": 12
+      },
+      "smaa": {
+        "enabled": false
+      }
+    }
+  },
+  "actors": [
+    {
+      "id": "actor_1386b0a9-e72c-43c5-943c-6c7a23455ccf",
+      "name": "Mansion Ground",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_17b7eee9-06f5-439a-800d-84ce653c95c4",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_b526ab4b-e921-4b04-821c-ee4fe833b6b2",
+      "name": "Mansion Upper",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e21106fa-dba4-41a8-8fc0-0c77cc6094ca",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_b5a0a509-49fa-46e2-a01c-e1aabd09bebd",
+      "name": "Spiral Tower",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 0,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_26a355a6-702e-4ca9-9013-23de82aa58f6",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ]
+    },
+    {
+      "id": "actor_d79d43b7-5dc5-4e70-8640-56b9b6d0d86e",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 12.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_25d61aa9-c6ad-420d-8437-9191bb473d44",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 25,
+            "z": 1200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_961d1e37-5711-4135-a3c5-ecd42babd533",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 12.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_395f4acf-5a16-43d5-92a1-f27cc6d47116",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 25,
+            "z": 300
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_7abf52da-8323-45a6-b8e0-9d55af9dc0fa",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 12.5,
+          "z": -700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f2e949f0-6c0c-4ae7-9560-4a391c77569c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 25,
+            "z": 400
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_582b2d0c-a6e8-4c6b-8f05-a4ad2aba7d8c",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": -587.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a1d1d689-547a-4afb-bda4-89b96ba8b3c7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_95e8b54b-f09e-45c5-a94c-535e3c594c72",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": 612.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_065a007c-a4af-485c-9a5b-fd7678fa7e1d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 1200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_5fd28c61-342c-4500-8426-a4b2ca5a4274",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -587.5,
+          "y": 150,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f966502a-0c32-47ca-b2c1-7a60935fb33f",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 1200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": {
+            "px": "mat_hall_ceiling"
+          },
+          "faceUVs": {
+            "px": {
+              "scale": {
+                "x": 1.5,
+                "y": 1
+              },
+              "offset": {
+                "x": 0,
+                "y": 0.1
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6605efaf-78d2-49d2-917d-94cc1c9a15c7",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 612.5,
+          "y": 150,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3f891f7b-59f7-49ad-920a-8cec101ab0d1",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 800
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_debd3067-86f8-45f1-a3ea-3c95ca22c804",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 150,
+          "z": 412.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_bfc42bbc-46af-4b13-9c79-0eba3cdf0032",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": {
+            "pz": "mat_hall_stone"
+          },
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1,
+                "y": 1
+              },
+              "offset": {
+                "x": 0.15,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c3b76780-aa99-4d5b-a892-b6c5eb508333",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 150,
+          "z": 412.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_75842c66-e4c3-420f-a8fb-91c6cf52107e",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 300,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": {
+            "pz": {
+              "scale": {
+                "x": 1,
+                "y": 1
+              },
+              "offset": {
+                "x": 2.15,
+                "y": 0
+              },
+              "rotation": 0
+            }
+          },
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_d6502220-77cb-41a8-af27-5137903b5a01",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -400,
+          "y": 150,
+          "z": 462.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_65defa25-9f71-4951-b0a8-fdcc1b758952",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 200,
+            "y": 300,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_df85dc5f-1e0e-408e-aec7-15d4a2d517d3",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -487.5,
+          "y": 150,
+          "z": 350
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e30fb73b-37a5-4902-ab5d-c14e9be4c15d",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 300,
+            "z": 200
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8aa6024c-a16b-4497-bf75-303e38ed07e6",
+      "name": "Subtract Box",
+      "transform": {
+        "position": {
+          "x": 600,
+          "y": 112.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3f762d0e-6efd-4b21-8158-efae313a7bba",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 175,
+            "z": 100
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_33c2d86f-015f-40bd-8e15-217289ab5ba2",
+      "name": "Gothic Arch",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 220,
+          "z": -575
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "arch"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9d49a9a8-4ca7-4200-9fd5-43ec5f81145f",
+          "type": "Arch",
+          "enabled": true,
+          "archType": "gothic",
+          "openingWidth": 200,
+          "openingHeight": 225,
+          "archRise": 175,
+          "thickness": 40,
+          "depth": 50,
+          "curveResolution": 16,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f6a2c887-a351-4711-82fa-0f3c36a78735",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": -250,
+          "y": 150,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6b5102a-693d-4f98-bd1c-091dafae0382",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_945f76d2-3be4-42f1-a2f8-c0d3fda01763",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 150,
+          "z": -250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_5dfdfaec-e86d-41bb-99fc-5e8b1d930ee9",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_437db504-c651-4ad8-ba12-9c580fceac5c",
+      "name": "Curved Wall",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 150,
+          "z": 700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "curvedWall",
+        "wall"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d795d61e-aef8-44c5-8cb4-cb61672af84d",
+          "type": "CurvedWall",
+          "enabled": true,
+          "radius": 200,
+          "sweepAngle": 90,
+          "startAngle": 0,
+          "height": 300,
+          "thickness": 25,
+          "clockwise": false,
+          "curveResolution": 24,
+          "miterStart": 0,
+          "miterEnd": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_14dee2d9-e7ef-47cb-a5ee-2b782f892d6a",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 150,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ab340381-af83-496b-bc1f-ed837e36f6c1",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "straight",
+          "width": 150,
+          "stepCount": 15,
+          "stepHeight": 20,
+          "treadDepth": 30,
+          "direction": "z+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e85a06c6-eb3d-4b7b-9988-90d316329b02",
+      "name": "Ramp",
+      "transform": {
+        "position": {
+          "x": 550,
+          "y": 150,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "ramp"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3dbfd3bb-6042-4793-b91a-fbe615b5601c",
+          "type": "Ramp",
+          "enabled": true,
+          "width": 120,
+          "length": 300,
+          "rise": 300,
+          "direction": "z+",
+          "thickness": 20,
+          "color": "#7a8494",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_feadaaf8-e36a-4de8-bd15-bc1ea2b77fc2",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": -350,
+          "y": 150,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f6d25d20-7f12-4f93-833f-d832cae86cb7",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "curved",
+          "width": 150,
+          "stepCount": 16,
+          "stepHeight": 25,
+          "treadDepth": 30,
+          "direction": "x+",
+          "innerRadius": 150,
+          "sweepAngle": 180,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_884466d2-fcd5-4b6c-b07c-aecd6bebdff6",
+      "name": "Stairs",
+      "transform": {
+        "position": {
+          "x": 900,
+          "y": 150,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "stair"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_34629ea4-249e-48e9-a65e-2d7e490b782b",
+          "type": "Stair",
+          "enabled": true,
+          "stairType": "spiral",
+          "width": 100,
+          "stepCount": 24,
+          "stepHeight": 25,
+          "treadDepth": 30,
+          "direction": "x+",
+          "innerRadius": 50,
+          "sweepAngle": 360,
+          "clockwise": true,
+          "startAngle": 0,
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8e27687c-687f-4eb6-b6e4-3fae50787b3f",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 312.5,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_8ebbb0f2-c5f8-461c-bdc7-17947351f613",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 25,
+            "z": 600
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_floor",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_6011d895-a5c1-406a-9ef5-e7b6aef21ad4",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 462.5,
+          "z": -487.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1d1cd06e-38b8-4058-84cc-e4c01c5993b5",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 275,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c8e679e3-f9be-45dc-9e72-b2abc9ce7374",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 462.5,
+          "z": 112.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_8eb6ef47-cbbb-4f6b-adda-fe4665bd83a9",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 800,
+            "y": 275,
+            "z": 25
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_f8cc1dd7-a4b5-4ed7-b194-fc3a2c8e9800",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 312.5,
+          "z": -700
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b4451164-27a3-4810-b176-0d8b07e71da7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 500,
+            "y": 25,
+            "z": 400
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_e97243cc-91eb-4bc9-b7bc-d7f518014939",
+      "name": "Point Light",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 250,
+          "z": 0
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_de74d321-6b2f-41c4-9130-346f0ee79620",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffe0b0",
+          "groundColor": "#444444",
+          "intensity": 2.5,
+          "range": 900,
+          "decay": 2,
+          "power": null,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "shadowBias": -0.0005,
+          "shadowNormalBias": 0.04,
+          "shadowRadius": 2,
+          "shadowBlurSamples": 8,
+          "shadowCameraNear": 0.2,
+          "shadowCameraFar": 80,
+          "shadowCameraSize": 20,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25,
+          "spotMapId": null,
+          "targetActorId": null,
+          "width": 200,
+          "height": 200,
+          "lensflareEnabled": false,
+          "lensflarePreset": "soft",
+          "lensflareElements": [],
+          "showHelper": false
+        }
+      ]
+    },
+    {
+      "id": "actor_44aab66b-5b0d-4a4b-872c-93627ac35ac2",
+      "name": "Point Light",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 225,
+          "z": -700
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "point"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1df0fda3-4b55-48ae-9b36-d4301817cde6",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "point",
+          "color": "#ffffff",
+          "groundColor": "#444444",
+          "intensity": 1.5,
+          "range": 1200,
+          "decay": 2,
+          "power": null,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "shadowBias": -0.0005,
+          "shadowNormalBias": 0.04,
+          "shadowRadius": 2,
+          "shadowBlurSamples": 8,
+          "shadowCameraNear": 0.2,
+          "shadowCameraFar": 80,
+          "shadowCameraSize": 20,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25,
+          "spotMapId": null,
+          "targetActorId": null,
+          "width": 200,
+          "height": 200,
+          "lensflareEnabled": false,
+          "lensflarePreset": "soft",
+          "lensflareElements": [],
+          "showHelper": false
+        }
+      ]
+    },
+    {
+      "id": "actor_b066dd9c-94fc-4392-bcc7-ed356751e113",
+      "name": "Spot Light",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 275,
+          "z": -100
+        },
+        "rotation": {
+          "x": -45,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "light",
+        "spot"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9a1e5f3b-d66d-40ae-b92a-0061ee57ee7e",
+          "type": "Light",
+          "enabled": true,
+          "lightType": "spot",
+          "color": "#ffffff",
+          "groundColor": "#444444",
+          "intensity": 1.5,
+          "range": 1200,
+          "decay": 2,
+          "power": null,
+          "castShadow": true,
+          "shadowMapSize": 1024,
+          "shadowBias": -0.0005,
+          "shadowNormalBias": 0.04,
+          "shadowRadius": 2,
+          "shadowBlurSamples": 8,
+          "shadowCameraNear": 0.2,
+          "shadowCameraFar": 80,
+          "shadowCameraSize": 20,
+          "spotAngle": 45,
+          "spotPenumbra": 0.25,
+          "spotMapId": null,
+          "targetActorId": null,
+          "width": 200,
+          "height": 200,
+          "lensflareEnabled": false,
+          "lensflarePreset": "soft",
+          "lensflareElements": [],
+          "showHelper": false
+        }
+      ]
+    },
+    {
+      "id": "actor_e64df8e4-a9df-42eb-84a2-d43aaf7fc145",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -75,
+          "y": 40,
+          "z": 75
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1ef00ace-34e1-45db-a094-9ba56a29f670",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_2f958774-369c-4754-bb4e-d80629ecc414",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -500,
+          "y": 40,
+          "z": -650
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_ef001b85-4e49-48d3-a8b3-2feb2cb7299e",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_362a27bd-aa01-4f0e-acf1-3bd0ccfdeb7b",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 200,
+          "y": 40,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_730016e1-16d5-41a8-b639-8d6612871e8f",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_4cac6ed9-480f-4988-9758-a6ba2850af9f",
+      "name": "Player Spawn",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 40,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn",
+        "gameplay"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0e20b521-24bb-48b4-8d7d-38289cd94f7b",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ]
+    },
+    {
+      "id": "actor_c4d56ac3-c796-489c-9525-d8103275d29c",
+      "name": "Column",
+      "transform": {
+        "position": {
+          "x": -250,
+          "y": 150,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "column"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6b5102a-693d-4f98-bd1c-091dafae0382",
+          "type": "Column",
+          "enabled": true,
+          "shape": "round",
+          "height": 300,
+          "radius": 25,
+          "sides": 24,
+          "baseEnabled": true,
+          "baseHeight": 20,
+          "baseRadius": null,
+          "capitalEnabled": true,
+          "capitalHeight": 16,
+          "capitalRadius": null,
+          "color": "#8a9098",
+          "collidable": true,
+          "materialId": "mat_hall_stone",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "prefab": {
+        "prefabId": "prefab_6a5e8fb1-7c4f-4d86-bfe9-b6c9d3386224",
+        "instanceId": "pinst_0dcd17b9-bd0f-4ce6-a395-a9c82681d03f",
+        "templateId": "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117",
+        "isRoot": true,
+        "overrides": {
+          "tpl_a2459f13-735c-47f5-8e4b-d12aab3fa117": {
+            "transform": {
+              "position": {
+                "x": -250,
+                "y": 150,
+                "z": 250
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 1,
+                "y": 1,
+                "z": 1
+              }
+            },
+            "components": {
+              "Column": {
+                "materialId": "mat_hall_stone"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "actor_be6bd17a-65ce-4404-9cd2-7e36bf7de91e",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -100,
+          "y": 50,
+          "z": 175
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_decbf02d-3382-4c5a-940f-3c218e746e77",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "VerifyCube:0": "mat_hall_wood"
+          },
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_8e058d09-b5dd-48af-bc4f-ee6ebf00c39e",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -100,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e9e722ff-731f-4de3-98d6-2433d6a086b7",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_71677b2d-8bd7-49ef-9e99-208c9360c9d9",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -50,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d57e8f72-79b8-4259-8870-5eff9c8c034e",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_d06d51b1-9548-4e05-972a-4132db879bdf",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_5a3fa599-8321-4dde-bde8-7a5990f01d96",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_abd968c6-9bb4-4f73-98a7-6a8d91309ac6",
+      "name": "PRINCIPAL BUGGELSBY.jpg",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 50,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 45,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1,
+          "z": 0.9
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_6c1833fd-6391-49b5-8308-23923e64ea9a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_679940e0-1322-4211-a8ec-c224b553b858",
+      "name": "Verify Cube Copy",
+      "transform": {
+        "position": {
+          "x": -100,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_cf911cd2-7512-4590-9f0b-a11b8f1e861f",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_a19e29fb-2c4a-47b8-91fa-d44f369b1535",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_93f5180d-893c-4070-beef-c59f872adce7",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 125,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_c94bbecc-90e5-45a8-81c1-f2ff40f5d86a",
+      "name": "Subtract Box",
+      "transform": {
+        "position": {
+          "x": 225,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7a439c57-7296-4893-91d7-6ee4d2af5860",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 75,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "contentOffset": {
+        "x": 25,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_74861fe3-63e2-4c07-b9ee-2db75eef4398",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -187.5,
+          "y": 100,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 35,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_6fe3dd0a-01b0-4fd2-8401-d7cbc7bb65dc",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 200,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_5271f609-b7f2-4995-99a3-9bbb0976bb65",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7bb965da-7b47-46fb-a648-73c11d300cf5",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_7c337995-d7be-4f04-972d-0dfc11bd79b4",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 500,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c6633293-6b99-456e-9ad9-7006c2897a40",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_d1ae518a-a44e-4d98-bb12-31118b90fb86",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 600,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_bd082659-5003-4d97-8da3-959394d1e616",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_89101d9b-9f1e-47f4-aab2-d6398f1eee2d",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_763609d3-f5e0-4314-b2c2-2b986d943f6c",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_9d82dcc7-7861-4cf8-a693-08128e68de19",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_eec3c4ee-cd2d-4cd6-b4db-92c854142831",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_bb9ab385-d223-49d6-b64d-923932f97307",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9813848f-72cd-4aa2-aa59-9360b947210a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_e021c48d-5bab-4fee-8b4e-9ca86fdaae20",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 850,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_c302d9ca-8613-4f60-8945-ea3d0a6afbc7",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_5b361efe-78f7-4266-91e7-3927c67ada9d",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b7f186dd-1760-42cf-9975-55cd5c31ebf3",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_d0592d6e-641c-4934-9b43-fb9e6e2f7446",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_54241459-a11f-45a9-9e84-f16f1c39c7c2",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_3025a319-24f7-43ef-95f5-d77b64b1b73e",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a8961333-b299-45d6-b1e1-7a0695b2e4a8",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_ec7ff973-b862-48eb-be92-ecf5a31f6df6",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 950,
+          "y": 0,
+          "z": -225
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": "actor_be6bd17a-65ce-4404-9cd2-7e36bf7de91e",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_b7157a54-08a6-46ce-8191-01e7d71c9d4b",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_21dee539-0acc-4c86-8a27-150cc7e1745b",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 1200,
+          "y": 37.5,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_49314697-7856-4311-87ce-9414dc76b212",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 25,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_d7545ed8-a3a6-44ac-98b6-416c0afe5faf",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 1325,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_6dbe6cfa-e1fb-490a-bf33-dbcef6260ef4",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_12a7ad86-d025-4f88-a906-df89c92b961a",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 1400,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_dc116aa4-1724-45d8-8dc4-76537f47475d",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_33f47dd1-e7e8-4658-9960-f1cbd3f704cd",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 1425,
+          "y": 50,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_25487672-3439-481f-add4-1f8af4fbf3a3",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_c9f70f27-8f88-4efc-abd1-7d4d6fe9a325",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 44.99999999999999,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1,
+          "z": 0.9
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": "actor_1386b0a9-e72c-43c5-943c-6c7a23455ccf",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_10accbd9-19cc-4c90-bf88-838bd69fe00b",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "VerifyCube:0": "mat_hall_wood"
+          },
+          "lodLevels": [
+            {
+              "assetId": "mesh_verify_cube",
+              "distance": 0
+            },
+            {
+              "assetId": "mesh_0ded71625564",
+              "distance": 400
+            },
+            {
+              "assetId": "mesh_01bfa6e6d2a6",
+              "distance": 900
+            }
+          ],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_6483646e-82ce-44a1-b326-2bdfcde5ccd7",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 14.731391274719726,
+          "y": 7.105427357601002e-15,
+          "z": 58.925565098878934
+        },
+        "rotation": {
+          "x": 0,
+          "y": -53.130102354155966,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.9820927516479826,
+          "y": 1,
+          "z": 0.9820927516479826
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": "actor_c9f70f27-8f88-4efc-abd1-7d4d6fe9a325",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_570b5e96-a49d-4562-ac10-335daec16c02",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_bf537205-d700-42c1-b6d1-9176b985241d",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -50,
+          "y": 75,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_f9a2eecc-e0e8-468f-a5d2-1c710620d1a6",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_774d683a-e736-4933-968b-6c62b84d5a20",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_30dd2b17-0ce5-43d8-9bcc-a36b2f9c0c9a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_53856503-7c93-4e65-92b0-33a09111709c",
+      "name": "PRINCIPAL BUGGELSBY.jpg",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 50,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_631cfbe9-8d28-413a-8186-4e8811da2a33",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_1c443189-aba9-4446-9b80-c6ba125f77f9",
+      "name": "Verify Cube Copy",
+      "transform": {
+        "position": {
+          "x": -100,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 45,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1,
+          "z": 0.9
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_35f7b027-4284-4b14-a184-34ec15279b21",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_29f7b253-6212-431d-b748-0e2ecb86dc8c",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_6f7dca51-82c7-4e7a-a2e5-33728f6b7c32",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 125,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_ab19736c-d858-4d62-ab1b-14571a11b263",
+      "name": "Subtract Box",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_86aa46ab-6ac6-48aa-a101-4189b8be5292",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 75,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_b9a70403-b477-416a-8c3e-f38941d48dbc",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -200,
+          "y": 100,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 35,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a3fcc6b8-91bb-4f74-8798-641227abb291",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 200,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "contentOffset": {
+        "x": 12.5,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_7e83d6e0-a1ea-45b7-80e4-a62f167871b2",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_96b09be4-34f6-449c-a681-b9311219d8a3",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_metal",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_18f1fe81-e16e-4312-8d44-57647aeb865d",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 500,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_de3cf54d-3773-41f3-851d-8e8f6a037e2b",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_glass",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_1e75c493-c9db-49b0-bf6a-c5f93ee08abf",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 600,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_36fdcd2f-a79a-498d-98a5-c291beb1b1d6",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_sheen",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_2397cc35-109c-43b8-a77a-ade6df7d07a5",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_fe90c094-f6ae-4850-99ba-9a9b48f8fcd2",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_0516723d-eaea-4628-92f1-1497d19ced5b",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_37d14abf-8e73-4290-a14f-c7d15a316036",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_b4e021c0-907e-448c-a835-2e7214ebe607",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a64cd914-4734-4eed-b870-6fe3103a3152",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_ddc3ed6f-0d59-4262-a8a3-d205863878bd",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 850,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_da8cd075-4bbc-4ae6-8c83-2bfd9c447d55",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_706dcf16-8366-4754-99bf-aec6ebe67651",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9673b136-40c6-49a9-b008-20c496b24aee",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_1abcf98d-f98d-4a18-b423-5ab2cc70b99c",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_0e8a7d9d-7272-4551-8b8b-e4a21db66aea",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_78b8f932-77a2-4875-b67c-0aaa4041e306",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_44107694-60cd-4b9a-9db9-77f4198f27ad",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_8d6d2a12-16de-4721-8519-14e813ebc90f",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 850,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7b26008f-76fe-4eb6-90f6-0a5fdf2676e6",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_e8cf4493-0bb8-437c-a385-a5ed416fae80",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 50,
+          "y": 50,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.1,
+          "y": 1.1,
+          "z": 1.1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_30dd2b17-0ce5-43d8-9bcc-a36b2f9c0c9a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      },
+      "prefab": {
+        "prefabId": "prefab_8754d034-983c-45f0-b9c0-136947ffa2b4",
+        "instanceId": "pinst_acd48926-3804-4ea3-b0e8-ad6a72f722c0",
+        "templateId": "tpl_7776f504-103a-4de5-a327-b49a42225ed9",
+        "isRoot": true,
+        "overrides": {
+          "tpl_7776f504-103a-4de5-a327-b49a42225ed9": {
+            "transform": {
+              "position": {
+                "x": 50,
+                "y": 50,
+                "z": 300
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 1.1,
+                "y": 1.1,
+                "z": 1.1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "actor_92d6e8e9-7895-4636-b024-74e443b28335",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -150,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 44.99999999999999,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1,
+          "z": 0.9
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": "actor_1386b0a9-e72c-43c5-943c-6c7a23455ccf",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e8de42b1-f8d3-4a27-8bbb-0cf8c467ed3e",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "VerifyCube:0": "mat_hall_wood"
+          },
+          "lodLevels": [
+            {
+              "assetId": "mesh_verify_cube",
+              "distance": 0
+            },
+            {
+              "assetId": "mesh_6d126b5d1b19",
+              "distance": 400
+            },
+            {
+              "assetId": "mesh_5644585d324f",
+              "distance": 900
+            }
+          ],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_854ca2df-1262-4f74-9650-f4e128ce9dff",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 14.731391274719726,
+          "y": 7.105427357601002e-15,
+          "z": 58.925565098878934
+        },
+        "rotation": {
+          "x": 0,
+          "y": -53.130102354155966,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.9820927516479826,
+          "y": 1,
+          "z": 0.9820927516479826
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": "actor_92d6e8e9-7895-4636-b024-74e443b28335",
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_21221a7c-9d40-4f2a-9874-da563c1a71b6",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_73845be9-da6c-406c-b825-3d2a4ee6aa0f",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": -50,
+          "y": 75,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_267bfa24-a461-4936-9992-7ab415e65e60",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 50,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_6519314e-193e-4433-ae47-0c6bfe4c7d12",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d1c71a27-ff3f-41f2-881d-8760805da1f9",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_a4b1b374-b292-49c0-a05a-5f08abae9745",
+      "name": "PRINCIPAL BUGGELSBY.jpg",
+      "transform": {
+        "position": {
+          "x": 100,
+          "y": 50,
+          "z": 100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_bc3c99f8-6799-4d73-b14b-76375387d76f",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_c34066cb0284",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_d64fc4a1-9b47-48b7-b881-b4162367a7e0",
+      "name": "Verify Cube Copy",
+      "transform": {
+        "position": {
+          "x": -100,
+          "y": 50,
+          "z": 150
+        },
+        "rotation": {
+          "x": 0,
+          "y": 45,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.2,
+          "y": 1,
+          "z": 0.9
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_9e2e7fa8-5ca3-4d6d-b4e3-ddb51767e65a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_26b24f81-081c-4726-a58b-52b04cff58ae",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_349540f5-db4a-4092-af3f-f3fd4c8bf32c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 125,
+            "z": 50
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_81f8aeb1-4110-456f-961b-b08fc7aaafed",
+      "name": "Subtract Box",
+      "transform": {
+        "position": {
+          "x": 250,
+          "y": 87.5,
+          "z": 250
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box",
+        "subtract"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_df4fc093-5d10-45ea-be92-b40f0aba0d00",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 50,
+            "y": 75,
+            "z": 50
+          },
+          "color": "#c23b4a",
+          "collidable": false,
+          "materialId": null,
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "subtract",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_4e91b04c-e569-4abf-a991-18051fdfd0d9",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": -200,
+          "y": 100,
+          "z": -550
+        },
+        "rotation": {
+          "x": 0,
+          "y": 35,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_00e3dcf3-d03a-49cf-86cb-187222601337",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 25,
+            "y": 200,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_hall_wood",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ],
+      "contentOffset": {
+        "x": 12.5,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_2f5e260f-2a1e-4d75-9f9e-2d84c8e5c04b",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 400,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_7bb2a947-cc57-40f1-8293-d67564d517ff",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_metal",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_8128f404-8ae7-4746-8e8d-6d204b857751",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 500,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a93d8a49-dfd9-4563-8a80-4ac510ad9c33",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_glass",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_a10ba75e-2be8-4636-8817-c8a8fc0b03a8",
+      "name": "Box",
+      "transform": {
+        "position": {
+          "x": 600,
+          "y": 62.5,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "box"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d3afed18-b323-4c92-bd9a-708e0080517c",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 100,
+            "y": 75,
+            "z": 100
+          },
+          "color": "#8a9099",
+          "collidable": true,
+          "materialId": "mat_batch2_sheen",
+          "faceMaterials": null,
+          "faceUVs": null,
+          "operation": "add",
+          "miterStart": 0,
+          "miterEnd": 0,
+          "uv": {
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "actor_de12bcad-1a60-4b01-a9bd-e9d5b21005cf",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_55723777-ecd2-4aa5-b4ae-6bde9b08dc5d",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_eb1df472-a386-49fb-96b8-9746a6edba47",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_278f0895-baec-421f-a518-cbb46287f9db",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_1b0240fb-19a9-473a-8295-1fcafa831e42",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_3ea2d328-1a84-4c58-97df-c1d1ca0a983e",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_75eb5183-4004-422b-8c27-070f7da071fa",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 850,
+          "y": 50,
+          "z": -100
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e72ea2b8-eeb2-4bf5-824a-1e627a60efb2",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_d537c498-e436-4778-bdc0-075fa1aea885",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 700,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_a85ab725-4286-4875-a0ab-c8b4ebfd187d",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_2d16a637-467a-4e75-ae82-ef2c6dca76e3",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 750,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_85e5408f-0c1b-4e64-bcc7-a4f7fd8931f9",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_04e4dacc-ed0b-442d-a0d6-9a21815d139f",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 800,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_1f2ec8dd-0a5f-406c-9790-0bbc3a60865c",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_9ba7596d-95ae-4663-9bb1-0a8b6d315dff",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 850,
+          "y": 50,
+          "z": -50
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_e089d4d7-4046-4a15-81c3-30a673297e02",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    },
+    {
+      "id": "actor_48ba78cb-f25e-44fe-b593-2be5874f3abd",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 50,
+          "y": 50,
+          "z": 300
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.1,
+          "y": 1.1,
+          "z": 1.1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_d1c71a27-ff3f-41f2-881d-8760805da1f9",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      },
+      "prefab": {
+        "prefabId": "prefab_0c9beaa3-6d2e-4cb3-84dc-123a741b06ae",
+        "instanceId": "pinst_4b0388ff-6ede-4b93-a1db-240777557bb1",
+        "templateId": "tpl_106f6488-cde9-442d-8c29-1b78ecbcbba8",
+        "isRoot": true,
+        "overrides": {
+          "tpl_106f6488-cde9-442d-8c29-1b78ecbcbba8": {
+            "transform": {
+              "position": {
+                "x": 50,
+                "y": 50,
+                "z": 300
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 1.1,
+                "y": 1.1,
+                "z": 1.1
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

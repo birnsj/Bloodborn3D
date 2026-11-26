@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "prefab_8754d034-983c-45f0-b9c0-136947ffa2b4",
+  "name": "Integrated Furniture Prefab",
+  "type": "prefab",
+  "rootTemplateIds": [
+    "tpl_7776f504-103a-4de5-a327-b49a42225ed9"
+  ],
+  "actors": [
+    {
+      "id": "tpl_7776f504-103a-4de5-a327-b49a42225ed9",
+      "name": "Verify Cube",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 50,
+          "z": 200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "mesh",
+        "prop"
+      ],
+      "parentId": null,
+      "visible": true,
+      "locked": false,
+      "components": [
+        {
+          "id": "comp_30dd2b17-0ce5-43d8-9bcc-a36b2f9c0c9a",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_verify_cube",
+          "collidable": false,
+          "collisionType": "none",
+          "collisionSize": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {},
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ],
+      "contentOffset": {
+        "x": 0,
+        "y": 75,
+        "z": 0
+      }
+    }
+  ],
+  "nestedPrefabIds": [],
+  "createdAt": 1795734444733,
+  "updatedAt": 1795734444736
+}

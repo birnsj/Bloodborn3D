@@ -137,6 +137,7 @@ import { normalizeStaticMeshFields } from '../components/StaticMeshComponent.js'
 import { createCellActor } from './cellFactory.js';
 import { createPlayerSpawnActor } from './spawnFactory.js';
 import { useAssetBrowser } from './assets/AssetBrowserContext.jsx';
+import { findAsset } from '../assets/AssetRegistry.js';
 import {
   getWorldTransform,
   reparentActor,
@@ -207,6 +208,7 @@ export function EditorProvider({ children }) {
   const {
     assetResolver,
     revision: assetRevision,
+    registry: assetRegistry,
     savePrefabDefinition,
     getPrefabDefinition,
     getPrefabDefinitionSync,
@@ -924,6 +926,10 @@ export function EditorProvider({ children }) {
     } else {
       next = ids.filter(Boolean);
     }
+    // Keep selectedRef in sync immediately so follow-up APIs
+    // (apply material, transform, pivot, delete) see the new selection
+    // before the next React render.
+    selectedRef.current = next;
     setSelectedActorIds(next);
     syncSelectionVisual(next);
     // Actor selection clears surface pick unless the surface actor stays selected.
@@ -2903,10 +2909,13 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || !asset?.id) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
-    const metaOffset = asset?.meta?.defaultContentOffset;
+    // Prefer live registry meta so Asset Viewer pivot Apply is inherited even if
+    // the caller still holds a stale asset object from before the meta patch.
+    const live = findAsset(assetRegistry, asset.id);
+    const metaOffset = live?.meta?.defaultContentOffset ?? asset?.meta?.defaultContentOffset;
     const actor = createStaticMeshActor({
       assetId: asset.id,
-      name: asset.name || 'Static Mesh',
+      name: asset.name || live?.name || 'Static Mesh',
       position: position || { x: 0, y: 50, z: 0 },
       rotation: options.rotation,
       gridSize: g,
@@ -2924,7 +2933,7 @@ export function EditorProvider({ children }) {
       { selectIds: [actor.id] },
     );
     return actor;
-  }, [world, mode, executeCommand]);
+  }, [world, mode, executeCommand, assetRegistry]);
 
   const placeLight = useCallback((lightType = 'point', position, options = {}) => {
     if (!world || mode === 'play') return null;

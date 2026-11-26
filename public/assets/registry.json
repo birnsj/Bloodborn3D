@@ -41,12 +41,12 @@
         "previewBytes": 5753,
         "defaultContentOffset": {
           "x": 0,
-          "y": 50,
+          "y": -75,
           "z": 0
         }
       },
       "createdAt": 1795405329387,
-      "updatedAt": 1795733682034
+      "updatedAt": 1795734480779
     },
     {
       "id": "mat_verify_wall",
@@ -1690,6 +1690,210 @@
       },
       "createdAt": 1795721996021,
       "updatedAt": 1795721996021
+    },
+    {
+      "id": "mesh_214d8208a300",
+      "kind": "mesh",
+      "name": "Verify Cube LOD1",
+      "folder": "Meshes",
+      "path": "meshes/mesh_214d8208a300.glb",
+      "originalName": "Verify Cube LOD1.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_214d8208a300_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734213760,
+      "updatedAt": 1795734215652
+    },
+    {
+      "id": "mesh_d641ae6b76c3",
+      "kind": "mesh",
+      "name": "Verify Cube LOD2",
+      "folder": "Meshes",
+      "path": "meshes/mesh_d641ae6b76c3.glb",
+      "originalName": "Verify Cube LOD2.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_d641ae6b76c3_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734214410,
+      "updatedAt": 1795734216878
+    },
+    {
+      "id": "prefab_eda93e0c-e80f-488b-8322-90a5faa68813",
+      "kind": "prefab",
+      "name": "Integrated Furniture Prefab",
+      "folder": "Prefabs",
+      "path": "prefabs/prefab_eda93e0c-e80f-488b-8322-90a5faa68813.json",
+      "originalName": "prefab_eda93e0c-e80f-488b-8322-90a5faa68813.json",
+      "tags": [],
+      "meta": {
+        "actorCount": 1,
+        "nestedCount": 0,
+        "rootCount": 1
+      },
+      "createdAt": 1795734215057,
+      "updatedAt": 1795734215061
+    },
+    {
+      "id": "mesh_0ded71625564",
+      "kind": "mesh",
+      "name": "Verify Cube LOD1",
+      "folder": "Meshes",
+      "path": "meshes/mesh_0ded71625564.glb",
+      "originalName": "Verify Cube LOD1.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_0ded71625564_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734442827,
+      "updatedAt": 1795734444762
+    },
+    {
+      "id": "mesh_01bfa6e6d2a6",
+      "kind": "mesh",
+      "name": "Verify Cube LOD2",
+      "folder": "Meshes",
+      "path": "meshes/mesh_01bfa6e6d2a6.glb",
+      "originalName": "Verify Cube LOD2.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_01bfa6e6d2a6_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734443641,
+      "updatedAt": 1795734446903
+    },
+    {
+      "id": "prefab_8754d034-983c-45f0-b9c0-136947ffa2b4",
+      "kind": "prefab",
+      "name": "Integrated Furniture Prefab",
+      "folder": "Prefabs",
+      "path": "prefabs/prefab_8754d034-983c-45f0-b9c0-136947ffa2b4.json",
+      "originalName": "prefab_8754d034-983c-45f0-b9c0-136947ffa2b4.json",
+      "tags": [],
+      "meta": {
+        "actorCount": 1,
+        "nestedCount": 0,
+        "rootCount": 1
+      },
+      "createdAt": 1795734444733,
+      "updatedAt": 1795734444736
+    },
+    {
+      "id": "mesh_6d126b5d1b19",
+      "kind": "mesh",
+      "name": "Verify Cube LOD1",
+      "folder": "Meshes",
+      "path": "meshes/mesh_6d126b5d1b19.glb",
+      "originalName": "Verify Cube LOD1.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_6d126b5d1b19_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734472800,
+      "updatedAt": 1795734474715
+    },
+    {
+      "id": "mesh_5644585d324f",
+      "kind": "mesh",
+      "name": "Verify Cube LOD2",
+      "folder": "Meshes",
+      "path": "meshes/mesh_5644585d324f.glb",
+      "originalName": "Verify Cube LOD2.glb",
+      "tags": [
+        "derived",
+        "lod",
+        "integrated-acceptance"
+      ],
+      "meta": {
+        "format": "glb",
+        "bytes": 2056,
+        "unitAssumption": "meters",
+        "editorUnitsPerMeter": 100,
+        "scaleWarning": null,
+        "relationship": "derived",
+        "derivedFrom": "mesh_verify_cube",
+        "previewPath": "previews/mesh_5644585d324f_mesh.png",
+        "previewBytes": 5811
+      },
+      "createdAt": 1795734473587,
+      "updatedAt": 1795734476108
+    },
+    {
+      "id": "prefab_0c9beaa3-6d2e-4cb3-84dc-123a741b06ae",
+      "kind": "prefab",
+      "name": "Integrated Furniture Prefab",
+      "folder": "Prefabs",
+      "path": "prefabs/prefab_0c9beaa3-6d2e-4cb3-84dc-123a741b06ae.json",
+      "originalName": "prefab_0c9beaa3-6d2e-4cb3-84dc-123a741b06ae.json",
+      "tags": [],
+      "meta": {
+        "actorCount": 1,
+        "nestedCount": 0,
+        "rootCount": 1
+      },
+      "createdAt": 1795734474715,
+      "updatedAt": 1795734474725
     }
   ]
 }
