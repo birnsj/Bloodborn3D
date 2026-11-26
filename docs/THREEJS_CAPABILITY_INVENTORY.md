@@ -1,536 +1,581 @@
 # BloodBound — Native Three.js Capability Inventory
 
-**Audit date:** 2026-11-26  
+**Audit date:** 2026-11-26 (revised)  
 **Installed Three.js:** `0.187.0` (`REVISION = '187'`)  
 **Related libraries:** `postprocessing@6.39.6` (pmndrs), `@dimforge/rapier3d-compat@0.21.0`  
-**Scope:** Audit and planning only. No application code, dependency, or package changes in this task.  
-**Milestone context:** Complete the base **geometry and environment authoring** layer. Multi-viewport fog/PP isolation is a separate completed track — do not re-plan it here.
+**Document type:** Audit and planning only. No application or dependency changes until this revision is approved.  
+**Milestone:** Complete the base **geometry and environment authoring** layer.
 
-### Principles (from brief)
+### Principles
 
 - Native Three.js first → official addons → existing integrated libraries → custom only when necessary.
-- Do **not** integrate the Three.js Editor.
-- Preserve engine-neutral JSON schemas and actor/component architecture.
-- Keep renderer-specific code behind `SceneView` / material / mesh adapters.
-- Do not replace working custom systems without a clear benefit.
+- Do **not** integrate the Three.js Editor; do **not** introduce WebGPU; do **not** upgrade dependencies.
+- Preserve engine-neutral JSON schemas, actor/component architecture, shared scene + single renderer, multi-viewport isolation, pmndrs postprocessing, constructive brushes, atmosphere, and custom gizmos.
+- Defer **gameplay / character animation / dialogue / AI characters** — not environment dressing.
 
 ### Status legend
 
 | Status | Meaning |
 |--------|---------|
 | **Complete** | Fully integrated and exposed |
-| **Partial** | Integrated but missing properties, wiring, or fidelity |
-| **Missing** | Available natively / via addon but not integrated |
+| **Partial** | Integrated but missing properties or fidelity |
+| **Missing** | Available natively / via WebGL-compatible addon; not integrated |
 | **Internal** | Used internally; no authoring UI required |
-| **Redundant** | Custom path that may duplicate native capability |
-| **Incompatible** | Unsupported by current WebGL / architecture choices |
-| **Deferred** | Relevant later (gameplay / animation / WebGPU / etc.) |
+| **Redundant** | Custom path that overlaps native — keep unless benefit proven |
+| **Incompatible** | Unsupported on current WebGL / single-renderer architecture |
+| **Deferred** | Explicitly outside this milestone (gameplay / WebGPU / etc.) |
 | **N/A** | No meaningful BloodBound application |
+
+### Complexity / value
+
+- Complexity: **S** small · **M** medium · **L** large  
+- Value: **H** / **M** / **L** within the **geometry + environment** milestone
+
+---
+
+## Revision summary (vs first draft)
+
+### Additions
+
+- Environmental object types restored to milestone scope: **Lensflare**, **DecalGeometry**, **Reflector**, **Refractor**, **Water / Water2**, **Sprite / billboards**, **Sky**, **GroundedSkybox**.
+- Native **primitive mesh actors** and procedural geometries treated as **additional tools**, not replacements for constructive brushes.
+- Full **MeshStandard / MeshPhysical / Basic / Toon / Matcap** property coverage called out.
+- **Editor authoring layers** (Architecture, Furniture, Props, Lighting, Collision, Reference, Gameplay) — independent of cells, prefabs, hierarchy, and `THREE.Layers`.
+- Asset tools: **SimplifyModifier**, **BufferGeometryUtils**, exporters, DRACO / KTX2 / Meshopt, normals/tangents/bounds diagnostics, centering/pivot.
+- Texture asset-level sampling props; StaticMesh render/LOD/instance/batch/collision expansions.
+- Backlog reorganized into **nine cohesive batches** with P0–P2 inside each and cross-batch dependencies.
+
+### Omissions corrected
+
+| Earlier mistake | Correction |
+|-----------------|------------|
+| Lensflare / Water / Reflector / Decals deferred as “gameplay” | **In milestone** — environment authoring |
+| Native primitives “N/A” because brushes exist | **Missing** authoring tools — different purpose |
+| Sky / GroundedSkybox under-represented | Explicit inventory + Map Settings batch |
+| MeshBasic / Toon / Matcap omitted | Materials batch |
+| Editor organization / layers omitted | New Batch 9 |
+| Asset diagnostics / exporters thin | Batch 7 expanded |
+| `GroundedSkybox` listed under `environments/` | Confirmed under `examples/jsm/objects/GroundedSkybox.js` |
+| Meshopt as missing loader file | Decoder at `examples/jsm/libs/meshopt_decoder.module.js` (wire via GLTFLoader) |
+
+### Priority changes
+
+- Environment maps, Sky, Hemisphere/RectArea, Physical materials, Decals/Reflector/Water, and native primitives move **into** the active backlog (not deferred).
+- WebGPU-only `*Mesh` variants (`SkyMesh`, `WaterMesh`, `LensflareMesh`, …) marked **Incompatible** for this stack — use WebGL classes (`Sky`, `Water`/`Water2`, `Lensflare`).
+- Official Three `EffectComposer` remains **N/A** (pmndrs retained).
+- Multi-viewport fog/PP isolation remains **Complete** — maintain only; not re-planned.
+
+### Compatibility findings (r187, WebGL)
+
+| API | WebGL path | Notes |
+|-----|------------|-------|
+| Sky | `objects/Sky.js` | Do not use `SkyMesh` |
+| Water | `Water.js` / `Water2.js` | Do not use `WaterMesh` / `Water2Mesh` |
+| Lensflare | `Lensflare.js` | Do not use `LensflareMesh` |
+| Reflector / Refractor | Own `WebGLRenderTarget` | Per-object RT; resize with viewport/DPR; dispose on actor remove; multi-pane must not assume full-canvas size |
+| RectAreaLight | + `RectAreaLightUniformsLib.init()` once | WebGL required |
+| HDR / EXR | `HDRLoader`, `EXRLoader` | Prefer `HDRLoader` over deprecated `RGBELoader` |
+| DRACO / Basis / Meshopt | `libs/draco`, `libs/basis`, `libs/meshopt_decoder.module.js` | Bundle or CDN decoder assets |
+| `PCFSoftShadowMap` | Deprecated → behaves as PCF | Relabel UI |
+| `scene.backgroundBlurriness` / `backgroundRotation` | Confirmed on `Scene` | Blur needs texture/env background |
+| `environmentIntensity` / `environmentRotation` | Confirmed on `Scene` | |
+
+### Remaining uncertainties
+
+- Reflector/Refractor quality vs cost with **multi-pane scissor** + shared scene (may need RT sized to active pane or max pane, and disable in ortho).
+- Water2 vs Water — which default for interior/exterior mansions (recommend Water2 for visuals, gate behind creation tool).
+- Whether native primitive actors share `StaticMesh`-like collision or a new `PrimitiveMesh` component — recommend new component or `StaticMesh` with `primitive:` payload to keep GLTF path clean.
+- Authoring-layer persistence: editor preference vs level JSON (recommend **level-authored** layer membership on actors + editor visibility prefs).
+- MeshPhysical transmission + pmndrs DoF/SSAO interaction — verify when implementing Physical materials.
 
 ---
 
 ## 0. Package surface
 
-| Export | Path | Role in BloodBound |
-|--------|------|------------------|
-| `three` | `build/three.module.js` | **Active** — WebGL core |
-| `three/addons/*` | `examples/jsm/*` | **Partial** — few imports (see §0.1) |
-| `three/webgpu` | `build/three.webgpu.js` | **Deferred / Incompatible** for current WebGL editor |
-| `three/tsl` | `build/three.tsl.js` | **Deferred** |
-| npm `postprocessing` | pmndrs EffectComposer | **Complete** — chosen FX stack (not official Three passes) |
+| Export | Role |
+|--------|------|
+| `three` | **Active** WebGL core |
+| `three/addons/*` | Official addons (**partially** used) |
+| `three/webgpu`, `three/tsl` | **Deferred / Incompatible** this milestone |
+| npm `postprocessing` | **Complete** FX stack |
 
-### 0.1 Official addons actually imported
+### 0.1 Addons / APIs already imported
 
-| API | File(s) | Status |
-|-----|---------|--------|
-| `OrbitControls` | `Viewport.jsx`, `MeshPreviewCanvas.jsx`, `MeshyModelPreview.jsx` | Complete (editor nav) |
-| `GLTFLoader` | `meshLoader.js` | Partial (GLB/GLTF only; no DRACO/KTX2/meshopt) |
-| `RoomEnvironment` | `studioEnvironment.js` | Partial (fixed studio IBL; not user HDRI) |
-| `Line2` / `LineGeometry` / `LineMaterial` | `SceneView.js` | Internal (selection / edge overlays) |
-
----
-
-## 1. Coverage summary by category
-
-| Category | Complete | Partial | Missing (high value) | Notes |
-|----------|----------|---------|----------------------|-------|
-| Map / World Settings | Background color, fog linear/exp2, tone map, shadow type, ambient fill | Env intensity via ambient; `backgroundBlurriness` on Color | Authored HDRI / `scene.environment`, outputColorSpace, renderer MSAA | Strong world schema |
-| Object Types / Creation | Brush family, convex, arch/column/ramp/stair/curve, lights, spawn, static mesh | Ambient light not on toolbar | Hemisphere, RectArea, Sky, Water, Reflector, InstancedMesh actors | Architecture-first |
-| Object Components / Details | Transform, visibility, materials/UV layers, light basics, mesh collidable | Shadow bias/camera, mesh animation | SkinnedMesh/Bone components | Engine-neutral OK |
-| Lighting | Point/Spot/Dir/Ambient actors + world ambient | Shadow quality knobs hardcoded | Hemisphere, RectArea (+UniformsLib), LightProbe, CSM, IES | |
-| Geometry | Procedural architecture + ConvexBrush edits | Native primitives as actors | DecalGeometry, TextGeometry, RoundedBox as tools | Custom CSG path intentional |
-| Static Meshes | GLTF place + box collision | No format variety / GPU compression | FBX/OBJ/STL, DRACO, KTX2, mesh collider | |
-| Materials Workspace | MeshStandard PBR core + 5 maps + UV L2 | No AO/disp/physical | MeshPhysical clearcoat/transmission/sheen; alphaMap | |
-| Texture Properties | Asset registry + material map refs | Wrap/filter/colorSpace fixed in adapter | Per-texture authoring, VideoTexture | |
-| Environmental Effects | Fog + drift + AtmosphereController | Studio RoomEnvironment only | HDRI, Sky, GroundedSkybox, height fog | Custom atmosphere complements fog |
-| Post-Processing | Full pmndrs catalog in UI | Input-gated effects need actors/textures | Official Three passes (N/A — pmndrs chosen) | Isolation tracked separately |
-| Asset Viewer | Texture/mesh/material import + thumbs | — | HDR/EXR preview as env | |
-| Content Browser | Kind folders | — | — | |
-| Viewport Settings | Multi-pane, display modes, fog/PP toggles, ortho clear | — | TransformControls addon, ViewHelper | |
-| Editor Settings | Camera, grid, snap, viewport colors | — | — | Prefs localStorage |
-| Rendering / Optimization | Incremental sync, world-solid batching, shadow types | BatchedMesh limited use | Meshopt, LOD actors, official SceneOptimizer | |
+| API | Files | Status |
+|-----|-------|--------|
+| `OrbitControls` | Viewport, mesh previews | Complete |
+| `GLTFLoader` | `meshLoader.js` | Partial (no DRACO/KTX2/Meshopt yet) |
+| `RoomEnvironment` | `studioEnvironment.js` | Partial (fixed studio IBL) |
+| `Line2` family | `SceneView.js` | Internal |
 
 ---
 
-## 2. Categorized capability inventory
+## 1. Coverage summary
 
-Each entry: **API** · purpose · BloodBound state · files · exposed / missing · editor location · serialize / runtime · deps · complexity · value · **Status**.
+| Category | Complete | Partial | Missing (milestone-relevant) |
+|----------|----------|---------|------------------------------|
+| Map / World | BG color, fog, tone, shadows, ambient fill, atmosphere | Env via RoomEnvironment; blurriness on Color | HDRI/EXR env, env intensity/rotation, Sky, GroundedSkybox, LightProbe, outputColorSpace |
+| Lighting | Point/Spot/Dir/Ambient | Shadow/decay hardcoded | Hemisphere, RectArea, Lensflare, shadow props, targets, spot map, helpers |
+| Materials | Standard core maps | — | Full Standard maps; Physical; Basic/Toon/Matcap; side/alpha |
+| Environmental objects | Atmosphere fog layers | — | Decal, Reflector, Refractor, Water/Water2, Sprite, Sky |
+| Geometry | Constructive brushes + ConvexBrush | — | Native primitives + RoundedBox/Lathe/Tube/Extrude/Shape/Text/Parametric/ConvexGeometry tools |
+| Static meshes | GLTF + box collision | — | Shadows toggles, overrides, LOD, instance/batch, renderOrder, collision varieties |
+| Textures | Asset refs | Fixed sampler in adapter | Wrap/filter/mip/aniso/colorSpace/channel/transform/compression |
+| Asset tools | Import texture/mesh, thumbs | — | Simplify, BufferGeometryUtils, exporters, DRACO/KTX2/Meshopt, diagnostics |
+| Editor organization | Cells/prefabs/hierarchy | — | Authoring layers + solo/lock/vis |
+| Viewport | Multi-pane, fog/PP chips, ortho clear | — | ViewHelper, light helpers as opt-in |
+| Post-processing | pmndrs catalog | Input-gated UX | Official Three passes = N/A |
 
-Complexity: **S** small · **M** medium · **L** large.  
-Value: **H** high for current milestone · **M** medium · **L** low / later.
+---
+
+## 2. Capability inventory
+
+Columns: **API** · purpose · BloodBound · files · exposed · missing · editor location · schema · serialize · runtime · multi-viewport · GPU dispose · WebGL · Cx · Val · **Status**.
 
 ---
 
 ### 2.1 Map / World Settings
 
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Location | Ser / RT | Deps | Cx | Val | Status |
-|------------|------------|----------|-------|---------|---------|----------|----------|------|----|-----|--------|
-| Scene background color | `Scene.background` Color | Yes | `World.js`, `SceneView._syncSceneFromWorld`, DetailsPanel | color, intensity | env-as-background | World → Scene | Y / Y | — | S | H | **Complete** |
-| Background blurriness | `backgroundBlurriness` | UI + schema | same | blurriness 0–1 | Only meaningful with texture/env background | World → Scene | Y / Y | — | S | M | **Partial** |
-| Scene environment map | `Scene.environment` + PMREM | Fixed `RoomEnvironment` only | `studioEnvironment.js` | (via ambient intensity) | User HDRI asset, intensity/rotation as first-class | World → Scene / Environment | N / Y | HDRLoader, PMREM | M | H | **Partial** |
-| Fog linear | `THREE.Fog` | Yes | World, SceneView, DetailsPanel | type, color, near, far (eu→m) | — | World → Scene | Y / Y | — | S | H | **Complete** |
-| Fog exp2 | `THREE.FogExp2` | Yes | same | density | — | World → Scene | Y / Y | — | S | H | **Complete** |
-| Fog drift | Custom modulation | Yes | `fogDriftFactor`, SceneView | drift, speed, amount | — | World → Scene | Y / Y | — | S | M | **Complete** (custom) |
-| Atmosphere mist/noise/volumetric | Custom shaders/particles | Yes | `AtmosphereController.js` | mist/noise/volumetric fields | Depth-buffered volume (soft depth only) | World → Scene | Y / Y | — | L | H | **Complete** for milestone |
-| World ambient fill | AmbientLight + IBL scale | Yes | World ambient, SceneView | color, edit/play intensity | Separate from Light actors | World → Ambient | Y / Y | RoomEnvironment | S | H | **Complete** |
-| Tone mapping | `WebGLRenderer.toneMapping` | Yes | World renderer, SceneView | mode enum + exposure | PP may override when composing | World → Renderer | Y / Y | — | S | H | **Complete** |
-| Shadow map global | `renderer.shadowMap` | Yes | World renderer | enabled, type Basic/PCF/PCFSoft/VSM | PCFSoft deprecated in r187 | World → Renderer | Y / Y | — | S | H | **Partial** |
-| Output color space | `outputColorSpace` | Assumed sRGB | SceneView ctor | — | Authorable toggle | World → Renderer | N / Y | — | S | M | **Missing** |
-| Renderer antialias / MSAA | ctor `antialias` / PP multisampling | PP multisampling only | PostProcessingSettings | 0/2/4/8 when PP on | WebGLRenderer MSAA independent of PP | World → PP / Renderer | Y / Y | — | S | M | **Partial** |
-| Physically correct lights / legacy | removed / default | N/A modern three | — | — | — | — | — | — | — | — | **N/A** |
+| Capability | API | BB today | Files | Exposed | Missing | Editor | Schema | Ser | RT | Multi-view | GPU | WebGL | Cx | Val | Status |
+|------------|-----|----------|-------|---------|---------|--------|--------|-----|----|------------|-----|-------|----|-----|--------|
+| Background color | `Scene.background` Color | Yes | World, SceneView, DetailsPanel | color, intensity | — | World → Scene | `scene.background*` | Y | Y | Ortho uses editor clear | N/A | Y | S | H | **Complete** |
+| Background as env/sky texture | `background` Texture | No | — | — | equirect/cube as BG | World → Scene | `backgroundType` | — | — | Per-pane OK | tex dispose | Y | M | H | **Missing** |
+| Background blurriness | `backgroundBlurriness` | Schema+UI | World | 0–1 | Needs tex/env BG | World → Scene | exists | Y | Y | OK | N/A | Y | S | M | **Partial** |
+| Background rotation | `backgroundRotation` Euler | No | Scene.js confirmed | — | euler degrees | World → Scene | add | — | — | OK | N/A | Y | S | M | **Missing** |
+| Environment map (HDRI/EXR) | `HDRLoader`/`EXRLoader` + PMREM + `scene.environment` | Fixed RoomEnvironment | studioEnvironment.js | ambient-linked intensity only | Asset id, intensity, rotation | World → Environment | `environmentAssetId`, intensity, rotation | — | — | Shared env OK | PMREM RT dispose/rebuild | Y | M | H | **Missing** |
+| Environment intensity | `environmentIntensity` | Via ambient fill approx | SceneView | — | First-class | World → Environment | add | — | — | OK | N/A | Y | S | H | **Missing** |
+| Environment rotation | `environmentRotation` | No | — | — | euler | World → Environment | add | — | — | OK | N/A | Y | S | H | **Missing** |
+| Procedural sky | `addons/objects/Sky.js` | No | — | — | turbidity, mie, sun position | World / Creation | sky component or world.sky | — | — | Hide in ortho optional | mat dispose | Y (not SkyMesh) | M | H | **Missing** |
+| Grounded skybox | `addons/objects/GroundedSkybox.js` | No | — | — | height, radius, map | World | — | — | — | OK | geo/mat | Y | M | M | **Missing** |
+| Light probe (scene) | `LightProbe` + `LightProbeGenerator` | No | — | — | bake from env cubemap | World → Environment | probe SH coeffs or bake flag | — | — | OK | N/A | Y | M | M | **Missing** |
+| Fog linear / exp2 | `Fog` / `FogExp2` | Yes | World, SceneView | full | — | World → Scene | Y | Y | Y | Pane toggle | N/A | Y | S | H | **Complete** |
+| Fog drift + atmosphere | custom | Yes | AtmosphereController | mist/noise/volumetric | True depth volume later | World → Scene | Y | Y | Y | Perspective layer | Y | Y | L | H | **Complete** |
+| World ambient | AmbientLight + IBL scale | Yes | World | color, edit/play intensity | — | World → Ambient | Y | Y | Y | OK | N/A | Y | S | H | **Complete** |
+| Tone mapping / exposure | renderer | Yes | World renderer | modes + exposure | PP override when active | World → Renderer | Y | Y | Y | Restored per pane | N/A | Y | S | H | **Complete** |
+| Shadow map global | `shadowMap` | Yes | World renderer | enabled, type | Drop Soft label | World → Renderer | Y | Y | Y | OK | N/A | Y | S | H | **Partial** |
+| Output color space | `outputColorSpace` | Assumed sRGB | SceneView | — | enum | World → Renderer | add | — | — | OK | N/A | Y | S | M | **Missing** |
+| RoomEnvironment fallback | addon | Yes internal | studioEnvironment | — | Keep when no HDRI | — | — | — | — | rebuild on resize | Y | S | H | **Internal** |
 
 ---
 
-### 2.2 Object Types / Creation Toolbar
+### 2.2 Lighting
 
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Location | Ser / RT | Cx | Val | Status |
-|------------|------------|----------|-------|---------|---------|----------|----------|----|-----|--------|
-| Box / wall / floor / ceiling | Custom BufferGeometry | Yes | BrushComponent, brushFactory, brushGeometry | size, openings, miters, mats | — | Creation → Geometry | Y / Y | — | H | **Complete** |
-| Convex solid | Custom + ConvexHull math | Yes | ConvexBrush, hull, edits | vertices/faces | — | Convert / geometry modes | Y / Y | — | H | **Complete** |
-| Ramp / stair / column / arch / curve | Custom | Yes | *Factory, *Geometry | type params | — | Creation → Geometry | Y / Y | — | H | **Complete** |
-| Subtractive brushes | Custom boolean | Yes | brushBoolean, world solid | operation | Three CSG addon unused (OK) | Creation | Y / Y | — | H | **Complete** |
-| Point / spot / directional light | `PointLight` etc. | Yes | LightComponent, lightFactory | see Lighting | — | Creation → Lights | Y / Y | — | H | **Complete** |
-| Ambient light actor | `AmbientLight` | Component yes; toolbar no | LightComponent, DetailsPanel select | type ambient | Toolbar create | Details / factory | Y / Y | S | L | **Partial** |
-| Static mesh | `Mesh` from GLTF | Yes | StaticMeshComponent, meshFactory | assetId, collision | — | Creation → Assets | Y / Y | — | H | **Complete** |
-| Player spawn | Marker + helper | Yes | PlayerSpawnComponent | — | — | Creation → Actors | Y / Y | — | H | **Complete** |
-| Cell / prefab | Hierarchy | Yes | CellComponent, prefabs | — | — | Creation / Details | Y / Y | — | H | **Complete** |
-| Hemisphere light | `HemisphereLight` | No | — | — | sky/ground color | Creation → Lights | — | S | H | **Missing** |
-| Rect area light | `RectAreaLight` + `RectAreaLightUniformsLib` | No | — | — | width/height | Creation → Lights | — | M | H | **Missing** |
-| Sky dome | `Sky` / `SkyMesh` addon | No | — | — | turbidity, sun position | World / Environment | — | M | M | **Missing** |
-| Water | `Water` / `Water2` addon | No | — | — | — | Creation | — | L | L | **Deferred** |
-| Reflector / Refractor | addons | No | — | — | — | Creation | — | M | L | **Deferred** |
-| Lensflare | addon | No | — | — | — | Light attachment | — | S | L | **Deferred** |
-| InstancedMesh actor | `InstancedMesh` | Internal batching only | brush batching experiments | — | Authorable prop instances | — | — | L | M | **Internal** / **Deferred** |
-| Group / empty | `Group` | Actor hierarchy | hierarchy.js | parentId | Dedicated empty type | Outliner | Y / Y | S | M | **Partial** |
-| Native primitive mesh actors | BoxGeometry etc. as props | No (architecture brushes instead) | — | — | Optional prop primitives | Creation | — | S | L | **N/A** (covered by brushes) |
+| Capability | API | BB | Exposed | Missing | Editor | Schema | Ser/RT | Multi-view | GPU | Cx | Val | Status |
+|------------|-----|----|---------|---------|--------|--------|--------|------------|-----|----|-----|--------|
+| PointLight | core | Y | color, intensity, range, castShadow, mapSize | decay, power, shadow bias/cam | Details / create | LightComponent | Y/Y | OK | light dispose w/ actor | S | H | **Partial** |
+| SpotLight | core | Y | + angle, penumbra | targetActorId, map (proj tex), decay, shadow* | Details | extend | Y/Y | OK | +tex | M | H | **Partial** |
+| DirectionalLight | core | Y | color, intensity, shadow | target, shadow cam size/near/far, bias* | Details | extend | Y/Y | OK | — | M | H | **Partial** |
+| AmbientLight actor | core | Y | color, intensity | toolbar create | Details | exists | Y/Y | OK | — | S | M | **Partial** |
+| HemisphereLight | core | N | — | sky/ground color, intensity | Creation → Lights | `lightType: hemisphere` | — | OK | — | S | H | **Missing** |
+| RectAreaLight | core + `RectAreaLightUniformsLib` | N | — | width, height, intensity; init once | Creation → Lights | `lightType: rectArea` | — | OK | uniforms lib | M | H | **Missing** |
+| Lensflare | `Lensflare` + elements | N | — | textures, distances, sizes; attach to light | Light Details / child | Lensflare elements[] | — | May disable ortho | textures | M | H | **Missing** |
+| Shadow bias / normalBias / radius / blurSamples | `LightShadow` | Hardcoded | — | authorable | Details → Light | fields | N/Y today | OK | — | S | H | **Missing** |
+| Shadow camera | `shadow.camera` | Dir ±20 fixed | — | near/far/ortho size | Details | fields | N/Y | OK | — | S | M | **Missing** |
+| Light decay / power | Point/Spot | decay=2 fixed | — | decay, power helpers | Details | fields | — | OK | — | S | M | **Missing** |
+| Light target | Object3D target | No | — | targetActorId | Details | ref | — | OK | — | S | H | **Missing** |
+| Spot projection map | `SpotLight.map` | No | — | textureAssetId | Details | ref | — | OK | tex | M | M | **Missing** |
+| Light helpers | Point/Spot/Dir/Hemi/RectArea helpers | Range spheres only | — | opt-in helpers | Viewport overlay | editor pref | — | Pane OK | helper dispose | S | M | **Missing** |
+| LightProbe actor | LightProbe | N | — | SH from generator | Advanced | — | — | OK | — | M | M | **Missing** |
+| CSM / IES | addons | N | — | — | — | — | — | — | — | L | L | **Deferred** (cost / niche) — *excluded with reason: outdoor CSM and IES are post-mansion-scale; not required for base env authoring* |
+| Edit fill Directionals | custom | Y | — | non-authored | — | — | — | — | — | — | — | **Internal** |
 
 ---
 
-### 2.3 Object Components / Details
+### 2.3 Materials
 
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Location | Ser / RT | Status |
-|------------|------------|----------|-------|---------|---------|----------|----------|--------|
-| Transform | `Object3D` pose | `Transform` eu | Actor, DetailsPanel | pos/rot/scale | — | Details | Y / Y | **Complete** |
-| Visibility / locked | `visible` | Actor flags | DetailsPanel | visible, locked | — | Details | Y / Y | **Complete** |
-| Cast / receive shadow (mesh) | `castShadow` / `receiveShadow` | Mostly hardcoded true on solids | SceneView mesh build | Light castShadow only | Per-mesh toggles | Details | N / Y | **Partial** |
-| Layers | `Layers` | Atmosphere layer 2 internal | AtmosphereController | — | Authorable render layers | — | — | **Internal** |
-| UserData | `userData` | Limited | — | — | Generic key UI | — | — | **N/A** |
-| Prefab overrides | Custom | Yes | prefabOps | — | — | Details | Y / Y | **Complete** |
-
----
-
-### 2.4 Lighting
-
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Location | Ser / RT | Cx | Val | Status |
-|------------|------------|----------|-------|---------|---------|----------|----------|----|-----|--------|
-| Point light | `PointLight` | Yes | LightComponent, SceneView | color, intensity, range, castShadow, mapSize | decay (fixed 2), power | Details / create | Y / Y | S | H | **Partial** |
-| Spot light | `SpotLight` | Yes | same | angle, penumbra + point props | target actor, map, shadow cam | Details | Y / Y | S | H | **Partial** |
-| Directional light | `DirectionalLight` | Yes | same | color, intensity, shadow | target, shadow cam ±20 hardcoded, bias | Details | Y / Y | S | H | **Partial** |
-| Ambient light actor | `AmbientLight` | Yes | same | color, intensity | — | Details | Y / Y | S | M | **Complete** |
-| Shadow bias / normalBias / radius | `LightShadow` | Hardcoded in SceneView | SceneView._createLight | — | Authorable | Details → Light | N / Y | S | H | **Missing** |
-| Shadow camera frustum | `shadow.camera` | Fixed dir ±20 | SceneView | — | near/far/size | Details | N / Y | S | M | **Missing** |
-| Hemisphere light | `HemisphereLight` | No | — | — | sky/ground | Creation / Details | — | S | H | **Missing** |
-| RectAreaLight | + `RectAreaLightUniformsLib` | No | — | — | Must call `init()` once | Creation | — | M | H | **Missing** |
-| LightProbe | `LightProbe` + `LightProbeGenerator` | No | — | — | From HDR env | World / Light | — | M | M | **Missing** |
-| CSM | `examples/jsm/csm` | No | — | — | Large outdoor | — | — | L | L | **Deferred** |
-| IES profile | `IESLoader` / WebGPU IESSpot | No | — | — | WebGL limited | — | — | L | L | **Deferred** |
-| Light helpers | core helpers | Edit range spheres only | SceneView | — | Selectable Three helpers | Viewport | — | S | L | **Internal** |
-| Edit fill lights | Extra Directionals | Yes | SceneView | — | Non-authored | — | — | — | — | **Internal** |
+| Capability | API | BB | Exposed | Missing | Editor | Schema | Cx | Val | Status |
+|------------|-----|----|---------|---------|--------|--------|----|-----|--------|
+| MeshStandardMaterial core | core | Y | baseColor, map, normal, rough/metal maps, emissive*, opacity, envMapIntensity, UV L2 | see maps/controls below | Materials Workspace | MaterialDefinition | — | H | **Partial** |
+| aoMap / aoMapIntensity | Standard | N | — | map id + intensity | Materials | add | S | H | **Missing** |
+| bumpMap / bumpScale | Standard | N | — | — | Materials | add | S | M | **Missing** |
+| displacementMap / scale / bias | Standard | N | — | — | Materials | add | S | M | **Missing** |
+| alphaMap | Standard | N | — | — | Materials | add | S | H | **Missing** |
+| lightMap / intensity | Standard | N | — | — | Materials | add | S | M | **Missing** |
+| alphaTest / alphaHash / alphaToCoverage | Material | N | — | cutoff controls | Materials | add | S | H | **Missing** |
+| side / flatShading / wireframe / fog / toneMapped | Material | N (side only in factory opts) | — | DoubleSide etc. | Materials | add | S | H | **Missing** |
+| transparent / opacity / depthWrite | Material | opacity/transparent | — | depthWrite toggle | Materials | add | S | M | **Partial** |
+| MeshPhysicalMaterial | core | N | — | clearcoat*, transmission*, thickness, attenuation*, ior, sheen*, specular*, iridescence*, anisotropy*, dispersion | Materials type | `shadingModel: physical` + fields | M | H | **Missing** |
+| MeshBasicMaterial | core | N | — | unlit props/maps | Materials type | `basic` | S | M | **Missing** |
+| MeshToonMaterial | core | N | — | gradientMap | Materials | `toon` | M | M | **Missing** |
+| MeshMatcapMaterial | core | N | — | matcap map | Materials | `matcap` | S | M | **Missing** |
+| Actor/face UV L1 | custom | Y | Details/Surface | — | Details | component | — | H | **Complete** |
+| PBR generator | custom | Y | normal/roughness | AO generate | Materials | pbrGenerator | M | M | **Partial** |
+| Node/TSL materials | three/tsl | N | — | — | — | — | L | — | **Deferred** (WebGPU) |
 
 ---
 
-### 2.5 Geometry
+### 2.4 Environmental object types
 
-| Capability | Native API | BloodBound | Files | Status | Notes |
-|------------|------------|----------|-------|--------|-------|
-| Architecture solids | Custom BufferGeometry | Full pipeline | `src/runtime/*Geometry.js`, `src/geometry/*` | **Complete** | Core milestone |
-| Face / edge / vertex edit | Custom | Yes | geometryEditing/* | **Complete** | |
-| Extrude / clip | Custom | Yes | extrudeClip, clip.js | **Complete** | |
-| Convex hull | Custom + math | Yes | hull.js | **Complete** | Overlaps addon `ConvexGeometry` — keep custom |
-| `DecalGeometry` | addon | No | — | **Missing** | Detail stickers — M value |
-| `TextGeometry` | addon + fonts | No | — | **Deferred** | Signage |
-| `RoundedBoxGeometry` | addon | No | — | **Missing** | Props — L |
-| `BufferGeometryUtils` | addon | Not imported | — | **Missing** | Merge/optimize — M |
-| Three CSG / BSP | community / none official | Custom boolean | brushBoolean | **Redundant** only if replaced | Keep custom unless proven better |
-| EdgesGeometry overlays | core | Yes | viewportDisplay, SceneView | **Internal** | Wireframe mode |
-
----
-
-### 2.6 Static Meshes
-
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Cx | Val | Status |
-|------------|------------|----------|-------|---------|---------|----|-----|--------|
-| GLTF/GLB import | `GLTFLoader` | Yes | meshLoader, AssetViewer | asset path | Extensions UI | — | H | **Partial** |
-| DRACO | `DRACOLoader` | No | — | — | decoder path | M | H | **Missing** |
-| KTX2 / Basis | `KTX2Loader` | No | — | — | transcoder | M | H | **Missing** |
-| FBX / OBJ / STL / PLY | loaders | No | — | — | Format matrix | M | M | **Missing** |
-| Mesh collision | Rapier box from bounds | Yes | StaticMeshComponent | box / none | Convex/trimesh from GLTF | M | H | **Partial** |
-| GLTF animations | AnimationMixer | Loaded unused | meshLoader | — | Clip component | L | — | **Deferred** |
-| SkinnedMesh | core | No | — | — | Characters milestone | L | — | **Deferred** |
+| Capability | API (WebGL) | BB | Editor location | Schema idea | Multi-view / GPU | Cx | Val | Status |
+|------------|-------------|----|-----------------|-------------|------------------|----|-----|--------|
+| Decal | `DecalGeometry` | N | Creation → Environment | DecalComponent: target, size, orientation, materialId | Shared geo; dispose on edit | M | H | **Missing** |
+| Reflector (mirror) | `Reflector` | N | Creation → Environment | MirrorComponent: size, color, textureSize, multisample | **Own RT** — resize DPR; prefer perspective only; dispose RT | M | H | **Missing** |
+| Refractor | `Refractor` | N | Creation → Environment | similar | Own RT; same constraints | M | H | **Missing** |
+| Water | `Water.js` | N | Creation → Environment | WaterComponent | Shader uniforms update; dispose | M | H | **Missing** |
+| Water2 | `Water2.js` | N | Creation → Environment | preferred default candidate | Needs normal/reflectivity maps as assets | M | H | **Missing** |
+| Sprite / billboard | `Sprite` + `SpriteMaterial` | N | Creation → Props/Environment | SpriteComponent: mapId, center, sizeAttenuation | Cheap; OK all panes | S | H | **Missing** |
+| Sky | `Sky.js` | N | World or Creation | see Map Settings | Optional hide ortho | M | H | **Missing** |
+| GroundedSkybox | `GroundedSkybox.js` | N | World | — | — | M | M | **Missing** |
+| Lensflare | `Lensflare.js` | N | under Light | elements[] | Disable ortho; texture ownership | M | H | **Missing** |
+| ShadowMesh | addon | N | — | — | Niche | S | L | **N/A** unless soft contact shadows requested — *exclusion: niche demo helper; atmosphere/PP cover soft contact needs for now* |
+| WaterMesh/SkyMesh/LensflareMesh | WebGPU | — | — | — | — | — | — | **Incompatible** |
 
 ---
 
-### 2.7 Materials Workspace
+### 2.5 Geometry (native tools — additive to brushes)
 
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Cx | Val | Status |
-|------------|------------|----------|-------|---------|---------|----|-----|--------|
-| MeshStandardMaterial | core | Yes via adapter | MaterialDefinition, materialFactory | baseColor, maps×5, roughness/metalness, emissive*, opacity, envMapIntensity, UV L2 | aoMap, bump, displacement, alphaMap, lightMap, wireframe, side, flatShading | — | H | **Partial** |
-| MeshPhysicalMaterial | core | No | — | — | clearcoat, transmission, thickness, ior, sheen, iridescence, anisotropy | M | H | **Missing** |
-| Material UV L2 | texture.repeat/offset/rotation | Yes | MaterialDefinition | scale/offset/rotation | Per-map transform | S | H | **Complete** |
-| Actor / face UV L1 | custom | Yes | uvMapping, faceUVs | Details + Surface | — | — | H | **Complete** |
-| PBR map generator | custom | Yes | PbrGeneratorPanel | normal/roughness from source | AO generate | M | M | **Partial** |
-| Node / TSL materials | `three/tsl` | No | — | — | Needs WebGPU path | L | — | **Deferred** / **Incompatible** now |
-| ShaderMaterial authoring | core | Atmosphere internal only | AtmosphereController | — | User shader graph | L | — | **Deferred** |
+Constructive brushes remain primary architecture tools. Native primitives are **prop / kit** meshes.
 
----
-
-### 2.8 Texture Properties
-
-| Capability | Native API | BloodBound | Files | Exposed | Missing | Status |
-|------------|------------|----------|-------|---------|---------|--------|
-| Texture asset record | custom registry | Yes | AssetRegistry | id, name, path, meta | wrap/filter/colorSpace/anisotropy | **Partial** |
-| Adapter defaults | `Texture` props | Fixed in materialFactory | RepeatWrapping, anisotropy 8, colorSpace | — | Per-asset overrides | **Partial** |
-| Canvas / Video / Data textures | core | Thumbs / PP internal | meshThumbnailBake, PP | — | Authorable VideoTexture | **Internal** / **Deferred** |
-| Compressed textures | KTX2/DDS/… | No | — | — | With KTX2Loader | **Missing** |
-| HDR / EXR as texture | HDRLoader, EXRLoader | No as env | — | — | Environment workflow | **Missing** |
-| LUT textures | pmndrs LUT + loaders | PP lut effect | effectRegistry | textureAssetId | — | **Partial** (PP only) |
+| Capability | API | BB | Editor | Schema | Cx | Val | Status |
+|------------|-----|----|--------|--------|----|-----|--------|
+| Box/Sphere/Cylinder/Cone/Plane/Capsule/Torus/Ring/Circle | core geometries | N as actors | Creation → Primitives | PrimitiveMeshComponent `{ primitive, params, materialId }` | S | H | **Missing** |
+| RoundedBoxGeometry | addon | N | Primitives | params | S | M | **Missing** |
+| LatheGeometry | core | N | Primitives / advanced | points profile | M | M | **Missing** |
+| TubeGeometry | core | N | Primitives | path/radius | M | M | **Missing** |
+| ExtrudeGeometry | core | N | Primitives | shape + extrude settings | M | M | **Missing** |
+| ShapeGeometry | core | N | Primitives | shape | M | M | **Missing** |
+| TextGeometry | addon + fonts | N | Primitives | font, text, size | M | M | **Missing** |
+| ParametricGeometry | addon | N | Advanced | fn id / samples | M | L | **Missing** — include; lower priority |
+| ConvexGeometry | addon | N as tool | — | From point cloud | M | L | **Missing** — note overlap with ConvexBrush; tool for props only |
+| Architecture brushes | custom | Y | Creation → Geometry | existing | — | H | **Complete** |
+| ConvexBrush edits | custom | Y | Face/Edge/Vertex | existing | — | H | **Complete** / **Redundant** vs ConvexGeometry for architecture — **keep custom** |
 
 ---
 
-### 2.9 Environmental Effects
+### 2.6 Static meshes
 
-| Capability | Native API | BloodBound | Status | Notes |
-|------------|------------|----------|--------|-------|
-| Fog + atmosphere | Fog + custom | **Complete** | Soft depth occlusion; true depth volume later |
-| Studio IBL | RoomEnvironment + PMREM | **Partial** | Not replaceable by map HDRI |
-| Sky | Sky addon | **Missing** | Outdoor maps |
-| GroundedSkybox | addon | **Missing** | |
-| Height fog | custom / shader | **Missing** | Could extend atmosphere |
-| Weather / particles system | Points / GPU | Mist only | **Partial** |
-| Audio / PositionalAudio | core | No | **Deferred** (gameplay) |
-
----
-
-### 2.10 Post-Processing
-
-| Capability | API | BloodBound | Status |
-|------------|-----|----------|--------|
-| Effect catalog | pmndrs (bloom, SSAO, DoF, vignette, AA, LUT, …) | Full UI via `effectRegistry` + `PostProcessingSettings` | **Complete** |
-| Presets | custom | Builtin + project | **Complete** |
-| Editor preview / per-pane PP | custom | Global + pane chip | **Complete** |
-| Official Three EffectComposer passes | `examples/jsm/postprocessing` | Not used | **N/A** / **Redundant** if dual-stacked — keep pmndrs |
-| God rays / selective bloom / outline | pmndrs | Gated on light/actor inputs | **Partial** (needs selection UX polish) |
-| Multi-viewport PP isolation | custom composer blit | Implemented (separate track) | **Complete** — do not re-scope |
+| Capability | API | BB | Missing | Editor | Schema | Cx | Val | Status |
+|------------|-----|----|---------|--------|--------|----|-----|--------|
+| GLTF place | GLTFLoader | Y | DRACO/KTX2/Meshopt | Creation | assetId | — | H | **Partial** |
+| castShadow / receiveShadow | Mesh flags | Hardcoded on | toggles | Details | fields | S | H | **Missing** |
+| Material overrides | swap materials | Face mats on brushes only | per-slot override on GLTF | Details | overrides{} | M | H | **Missing** |
+| LOD | `LOD` | N | distances + child meshes | Details | lod levels | M | M | **Missing** |
+| Instancing | `InstancedMesh` | Internal batch only | authorable instance sets | Creation/Details | instance transforms | L | M | **Missing** |
+| Batching | `BatchedMesh` | Experimental solids | expose later | — | — | L | M | **Partial** / Internal |
+| renderOrder | Object3D | N | number | Details | field | S | M | **Missing** |
+| frustumCulled | Object3D | default true | toggle | Details | field | S | L | **Missing** |
+| Collision box | Rapier | Y | — | Details | collisionType box/none | — | H | **Complete** |
+| Collision convex / trimesh | Rapier | N | hull/trimesh from mesh | Details | collisionType | M | H | **Missing** |
 
 ---
 
-### 2.11 Asset Viewer / Content Browser
+### 2.7 Asset Viewer / Content Browser / tools
 
-| Capability | Status | Notes |
-|------------|--------|-------|
-| Texture / mesh / material / prefab browse | **Complete** | |
-| Import texture / mesh | **Complete** | |
-| Mesh thumbnails | **Complete** | |
-| Material sphere thumbs | **Complete** | |
-| HDRI browser / assign env | **Missing** | |
-| Format badges (Draco/KTX2) | **Missing** | |
-
----
-
-### 2.12 Viewport Settings
-
-| Capability | Native / custom | BloodBound | Status |
-|------------|-----------------|----------|--------|
-| Multi-pane layouts | custom scissor | Yes | **Complete** |
-| Perspective / ortho / iso cameras | core cameras | Yes | **Complete** |
-| Display modes lit/unlit/wire/… | custom material overrides | Yes | **Complete** |
-| Show Fog / Show PP per pane | custom | Yes | **Complete** |
-| Ortho editor clear (not world BG) | custom swap | Yes | **Complete** |
-| OrbitControls | addon | Yes | **Complete** |
-| TransformControls | addon | Custom BrushGizmo instead | **Internal** / evaluate **Redundant** only if gizmo lacking |
-| ViewHelper | addon | No | **Missing** (nice-to-have) |
-| SelectionBox addon | addon | Custom marquee | **N/A** |
+| Capability | API | BB | Editor | Cx | Val | Status |
+|------------|-----|----|--------|----|-----|--------|
+| Import texture/mesh | loaders + registry | Y | Asset Viewer | — | H | **Complete** |
+| Thumbs | custom bake | Y | Asset Viewer | — | H | **Complete** |
+| SimplifyModifier | addon | N | Asset tools / mesh inspector | M | H | **Missing** |
+| BufferGeometryUtils | addon | N | merge, index, normals, center | M | H | **Missing** |
+| GLTFExporter / OBJExporter | addons | N | Export selected / asset | M | H | **Missing** |
+| FBX/OBJ/STL/PLY import | loaders | N | Import | M | M | **Missing** |
+| DRACO | DRACOLoader + libs/draco | N | meshLoader | M | H | **Missing** |
+| KTX2 | KTX2Loader + basis | N | textures/meshes | M | H | **Missing** |
+| Meshopt | meshopt_decoder.module.js + GLTF | N | meshLoader | M | H | **Missing** |
+| computeVertexNormals / tangents | BufferGeometry / utils | Internal ad hoc | Tool buttons + helpers | S | H | **Missing** |
+| VertexNormalsHelper / VertexTangentsHelper | addons | N | Viewport diagnostic | S | M | **Missing** |
+| Box3Helper / bounds display | core | Selection box only | Mesh diagnostics | S | M | **Partial** |
+| Geometry center / pivot | utils / manual | N | Asset tool | S | H | **Missing** |
+| HDR/EXR import | HDRLoader/EXRLoader | N | Asset Viewer → Environment | M | H | **Missing** |
 
 ---
 
-### 2.13 Editor Settings
+### 2.8 Texture properties
 
-| Capability | BloodBound | Status |
-|------------|----------|--------|
-| Camera orbit/fly/play sensitivities | `editorSettingsPrefs.js` | **Complete** |
-| Grid / snap / rotation / scale snap | same | **Complete** |
-| Viewport colors (grid/selection/subtract) | same — background no longer overrides world BG | **Complete** |
-| Default display mode | same | **Complete** |
-| Three.js Editor integration | Explicitly out of scope | **N/A** |
-
----
-
-### 2.14 Rendering and Optimization
-
-| Capability | Native API | BloodBound | Status |
-|------------|------------|----------|--------|
-| Incremental actor sync | custom | SceneView 2F.7C | **Complete** |
-| World solid batching | custom | renderExperiments | **Complete** |
-| `BatchedMesh` | core | Limited / experimental | **Partial** |
-| `LOD` | core | No | **Deferred** |
-| `SceneOptimizer` | addon | No | **Missing** (eval) |
-| ShadowMapViewer | addon | No | **Internal** debug |
-| WebGPURenderer | `three/webgpu` | Not used | **Deferred** / **Incompatible** now |
-| Rapier physics | `@dimforge/rapier3d-compat` | PhysicsWorld | **Complete** (not Three) |
-| `RapierHelper` | three addon | No | **Missing** debug |
+| Capability | API | BB | Missing | Editor | Schema | Status |
+|------------|-----|----|---------|--------|--------|--------|
+| Asset record | registry | Y | sampler fields | Content Browser | meta | **Partial** |
+| wrapS / wrapT | Texture | Fixed Repeat | enum | Texture inspector | meta | **Missing** |
+| minFilter / magFilter | Texture | default | enum | inspector | meta | **Missing** |
+| generateMipmaps | Texture | default true | bool | inspector | meta | **Missing** |
+| anisotropy | Texture | 8 fixed | number | inspector | meta | **Missing** |
+| colorSpace | Texture | set in adapter | enum | inspector | meta | **Missing** |
+| channel (UV set) | Texture.channel | N | 0..N | inspector / material | meta + mat | **Missing** |
+| offset / repeat / rotation / center | Texture | via material UV L2 | optional tex-level | inspector | meta | **Partial** |
+| Compression (KTX2) | compressed textures | N | import path | Asset Viewer | kind | **Missing** |
 
 ---
 
-## 3. Recently integrated features — completeness review
+### 2.9 Editor organization — authoring layers
 
-| Feature | Controls | Data | Undo | Serialize | Prefab/dup | Adapter | Edit+Play RT | GPU dispose | Gaps |
-|---------|----------|------|------|-----------|------------|---------|--------------|-------------|------|
-| World scene BG + fog | Y | Y | via world cmds | Y | N/A map | SceneView | Y | N/A | Blurriness weak without env tex; ortho uses editor clear |
-| Fog drift + atmosphere | Y | Y | Y | Y | N/A | AtmosphereController | Y perspective | Y dispose | Soft depth only |
-| World renderer tone/shadow | Y | Y | Y | Y | N/A | SceneView | Y; PP may override tone | N/A | PCFSoft deprecated alias |
-| Post-processing catalog | Y | Y | Y | Y | N/A | PostProcessingController | Y | composer dispose | Master-enable UX fixed; input-gated effects |
-| MeshStandard materials | Y | Y | asset cmds | material JSON | Y | materialFactory | Y | shared vs owned | Missing AO/physical maps |
-| Lights | Y | Y | Y | component JSON | Y | SceneView | Y | with actor | Shadow bias/camera not exposed |
-| GLTF static meshes | Y | Y | Y | assetId | Y | meshLoader | Y | epoch lifecycle | Single format |
+**Distinct from** cells, prefabs, actor hierarchy, and `THREE.Layers` (rendering bitmasks; atmosphere already uses layer 2 internally).
 
-**Silent fallbacks / inconsistencies to watch**
-
-- `PCFSoftShadowMap` still offered in UI; Three r187 maps it to PCF.
-- `backgroundBlurriness` stored but ineffective on solid Color backgrounds.
-- Light `decay` fixed at 2; range alone may surprise artists used to Three defaults.
-- Atmosphere and distance fog share color but are independent toggles — intentional, document in help.
-- PP “Enabled” vs effect Enabled: enabling an effect now also enables master PP.
+| Capability | Proposal | BB | Status |
+|------------|----------|----|--------|
+| Layer set | Architecture, Furniture, Props, Lighting, Collision, Reference, Gameplay | N | **Missing** |
+| Actor → layer membership | `actor.editorLayers: string[]` or primary `editorLayer` | N | **Missing** |
+| Visibility / lock / solo | Editor prefs or session UI; do not bake into Play unless tagged | N | **Missing** |
+| Outliner filter by layer | Scene Outliner | N | **Missing** |
+| Independence | Must not replace Cell/prefab/parentId | — | constraint |
+| THREE.Layers mapping | Optional later for perf; **not** required for authoring layers v1 | — | avoid conflating |
 
 ---
 
-## 4. Missing native object types (authoring)
+### 2.10 Viewport / helpers / diagnostics
 
-High relevance to geometry/environment milestone:
-
-1. **HemisphereLight** — sky/ground fill without IBL  
-2. **RectAreaLight** (+ `RectAreaLightUniformsLib.init`) — soft architectural panels  
-3. **Sky / SkyMesh** — outdoor backdrop  
-4. **Environment HDRI actor or World env slot** — replaces fixed RoomEnvironment  
-5. **Decal** (DecalGeometry) — surface detail without new brush  
-
-Later / deferred: Water, Reflector, Lensflare, Gaussian splat, InstancedMesh props, Audio.
-
----
-
-## 5. Missing native properties on existing types
-
-### Lights (Point / Spot / Directional)
-
-- `decay` / power  
-- `shadow.bias`, `normalBias`, `radius`, `blurSamples`  
-- Shadow camera `near` / `far` / ortho size  
-- Spot `target` (actor ref), optional `map`  
-- Directional `target`  
-- Per-mesh `castShadow` / `receiveShadow` on solids and StaticMesh  
-
-### Materials (MeshStandard path)
-
-- `aoMap` + `aoMapIntensity`  
-- `displacementMap` / `bumpMap` + scale  
-- `alphaMap`  
-- `lightMap`  
-- `side`, `wireframe`, `flatShading`, `depthWrite`  
-- Optional promote to **MeshPhysicalMaterial** extras  
-
-### StaticMesh
-
-- `castShadow` / `receiveShadow`  
-- Collision: convex hull / trimesh  
-- Animation clips (deferred)  
-
-### World / Renderer
-
-- `outputColorSpace`  
-- Authored `scene.environment` asset + intensity/rotation  
-- Deprecate or relabel PCFSoft  
+| Capability | API | BB | Status |
+|------------|-----|----|--------|
+| Multi-pane, display modes, fog/PP chips, ortho clear | custom | Y | **Complete** |
+| OrbitControls | addon | Y | **Complete** |
+| BrushGizmo | custom | Y | **Complete** / keep vs TransformControls |
+| ViewHelper | addon | N | **Missing** |
+| Light helpers opt-in | core/addon | Partial spheres | **Missing** |
+| TextureHelper | addon | N | **Missing** (debug) |
+| GridHelper | core | Y | **Complete** |
 
 ---
 
-## 6. Missing material and texture capabilities
+### 2.11 Post-processing / rendering (brief)
 
-| Gap | Native | Suggested home | Priority |
-|-----|--------|----------------|----------|
-| AO map | `aoMap` | Materials Workspace | H |
-| Displacement / bump | maps | Materials Workspace | M |
-| Alpha map | `alphaMap` | Materials Workspace | M |
-| Physical layer | MeshPhysicalMaterial | Materials type dropdown | H |
-| Per-texture wrap/filter/colorSpace | `Texture` | Texture inspector in Asset Viewer | M |
-| KTX2 pipeline | KTX2Loader | Import + meshLoader | H |
-| HDR/EXR import as env | HDRLoader / EXRLoader | World Environment + Asset Viewer | H |
+| Capability | Status | Note |
+|------------|--------|------|
+| pmndrs full catalog | **Complete** | Retain |
+| Official Three passes | **N/A** | Do not dual-stack |
+| Multi-viewport PP/fog isolation | **Complete** | Separate track |
+| WebGPURenderer | **Deferred** | Out of milestone |
+| outputColorSpace authoring | **Missing** | World renderer |
 
 ---
 
-## 7. Missing world and environmental capabilities
+## 3. Recently integrated features — wiring check
 
-| Gap | Native / addon | Home | Priority |
-|-----|----------------|------|----------|
-| User HDRI environment | HDRLoader + PMREM + `scene.environment` | World Settings → Environment | H |
-| Sky procedural | Sky addon | World / Creation | M |
-| Hemisphere light | core | Lights | H |
-| Rect area light | core + UniformsLib | Lights | H |
-| LightProbe from env | LightProbeGenerator | World / bake | M |
-| Height fog | shader / atmosphere extend | World Fog | M |
-| True volumetric depth buffer | custom / later | Atmosphere | M (after soft depth) |
-
----
-
-## 8. Potentially redundant custom implementations
-
-| Custom | Native analogue | Recommendation |
-|--------|-----------------|----------------|
-| Atmosphere volumetric | None first-class in WebGL core | **Keep** — complements Fog |
-| Fog drift | None | **Keep** |
-| brushBoolean CSG | No official CSG | **Keep** |
-| BrushGizmo | TransformControls | **Keep** unless feature gap proven |
-| Marquee selection | SelectionBox addon | **Keep** |
-| pmndrs postprocessing | Official EffectComposer | **Keep pmndrs** — richer, already complete |
-| RoomEnvironment studio | User HDRI | **Keep as fallback**; add authored env |
-| ConvexBrush hull | ConvexGeometry addon | **Keep** engine-neutral hull |
+| Feature | UI | Data | Undo | Ser | Prefab | Adapter | Edit+Play | GPU | Gaps |
+|---------|----|------|------|-----|--------|---------|-----------|-----|------|
+| World BG + fog | Y | Y | Y | Y | N/A | SceneView | Y | N/A | Blur/rotation; Soft shadow label |
+| Atmosphere | Y | Y | Y | Y | N/A | AtmosphereController | Perspective | Y | Soft depth only |
+| World renderer | Y | Y | Y | Y | N/A | SceneView | Y | N/A | outputColorSpace |
+| PP catalog | Y | Y | Y | Y | N/A | PP controller | Y | Y | Input-gated effects |
+| MeshStandard | Y | Y | Y | Y | Y | materialFactory | Y | Y | Maps/models incomplete |
+| Lights | Y | Y | Y | Y | Y | SceneView | Y | Y | Advanced props |
+| GLTF StaticMesh | Y | Y | Y | Y | Y | meshLoader | Y | Y | Compression / shadows |
 
 ---
 
-## 9. Compatibility limitations
+## 4. Implementation backlog (batches)
 
-| Constraint | Impact |
-|------------|--------|
-| WebGL2 renderer only (`three` main export) | WebGPU/TSL/node materials **Deferred** |
-| Single shared `WebGLRenderer` + scissor multi-view | PP must blit per pane (done); avoid fullscreen-only effects without scissor |
-| Engine-neutral JSON | Do not serialize Three class instances; keep adapters in runtime |
-| pmndrs PP vs official passes | Do not dual-stack composers |
-| Fixed RoomEnvironment | Physical materials respond to studio IBL, not map-specific lighting until HDRI lands |
-| PCFSoft deprecated in r187 | UI label/type cleanup |
-| Soft particle / volume depth | Approximate occlusion; not full scene depth history for all effects |
+Priorities **P0–P2 within each batch**. Implement batches in order where possible; dependencies noted.
+
+### Batch 1 — Map Settings (environment, sky, background)
+
+| Pri | Item | API | Schema | Deps |
+|-----|------|-----|--------|------|
+| P0 | Authored HDRI/EXR → PMREM → `scene.environment` | HDRLoader/EXRLoader | `environmentAssetId`, intensity, rotation | Asset import |
+| P0 | `environmentIntensity` / `environmentRotation` | Scene | fields | P0 HDRI |
+| P0 | Background type color \| env \| sky; wire blurriness/rotation when non-color | Scene | `backgroundType`, rotation | HDRI/Sky |
+| P0 | Keep RoomEnvironment fallback when no env | existing | — | — |
+| P1 | Procedural Sky actor/world | Sky.js | sky params | — |
+| P1 | GroundedSkybox option | GroundedSkybox.js | | HDRI map |
+| P2 | LightProbe bake from env | LightProbeGenerator | bake data | HDRI |
+| P2 | `outputColorSpace` | renderer | field | — |
+| P2 | Shadow type UI: remove Soft deprecation footgun | enum | — | — |
+
+**Depends on:** Batch 8 (HDR asset) ideally parallel.  
+**Unlocks:** Physical materials response to real env; Batch 3 RectArea look.
+
+### Batch 2 — Materials
+
+| Pri | Item | API | Schema |
+|-----|------|-----|--------|
+| P0 | aoMap + aoMapIntensity | Standard | map ids |
+| P0 | alphaMap + alphaTest/alphaHash + side | Standard/Material | fields |
+| P1 | bump + displacement maps | Standard | fields |
+| P1 | lightMap | Standard | fields |
+| P0 | MeshPhysicalMaterial opt-in + clearcoat/transmission/thickness/ior/attenuation/sheen/specular/iridescence/anisotropy | Physical | `shadingModel` + props |
+| P1 | MeshBasicMaterial / MeshMatcapMaterial | core | type |
+| P2 | MeshToonMaterial + gradientMap | core | type |
+| P2 | depthWrite / wireframe / flatShading / toneMapped | Material | fields |
+
+**Depends on:** Batch 1 env for Physical transmission/clearcoat to look correct.  
+**Unlocks:** Decals/Water materials; richer StaticMesh overrides.
+
+### Batch 3 — Lighting
+
+| Pri | Item | API | Schema |
+|-----|------|-----|--------|
+| P0 | HemisphereLight + toolbar | core | lightType |
+| P0 | Shadow bias/normalBias/radius (+ blurSamples) | LightShadow | fields |
+| P0 | Directional shadow camera size/near/far | shadow.camera | fields |
+| P1 | RectAreaLight + UniformsLib.init | core+addon | lightType, width/height |
+| P1 | Light targets (spot/dir) | target | targetActorId |
+| P1 | decay / power | Point/Spot | fields |
+| P1 | Lensflare on lights | Lensflare.js | elements[] |
+| P2 | Spot projection map | SpotLight.map | textureAssetId |
+| P2 | Opt-in light helpers | helpers | editor pref |
+| P2 | Ambient on creation toolbar | existing type | — |
+
+**Depends on:** Batch 1 for area lights in HDR environments.  
+**Note:** CSM/IES deferred with reason (scale/niche).
+
+### Batch 4 — Environmental objects
+
+| Pri | Item | API | Notes |
+|-----|------|-----|-------|
+| P0 | Decal tool | DecalGeometry | project onto brushes/meshes |
+| P0 | Reflector (mirror) | Reflector | RT lifecycle; perspective-first |
+| P1 | Refractor | Refractor | same RT rules |
+| P0 | Water2 creation tool | Water2.js | asset normals |
+| P1 | Water (simpler) | Water.js | fallback |
+| P0 | Sprite / billboard | Sprite | props/fx |
+| P1 | Sky as placeable or world toggle | Sky.js | overlap Batch 1 — coordinate |
+| P2 | GroundedSkybox | objects/ | |
+
+**Depends on:** Batch 2 materials; Batch 8 textures for water normals.  
+**Multi-view:** mirrors/refractors expensive — document pane policy (e.g. active perspective only).
+
+### Batch 5 — Geometry (native primitives & procedural)
+
+| Pri | Item | API |
+|-----|------|-----|
+| P0 | Primitive mesh actors: box, sphere, cylinder, cone, plane, capsule, torus | core geometries |
+| P1 | RoundedBoxGeometry | addon |
+| P1 | Lathe / Tube / Extrude / Shape | core |
+| P2 | TextGeometry | addon + font |
+| P2 | ParametricGeometry | addon |
+| P2 | ConvexGeometry prop tool | addon — not a ConvexBrush replacement |
+
+**Depends on:** Batch 2 for materials; collision via Batch 6 patterns.  
+**Do not** replace Brush/ConvexBrush workflows.
+
+### Batch 6 — Static meshes (render + collision)
+
+| Pri | Item |
+|-----|------|
+| P0 | castShadow / receiveShadow on StaticMesh (+ optional solids) |
+| P0 | Rapier convex hull collision option |
+| P1 | Trimesh collision option (cost-warn) |
+| P1 | Material slot overrides on GLTF |
+| P1 | renderOrder / frustumCulled |
+| P2 | LOD component |
+| P2 | InstancedMesh authoring (prop scatters) |
+
+**Depends on:** Batch 7 compression for heavy meshes; Batch 2 overrides.
+
+### Batch 7 — Asset tools
+
+| Pri | Item | API |
+|-----|------|-----|
+| P0 | DRACO + KTX2 + Meshopt in GLTFLoader path | loaders + libs |
+| P0 | HDR/EXR import to texture/env assets | HDRLoader/EXRLoader |
+| P1 | BufferGeometryUtils center/merge/index/normals | utils |
+| P1 | SimplifyModifier tool | modifier |
+| P1 | GLTFExporter / OBJExporter | exporters |
+| P2 | FBX/OBJ/STL/PLY import | loaders |
+| P2 | Normals/tangents helpers + bounds viz | helpers |
+| P2 | Pivot/center utilities | utils |
+
+**Depends on:** none hard; **feeds** Batches 1, 4, 6.
+
+### Batch 8 — Textures
+
+| Pri | Item |
+|-----|------|
+| P0 | Texture inspector: wrap, min/mag filter, anisotropy, colorSpace, generateMipmaps |
+| P1 | UV channel selection |
+| P1 | Texture-level offset/repeat/rotation (optional vs material UV) |
+| P0 | KTX2 compressed texture import | 
+| P2 | VideoTexture authoring (optional env screens) — *include with note: useful for diegetic screens; low priority* |
+
+**Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.
+
+### Batch 9 — Editor organization & viewport tools
+
+| Pri | Item |
+|-----|------|
+| P0 | Authoring layers enum + actor assignment |
+| P0 | Layer visibility / lock / solo in Outliner + viewport filter |
+| P1 | Layer-aware creation default |
+| P1 | ViewHelper |
+| P2 | TextureHelper / advanced diagnostics |
+| P2 | Optional mapping authoring layers → THREE.Layers for render perf (document carefully) |
+
+**Depends on:** soft — can start early; avoid coupling to prefabs/cells.
+
+### Cross-batch dependency graph
+
+```
+Batch 7 (Asset tools) ──┬──► Batch 1 (Map env)
+                        ├──► Batch 8 (Textures) ──► Batch 2 (Materials) ──► Batch 4 (Env objects)
+                        └──► Batch 6 (Static meshes)
+Batch 1 ──► Batch 3 (Lighting look)
+Batch 2 ──► Batch 5 (Primitives materials)
+Batch 9 parallel (Editor layers)
+```
 
 ---
 
-## 10. Prioritized implementation backlog
+## 5. Exclusions (explicit)
 
-Grouped by editor category. **Current milestone only** (geometry + environment authoring).  
-Gameplay / animation / audio / WebGPU / characters are listed in §11 as deferred inventory — **not** in this backlog.
-
-### P0 — High value, fits environment authoring
-
-1. **World → Environment: authored HDRI**  
-   - HDRLoader/EXRLoader → PMREM → `scene.environment` (+ intensity/rotation)  
-   - Keep RoomEnvironment fallback  
-   - Wire serialization on `world.scene`  
-2. **Materials: `aoMap` + intensity** (+ optional bump/displacement)  
-3. **Lights: expose shadow bias / normalBias / radius** (+ directional shadow camera size)  
-4. **Lights: HemisphereLight** type + creation toolbar  
-5. **Renderer: migrate UI off deprecated PCFSoft**; document PCF vs VSM  
-
-### P1 — Strong environment / lighting fidelity
-
-6. **RectAreaLight** + `RectAreaLightUniformsLib` init once per renderer  
-7. **MeshPhysicalMaterial** opt-in (clearcoat, transmission, thickness, ior)  
-8. **StaticMesh / import: DRACO + KTX2** loader pipeline  
-9. **Per-mesh cast/receive shadow** on Brush/StaticMesh  
-10. **Texture asset inspector** (wrap, filter, colorSpace, anisotropy)  
-
-### P2 — Polish / tools
-
-11. **Sky** addon as World backdrop option  
-12. **DecalGeometry** creation tool  
-13. **LightProbe** bake from env  
-14. **BufferGeometryUtils** merge pass for export/optimize  
-15. **ViewHelper** in viewport chrome  
-16. **outputColorSpace** world renderer field  
-17. **Spot/Dir light target** actor reference  
-
-### Explicitly out of this backlog
-
-- Multi-viewport fog/PP isolation (done; maintain only)  
-- Replacing pmndrs with official EffectComposer  
-- Three.js Editor embedding  
-- WebGPU migration  
-- Water / Reflector / Gaussian splats  
+| Capability | Status | Reason |
+|------------|--------|--------|
+| Three.js Editor app | N/A | Brief forbids |
+| WebGPU / TSL / *Mesh env objects | Incompatible / Deferred | WebGL renderer only |
+| Official EffectComposer passes | N/A | pmndrs chosen; dual-stack harmful |
+| CSM, VXGI, LightMapper | Deferred | Cost/complexity beyond base env layer |
+| IES profiles | Deferred | Niche; WebGL path limited vs WebGPU IES |
+| SkinnedMesh / AnimationMixer authoring | Deferred | Character milestone |
+| Audio / PositionalAudio | Deferred | Gameplay/audio milestone |
+| Gaussian splats | Deferred | Pipeline weight; not required for mansion env |
+| Replacing constructive CSG with community CSG | Redundant keep custom | Working architecture tool |
+| Replacing BrushGizmo with TransformControls | Keep custom | Unless feature gap proven |
+| ShadowMesh addon | N/A for now | Niche; PP/atmosphere cover soft contact |
 
 ---
 
-## 11. Deferred inventory (not in current backlog)
+## 6. Suggested schema touchpoints (planning)
 
-| Area | Examples | Status |
-|------|----------|--------|
-| Animation | AnimationMixer, clips on StaticMesh, SkeletonUtils | **Deferred** |
-| Characters | SkinnedMesh, Bone hierarchy workspace | **Deferred** |
-| Audio | AudioListener, PositionalAudio | **Deferred** |
-| WebGPU / TSL | `three/webgpu`, node materials, TSL display passes | **Deferred** |
-| XR | `webxr` addons | **Deferred** |
-| Advanced GI | VXGI, LightMapper, CSM | **Deferred** |
-| Water / mirrors | Water2, Reflector, Refractor | **Deferred** |
-| Splats | GaussianSplat loaders | **Deferred** |
-| Dialogue / UI / vis-script workspaces | PlaceholderWorkspace | **Deferred** (product) |
+| Blob | Extensions |
+|------|------------|
+| `world.scene` | `environmentAssetId`, `environmentIntensity`, `environmentRotation`, `backgroundType`, `backgroundRotation`, sky block |
+| `world.renderer` | `outputColorSpace`; shadow type without Soft |
+| `LightComponent` | hemisphere/rectArea types; decay; shadow*; targetActorId; spotMapId; size; lensflare |
+| New components | `PrimitiveMesh`, `Decal`, `Mirror`/`Reflector`, `Refractor`, `Water`, `Sprite`, optional `Sky` |
+| `MaterialDefinition` | `shadingModel`, ao/bump/disp/alpha/light maps, physical fields, side/alphaTest |
+| Texture asset `meta` | wrap, filter, mip, aniso, colorSpace, channel, transform |
+| `StaticMeshComponent` | cast/receive shadow, renderOrder, frustumCulled, collisionType, materialOverrides, lod |
+| `Actor` | `editorLayer` / `editorLayers` |
 
----
-
-## 12. Suggested schema touchpoints (planning only)
-
-When implementing P0/P1, prefer extending existing blobs:
-
-| Data | Extension ideas |
-|------|-----------------|
-| `world.scene` | `environmentAssetId`, `environmentIntensity`, `environmentRotation`, `backgroundType: color\|env` |
-| `world.renderer` | `outputColorSpace`; shadow type enum without Soft |
-| `LightComponent` | `decay`, `shadowBias`, `shadowNormalBias`, `shadowRadius`, `shadowCamSize`, `targetActorId` |
-| `MaterialDefinition` | `aoMapId`, `aoMapIntensity`, `bumpMapId`, `displacement*`, `shadingModel: standard\|physical`, physical fields |
-| Texture asset meta | `wrapS/T`, `mag/minFilter`, `colorSpace`, `anisotropy` |
-| `StaticMeshComponent` | `castShadow`, `receiveShadow`, `collisionType: none\|box\|convex` |
-
-Preserve engine-neutral naming; map to Three only in adapters.
+Map to Three **only** in runtime adapters; keep JSON engine-neutral.
 
 ---
 
-## 13. Source index (quick)
+## 7. Multi-viewport & GPU ownership checklist (for implementers)
+
+| Feature class | Rule |
+|---------------|------|
+| Scene fog / background / environment | Swap/restore per pane as today; don’t mutate authored objects |
+| Atmosphere | Perspective layer only |
+| Reflector/Refractor/Water | Own RTs; dispose on actor remove; resize on DPR/pane; consider perspective-only |
+| Lensflare | Hide in ortho |
+| HDRI PMREM | Shared; rebuild on env change; dispose old RT |
+| DRACO/KTX2/Meshopt | Shared decoder modules; shared GPU textures with lifecycle epochs |
+| Authoring layers | Filter outliner/pick lists; don’t rely on THREE.Layers for v1 |
+
+---
+
+## 8. Source index
 
 | Concern | Path |
 |---------|------|
 | World schema | `src/core/World.js` |
-| Scene / lights / fog adapter | `src/runtime/SceneView.js` |
+| Scene adapter | `src/runtime/SceneView.js` |
 | Atmosphere | `src/runtime/atmosphere/AtmosphereController.js` |
 | Studio IBL | `src/runtime/studioEnvironment.js` |
 | Materials | `src/materials/MaterialDefinition.js`, `src/runtime/materialFactory.js` |
-| Lights component | `src/components/LightComponent.js` |
-| Mesh load | `src/runtime/meshLoader.js` |
-| PP | `src/runtime/postprocessing/*`, `src/editor/postprocessing/PostProcessingSettings.jsx` |
+| Lights | `src/components/LightComponent.js` |
+| Meshes | `src/runtime/meshLoader.js`, `StaticMeshComponent.js` |
+| PP | `src/runtime/postprocessing/*` |
 | Viewport prefs | `src/editor/viewport/viewportPrefs.js` |
-| Editor prefs | `src/editor/editorSettingsPrefs.js` |
-| Level IO | `src/serialization/LevelSerializer.js`, `LevelDeserializer.js` |
-| Components | `src/components/componentRegistry.js` |
+| Three addons (installed) | `node_modules/three/examples/jsm/**` |
 
 ---
 
-## 14. Audit method
+## 9. Audit method (revision)
 
-- Inspected installed `node_modules/three@0.187.0` exports and `examples/jsm/**` addon tree.  
-- Cross-mapped BloodBound `src/**` imports, World/component schemas, DetailsPanel / Materials / PP UI, and runtime adapters.  
-- Compared against pmndrs `postprocessing@6.39.6` (project FX stack) and Rapier (physics, not Three).  
-- Excluded re-planning of multi-viewport fog/PP isolation work already landed on `main`.
+- Re-verified APIs against `three@0.187.0` (`src/scenes/Scene.js`, `MeshPhysicalMaterial.js`, `examples/jsm/objects|geometries|lights|loaders|libs|helpers|exporters|modifiers|utils`).
+- Confirmed WebGL vs WebGPU class pairs for Sky/Water/Lensflare.
+- Corrected milestone scope per design authority: environment dressing and native primitives are **in**.
+- Did not modify application code or dependencies.
 
 ---
 
-*End of inventory.*
+*End of revised inventory.*
