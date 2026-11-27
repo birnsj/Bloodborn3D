@@ -324,6 +324,7 @@ export function PbrGeneratorPanel({
               type="button"
               className="bb-btn bb-btn--ghost"
               onClick={() => patchNormal({ ...DEFAULT_NORMAL_PARAMS })}
+              {...helpProps('materials.resetGroup')}
             >
               Reset
             </button>
@@ -383,6 +384,7 @@ export function PbrGeneratorPanel({
               type="button"
               className="bb-btn bb-btn--ghost"
               onClick={() => patchRoughness({ ...DEFAULT_ROUGHNESS_PARAMS })}
+              {...helpProps('materials.resetGroup')}
             >
               Reset
             </button>
@@ -474,25 +476,27 @@ export function PbrGeneratorPanel({
 
         <section className="bb-pbr-generator__preview">
           <div className="bb-pbr-generator__preview-toolbar">
-            <div className="bb-seg" role="group" aria-label="Preview mode">
+            <div className="bb-seg" role="group" aria-label="Preview mode" {...helpProps('materials.pbrPreview')}>
               {PREVIEW_MODES.map((m) => (
                 <button
                   key={m.id}
                   type="button"
                   className={`bb-btn bb-btn--icon${previewMode === m.id ? ' bb-btn--active' : ''}`}
                   onClick={() => setPreviewMode(m.id)}
+                  title={m.label}
                 >
                   {m.label}
                 </button>
               ))}
             </div>
-            <div className="bb-seg" role="group" aria-label="Preview shape">
+            <div className="bb-seg" role="group" aria-label="Preview shape" {...helpProps('materials.previewShape')}>
               {PREVIEW_SHAPES.map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   className={`bb-btn bb-btn--icon${previewShape === s.id ? ' bb-btn--active' : ''}`}
                   onClick={() => setPreviewShape(s.id)}
+                  title={s.label}
                 >
                   {s.label}
                 </button>

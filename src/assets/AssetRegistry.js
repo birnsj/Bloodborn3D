@@ -15,6 +15,7 @@ export const ASSET_KINDS = {
 export function createEmptyRegistry() {
   return {
     schemaVersion: ASSET_REGISTRY_SCHEMA_VERSION,
+    folders: [],
     assets: [],
   };
 }
@@ -25,8 +26,12 @@ export function normalizeRegistry(raw) {
   const assets = Array.isArray(raw.assets)
     ? raw.assets.map(normalizeAssetEntry).filter(Boolean)
     : [];
+  const folders = Array.isArray(raw.folders)
+    ? raw.folders.map((f) => String(f || '').trim()).filter(Boolean)
+    : [];
   return {
     schemaVersion: ASSET_REGISTRY_SCHEMA_VERSION,
+    folders,
     assets,
   };
 }

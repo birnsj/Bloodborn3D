@@ -26,6 +26,9 @@ export function TextureInspector({
   updateTextureMeta,
   notify,
   maxAnisotropy = 16,
+  /** When false, preview is owned by the parent stage (avoids a second WebGL view). */
+  showPreview = true,
+  onDraftChange = null,
 }) {
   const meta = asset?.meta || {};
   const compressed = isCompressedTextureMeta(meta) || isCompressedTexturePath(asset?.path);
@@ -49,6 +52,10 @@ export function TextureInspector({
     });
   }, [asset?.id, asset?.updatedAt, asset?.meta, asset?.path]);
 
+  useEffect(() => {
+    onDraftChange?.({ sampler, transform, channelView, width: dims.width, height: dims.height });
+  }, [sampler, transform, channelView, dims.width, dims.height, onDraftChange]);
+
   const validation = useMemo(
     () => validateTextureSampler(sampler, { compressed }),
     [sampler, compressed],
@@ -61,10 +68,6 @@ export function TextureInspector({
     compressed,
     bytes: Number(meta.bytes) || 0,
   }), [dims, sampler.generateMipmaps, compressed, meta.bytes]);
-
-  const aspect = dims.width > 0 && dims.height > 0
-    ? (dims.width / dims.height).toFixed(3)
-    : '—';
 
   const dirty = useMemo(() => {
     const a = normalizeTextureSampler(meta.sampler, { compressed });
@@ -109,35 +112,38 @@ export function TextureInspector({
   }, []);
 
   const summary = describeSampler(sampler);
+  const format = meta.format || (asset?.path || '').split('.').pop() || '—';
+  const alpha = meta.hasAlpha == null ? 'α?' : (meta.hasAlpha ? 'α' : 'opaque');
+  const dimLabel = dims.width && dims.height ? `${dims.width}×${dims.height}` : '—';
+  const compact = !showPreview;
 
   return (
-    <div className="bb-texture-inspector" {...helpProps('texture.inspector')}>
-      <TexturePreviewCanvas
-        url={asset?.url || asset?.preview?.url}
-        path={asset?.path}
-        sampler={sampler}
-        transform={transform}
-        channelView={channelView}
-        compressed={compressed}
-        maxAnisotropy={maxAnisotropy}
-        onProbeSize={onImageProbe}
-      />
+    <div
+      className={`bb-texture-inspector${compact ? ' bb-texture-inspector--compact' : ''}`}
+      {...helpProps('texture.inspector')}
+    >
+      {showPreview ? (
+        <TexturePreviewCanvas
+          url={asset?.url || asset?.preview?.url}
+          path={asset?.path}
+          sampler={sampler}
+          transform={transform}
+          channelView={channelView}
+          compressed={compressed}
+          maxAnisotropy={maxAnisotropy}
+          onProbeSize={onImageProbe}
+        />
+      ) : null}
 
-      <div className="bb-texture-inspector__stats">
-        <dl>
-          <div><dt>Dimensions</dt><dd>{dims.width && dims.height ? `${dims.width} × ${dims.height}` : '—'}</dd></div>
-          <div><dt>Aspect</dt><dd>{aspect}</dd></div>
-          <div><dt>Source format</dt><dd>{meta.format || (asset?.path || '').split('.').pop() || '—'}</dd></div>
-          <div><dt>Color space</dt><dd>{summary.colorSpace}</dd></div>
-          <div><dt>Alpha</dt><dd>{meta.hasAlpha == null ? 'unknown' : (meta.hasAlpha ? 'yes' : 'no')}</dd></div>
-          <div><dt>Mipmaps</dt><dd>{summary.mipmaps}</dd></div>
-          <div><dt>Compression</dt><dd>{compressed ? 'KTX2 / compressed' : 'uncompressed'}</dd></div>
-          <div><dt>GPU memory (est.)</dt><dd>{formatBytes(gpuEstimate)}</dd></div>
-        </dl>
-        <p className="bb-texture-inspector__est-note">
-          GPU memory is an estimate (RGBA8 or compressed payload), not a live GPU query.
-        </p>
-      </div>
+      <p className="bb-texture-inspector__summary">
+        <span>{dimLabel}</span>
+        <span>{format}</span>
+        <span>{summary.colorSpace}</span>
+        <span>{alpha}</span>
+        <span>{summary.mipmaps}</span>
+        <span>{compressed ? 'KTX2' : 'raw'}</span>
+        <span title="GPU memory estimate (not a live query)">{formatBytes(gpuEstimate)}</span>
+      </p>
 
       {validation.warnings.length > 0 && (
         <ul className="bb-texture-inspector__warnings">
@@ -145,97 +151,113 @@ export function TextureInspector({
         </ul>
       )}
 
-      <fieldset className="bb-texture-inspector__fieldset" disabled={busy}>
-        <legend>Sampling</legend>
-        <label>
-          Wrap S
-          <select value={sampler.wrapS} onChange={(e) => patchSampler({ wrapS: e.target.value })}>
-            {TEXTURE_WRAP_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-        <label>
-          Wrap T
-          <select value={sampler.wrapT} onChange={(e) => patchSampler({ wrapT: e.target.value })}>
-            {TEXTURE_WRAP_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-        <label>
-          Mag filter
-          <select value={sampler.magFilter} onChange={(e) => patchSampler({ magFilter: e.target.value })}>
-            {TEXTURE_MAG_FILTERS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-        <label>
-          Min filter
-          <select value={sampler.minFilter} onChange={(e) => patchSampler({ minFilter: e.target.value })}>
-            {TEXTURE_MIN_FILTERS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-        <label>
-          Anisotropy
-          <input
-            type="number"
-            min={1}
-            max={maxAnisotropy}
-            value={sampler.anisotropy}
-            onChange={(e) => patchSampler({ anisotropy: Number(e.target.value) })}
-          />
-          <span className="bb-texture-inspector__hint">max {maxAnisotropy}</span>
-        </label>
-        <label className="bb-texture-inspector__check">
-          <input
-            type="checkbox"
-            checked={sampler.generateMipmaps}
-            disabled={compressed}
-            onChange={(e) => patchSampler({ generateMipmaps: e.target.checked })}
-          />
-          Generate mipmaps
-        </label>
-        <label>
-          Color space
-          <select value={sampler.colorSpace} onChange={(e) => patchSampler({ colorSpace: e.target.value })}>
-            {TEXTURE_COLOR_SPACES.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </label>
-      </fieldset>
+      <div className="bb-texture-inspector__grid">
+        <fieldset className="bb-texture-inspector__fieldset" disabled={busy}>
+          <legend>Sampling</legend>
+          <label>
+            Wrap S
+            <select value={sampler.wrapS} onChange={(e) => patchSampler({ wrapS: e.target.value })}>
+              {TEXTURE_WRAP_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label>
+            Wrap T
+            <select value={sampler.wrapT} onChange={(e) => patchSampler({ wrapT: e.target.value })}>
+              {TEXTURE_WRAP_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label>
+            Mag
+            <select value={sampler.magFilter} onChange={(e) => patchSampler({ magFilter: e.target.value })}>
+              {TEXTURE_MAG_FILTERS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label>
+            Min
+            <select value={sampler.minFilter} onChange={(e) => patchSampler({ minFilter: e.target.value })}>
+              {TEXTURE_MIN_FILTERS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label>
+            Aniso
+            <input
+              type="number"
+              min={1}
+              max={maxAnisotropy}
+              value={sampler.anisotropy}
+              onChange={(e) => patchSampler({ anisotropy: Number(e.target.value) })}
+              title={`max ${maxAnisotropy}`}
+            />
+          </label>
+          <label>
+            Color
+            <select value={sampler.colorSpace} onChange={(e) => patchSampler({ colorSpace: e.target.value })}>
+              {TEXTURE_COLOR_SPACES.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="bb-texture-inspector__check">
+            <input
+              type="checkbox"
+              checked={sampler.generateMipmaps}
+              disabled={compressed}
+              onChange={(e) => patchSampler({ generateMipmaps: e.target.checked })}
+            />
+            Mipmaps
+          </label>
+        </fieldset>
 
-      <fieldset className="bb-texture-inspector__fieldset" disabled={busy}>
-        <legend>Transform (asset default)</legend>
-        <p className="bb-texture-inspector__hint">
-          Distinct from surface UV (Layer 1) and material UV (Layer 2). Material UV multiplies on top.
-        </p>
-        <label>Repeat U <input type="number" step="0.1" value={transform.repeatU} onChange={(e) => patchTransform({ repeatU: Number(e.target.value) })} /></label>
-        <label>Repeat V <input type="number" step="0.1" value={transform.repeatV} onChange={(e) => patchTransform({ repeatV: Number(e.target.value) })} /></label>
-        <label>Offset U <input type="number" step="0.05" value={transform.offsetU} onChange={(e) => patchTransform({ offsetU: Number(e.target.value) })} /></label>
-        <label>Offset V <input type="number" step="0.05" value={transform.offsetV} onChange={(e) => patchTransform({ offsetV: Number(e.target.value) })} /></label>
-        <label>Rotation ° <input type="number" step="1" value={transform.rotation} onChange={(e) => patchTransform({ rotation: Number(e.target.value) })} /></label>
-        <label>Center U <input type="number" step="0.05" value={transform.centerU} onChange={(e) => patchTransform({ centerU: Number(e.target.value) })} /></label>
-        <label>Center V <input type="number" step="0.05" value={transform.centerV} onChange={(e) => patchTransform({ centerV: Number(e.target.value) })} /></label>
-        <label className="bb-texture-inspector__check">
-          <input
-            type="checkbox"
-            checked={transform.flipY}
-            disabled={compressed}
-            onChange={(e) => patchTransform({ flipY: e.target.checked })}
-          />
-          Flip Y
+        <fieldset className="bb-texture-inspector__fieldset" disabled={busy} {...helpProps('texture.transform')}>
+          <legend>Transform</legend>
+          <label>Rep U <input type="number" step="0.1" value={transform.repeatU} onChange={(e) => patchTransform({ repeatU: Number(e.target.value) })} /></label>
+          <label>Rep V <input type="number" step="0.1" value={transform.repeatV} onChange={(e) => patchTransform({ repeatV: Number(e.target.value) })} /></label>
+          <label>Off U <input type="number" step="0.05" value={transform.offsetU} onChange={(e) => patchTransform({ offsetU: Number(e.target.value) })} /></label>
+          <label>Off V <input type="number" step="0.05" value={transform.offsetV} onChange={(e) => patchTransform({ offsetV: Number(e.target.value) })} /></label>
+          <label>Rot ° <input type="number" step="1" value={transform.rotation} onChange={(e) => patchTransform({ rotation: Number(e.target.value) })} /></label>
+          <label>Ctr U <input type="number" step="0.05" value={transform.centerU} onChange={(e) => patchTransform({ centerU: Number(e.target.value) })} /></label>
+          <label>Ctr V <input type="number" step="0.05" value={transform.centerV} onChange={(e) => patchTransform({ centerV: Number(e.target.value) })} /></label>
+          <label className="bb-texture-inspector__check">
+            <input
+              type="checkbox"
+              checked={transform.flipY}
+              disabled={compressed}
+              onChange={(e) => patchTransform({ flipY: e.target.checked })}
+            />
+            Flip Y
+          </label>
+        </fieldset>
+      </div>
+
+      <div className="bb-texture-inspector__footer">
+        <label className="bb-texture-inspector__channel" {...helpProps('texture.channel')}>
+          Channel
+          <select value={channelView} onChange={(e) => setChannelView(e.target.value)}>
+            <option value="rgba">RGBA</option>
+            <option value="r">R</option>
+            <option value="g">G</option>
+            <option value="b">B</option>
+            <option value="a">A</option>
+          </select>
         </label>
-      </fieldset>
-
-      <fieldset className="bb-texture-inspector__fieldset">
-        <legend>Channel view</legend>
-        <select value={channelView} onChange={(e) => setChannelView(e.target.value)}>
-          <option value="rgba">RGBA</option>
-          <option value="r">R</option>
-          <option value="g">G</option>
-          <option value="b">B</option>
-          <option value="a">A</option>
-        </select>
-      </fieldset>
-
-      <div className="bb-texture-inspector__actions">
-        <button type="button" className="bb-btn" disabled={!dirty || busy} onClick={onApply}>Apply</button>
-        <button type="button" className="bb-btn" disabled={busy} onClick={onReset}>Reset defaults</button>
+        <div className="bb-texture-inspector__actions">
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={!dirty || busy}
+            onClick={onApply}
+            {...helpProps('texture.apply', dirty ? null : 'No texture draft changes.')}
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={busy}
+            onClick={onReset}
+            {...helpProps('texture.reset')}
+          >
+            Reset
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -248,6 +248,23 @@ export async function updatePrefab(id, definition) {
   return res.json();
 }
 
+/**
+ * Mutate Content Browser virtual folders (create / rename / delete / move / reorder / move-asset).
+ * Persists into public/assets/registry.json via the dev asset API.
+ */
+export async function runAssetFolderOp(op) {
+  const res = await fetch('/api/assets?action=folder-op', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(op || {}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Folder operation failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 /** Public URL for a registry-relative asset path. */
 export function publicAssetUrl(relPath) {
   if (!relPath) return null;

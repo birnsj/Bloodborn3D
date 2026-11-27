@@ -1,14 +1,14 @@
 export const workspaceLesson = {
   id: 'workspace',
   title: 'Workspace & Viewports',
-  summary: 'Dock panels, Asset Viewer, named layouts, multi-pane Fog/PP chips, AI Assets tab, Editor Settings, and hover help.',
+  summary: 'Dock panels, Content Browser folders, Asset Viewer, named layouts, multi-pane Fog/PP chips, AI Assets tab, Editor Settings, and hover help.',
   order: 10,
   starterPath: 'tutorials/getting-started.json',
   steps: [
     {
       id: 'intro',
       title: 'Your workspace',
-      body: 'Content Browser navigates folders; Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together. Workspace tabs (Level Editor, Materials, AI Assets, …) switch major editor modes.',
+      body: 'Content Browser navigates folders (including subfolders); Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together. Workspace tabs (Level Editor, Materials, AI Assets, …) switch major editor modes.',
       verify: { type: 'manualConfirm', label: 'Continue' },
     },
     {
@@ -20,10 +20,23 @@ export const workspaceLesson = {
       explain: 'Dedicated Tutorials lessons cover Project Art Library and Asset Generation under Art & generation.',
     },
     {
+      id: 'content-folders',
+      title: 'Content Browser folders',
+      body: 'In Content Browser, right-click a folder for New Subfolder, Rename, Delete, Move Up/Down, or Move To. Use + Folder for a top-level folder. Drag a custom folder onto another to reparent it. Built-in roots (Textures, Materials, Meshes, …) cannot be renamed or deleted.',
+      terms: [
+        { term: 'Virtual folders', def: 'Registry organization paths — they do not create directories on disk.' },
+        { term: 'Built-in roots', def: 'Factory folders like Textures and Materials that stay fixed.' },
+      ],
+      highlight: ['content.folder', 'content.folder.new'],
+      verify: { type: 'manualConfirm', label: 'I tried a folder menu' },
+      failHint: 'Right-click Textures (or empty space) in Content Browser and look for New Subfolder / New Folder.',
+      explain: 'Delete only works on empty custom folders. Move assets first via Asset Viewer → right-click → Move To Folder.',
+    },
+    {
       id: 'asset-viewer',
       title: 'Asset Viewer',
-      body: 'Open Window → Asset Viewer if needed. Pick a folder in Content Browser, then browse thumbnails here. Use the Size slider for thumb scale; drag materials onto faces or meshes into the Viewport.',
-      highlight: ['assetViewer.thumbSize'],
+      body: 'Open Window → Asset Viewer if needed. Pick a folder in Content Browser, then browse thumbnails here. Use the Size slider for thumb scale; drag materials onto faces or meshes into the Viewport. Right-click an asset → Move To Folder to reorganize without changing files on disk.',
+      highlight: ['assetViewer.thumbSize', 'content.asset.move'],
       verify: { type: 'manualConfirm', label: 'I found Asset Viewer' },
       explain: 'Double-click an asset for a preview window. Material drags paint faces — they do not split the dock layout.',
     },
@@ -80,8 +93,8 @@ export const workspaceLesson = {
     {
       id: 'hover-help',
       title: 'Hover Help',
-      body: 'Help → Show Hover Help. Pause on a toolbar or viewport control (including Fog / PP) for a tip. Help → Keyboard Shortcuts… lists hotkeys (Ctrl+Shift+S Save All, Enter for clip, Esc cascades, Tab for placement, Space maximize).',
-      highlight: ['toolbar.select', 'help.hoverHelp'],
+      body: 'Help → Show Hover Help. Pause on a toolbar, Content Browser folder, or viewport control (including Fog / PP) for a tip. Help → Keyboard Shortcuts… lists hotkeys and mouse bindings (Ctrl+Shift+S Save All, Enter for clip, Esc cascades, Tab for placement, Space maximize, Content Browser folder RMB).',
+      highlight: ['toolbar.select', 'help.hoverHelp', 'content.folder'],
       verify: { type: 'manualConfirm', label: 'I saw a tip' },
     },
     {

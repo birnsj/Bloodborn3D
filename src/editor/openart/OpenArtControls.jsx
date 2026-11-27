@@ -770,6 +770,7 @@ export function OpenArtControls() {
                     disabled={ui.busy}
                     title="Clear reference"
                     onClick={clearReference}
+                    {...helpProps('openart.prompt')}
                   >
                     ×
                   </button>

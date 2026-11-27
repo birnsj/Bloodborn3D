@@ -364,6 +364,7 @@ function LayerNode({
             onActivate(layer.id);
           }}
           title="Click: set active · Double-click: select actors"
+          {...helpProps('layers.row', disabled ? 'Unavailable during Play mode.' : null)}
         >
           <span className="bb-layers-item__name">{layer.name}</span>
           <span className="bb-layers-item__count">{count}</span>
@@ -375,6 +376,7 @@ function LayerNode({
           title={isHidden ? 'Show layer' : 'Hide layer'}
           disabled={disabled}
           onClick={() => onToggleHidden(layer.id)}
+          {...helpProps('layers.visibility', disabled ? 'Unavailable during Play mode.' : null)}
         >
           {isHidden ? '○' : '●'}
         </button>
@@ -384,6 +386,7 @@ function LayerNode({
           title={isLocked ? 'Unlock layer' : 'Lock layer'}
           disabled={disabled}
           onClick={() => onToggleLocked(layer.id)}
+          {...helpProps('layers.lock', disabled ? 'Unavailable during Play mode.' : null)}
         >
           {isLocked ? 'L' : '·'}
         </button>
@@ -393,6 +396,7 @@ function LayerNode({
           title={isSolo ? 'Clear solo' : 'Solo layer'}
           disabled={disabled}
           onClick={() => onSolo(isSolo ? null : layer.id)}
+          {...helpProps('layers.solo', disabled ? 'Unavailable during Play mode.' : null)}
         >
           S
         </button>
@@ -405,6 +409,7 @@ function LayerNode({
             if (selectedActorIds.length) onAssignSelection(layer.id);
             else onSelectActors(layer.id);
           }}
+          {...helpProps('layers.rowAssign', disabled ? 'Unavailable during Play mode.' : null)}
         >
           →
         </button>

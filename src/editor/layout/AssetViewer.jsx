@@ -43,6 +43,8 @@ export function AssetViewer({ docked = false } = {}) {
     createNewMaterial,
     dragMime,
     notify,
+    folders,
+    mutateFolders,
   } = useAssetBrowser();
   const {
     createPrefabFromSelection,
@@ -320,6 +322,7 @@ export function AssetViewer({ docked = false } = {}) {
                     onDoubleClick={() => openPreview(asset)}
                     onContextMenu={(event) => {
                       if (!selected) selectAsset(asset.id);
+                      const moveTargets = (folders || []).filter((f) => f !== asset.folder);
                       openFromEvent(event, [
                         {
                           id: 'preview',
@@ -330,6 +333,27 @@ export function AssetViewer({ docked = false } = {}) {
                           id: 'select',
                           label: 'Select',
                           onSelect: () => selectAsset(asset.id),
+                        },
+                        {
+                          id: 'move-to',
+                          label: 'Move To Folder',
+                          disabled: !moveTargets.length || !mutateFolders,
+                          submenu: moveTargets.map((target) => ({
+                            id: `move-${target}`,
+                            label: target,
+                            onSelect: async () => {
+                              try {
+                                await mutateFolders({
+                                  type: 'move-asset',
+                                  assetId: asset.id,
+                                  folder: target,
+                                });
+                                notify?.(`Moved ${asset.name} to ${target}`);
+                              } catch (err) {
+                                notify?.(err.message || 'Could not move asset');
+                              }
+                            },
+                          })),
                         },
                       ]);
                     }}
@@ -376,7 +400,14 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
   const [previewRotationY, setPreviewRotationY] = useState(0);
   const [previewScale, setPreviewScale] = useState(1);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [textureDraft, setTextureDraft] = useState(null);
   const previewApiRef = useRef(null);
+  const isTexture = asset?.type === 'texture';
+  const isMaterial = asset?.type === 'material';
+  const isCompactPreview = isTexture || isMaterial;
+  const onTextureDraftChange = useCallback((draft) => {
+    setTextureDraft(draft);
+  }, []);
 
   const savedOffset = normalizeContentOffset(asset?.meta?.defaultContentOffset);
   const pivotDirty = !offsetsEqual(pivotDraft, savedOffset);
@@ -387,6 +418,7 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
     setPreviewRotationY(0);
     setPreviewScale(1);
     setPivotDragActive(false);
+    setTextureDraft(null);
   }, [asset.id, asset?.meta?.defaultContentOffset]);
 
   useEffect(() => {
@@ -452,6 +484,138 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
       }
     : null;
 
+  const texW = Number(textureDraft?.width) || Number(asset?.meta?.width) || 0;
+  const texH = Number(textureDraft?.height) || Number(asset?.meta?.height) || 0;
+  const texAspect = texW > 0 && texH > 0 ? texW / texH : 1;
+
+  const previewStage = (
+    <div
+      className={`bb-asset-preview__stage${isTexture ? ' bb-asset-preview__stage--texture' : ''}${isMaterial ? ' bb-asset-preview__stage--material' : ''}`}
+      style={isTexture ? { '--tex-aspect': String(texAspect) } : undefined}
+      {...helpProps('assetViewer.preview')}
+    >
+      <PreviewSurface
+        asset={asset}
+        pivotDraft={pivotDraft}
+        pivotEditMode={pivotEditMode}
+        onPivotDraftChange={setPivotDraft}
+        onPivotDragActiveChange={setPivotDragActive}
+        previewRotationY={previewRotationY}
+        previewScale={previewScale}
+        snapEnabled={snapEnabled}
+        previewApiRef={previewApiRef}
+        textureDraft={textureDraft}
+      />
+    </div>
+  );
+
+  const materialBits = isMaterial ? materialSummaryBits(asset) : [];
+
+  const previewMeta = (
+    <div className={`bb-asset-preview__meta${isCompactPreview ? ' bb-asset-preview__meta--compact' : ''}`}>
+      {isCompactPreview ? (
+        <>
+          <p className="bb-asset-preview__identity">
+            <code>{asset.id}</code>
+            {asset.path ? <span className="bb-muted">{asset.path}</span> : null}
+            {(asset.tags || []).length > 0 ? (
+              <span className="bb-muted">{asset.tags.join(', ')}</span>
+            ) : null}
+          </p>
+          {isMaterial && materialBits.length > 0 && (
+            <p className="bb-asset-preview__summary">
+              {materialBits.map((bit) => (
+                <span key={bit.key} title={bit.title}>{bit.label}</span>
+              ))}
+            </p>
+          )}
+          {isMaterial && (
+            <p className="bb-muted bb-asset-preview__hint bb-asset-preview__hint--compact">
+              {previewHint(asset)}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="bb-asset-preview__title-row">
+            <AssetThumbnail asset={asset} size={28} />
+            <div>
+              <div className="bb-asset-preview__name">{asset.name}</div>
+              <div className="bb-muted">{asset.type} · {asset.folder}</div>
+            </div>
+          </div>
+          <dl className="bb-asset-preview__fields">
+            <div><dt>ID</dt><dd>{asset.id}</dd></div>
+            {asset.path && <div><dt>Path</dt><dd>{asset.path}</dd></div>}
+            {(asset.tags || []).length > 0 && (
+              <div><dt>Tags</dt><dd>{asset.tags.join(', ')}</dd></div>
+            )}
+            {meshMeta?.boundingBoxMeters && (
+              <>
+                <div>
+                  <dt>Size (m)</dt>
+                  <dd>
+                    {fmt(meshMeta.boundingBoxMeters.x)} × {fmt(meshMeta.boundingBoxMeters.y)} × {fmt(meshMeta.boundingBoxMeters.z)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Size (eu)</dt>
+                  <dd>
+                    {fmt(meshMeta.boundingBoxEditor.x, 0)} × {fmt(meshMeta.boundingBoxEditor.y, 0)} × {fmt(meshMeta.boundingBoxEditor.z, 0)}
+                  </dd>
+                </div>
+                <div><dt>Triangles</dt><dd>{meshMeta.triangles}</dd></div>
+              </>
+            )}
+            {Object.entries(asset.meta || {}).map(([key, value]) => {
+              if (typeof value === 'object') return null;
+              return (
+                <div key={key}>
+                  <dt>{key}</dt>
+                  <dd>{String(value)}</dd>
+                </div>
+              );
+            })}
+          </dl>
+          <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
+        </>
+      )}
+      {pivotDragActive && (
+        <p className="bb-muted">Dragging pivot — release to commit draft, Escape to cancel drag.</p>
+      )}
+      {meshAsset && (
+        <MeshAssetTools
+          asset={meshAsset}
+          importDerivedMeshGlb={importDerivedMeshGlb}
+          updateMeshMeta={updateMeshMeta}
+          notify={notify}
+          pivotDraft={pivotDraft}
+          onPivotDraftChange={setPivotDraft}
+          pivotEditMode={pivotEditMode}
+          onPivotEditModeChange={setPivotEditMode}
+          previewRotationY={previewRotationY}
+          onPreviewRotationYChange={setPreviewRotationY}
+          previewScale={previewScale}
+          onPreviewScaleChange={setPreviewScale}
+          snapEnabled={snapEnabled}
+          onSnapEnabledChange={setSnapEnabled}
+          onApplyPivot={applyPivot}
+          onCancelPivot={cancelPivotSession}
+          pivotDirty={pivotDirty}
+        />
+      )}
+      {isTexture && (
+        <TextureInspector
+          asset={asset}
+          updateTextureMeta={updateTextureMeta}
+          notify={notify}
+          showPreview={false}
+          onDraftChange={onTextureDraftChange}
+        />
+      )}
+    </div>
+  );
+
   return createPortal(
     <div className="bb-dialog-root" role="presentation">
       <button
@@ -461,16 +625,19 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
         onClick={() => onClose?.()}
       />
       <div
-        className="bb-dialog bb-dialog--asset-preview"
+        className={`bb-dialog bb-dialog--asset-preview${isTexture ? ' bb-dialog--asset-preview-texture' : ''}${isMaterial ? ' bb-dialog--asset-preview-material' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bb-asset-preview-title"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="bb-dialog__header">
-          <h2 id="bb-asset-preview-title" className="bb-dialog__title">
-            {asset.name}
-          </h2>
+          <div className="bb-asset-preview__header-text">
+            <h2 id="bb-asset-preview-title" className="bb-dialog__title">
+              {asset.name}
+            </h2>
+            <p className="bb-muted bb-asset-preview__header-sub">{asset.type} · {asset.folder}</p>
+          </div>
           <button
             type="button"
             className="bb-btn"
@@ -481,93 +648,8 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
           </button>
         </div>
         <div className="bb-dialog__body bb-asset-preview-dialog">
-          <div className="bb-asset-preview__stage" {...helpProps('assetViewer.preview')}>
-            <PreviewSurface
-              asset={asset}
-              pivotDraft={pivotDraft}
-              pivotEditMode={pivotEditMode}
-              onPivotDraftChange={setPivotDraft}
-              onPivotDragActiveChange={setPivotDragActive}
-              previewRotationY={previewRotationY}
-              previewScale={previewScale}
-              snapEnabled={snapEnabled}
-              previewApiRef={previewApiRef}
-            />
-          </div>
-          <div className="bb-asset-preview__meta">
-            <div className="bb-asset-preview__title-row">
-              <AssetThumbnail asset={asset} size={28} />
-              <div>
-                <div className="bb-asset-preview__name">{asset.name}</div>
-                <div className="bb-muted">{asset.type} · {asset.folder}</div>
-              </div>
-            </div>
-            <dl className="bb-asset-preview__fields">
-              <div><dt>ID</dt><dd>{asset.id}</dd></div>
-              {asset.path && <div><dt>Path</dt><dd>{asset.path}</dd></div>}
-              {(asset.tags || []).length > 0 && (
-                <div><dt>Tags</dt><dd>{asset.tags.join(', ')}</dd></div>
-              )}
-              {meshMeta?.boundingBoxMeters && (
-                <>
-                  <div>
-                    <dt>Size (m)</dt>
-                    <dd>
-                      {fmt(meshMeta.boundingBoxMeters.x)} × {fmt(meshMeta.boundingBoxMeters.y)} × {fmt(meshMeta.boundingBoxMeters.z)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Size (eu)</dt>
-                    <dd>
-                      {fmt(meshMeta.boundingBoxEditor.x, 0)} × {fmt(meshMeta.boundingBoxEditor.y, 0)} × {fmt(meshMeta.boundingBoxEditor.z, 0)}
-                    </dd>
-                  </div>
-                  <div><dt>Triangles</dt><dd>{meshMeta.triangles}</dd></div>
-                </>
-              )}
-              {Object.entries(asset.meta || {}).map(([key, value]) => {
-                if (typeof value === 'object') return null;
-                return (
-                  <div key={key}>
-                    <dt>{key}</dt>
-                    <dd>{String(value)}</dd>
-                  </div>
-                );
-              })}
-            </dl>
-            <p className="bb-muted bb-asset-preview__hint">{previewHint(asset)}</p>
-            {pivotDragActive && (
-              <p className="bb-muted">Dragging pivot — release to commit draft, Escape to cancel drag.</p>
-            )}
-            {meshAsset && (
-              <MeshAssetTools
-                asset={meshAsset}
-                importDerivedMeshGlb={importDerivedMeshGlb}
-                updateMeshMeta={updateMeshMeta}
-                notify={notify}
-                pivotDraft={pivotDraft}
-                onPivotDraftChange={setPivotDraft}
-                pivotEditMode={pivotEditMode}
-                onPivotEditModeChange={setPivotEditMode}
-                previewRotationY={previewRotationY}
-                onPreviewRotationYChange={setPreviewRotationY}
-                previewScale={previewScale}
-                onPreviewScaleChange={setPreviewScale}
-                snapEnabled={snapEnabled}
-                onSnapEnabledChange={setSnapEnabled}
-                onApplyPivot={applyPivot}
-                onCancelPivot={cancelPivotSession}
-                pivotDirty={pivotDirty}
-              />
-            )}
-            {asset.type === 'texture' && (
-              <TextureInspector
-                asset={asset}
-                updateTextureMeta={updateTextureMeta}
-                notify={notify}
-              />
-            )}
-          </div>
+          {previewStage}
+          {previewMeta}
         </div>
       </div>
     </div>,
@@ -585,6 +667,7 @@ function PreviewSurface({
   previewScale,
   snapEnabled,
   previewApiRef,
+  textureDraft = null,
 }) {
   if (asset.type === 'mesh' && asset.url) {
     return (
@@ -603,14 +686,15 @@ function PreviewSurface({
   }
 
   if (asset.type === 'texture' && (asset.url || asset.path)) {
-    // WebGL preview (supports KTX2); raster <img> cannot decode compressed fixtures.
+    // Single WebGL preview (supports KTX2); draft sampling comes from TextureInspector.
     return (
       <div className="bb-asset-preview__surface bb-asset-preview__surface--image">
         <TexturePreviewCanvas
           url={asset.url}
           path={asset.path}
-          sampler={asset.meta?.sampler}
-          transform={asset.meta?.transform}
+          sampler={textureDraft?.sampler ?? asset.meta?.sampler}
+          transform={textureDraft?.transform ?? asset.meta?.transform}
+          channelView={textureDraft?.channelView || 'rgba'}
           compressed={isCompressedTexturePath(asset.path || asset.url) || isCompressedTextureMeta(asset.meta)}
         />
       </div>
@@ -760,12 +844,45 @@ function previewHint(asset) {
     case 'mesh':
       return 'Orbit to frame the model, then Generate Icon to save that view as the Asset Viewer thumbnail. Models load in meters (100 editor units = 1 m).';
     case 'material':
-      return 'Orbit to frame the sphere, then Generate Icon to save that view as the Asset Viewer thumbnail. Assign materials to brushes from the Details panel.';
+      return 'Orbit to frame, then Generate Icon for the Asset Viewer thumbnail. Assign from Details.';
     case 'texture':
       return 'Imported texture preview. Use New Material to build a reusable material.';
     default:
       return 'Project asset preview.';
   }
+}
+
+function materialSummaryBits(asset) {
+  const def = asset?.definition || {};
+  const meta = asset?.meta || {};
+  const bits = [];
+  const color = def.baseColor || meta.baseColor;
+  if (color) {
+    bits.push({ key: 'color', label: String(color), title: 'Base color' });
+  }
+  const roughness = def.roughness ?? meta.roughness;
+  if (roughness != null && roughness !== '') {
+    bits.push({ key: 'rough', label: `R ${roughness}`, title: 'Roughness' });
+  }
+  const metalness = def.metalness ?? meta.metalness;
+  if (metalness != null && metalness !== '') {
+    bits.push({ key: 'metal', label: `M ${metalness}`, title: 'Metalness' });
+  }
+  const shading = def.shadingModel || meta.shadingModel;
+  if (shading) {
+    bits.push({ key: 'shade', label: String(shading), title: 'Shading model' });
+  }
+  const maps = [];
+  if (def.baseColorMapId || meta.hasBaseMap) maps.push('albedo');
+  if (def.normalMapId || meta.hasNormalMap) maps.push('normal');
+  if (def.roughnessMapId || meta.hasRoughness || meta.hasRoughnessMap) maps.push('roughness');
+  if (def.metalnessMapId || meta.hasMetalnessMap) maps.push('metalness');
+  if (def.aoMapId || meta.hasAoMap) maps.push('ao');
+  if (def.emissiveMapId || meta.hasEmissiveMap) maps.push('emissive');
+  if (maps.length) {
+    bits.push({ key: 'maps', label: maps.join('+'), title: 'Maps' });
+  }
+  return bits;
 }
 
 function fmt(n, digits = 2) {

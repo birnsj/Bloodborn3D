@@ -94,6 +94,32 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     ],
   },
   {
+    id: 'contentBrowser',
+    title: 'Content Browser',
+    rows: [
+      {
+        keys: ['RMB'],
+        action: 'Folder menu',
+        note: 'New Subfolder · Rename · Delete · Move Up/Down · Move To',
+      },
+      {
+        keys: ['RMB'],
+        action: 'Empty-space menu',
+        note: 'New Folder (top level)',
+      },
+      {
+        keys: ['Drag'],
+        action: 'Reparent folder',
+        note: 'custom folders only · drop onto another folder',
+      },
+      {
+        keys: ['RMB'],
+        action: 'Asset → Move To Folder',
+        note: 'in Asset Viewer · registry path only, files stay put',
+      },
+    ],
+  },
+  {
     id: 'projectArt',
     title: 'Project Art Library',
     rows: [

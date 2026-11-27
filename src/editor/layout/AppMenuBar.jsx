@@ -256,10 +256,10 @@ export function AppMenuBar() {
               }}
             />
             <Sep />
-            <Item label="Save Level" shortcut="Ctrl+S" disabled={isPlay} close={close} onClick={() => saveLevel()} />
-            <Item label="Save Level As…" disabled={isPlay} close={close} onClick={() => saveLevelAs()} />
-            <Item label="Save All" shortcut="Ctrl+Shift+S" disabled={isPlay} close={close} onClick={() => saveAll()} helpId="menu.saveAll" />
-            <Item label="Reload Level" disabled={isPlay} close={close} onClick={() => loadLevel(levelName)} />
+            <Item label="Save Level" shortcut="Ctrl+S" disabled={isPlay} close={close} onClick={() => saveLevel()} helpId="toolbar.save" disabledReason="Unavailable during Play mode." />
+            <Item label="Save Level As…" disabled={isPlay} close={close} onClick={() => saveLevelAs()} helpId="menu.saveAs" disabledReason="Unavailable during Play mode." />
+            <Item label="Save All" shortcut="Ctrl+Shift+S" disabled={isPlay} close={close} onClick={() => saveAll()} helpId="menu.saveAll" disabledReason="Unavailable during Play mode." />
+            <Item label="Reload Level" disabled={isPlay} close={close} onClick={() => loadLevel(levelName)} helpId="menu.reloadLevel" disabledReason="Unavailable during Play mode." />
             <Sep />
             {levels.map((name) => {
               const active = name === levelName;
@@ -284,8 +284,8 @@ export function AppMenuBar() {
       <Menu label="Edit">
         {(close) => (
           <>
-            <Item label="Undo" shortcut="Ctrl+Z" disabled={isPlay || !canUndo} close={close} onClick={() => undo()} />
-            <Item label="Redo" shortcut="Ctrl+Y" disabled={isPlay || !canRedo} close={close} onClick={() => redo()} />
+            <Item label="Undo" shortcut="Ctrl+Z" disabled={isPlay || !canUndo} close={close} onClick={() => undo()} helpId="toolbar.undo" disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Nothing to undo.'} />
+            <Item label="Redo" shortcut="Ctrl+Y" disabled={isPlay || !canRedo} close={close} onClick={() => redo()} helpId="toolbar.redo" disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Nothing to redo.'} />
             <Sep />
             <Item
               label="Select All"
@@ -293,6 +293,8 @@ export function AppMenuBar() {
               disabled={isPlay || !world?.actors?.length}
               close={close}
               onClick={() => selectAllActors()}
+              helpId="menu.selectAll"
+              disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Level has no actors.'}
             />
             <Item
               label="Deselect"
@@ -300,10 +302,12 @@ export function AppMenuBar() {
               disabled={isPlay || !hasSelection}
               close={close}
               onClick={() => deselectAllActors()}
+              helpId="menu.deselect"
+              disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Nothing selected.'}
             />
             <Sep />
-            <Item label="Duplicate" shortcut="Ctrl+D" disabled={isPlay || !hasSelection} close={close} onClick={() => duplicateSelected()} />
-            <Item label="Delete" shortcut="Del" disabled={isPlay || !hasSelection} close={close} onClick={() => deleteSelected()} />
+            <Item label="Duplicate" shortcut="Ctrl+D" disabled={isPlay || !hasSelection} close={close} onClick={() => duplicateSelected()} helpId="details.duplicate" disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Select actors first.'} />
+            <Item label="Delete" shortcut="Del" disabled={isPlay || !hasSelection} close={close} onClick={() => deleteSelected()} helpId="details.delete" disabledReason={isPlay ? 'Unavailable during Play mode.' : 'Select actors first.'} />
             <Sep />
             <Item
               label="Settings…"
@@ -337,7 +341,12 @@ export function AppMenuBar() {
               helpId="workspace.ai"
             />
             <Sep />
-            <Item label={isPlay ? 'Stop Play' : 'Play In Editor'} close={close} onClick={() => (isPlay ? stop() : play())} />
+            <Item
+              label={isPlay ? 'Stop Play' : 'Play In Editor'}
+              close={close}
+              onClick={() => (isPlay ? stop() : play())}
+              helpId={isPlay ? 'toolbar.stop' : 'menu.play'}
+            />
           </>
         )}
       </Menu>
@@ -363,6 +372,8 @@ export function AppMenuBar() {
               disabled={isPlay}
               close={close}
               onClick={() => cycleGridSize(-1)}
+              helpId="toolbar.grid"
+              disabledReason="Unavailable during Play mode."
             />
             <Item
               label={`Larger Grid (${gridSize})`}
@@ -370,6 +381,8 @@ export function AppMenuBar() {
               disabled={isPlay}
               close={close}
               onClick={() => cycleGridSize(1)}
+              helpId="toolbar.grid"
+              disabledReason="Unavailable during Play mode."
             />
             <Item
               label="Grid Snap"
@@ -378,6 +391,8 @@ export function AppMenuBar() {
               disabled={isPlay}
               close={close}
               onClick={() => toggleGridSnap()}
+              helpId="toolbar.gridSnap"
+              disabledReason="Unavailable during Play mode."
             />
             <Sep />
             <SubMenu label="Viewport Layout">
@@ -396,6 +411,7 @@ export function AppMenuBar() {
                         checked={currentMode === mode.id}
                         close={done}
                         onClick={() => setViewportLayoutMode(mode.id)}
+                        helpId="viewport.layout"
                       />
                     ))}
                   </>
@@ -417,6 +433,7 @@ export function AppMenuBar() {
                         checked={layout.colorTheme === theme.id}
                         close={done}
                         onClick={() => setColorTheme(theme.id)}
+                        helpId="settings.appearance"
                       />
                     ))}
                   </>
@@ -431,6 +448,7 @@ export function AppMenuBar() {
                 checked={layout.uiScale === entry.id}
                 close={close}
                 onClick={() => setUiScale(entry.id)}
+                helpId="settings.appearance"
               />
             ))}
           </>
@@ -444,26 +462,31 @@ export function AppMenuBar() {
               label={`${layout.outlinerVisible ? 'Hide' : 'Show'} Scene Outliner`}
               close={close}
               onClick={() => togglePanel('outlinerVisible')}
+              helpId="panel.outliner"
             />
             <Item
               label={`${layout.detailsVisible ? 'Hide' : 'Show'} Details`}
               close={close}
               onClick={() => togglePanel('detailsVisible')}
+              helpId="panel.details"
             />
             <Item
               label={`${layout.contentVisible ? 'Hide' : 'Show'} Content Browser`}
               close={close}
               onClick={() => togglePanel('contentVisible')}
+              helpId="panel.content"
             />
             <Item
               label={`${layout.assetViewerVisible ? 'Hide' : 'Show'} Asset Viewer`}
               close={close}
               onClick={() => togglePanel('assetViewerVisible')}
+              helpId="panel.assetViewer"
             />
             <Item
               label={`${layout.tutorialsVisible ? 'Hide' : 'Show'} Tutorials`}
               close={close}
               onClick={() => togglePanel('tutorialsVisible')}
+              helpId="panel.tutorials"
             />
             <Item
               label={`${layout.layersVisible ? 'Hide' : 'Show'} Layers`}
@@ -477,6 +500,7 @@ export function AppMenuBar() {
               shortcut="Space"
               close={close}
               onClick={() => toggleMaximizeViewport()}
+              helpId="viewport.maximize"
             />
             <Sep />
             <SubMenu label="Layouts">
@@ -492,8 +516,9 @@ export function AppMenuBar() {
                       disabled={!canSaveActive || !layoutDirty}
                       close={done}
                       onClick={onSaveLayout}
+                      helpId="menu.layouts"
                     />
-                    <Item label="Save Layout As…" close={done} onClick={onSaveLayoutAs} />
+                    <Item label="Save Layout As…" close={done} onClick={onSaveLayoutAs} helpId="menu.layouts" />
                     <Sep />
                     {namedLayouts.map((entry) => (
                       <Item
@@ -502,6 +527,7 @@ export function AppMenuBar() {
                         checked={entry.id === activeId}
                         close={done}
                         onClick={() => loadNamedLayout(entry.id)}
+                        helpId="menu.layouts"
                       />
                     ))}
                     <Sep />
@@ -510,14 +536,16 @@ export function AppMenuBar() {
                       disabled={isFactory || activeNamedLayout?.protected}
                       close={done}
                       onClick={onRenameLayout}
+                      helpId="menu.layouts"
                     />
                     <Item
                       label="Delete Layout…"
                       disabled={isFactory || activeNamedLayout?.protected}
                       close={done}
                       onClick={onDeleteLayout}
+                      helpId="menu.layouts"
                     />
-                    <Item label="Reset Layout" close={done} onClick={onResetLayout} />
+                    <Item label="Reset Layout" close={done} onClick={onResetLayout} helpId="menu.layouts" />
                   </>
                 );
               }}

@@ -35,7 +35,12 @@ export function TexturePreviewCanvas({
     camera.position.z = 2;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(el.clientWidth || 280, el.clientHeight || 180, false);
+    // updateStyle true so canvas CSS matches the mount box; false left the
+    // buffer-sized canvas overflowing (and covering stats) at devicePixelRatio > 1.
+    renderer.setSize(el.clientWidth || 280, el.clientHeight || 180, true);
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     el.appendChild(renderer.domElement);
 
     const geo = new THREE.PlaneGeometry(2, 2, 1, 1);
@@ -147,7 +152,9 @@ export function TexturePreviewCanvas({
 
     const onResize = () => {
       if (!el) return;
-      renderer.setSize(el.clientWidth || 280, el.clientHeight || 180, false);
+      renderer.setSize(el.clientWidth || 280, el.clientHeight || 180, true);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
       render();
     };
     const ro = new ResizeObserver(onResize);

@@ -523,6 +523,7 @@ export function DetailsPanel({ docked = false } = {}) {
                       className="bb-btn"
                       disabled={disabled}
                       onClick={() => setSelectedSurface(null)}
+                      {...helpProps('details.surface.clear')}
                     >
                       Clear surface selection
                     </button>
@@ -759,20 +760,20 @@ export function DetailsPanel({ docked = false } = {}) {
                 >
                   {pivotEditMode ? 'Exit Pivot Edit' : 'Pivot Edit'}
                 </button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('original')}>Reset</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('center')}>Center</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('bottomCenter')}>Bottom</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('topCenter')}>Top</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('original')} {...helpProps('details.pivot.presets')}>Reset</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('center')} {...helpProps('details.pivot.presets')}>Center</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('bottomCenter')} {...helpProps('details.pivot.presets')}>Bottom</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('topCenter')} {...helpProps('details.pivot.presets')}>Top</button>
               </div>
               <div className="bb-row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNx')}>−X</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePx')}>+X</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNy')}>−Y</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePy')}>+Y</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNz')}>−Z</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePz')}>+Z</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMin')}>Corner −</button>
-                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMax')}>Corner +</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNx')} {...helpProps('details.pivot.presets')}>−X</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePx')} {...helpProps('details.pivot.presets')}>+X</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNy')} {...helpProps('details.pivot.presets')}>−Y</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePy')} {...helpProps('details.pivot.presets')}>+Y</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('faceNz')} {...helpProps('details.pivot.presets')}>−Z</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('facePz')} {...helpProps('details.pivot.presets')}>+Z</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMin')} {...helpProps('details.pivot.presets')}>Corner −</button>
+                <button type="button" className="bb-btn" disabled={disabled} onClick={() => applyPivotPresetToSelected?.('cornerMax')} {...helpProps('details.pivot.presets')}>Corner +</button>
               </div>
             </Collapsible>
 
@@ -2136,6 +2137,7 @@ function MaterialDefinitionEditor({
           className="bb-btn"
           disabled={disabled || !dirty || saving}
           onClick={onCancel}
+          {...helpProps('details.material.cancel', !dirty ? 'No unsaved material changes.' : null)}
         >
           Cancel
         </button>
@@ -2144,6 +2146,7 @@ function MaterialDefinitionEditor({
           className="bb-btn bb-btn--primary"
           disabled={disabled || !dirty || saving}
           onClick={() => { void onSave(); }}
+          {...helpProps('details.material.save', !dirty ? 'No unsaved material changes.' : null)}
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
@@ -2153,6 +2156,7 @@ function MaterialDefinitionEditor({
           disabled={disabled}
           onClick={() => { void setWorkspace('materials'); }}
           title="Open Materials workspace"
+          {...helpProps('details.material.openWorkspace')}
         >
           Materials…
         </button>
@@ -2264,6 +2268,7 @@ function StaticMeshDetailsSection({
         )}
 
         <Collapsible title="Collision" storageKey="details.staticMesh.collision" defaultOpen>
+          <div {...helpProps('details.staticMesh.collision')}>
           <label className="bb-field">
             <span className="bb-field__label">
               <input
@@ -2335,9 +2340,11 @@ function StaticMeshDetailsSection({
               {' '}Show collision helper
             </span>
           </label>
+          </div>
         </Collapsible>
 
         <Collapsible title="Materials" storageKey="details.staticMesh.materials" defaultOpen>
+          <div {...helpProps('details.staticMesh.materials')}>
           <p className="bb-muted">
             Slots come from the loaded GLB (`meshName:matIndex`). Clear a slot to restore the original material. GLB files are never modified.
           </p>
@@ -2394,12 +2401,18 @@ function StaticMeshDetailsSection({
             className="bb-btn"
             disabled={disabled || overrideKeys.length === 0}
             onClick={() => updateSelectedStaticMesh({ materialOverrides: {} })}
+            {...helpProps(
+              'details.staticMesh.clearOverrides',
+              overrideKeys.length === 0 ? 'No material overrides on this actor.' : null,
+            )}
           >
             Restore all original materials
           </button>
+          </div>
         </Collapsible>
 
         <Collapsible title="LOD" storageKey="details.staticMesh.lod">
+          <div {...helpProps('details.staticMesh.lod')}>
           <p className="bb-muted">
             Distances in editor units (100 eu = 1 m). Level 0 is nearest. Auto LOD uses SimplifyModifier (Batch 7) and saves derived assets without overwriting the source.
           </p>
@@ -2456,6 +2469,10 @@ function StaticMeshDetailsSection({
             className="bb-btn"
             disabled={disabled || !lodLevels.length}
             onClick={() => updateSelectedStaticMesh({ lodLevels: [] })}
+            {...helpProps(
+              'details.staticMesh.clearLod',
+              lodLevels.length ? null : 'No LOD levels authored.',
+            )}
           >
             Clear LOD (use primary asset)
           </button>
@@ -2480,9 +2497,11 @@ function StaticMeshDetailsSection({
             disabled={disabled}
             staticMesh={staticMesh}
           />
+          </div>
         </Collapsible>
 
         <Collapsible title="Rendering" storageKey="details.staticMesh.rendering" defaultOpen>
+          <div {...helpProps('details.staticMesh.rendering')}>
           <label className="bb-field">
             <span className="bb-field__label">
               <input
@@ -2539,6 +2558,7 @@ function StaticMeshDetailsSection({
           <p className="bb-muted">
             Instancing default is off. Auto groups 3+ identical assets. BatchedMesh deferred for multi-material atlases.
           </p>
+          </div>
         </Collapsible>
       </div>
     </Collapsible>
@@ -3567,6 +3587,7 @@ function LightDetailsSection({
                   shadowCameraFar: 80,
                   shadowCameraSize: 20,
                 })}
+                {...helpProps('details.light.shadowReset')}
               >
                 Reset shadow defaults
               </button>
@@ -3895,6 +3916,7 @@ function WorldSettings() {
             groundedSkybox: { ...DEFAULT_WORLD_SCENE.groundedSkybox },
             sky: { ...DEFAULT_WORLD_SCENE.sky },
           }, { label: 'Reset environment' })}
+          {...helpProps('world.scene.clearEnvironment')}
         >
           Reset environment
         </button>
@@ -4431,6 +4453,7 @@ function ExtrudeClipControls({
         disabled={!canExtrude}
         title={canExtrude ? 'Extrude selected face' : 'Select a face in Face mode'}
         onClick={() => commitExtrudeFace?.(distance)}
+        {...helpProps('details.extrude', canExtrude ? null : 'Select a face in Face mode.')}
       >
         Extrude Face
       </button>
@@ -4458,6 +4481,7 @@ function ExtrudeClipControls({
           className="bb-btn"
           disabled={disabled}
           onClick={() => beginClipSession?.(clipMode)}
+          {...helpProps('details.clipPick', disabled ? 'Unavailable during Play mode.' : null)}
         >
           Pick 3 Points
         </button>
@@ -4470,6 +4494,7 @@ function ExtrudeClipControls({
             if (!primaryFace) return;
             setClipPlaneFromFace?.(primaryFace.actorId, primaryFace.id, clipMode);
           }}
+          {...helpProps('details.clipByFace', primaryFace ? null : 'Select a face first.')}
         >
           Clip by Face
         </button>
@@ -4489,6 +4514,7 @@ function ExtrudeClipControls({
           disabled={disabled || !clipSession}
           onClick={() => cancelClipSession?.()}
           title="Cancel clip (Esc)"
+          {...helpProps('details.clipCancel', clipSession ? null : 'No active clip session.')}
         >
           Cancel
         </button>

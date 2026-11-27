@@ -119,12 +119,12 @@ export const HELP_CONTENT = {
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
-    body: 'Open Help → Keyboard Shortcuts… for edit (including Ctrl+Shift+S Save All), transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, and Project Art Library gallery bindings.',
-    tips: 'Hover Help shows matching shortcuts on toolbar, viewport, and AI Assets controls.',
+    body: 'Open Help → Keyboard Shortcuts… for edit (including Ctrl+Shift+S Save All), transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, Content Browser folder RMB actions, and Project Art Library gallery bindings.',
+    tips: 'Hover Help shows matching shortcuts on toolbar, viewport, Content Browser, and AI Assets controls.',
   },
   'help.hoverHelp': {
     title: 'Show Hover Help',
-    body: 'When enabled, pausing the cursor over toolbar and panel controls shows a tip with description and shortcut when available.',
+    body: 'When enabled, pausing the cursor over toolbar, panel, and Content Browser controls shows a tip with description and shortcut when available.',
   },
 
   // —— Toolbar ——
@@ -746,7 +746,16 @@ export const HELP_CONTENT = {
   // —— Content Browser ——
   'content.folder': {
     title: 'Content Folder',
-    body: 'Chooses which folder the Asset Viewer lists. The Content Browser is for navigation only.',
+    body: 'Chooses which folder the Asset Viewer lists. Right-click for New Subfolder, Rename, Delete, Move Up/Down, or Move To. Drag a custom folder onto another to reparent it. Built-in roots (Textures, Materials, …) stay fixed.',
+    tips: 'Folders are virtual registry paths — they do not create directories on disk. Empty folders can be deleted; move assets first if the folder still has content.',
+  },
+  'content.folder.new': {
+    title: 'New Folder',
+    body: 'Creates a top-level Content Browser folder. Right-click an existing folder for New Subfolder.',
+  },
+  'content.asset.move': {
+    title: 'Move Asset',
+    body: 'Moves the selected asset into another Content Browser folder without changing its file on disk.',
   },
   'workspace.ai': {
     title: 'AI Assets',
@@ -1134,7 +1143,7 @@ export const HELP_CONTENT = {
   'panel.tutorials': {
     title: 'Tutorials',
     body: 'Guided lessons (Academy) with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
-    tips: 'Help → Tutorials… or Window → Tutorials. Covers building, workspace Fog/PP chips, World Fog & Atmosphere, Post Processing, Project Art Library, and Asset Generation.',
+    tips: 'Help → Tutorials… or Window → Tutorials. Covers building, workspace Fog/PP chips, Content Browser folders, World Fog & Atmosphere, Post Processing, Project Art Library, and Asset Generation.',
   },
   'panel.layers': {
     title: 'Layers',
@@ -1149,9 +1158,225 @@ export const HELP_CONTENT = {
     title: 'Assign Selection',
     body: 'Moves the current selection onto the Active authoring layer (undoable).',
   },
+  'layers.row': {
+    title: 'Authoring Layer',
+    body: 'Click to set Active (new actors join this layer). Double-click to select all actors on the layer. Drag the color swatch to reparent layers; drop Outliner actors onto a row to assign membership.',
+    tips: 'Right-click for rename, recolor, child layer, solo, and delete (actors reassign — never deleted).',
+  },
+  'layers.visibility': {
+    title: 'Layer Visibility',
+    body: 'Hides or shows actors on this layer in the edit viewport (self ∧ ancestors). Editor-only — does not change Play or serialized actor.visible.',
+  },
+  'layers.lock': {
+    title: 'Layer Lock',
+    body: 'Blocks shared edit paths for actors on this layer (transforms, delete, reparent, and similar). Layers panel controls stay available so you can unlock.',
+  },
+  'layers.solo': {
+    title: 'Solo Layer',
+    body: 'Temporarily hides every other layer so only this one is visible. Clearing Solo restores the previous hidden map.',
+  },
+  'layers.rowAssign': {
+    title: 'Assign / Select Layer',
+    body: 'With a selection: assigns those actors to this layer. With no selection: selects all actors already on the layer.',
+  },
   'outliner.layerFilter': {
     title: 'Filter by Layer',
     body: 'Shows only actors on the chosen authoring layer (and their ancestors for hierarchy context). Does not replace parent-based Outliner tree.',
+  },
+  'panel.outliner': {
+    title: 'Scene Outliner',
+    body: 'Hierarchical list of level actors. Select, hide/lock, reparent by drag, and filter by name or authoring layer.',
+  },
+  'panel.details': {
+    title: 'Details',
+    body: 'Inspects and edits the current selection (transform, brush, materials, lights, world settings when nothing is selected).',
+  },
+  'panel.content': {
+    title: 'Content Browser',
+    body: 'Folder tree of project content. Pair with Asset Viewer for the selected folder’s assets.',
+  },
+  'panel.assetViewer': {
+    title: 'Asset Viewer',
+    body: 'Grid/list of assets in the current Content Browser folder. Import, preview, and drag into the level.',
+  },
+  'details.pivot.presets': {
+    title: 'Pivot Presets',
+    body: 'Snaps the actor pivot to bounds presets (center, faces, corners) without moving world geometry. Same idea as Asset Viewer placement-pivot presets.',
+  },
+  'details.surface.clear': {
+    title: 'Clear Surface Selection',
+    body: 'Deselects the picked face so Surface / face UV controls hide until you pick again.',
+  },
+  'details.extrude': {
+    title: 'Extrude Face',
+    body: 'Creates a new prism brush grown from the selected ConvexBrush face by the Extrude depth.',
+    tips: 'Requires Face mode with a face selected.',
+  },
+  'details.clipPick': {
+    title: 'Pick 3 Points',
+    body: 'Starts a clip session — click three world points in the viewport to define the cut plane.',
+  },
+  'details.clipByFace': {
+    title: 'Clip by Face',
+    body: 'Uses the selected ConvexBrush face as the clip plane instead of three picks.',
+  },
+  'details.clipCancel': {
+    title: 'Cancel Clip',
+    body: 'Ends the active clip session without cutting.',
+    shortcut: 'Esc',
+  },
+  'details.material.save': {
+    title: 'Save Material',
+    body: 'Writes the shared material draft back to the project asset. Other actors using this material update on next bind.',
+  },
+  'details.material.cancel': {
+    title: 'Cancel Material Edits',
+    body: 'Discards unsaved changes to this material draft and restores the last saved asset.',
+  },
+  'details.material.openWorkspace': {
+    title: 'Open Materials Workspace',
+    body: 'Switches to the Materials workspace for the full library, preview sphere, and PBR map generator.',
+  },
+  'details.light.shadowReset': {
+    title: 'Reset Shadow Defaults',
+    body: 'Restores bias, normal bias, radius, blur samples, and shadow camera near/far/size to editor defaults for this light.',
+  },
+  'details.staticMesh.clearOverrides': {
+    title: 'Clear Material Overrides',
+    body: 'Removes per-slot material overrides so the Static Mesh uses the asset’s default materials again.',
+  },
+  'details.staticMesh.clearLod': {
+    title: 'Clear LOD Levels',
+    body: 'Removes authored LOD distance entries from this actor (does not delete derived mesh assets).',
+  },
+  'world.scene.clearEnvironment': {
+    title: 'Clear Environment Map',
+    body: 'Removes the authored HDRI/EXR and returns to RoomEnvironment studio IBL driven by World Ambient.',
+  },
+  'materials.library.new': {
+    title: 'New Material',
+    body: 'Creates a new project material asset and opens it in the editor draft.',
+  },
+  'materials.library.duplicate': {
+    title: 'Duplicate Material',
+    body: 'Copies the selected material asset into a new id and opens the copy.',
+  },
+  'materials.library.item': {
+    title: 'Material Asset',
+    body: 'Select to edit. Right-click for Open / Duplicate. Draft changes stay local until Save.',
+  },
+  'materials.draft.undo': {
+    title: 'Material Draft Undo',
+    body: 'Undoes the last finished numeric scrub in this material draft. Separate from Level Undo.',
+  },
+  'materials.draft.redo': {
+    title: 'Material Draft Redo',
+    body: 'Redoes a draft-local numeric material adjustment.',
+  },
+  'materials.draft.cancel': {
+    title: 'Cancel Material Draft',
+    body: 'Discards unsaved draft edits and reloads the last saved material asset.',
+  },
+  'materials.draft.save': {
+    title: 'Save Material Draft',
+    body: 'Writes the material draft to disk. Level actors using this material refresh on the next bind.',
+  },
+  'materials.previewShape': {
+    title: 'Preview Shape',
+    body: 'Switches the Materials workspace preview mesh (sphere / plane / cube) without changing the asset.',
+  },
+  'materials.resetGroup': {
+    title: 'Reset Material Group',
+    body: 'Restores this section’s fields to factory defaults in the current draft (Save to keep).',
+  },
+  'texture.apply': {
+    title: 'Apply Texture Meta',
+    body: 'Writes sampling and transform draft values into the texture asset and clears the GPU texture cache so the level reloads them.',
+  },
+  'texture.reset': {
+    title: 'Reset Texture Draft',
+    body: 'Restores sampling and transform controls to defaults in the inspector draft (Apply to write).',
+  },
+  'texture.channel': {
+    title: 'Channel View',
+    body: 'Isolates R, G, B, A, or full RGBA in the texture preview for sampling diagnostics.',
+  },
+  'assetViewer.simplify': {
+    title: 'Simplify Mesh',
+    body: 'Non-destructive SimplifyModifier preview and Save derived — always creates a new mesh asset; source GLB stays intact.',
+  },
+  'assetViewer.lod': {
+    title: 'Generate LOD Assets',
+    body: 'Builds simplified L1/L2 derived meshes and default distance entries. Collision stays on the actor collider.',
+  },
+  'assetViewer.pivot.apply': {
+    title: 'Apply Placement Pivot',
+    body: 'Saves meta.defaultContentOffset for future mesh placements from this asset.',
+  },
+  'assetViewer.pivot.cancel': {
+    title: 'Cancel Pivot Draft',
+    body: 'Discards the interactive pivot draft and exits Pivot Edit.',
+    shortcut: 'Esc',
+  },
+  'assetViewer.pivot.presets': {
+    title: 'Placement Pivot Presets',
+    body: 'Snaps the proposed defaultContentOffset to bounds presets for future placements.',
+  },
+  'assetViewer.export': {
+    title: 'Export Mesh',
+    body: 'Downloads the mesh in the chosen format (GLB/GLTF/OBJ/STL/PLY/USDZ). Never overwrites registry source assets.',
+  },
+  'creation.dragHandle': {
+    title: 'Move Creation Toolbar',
+    body: 'Drag to reposition the floating creation strip. Snaps to left or right viewport edges when close.',
+  },
+  'concept.area.new': {
+    title: 'New Concept Area',
+    body: 'Creates an area folder for concept images, prompts, and art direction notes.',
+  },
+  'concept.tabs': {
+    title: 'Concepts / Prompts',
+    body: 'Toggle the center pane between concept image cards and reusable prompt entries for the selected area.',
+  },
+  'concept.import': {
+    title: 'Import Concept',
+    body: 'Imports an image file into the selected Concept Library area (subject to per-area limits).',
+  },
+  'concept.generate': {
+    title: 'Generate Concept',
+    body: 'Creates a new concept image for the selected area using the active AI image provider.',
+  },
+  'concept.prompt.new': {
+    title: 'New Prompt',
+    body: 'Adds a prompt entry linked to the selected area (and optional concept references).',
+  },
+  'concept.analyze': {
+    title: 'Vision Analysis',
+    body: 'Runs vision analysis on the concept image to help seed prompts and metadata when the provider supports it.',
+  },
+  'concept.area.actions': {
+    title: 'Area Actions',
+    body: 'Rename, duplicate, or delete the selected Concept Library area. Deleting removes concept images for that area; production textures/materials are untouched.',
+  },
+  'concept.card': {
+    title: 'Concept Card',
+    body: 'Reorder concepts, mark a primary reference image, or open the detail inspector for titles, notes, and generation.',
+  },
+  'concept.detail.save': {
+    title: 'Save Concept',
+    body: 'Writes title and metadata edits for this concept image back to the library.',
+  },
+  'concept.generateAsset': {
+    title: 'Generate Asset From Concept',
+    body: 'Sends this concept (and optional prompt) into Asset Generation — typically OpenArt — with the image staged as a reference when supported.',
+  },
+  'concept.delete': {
+    title: 'Delete Concept',
+    body: 'Removes this concept image from the library. Does not delete production textures or materials already imported.',
+  },
+  'assetViewer.clearPreview': {
+    title: 'Clear Preview Spin',
+    body: 'Resets temporary Rot Y / Scale preview around the proposed placement pivot without changing saved meta.',
   },
   'viewport.viewHelper': {
     title: 'ViewHelper',
@@ -1163,6 +1388,14 @@ export const HELP_CONTENT = {
     body: 'Appearance, viewport colors, grid, camera feel (orbit / pan / free-fly), Play look sensitivity, and Hover Help. Edit → Settings…',
     tips: 'Save as Default stores your prefs; Reset Defaults restores them (or factory values).',
   },
+  'settings.saveAsDefault': {
+    title: 'Save as Default',
+    body: 'Stores the current Editor Settings (including grid size/snap) as your personal defaults for Reset Defaults.',
+  },
+  'settings.resetDefaults': {
+    title: 'Reset Defaults',
+    body: 'Restores your saved personal defaults, or factory defaults if none were saved.',
+  },
   'settings.camera': {
     title: 'Camera Feel',
     body: 'Orbit speed, wheel zoom, middle-mouse pan (default fast), free-fly look/speed/boost, and Invert Y. Orbit stops when you release — no after-drift.',
@@ -1170,6 +1403,33 @@ export const HELP_CONTENT = {
   'settings.appearance': {
     title: 'Appearance',
     body: 'Color theme, UI scale (chrome only, not browser zoom), and Asset Viewer grid/list preference.',
+  },
+  'menu.play': {
+    title: 'Play In Editor',
+    body: 'Same as the toolbar Play button — enters Play mode with the authored level.',
+    shortcut: 'Alt+P',
+  },
+  'menu.selectAll': {
+    title: 'Select All',
+    body: 'Selects every actor in the current level.',
+    shortcut: 'Ctrl+A',
+  },
+  'menu.deselect': {
+    title: 'Deselect',
+    body: 'Clears the current actor selection.',
+    shortcut: 'Esc',
+  },
+  'menu.reloadLevel': {
+    title: 'Reload Level',
+    body: 'Reloads the active level file from disk, discarding unsaved level edits.',
+  },
+  'menu.saveAs': {
+    title: 'Save Level As',
+    body: 'Writes the current level under a new filename in public/levels.',
+  },
+  'menu.layouts': {
+    title: 'Workspace Layouts',
+    body: 'Save, load, rename, or reset docked panel arrangements. Factory Default is protected; dirty rearrangements autosave to Autosaved.',
   },
 };
 

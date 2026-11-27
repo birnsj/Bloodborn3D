@@ -241,6 +241,7 @@ export function CreationToolbar({
         aria-label="Drag creation toolbar"
         onPointerDown={onHandlePointerDown}
         ref={dragBarRef}
+        {...helpProps('creation.dragHandle')}
       >
         <IconDragHandle />
       </button>

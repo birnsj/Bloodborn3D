@@ -108,9 +108,22 @@ describe('hover help content', () => {
       'assetViewer.thumbSize',
       'details.surface.material',
       'details.convex.convert',
+      'details.extrude',
+      'details.clipPick',
+      'details.pivot.presets',
       'panel.tutorials',
+      'panel.outliner',
+      'panel.details',
+      'panel.layers',
+      'layers.row',
+      'layers.visibility',
+      'layers.lock',
+      'layers.solo',
+      'layers.rowAssign',
       'settings.dialog',
       'settings.camera',
+      'settings.saveAsDefault',
+      'settings.resetDefaults',
       'workspace.ai',
       'ai.section.library',
       'ai.section.generation',
@@ -125,10 +138,51 @@ describe('hover help content', () => {
       'materials.pbrTiling',
       'materials.pbrPreview',
       'materials.pbrApply',
+      'materials.library.new',
+      'materials.draft.save',
+      'texture.apply',
+      'texture.channel',
+      'concept.area.new',
+      'concept.generate',
+      'creation.dragHandle',
+      'menu.layouts',
     ];
     for (const id of required) {
       expect(content[id], id).toBeTruthy();
     }
+  });
+
+  it('every literal helpProps id and creationTools helpId has HELP_CONTENT', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const { HELP_CONTENT: content } = await import('../ui/hoverHelp/helpContent.js');
+
+    function walk(dir, acc = []) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (!['node_modules', 'dist', 'coverage'].includes(entry.name)) walk(full, acc);
+        } else if (/\.(jsx|js)$/.test(entry.name)) acc.push(full);
+      }
+      return acc;
+    }
+
+    const files = [
+      ...walk(path.resolve('src/editor')),
+      ...walk(path.resolve('src/ui')),
+      ...walk(path.resolve('src/tutorials')),
+    ];
+    const used = new Set();
+    const re = /helpProps\(\s*['"`]([^'"`]+)['"`]/g;
+    const helpIdRe = /helpId\s*[:=]\s*['"`]([^'"`]+)['"`]/g;
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      let match;
+      while ((match = re.exec(text))) used.add(match[1]);
+      while ((match = helpIdRe.exec(text))) used.add(match[1]);
+    }
+    const missing = [...used].filter((id) => !content[id]).sort();
+    expect(missing, `Missing HELP_CONTENT for: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('does not claim stubbed features as working', () => {
@@ -158,9 +212,12 @@ describe('keyboard shortcuts catalog', () => {
     expect(flat.some((r) => r.keys.includes('Tab') && /surface/i.test(r.action))).toBe(true);
     expect(flat.some((r) => r.keys.includes('F'))).toBe(true);
     expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'projectArt')).toBe(true);
+    expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'contentBrowser')).toBe(true);
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Shift+G');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Commit clip');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Project Art Library');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Content Browser');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('New Subfolder');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Save All');
     expect(flat.some((r) => r.keys.includes('Ctrl') && r.keys.includes('Shift') && r.keys.includes('S'))).toBe(true);
   });

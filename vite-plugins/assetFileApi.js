@@ -119,6 +119,29 @@ export function assetFileApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'folder-op') {
+            const body = JSON.parse(await readBody(req));
+            const { applyFolderOp } = await import('../src/assets/contentFolders.js');
+            const result = await mutateRegistry(async (registry) => {
+              const applied = applyFolderOp(registry, body);
+              if (!applied.ok) {
+                const err = new Error(applied.error || 'Folder operation failed');
+                err.code = 'FOLDER_OP';
+                throw err;
+              }
+              registry.folders = applied.registry.folders;
+              registry.assets = applied.registry.assets;
+              return {
+                ok: true,
+                path: applied.path || null,
+                folders: registry.folders,
+                assets: registry.assets,
+              };
+            });
+            sendJson(res, 200, result);
+            return;
+          }
+
           if (req.method === 'POST' && action === 'import-texture') {
             const url = new URL(req.url || '/', 'http://localhost');
             const originalName = url.searchParams.get('name') || 'import.png';
@@ -243,7 +266,7 @@ export function assetFileApiPlugin() {
         } catch (err) {
           const status = err?.code === 'BODY_TOO_LARGE' ? 413
             : err?.code === 'NOT_FOUND' ? 404
-              : err?.code === 'INVALID_IMAGE' || err?.code === 'PATH_TRAVERSAL' ? 400
+              : err?.code === 'INVALID_IMAGE' || err?.code === 'PATH_TRAVERSAL' || err?.code === 'FOLDER_OP' ? 400
                 : 500;
           sendJson(res, status, { error: String(err.message || err), code: err.code || null });
         }
@@ -261,7 +284,7 @@ async function ensureAssetDirs() {
     await fs.access(REGISTRY_PATH);
   } catch {
     // Seed empty registry directly — do not call writeRegistry (would re-enter ensure).
-    await atomicWriteJson(REGISTRY_PATH, { schemaVersion: 1, assets: [] });
+    await atomicWriteJson(REGISTRY_PATH, { schemaVersion: 1, folders: [], assets: [] });
   }
 }
 
@@ -271,6 +294,7 @@ async function readRegistry() {
   const parsed = JSON.parse(raw);
   return {
     schemaVersion: 1,
+    folders: Array.isArray(parsed.folders) ? parsed.folders : [],
     assets: Array.isArray(parsed.assets) ? parsed.assets : [],
   };
 }
@@ -279,6 +303,7 @@ async function writeRegistry(registry) {
   await fs.mkdir(ASSETS_DIR, { recursive: true });
   const normalized = {
     schemaVersion: 1,
+    folders: Array.isArray(registry?.folders) ? registry.folders : [],
     assets: Array.isArray(registry?.assets) ? registry.assets : [],
   };
   await atomicWriteJson(REGISTRY_PATH, normalized);

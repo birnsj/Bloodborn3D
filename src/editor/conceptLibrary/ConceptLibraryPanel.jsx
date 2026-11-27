@@ -53,6 +53,7 @@ import {
   preferReferenceMode,
 } from './conceptGeneration.js';
 import { mergeAnalysisSuggestions } from './visionProvider.js';
+import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 
 /**
  * Phase 2H.1D — Concept Library three-column UI.
@@ -227,7 +228,14 @@ export function ConceptLibraryPanel() {
       <aside className="bb-panel-chrome bb-concept-library__nav">
         <div className="bb-panel-chrome__head">
           <span className="bb-panel-chrome__title">Areas</span>
-          <button type="button" className="bb-btn bb-btn--ghost" onClick={onCreateArea}>New</button>
+          <button
+            type="button"
+            className="bb-btn bb-btn--ghost"
+            onClick={onCreateArea}
+            {...helpProps('concept.area.new')}
+          >
+            New
+          </button>
         </div>
         <div className="bb-panel-chrome__body bb-concept-library__nav-body">
           <AreaList
@@ -275,7 +283,7 @@ export function ConceptLibraryPanel() {
 
       <section className="bb-panel-chrome bb-concept-library__center">
         <div className="bb-panel-chrome__head">
-          <div className="bb-concept-library__tabs">
+          <div className="bb-concept-library__tabs" {...helpProps('concept.tabs')}>
             <button
               type="button"
               className={`bb-btn${ui.centerMode === 'concepts' ? ' bb-btn--primary' : ''}`}
@@ -297,6 +305,12 @@ export function ConceptLibraryPanel() {
               className="bb-btn"
               disabled={!ui.selectedAreaId || atLimit || ui.busy}
               onClick={() => fileRef.current?.click()}
+              {...helpProps(
+                'concept.import',
+                !ui.selectedAreaId
+                  ? 'Select an area first.'
+                  : (atLimit ? 'This area is at its concept limit.' : null),
+              )}
             >
               Import Concept
             </button>
@@ -305,6 +319,12 @@ export function ConceptLibraryPanel() {
               className="bb-btn"
               disabled={!ui.selectedAreaId || atLimit || ui.busy}
               onClick={onGenerateConcept}
+              {...helpProps(
+                'concept.generate',
+                !ui.selectedAreaId
+                  ? 'Select an area first.'
+                  : (atLimit ? 'This area is at its concept limit.' : null),
+              )}
             >
               Generate Concept
             </button>
@@ -312,6 +332,10 @@ export function ConceptLibraryPanel() {
               type="button"
               className="bb-btn"
               disabled={!ui.selectedAreaId || ui.busy}
+              {...helpProps(
+                'concept.prompt.new',
+                ui.selectedAreaId ? null : 'Select an area first.',
+              )}
               onClick={async () => {
                 try {
                   await conceptLibraryCreatePrompt({
@@ -420,7 +444,7 @@ function AreaList({ areas, selectedAreaId, onSelect, onRename, onDuplicate, onDe
             <span className="bb-muted">{area.conceptOrder.length}</span>
           </button>
           {selectedAreaId === area.id && (
-            <div className="bb-concept-library__area-tools">
+            <div className="bb-concept-library__area-tools" {...helpProps('concept.area.actions')}>
               <button type="button" className="bb-btn bb-btn--ghost" onClick={() => onRename(area)}>Rename</button>
               <button type="button" className="bb-btn bb-btn--ghost" onClick={() => onDuplicate(area.id)}>Duplicate</button>
               <button type="button" className="bb-btn bb-btn--ghost" onClick={() => onDelete(area.id)}>Delete</button>
@@ -451,7 +475,7 @@ function ConceptGallery({ area, concepts, selectedConceptId, onSelect, onReorder
               )}
               <span className="bb-concept-tile__title">{concept.title}</span>
             </button>
-            <div className="bb-concept-tile__tools">
+            <div className="bb-concept-tile__tools" {...helpProps('concept.card')}>
               <button
                 type="button"
                 className="bb-btn bb-btn--ghost"
@@ -574,6 +598,7 @@ function ConceptDetail({
               className="bb-btn"
               disabled={busy}
               onClick={() => conceptLibraryUpdateConcept(concept.id, draft).catch((err) => notify(err.message))}
+              {...helpProps('concept.detail.save')}
             >
               Save
             </button>
@@ -582,6 +607,7 @@ function ConceptDetail({
               className="bb-btn"
               disabled={busy}
               title={vision?.reason || 'Vision analysis'}
+              {...helpProps('concept.analyze', vision?.reason || null)}
               onClick={async () => {
                 const result = await conceptLibraryAnalyze(concept.id).catch((err) => {
                   notify(err.message);
@@ -604,6 +630,7 @@ function ConceptDetail({
               className="bb-btn bb-btn--primary"
               disabled={busy}
               onClick={() => onGenerateAsset(null, draft)}
+              {...helpProps('concept.generateAsset')}
             >
               Generate Asset
             </button>
@@ -620,6 +647,7 @@ function ConceptDetail({
                 if (!ok) return;
                 await conceptLibraryDeleteConcept(concept.id).catch((err) => notify(err.message));
               }}
+              {...helpProps('concept.delete')}
             >
               Delete
             </button>

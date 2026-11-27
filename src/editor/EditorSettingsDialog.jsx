@@ -419,6 +419,7 @@ export function EditorSettingsDialog({ open, onClose }) {
             className="bb-btn"
             onClick={() => saveSettingsAsDefault({ gridSize, gridSnap })}
             title="Store the current settings as your personal defaults for Reset"
+            {...helpProps('settings.saveAsDefault')}
           >
             Save as Default
           </button>
@@ -427,6 +428,7 @@ export function EditorSettingsDialog({ open, onClose }) {
             className="bb-btn"
             onClick={onResetAll}
             title="Restore your saved defaults (or factory defaults if none saved)"
+            {...helpProps('settings.resetDefaults')}
           >
             Reset Defaults
           </button>

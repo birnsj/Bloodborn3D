@@ -192,6 +192,7 @@ export function MaterialDefinitionForm({
                 roughnessMapId: null,
                 metalnessMapId: null,
               })}
+              {...helpProps('materials.resetGroup')}
             >
               Reset surface
             </button>

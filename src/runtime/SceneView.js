@@ -1205,13 +1205,17 @@ export class SceneView {
       bottom,
     };
     if (helper.animating) helper.update(dt || 1 / 60);
-    // Temporarily expand scissor so helper can clearDepth/draw in its corner.
+    // Scissor MUST be the helper corner only. ViewHelper.render() clearDepth/autoClear
+    // honor the active scissor — a full-pane scissor wiped the just-drawn scene (black viewport).
     const renderer = this.renderer;
     const prevScissorTest = renderer.getScissorTest();
+    const prevAutoClear = renderer.autoClear;
     renderer.setScissorTest(true);
-    renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
-    renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
+    renderer.setScissor(left, bottom, dim, dim);
+    renderer.setViewport(left, bottom, dim, dim);
+    renderer.autoClear = true;
     helper.render(renderer);
+    renderer.autoClear = prevAutoClear;
     renderer.setScissorTest(prevScissorTest);
   }
 

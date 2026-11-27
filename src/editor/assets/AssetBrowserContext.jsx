@@ -10,11 +10,15 @@ import {
 import {
   ASSET_DRAG_MIME,
   ASSET_DRAG_MIME_MATERIAL,
-  ASSET_FOLDERS as REGISTRY_ASSET_FOLDERS,
   getCatalogAsset,
   listCatalogAssets,
 } from '../../assets/assetCatalog.js';
 import { normalizeRegistry, findAsset } from '../../assets/AssetRegistry.js';
+import {
+  applyFolderOp,
+  buildFolderTree,
+  normalizeContentFolderList,
+} from '../../assets/contentFolders.js';
 import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
 import { materialDraftForDuplicate } from '../materials/materialDraft.js';
 import {
@@ -30,6 +34,7 @@ import {
   storeMeshSourceOriginal,
   patchMeshAssetMeta,
   patchTextureAssetMeta,
+  runAssetFolderOp,
   updateMaterial,
   updatePrefab,
   uploadMaterialPreview,
@@ -642,6 +647,40 @@ export function AssetBrowserProvider({ children }) {
     return { asset: result.asset, definition: def };
   }, [registry, notify]);
 
+  const folders = useMemo(
+    () => normalizeContentFolderList(registry?.folders, registry?.assets || []),
+    [registry, revision],
+  );
+
+  const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
+
+  const applyFolderOpLocal = useCallback((op) => {
+    const applied = applyFolderOp(registry, op);
+    if (!applied.ok) throw new Error(applied.error || 'Folder operation failed');
+    setRegistry(normalizeRegistry(applied.registry));
+    setRevision((r) => r + 1);
+    return applied;
+  }, [registry]);
+
+  const mutateFolders = useCallback(async (op) => {
+    try {
+      const result = await runAssetFolderOp(op);
+      setRegistry(normalizeRegistry({
+        ...registry,
+        folders: result.folders,
+        assets: result.assets,
+      }));
+      setRevision((r) => r + 1);
+      return result;
+    } catch (err) {
+      // Preview / static hosting: apply in-memory when the write API is unavailable.
+      if (/failed:\s*404|Failed to fetch|folder operation failed:\s*5/i.test(String(err.message || ''))) {
+        return applyFolderOpLocal(op);
+      }
+      throw err;
+    }
+  }, [registry, applyFolderOpLocal]);
+
   const assetResolver = useMemo(() => ({
     getTextureUrl,
     getTextureAsset,
@@ -663,7 +702,9 @@ export function AssetBrowserProvider({ children }) {
   ]);
 
   const value = useMemo(() => ({
-    folders: REGISTRY_ASSET_FOLDERS,
+    folders,
+    folderTree,
+    mutateFolders,
     registry,
     revision,
     materialDefs,
@@ -697,6 +738,9 @@ export function AssetBrowserProvider({ children }) {
     setStatus,
     notify,
   }), [
+    folders,
+    folderTree,
+    mutateFolders,
     registry,
     revision,
     materialDefs,

@@ -282,7 +282,7 @@ export function MeshAssetTools({
           onChange={(e) => setRatio(Number(e.target.value))}
         />
       </label>
-      <div className="bb-mesh-tools__row">
+      <div className="bb-mesh-tools__row" {...helpProps('assetViewer.simplify')}>
         <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={runSimplifyPreview}>
           {busy === 'simplify' ? 'Simplifying…' : 'Preview'}
         </button>
@@ -301,7 +301,13 @@ export function MeshAssetTools({
       <p className="bb-muted">
         Generates L0 (source) + simplified L1/L2 as derived assets. Collision stays on the actor collider.
       </p>
-      <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={generateLods}>
+      <button
+        type="button"
+        className="bb-btn"
+        disabled={Boolean(busy)}
+        onClick={generateLods}
+        {...helpProps('assetViewer.lod')}
+      >
         {busy === 'lod' ? 'Generating…' : 'Generate LOD assets'}
       </button>
       {previewCompare?.lod && (
@@ -366,6 +372,7 @@ export function MeshAssetTools({
           className="bb-btn bb-btn--primary"
           disabled={Boolean(busy) || !pivotDirty}
           onClick={() => saveAssetPivot(pivotDraft)}
+          {...helpProps('assetViewer.pivot.apply', pivotDirty ? null : 'No pivot draft changes.')}
         >
           {busy === 'pivot' ? 'Saving…' : 'Apply'}
         </button>
@@ -380,13 +387,14 @@ export function MeshAssetTools({
               onPivotEditModeChange?.(false);
             }
           }}
+          {...helpProps('assetViewer.pivot.cancel')}
         >
           Cancel
         </button>
-        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('original')}>Reset</button>
-        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('center')}>Center</button>
-        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('bottomCenter')}>Bottom</button>
-        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('topCenter')}>Top</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('original')} {...helpProps('assetViewer.pivot.presets')}>Reset</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('center')} {...helpProps('assetViewer.pivot.presets')}>Center</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('bottomCenter')} {...helpProps('assetViewer.pivot.presets')}>Bottom</button>
+        <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={() => applyAssetPivotPreset('topCenter')} {...helpProps('assetViewer.pivot.presets')}>Top</button>
       </div>
       <div className="bb-field-caption">Preview around proposed pivot</div>
       <div className="bb-mesh-tools__row">
@@ -421,6 +429,7 @@ export function MeshAssetTools({
             onPreviewRotationYChange?.(0);
             onPreviewScaleChange?.(1);
           }}
+          {...helpProps('assetViewer.clearPreview')}
         >
           Clear preview
         </button>
@@ -440,7 +449,13 @@ export function MeshAssetTools({
           ))}
         </select>
       </label>
-      <button type="button" className="bb-btn" disabled={Boolean(busy)} onClick={runExport}>
+      <button
+        type="button"
+        className="bb-btn"
+        disabled={Boolean(busy)}
+        onClick={runExport}
+        {...helpProps('assetViewer.export')}
+      >
         {busy === 'export' ? 'Exporting…' : 'Download export'}
       </button>
       <p className="bb-muted">Source registry assets are never overwritten by export or simplify.</p>

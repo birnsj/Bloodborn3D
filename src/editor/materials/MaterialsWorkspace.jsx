@@ -318,7 +318,12 @@ export function MaterialsWorkspace() {
             />
           </div>
           <div className="bb-field-row" style={{ gap: 6 }}>
-            <button type="button" className="bb-btn" onClick={onCreate}>
+            <button
+              type="button"
+              className="bb-btn"
+              onClick={onCreate}
+              {...helpProps('materials.library.new')}
+            >
               New
             </button>
             <button
@@ -326,6 +331,10 @@ export function MaterialsWorkspace() {
               className="bb-btn"
               disabled={!selectedMaterialId}
               onClick={onDuplicate}
+              {...helpProps(
+                'materials.library.duplicate',
+                selectedMaterialId ? null : 'Select a material first.',
+              )}
             >
               Duplicate
             </button>
@@ -343,6 +352,7 @@ export function MaterialsWorkspace() {
                 role="listitem"
                 className={`bb-materials-workspace__tile${active ? ' is-active' : ''}`}
                 onClick={() => { void selectMaterial(asset.id); }}
+                {...helpProps('materials.library.item')}
                 onContextMenu={(event) => {
                   openFromEvent(event, [
                     {
@@ -403,6 +413,10 @@ export function MaterialsWorkspace() {
               disabled={!canDraftUndo || saving || loading}
               onClick={undoDraftGesture}
               title="Undo last numeric material adjustment"
+              {...helpProps(
+                'materials.draft.undo',
+                canDraftUndo ? null : 'Nothing to undo in this draft.',
+              )}
             >
               Undo
             </button>
@@ -412,6 +426,10 @@ export function MaterialsWorkspace() {
               disabled={!canDraftRedo || saving || loading}
               onClick={redoDraftGesture}
               title="Redo material adjustment"
+              {...helpProps(
+                'materials.draft.redo',
+                canDraftRedo ? null : 'Nothing to redo in this draft.',
+              )}
             >
               Redo
             </button>
@@ -420,6 +438,7 @@ export function MaterialsWorkspace() {
               className="bb-btn"
               disabled={!dirty || saving || loading}
               onClick={onCancel}
+              {...helpProps('materials.draft.cancel', dirty ? null : 'No unsaved changes.')}
             >
               Cancel
             </button>
@@ -428,6 +447,7 @@ export function MaterialsWorkspace() {
               className="bb-btn bb-btn--primary"
               disabled={!dirty || saving || loading}
               onClick={() => { void onSave(); }}
+              {...helpProps('materials.draft.save', dirty ? null : 'No unsaved changes.')}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
@@ -469,6 +489,7 @@ export function MaterialsWorkspace() {
                 className={`bb-btn bb-btn--icon${previewShape === shape.id ? ' bb-btn--active' : ''}`}
                 title={shape.label}
                 onClick={() => setPreviewShape(shape.id)}
+                {...helpProps('materials.previewShape')}
               >
                 {shape.label}
               </button>

@@ -193,6 +193,7 @@ export function MeshyControls() {
           className="bb-btn bb-btn--ghost"
           disabled={ui.busy}
           onClick={() => meshyConnect().catch((err) => notify(err.message))}
+          {...helpProps('meshy.connect')}
         >
           Refresh
         </button>
@@ -232,6 +233,7 @@ export function MeshyControls() {
             className="bb-btn"
             disabled={ui.busy}
             onClick={() => fileRef.current?.click()}
+            {...helpProps('meshy.reference')}
           >
             Import Image…
           </button>
@@ -240,6 +242,7 @@ export function MeshyControls() {
             className="bb-btn bb-btn--ghost"
             disabled={ui.busy || !ui.reference}
             onClick={() => meshyClearReference()}
+            {...helpProps('meshy.reference', ui.reference ? null : 'No reference image loaded.')}
           >
             Remove
           </button>
