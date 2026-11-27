@@ -97,4 +97,5 @@ Always record which machine produced a measurement.
 
 - [`ROADMAP.md`](./ROADMAP.md) — phase history and approved decisions
 - [`TECHNICAL_STATUS.md`](./TECHNICAL_STATUS.md) — verification and known debt
+- [`PROJECT_CLEANUP_2026-11.md`](./PROJECT_CLEANUP_2026-11.md) — what the November 2026 clean-up changed and what is still open
 - [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md) — foundation audit
