@@ -73,7 +73,12 @@ A new workspace must not create a parallel save format, asset store or undo syst
    Earlier docs (C6, DPR 1.5, 671×507, editor): 29.8 FPS single, 9.0 quad.
    Measured 2026-11-27 in the standalone player on the integrated level, 2439×1899 canvas: CPU render cost
    2.6 ms per frame (2,839 draw calls, 101,810 triangles). Shadows are about 70% of it (3 shadow lights, 174
-   casters = 2,652 of the draw calls); shadows off = 0.8 ms. GPU time not yet measured.
+   casters = 2,652 of the draw calls); shadows off = 0.8 ms. GPU time on that machine (strong GPU): 0.3–0.6 ms
+   per frame, so it does not show weak-GPU behavior.
+   Measured the same day in the real editor with the C6 harness (`runC6FoundationAcceptance`, 671×507, DPR 1.5):
+   integrated level **59.9 FPS single (vsync-limited), 37.2 FPS four-pane**; Gothic 59.9 / 60.2. Four-pane is
+   CPU-bound (~26.7 ms submit, 1,692 draw calls). These differ greatly from the earlier 29.8 / 9.0, so the earlier
+   numbers came from slower hardware or load; re-measure on a modest machine before treating the target as met.
 
 ## Related documents
 
