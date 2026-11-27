@@ -19,7 +19,6 @@ const SLACK = 100;
 /** path (relative to src/) -> maximum allowed lines. Lower these as files are split. */
 const BUDGETS = {
   'editor/EditorContext.jsx': 4610,
-  'runtime/SceneView.js': 4430,
   'editor/Viewport.jsx': 2787,
   'editor/projectArt/ProjectArtLibraryPanel.jsx': 2429,
   'editor/layout/DetailsPanel.jsx': 1864,

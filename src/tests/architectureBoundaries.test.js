@@ -152,7 +152,9 @@ describe('architecture boundaries (C2)', () => {
   });
 
   it('SceneView does not import editor modules', () => {
-    const sceneView = fs.readFileSync(path.join(SRC, 'runtime/SceneView.js'), 'utf8');
+    const sceneViewDir = path.join(SRC, 'runtime/sceneView');
+    const sceneView = [path.join(SRC, 'runtime/SceneView.js'), ...fs.readdirSync(sceneViewDir).map((f) => path.join(sceneViewDir, f))]
+      .map((f) => fs.readFileSync(f, 'utf8')).join('\n');
     expect(sceneView).not.toMatch(/from ['"][^'"]*editor\//);
   });
 });

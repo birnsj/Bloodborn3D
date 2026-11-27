@@ -228,7 +228,7 @@ describe('C5 fix: light shadow maps disposed on teardown', () => {
   });
 
   it('SceneView disposeObject invokes bbLightDispose', () => {
-    const src = readSrc('runtime/SceneView.js');
+    const src = readSrc('runtime/sceneView/shared.js');
     expect(src).toMatch(/bbLightDispose/);
     expect(src).toMatch(/child\.userData\.bbLightDispose/);
   });
@@ -321,7 +321,7 @@ describe('C5 fix: PMREM not marked shared', () => {
   });
 
   it('SceneView registers bbEnvDispose on holder only', () => {
-    const src = readSrc('runtime/SceneView.js');
+    const src = readSrc('runtime/sceneView/lightEnvironmentVisuals.js');
     expect(src).toMatch(/holder\.userData\.bbEnvDispose\s*=\s*built\.dispose/);
     expect(src).not.toMatch(/built\.root\.userData\.bbEnvDispose\s*=\s*built\.dispose/);
   });
