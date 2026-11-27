@@ -200,6 +200,12 @@ import {
   resetAllPostProcessing,
   resetEffectInPostProcessing,
 } from '../runtime/postprocessing/postProcessingState.js';
+import {
+  commitSelectedComponentGesture,
+  commitWorldFieldGesture,
+  updateSelectedComponentProperties,
+  updateWorldField,
+} from './propertyEditing.js';
 import { computeAlignFaceUv } from '../rules/alignSurfaces.js';
 import {
   computeFitSurfaceUv,
@@ -2373,166 +2379,115 @@ export function EditorProvider({ children }) {
     );
   }, [world, mode, setSelectedBrushOpenings]);
 
+  const rebuildSelectedActorVisual = useCallback((actor, currentWorld) => {
+    runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, currentWorld);
+  }, []);
+
   const updateSelectedLight = useCallback((partial, options = {}) => {
-    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
-    const { undoable = true, label = 'Edit light' } = options;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    if (isEditorActorLocked(world.getActor(actorId))) {
-      setStatus('Cannot edit light: actor or authoring layer is locked.');
-      return;
-    }
-    const light = world.getActor(actorId)?.getComponent('Light');
-    if (!light) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(partial)) {
-      before[key] = structuredClone(light[key]);
-      after[key] = structuredClone(partial[key]);
-    }
-    if (!undoable) {
-      for (const key of Object.keys(after)) {
-        light[key] = after[key];
-      }
-      const actor = world.getActor(actorId);
-      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
-      bump();
-      return;
-    }
-    executeCommand(
-      new SetLightPropertiesCommand({ world, actorId, before, after, label }),
-      { resync: true },
-    );
-    autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+    updateSelectedComponentProperties({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'Light',
+      partial,
+      options: { ...options, label: options.label || 'Edit light' },
+      CommandClass: SetLightPropertiesCommand,
+      isEditorActorLocked,
+      setStatus,
+      lockedMessage: 'Cannot edit light: actor or authoring layer is locked.',
+      executeCommand,
+      autoCapturePrefabOverrides,
+      rebuildActorVisual: rebuildSelectedActorVisual,
+      bump,
+    });
+  }, [world, mode, isEditorActorLocked, setStatus, executeCommand, autoCapturePrefabOverrides, rebuildSelectedActorVisual, bump]);
 
   /**
    * After a live (non-undoable) light scrub, record one undo entry from
    * `beforeSnapshot` → current light fields without re-applying.
    */
   const commitLightGesture = useCallback((beforeSnapshot, label = 'Edit light') => {
-    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    const light = world.getActor(actorId)?.getComponent('Light');
-    if (!light) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(beforeSnapshot)) {
-      before[key] = structuredClone(beforeSnapshot[key]);
-      after[key] = structuredClone(light[key]);
-    }
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    recordCommand(
-      new SetLightPropertiesCommand({ world, actorId, before, after, label }),
-    );
-    autoCapturePrefabOverrides([actorId]);
+    commitSelectedComponentGesture({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'Light',
+      beforeSnapshot,
+      label,
+      CommandClass: SetLightPropertiesCommand,
+      recordCommand,
+      autoCapturePrefabOverrides,
+    });
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   const updateSelectedEnvironment = useCallback((partial, options = {}) => {
-    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
-    const { undoable = true, label = 'Edit environment' } = options;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    if (isEditorActorLocked(world.getActor(actorId))) {
-      setStatus('Cannot edit environment: actor or authoring layer is locked.');
-      return;
-    }
-    const env = world.getActor(actorId)?.getComponent('Environment');
-    if (!env) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(partial)) {
-      before[key] = structuredClone(env[key]);
-      after[key] = structuredClone(partial[key]);
-    }
-    if (!undoable) {
-      for (const key of Object.keys(after)) {
-        env[key] = after[key];
-      }
-      const actor = world.getActor(actorId);
-      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
-      bump();
-      return;
-    }
-    executeCommand(
-      new SetEnvironmentPropertiesCommand({ world, actorId, before, after, label }),
-      { resync: true },
-    );
-    autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+    updateSelectedComponentProperties({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'Environment',
+      partial,
+      options: { ...options, label: options.label || 'Edit environment' },
+      CommandClass: SetEnvironmentPropertiesCommand,
+      isEditorActorLocked,
+      setStatus,
+      lockedMessage: 'Cannot edit environment: actor or authoring layer is locked.',
+      executeCommand,
+      autoCapturePrefabOverrides,
+      rebuildActorVisual: rebuildSelectedActorVisual,
+      bump,
+    });
+  }, [world, mode, isEditorActorLocked, setStatus, executeCommand, autoCapturePrefabOverrides, rebuildSelectedActorVisual, bump]);
 
   const commitEnvironmentGesture = useCallback((beforeSnapshot, label = 'Edit environment') => {
-    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    const env = world.getActor(actorId)?.getComponent('Environment');
-    if (!env) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(beforeSnapshot)) {
-      before[key] = structuredClone(beforeSnapshot[key]);
-      after[key] = structuredClone(env[key]);
-    }
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    recordCommand(
-      new SetEnvironmentPropertiesCommand({ world, actorId, before, after, label }),
-    );
-    autoCapturePrefabOverrides([actorId]);
+    commitSelectedComponentGesture({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'Environment',
+      beforeSnapshot,
+      label,
+      CommandClass: SetEnvironmentPropertiesCommand,
+      recordCommand,
+      autoCapturePrefabOverrides,
+    });
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   const updateSelectedPrimitiveMesh = useCallback((partial, options = {}) => {
-    if (!world || mode === 'play' || selectedRef.current.length === 0) return;
-    const { undoable = true, label = 'Edit primitive' } = options;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    if (isEditorActorLocked(world.getActor(actorId))) {
-      setStatus('Cannot edit primitive: actor or authoring layer is locked.');
-      return;
-    }
-    const comp = world.getActor(actorId)?.getComponent('PrimitiveMesh');
-    if (!comp) return;
-    const merged = normalizePrimitiveMeshFields({ ...comp, ...partial });
-    const check = validatePrimitiveAllocation(merged);
-    if (!check.ok) {
-      console.warn('[BloodBound]', check.message);
-      return;
-    }
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(partial)) {
-      before[key] = structuredClone(comp[key]);
-      after[key] = structuredClone(partial[key]);
-    }
-    if (!undoable) {
-      for (const key of Object.keys(after)) {
-        comp[key] = after[key];
-      }
-      const actor = world.getActor(actorId);
-      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
-      bump();
-      return;
-    }
-    executeCommand(
-      new SetPrimitiveMeshPropertiesCommand({ world, actorId, before, after, label }),
-      { resync: true },
-    );
-    autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+    updateSelectedComponentProperties({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'PrimitiveMesh',
+      partial,
+      options: { ...options, label: options.label || 'Edit primitive' },
+      CommandClass: SetPrimitiveMeshPropertiesCommand,
+      isEditorActorLocked,
+      setStatus,
+      lockedMessage: 'Cannot edit primitive: actor or authoring layer is locked.',
+      executeCommand,
+      autoCapturePrefabOverrides,
+      rebuildActorVisual: rebuildSelectedActorVisual,
+      bump,
+      validate: (comp, nextPartial) => validatePrimitiveAllocation(
+        normalizePrimitiveMeshFields({ ...comp, ...nextPartial }),
+      ),
+    });
+  }, [world, mode, isEditorActorLocked, setStatus, executeCommand, autoCapturePrefabOverrides, rebuildSelectedActorVisual, bump]);
 
   const commitPrimitiveMeshGesture = useCallback((beforeSnapshot, label = 'Edit primitive') => {
-    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    const comp = world.getActor(actorId)?.getComponent('PrimitiveMesh');
-    if (!comp) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(beforeSnapshot)) {
-      before[key] = structuredClone(beforeSnapshot[key]);
-      after[key] = structuredClone(comp[key]);
-    }
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const check = validatePrimitiveAllocation(normalizePrimitiveMeshFields({ ...comp }));
-    if (!check.ok) return;
-    recordCommand(
-      new SetPrimitiveMeshPropertiesCommand({ world, actorId, before, after, label }),
-    );
-    autoCapturePrefabOverrides([actorId]);
+    commitSelectedComponentGesture({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'PrimitiveMesh',
+      beforeSnapshot,
+      label,
+      CommandClass: SetPrimitiveMeshPropertiesCommand,
+      recordCommand,
+      autoCapturePrefabOverrides,
+      validate: (comp) => validatePrimitiveAllocation(normalizePrimitiveMeshFields({ ...comp })),
+    });
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   /**
@@ -2560,22 +2515,18 @@ export function EditorProvider({ children }) {
     const onApply = (ambient) => {
       runtimeRef.current?.sceneView?.applyWorldAmbient?.(ambient);
     };
-    if (undoable) {
-      executeCommand(
-        new SetWorldAmbientCommand({
-          world: current,
-          before: normalizeWorldAmbient(base),
-          after,
-          label,
-          onApply,
-        }),
-      );
-      bump();
-      return;
-    }
-    current.ambient = after;
-    onApply(after);
-    bump();
+    updateWorldField({
+      world: current,
+      mode,
+      field: 'ambient',
+      before: normalizeWorldAmbient(base),
+      after,
+      options: { undoable, label },
+      CommandClass: SetWorldAmbientCommand,
+      executeCommand,
+      onApply,
+      bump,
+    });
   }, [mode, bump, executeCommand]);
 
   /**
@@ -2584,22 +2535,19 @@ export function EditorProvider({ children }) {
    */
   const commitWorldAmbientGesture = useCallback((beforeSnapshot, label = 'Edit world ambient') => {
     const current = worldRef.current;
-    if (!current || mode === 'play' || !beforeSnapshot) return;
-    const before = normalizeWorldAmbient(beforeSnapshot);
-    const after = normalizeWorldAmbient(current.ambient);
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const onApply = (ambient) => {
-      runtimeRef.current?.sceneView?.applyWorldAmbient?.(ambient);
-    };
-    recordCommand(
-      new SetWorldAmbientCommand({
-        world: current,
-        before,
-        after,
-        label,
-        onApply,
-      }),
-    );
+    commitWorldFieldGesture({
+      world: current,
+      mode,
+      before: beforeSnapshot,
+      after: current?.ambient,
+      label,
+      CommandClass: SetWorldAmbientCommand,
+      recordCommand,
+      onApply: (ambient) => {
+        runtimeRef.current?.sceneView?.applyWorldAmbient?.(ambient);
+      },
+      normalize: normalizeWorldAmbient,
+    });
   }, [mode, recordCommand]);
 
   /** Level-authored Three.js Scene look (background + fog + environment). */
@@ -2649,23 +2597,18 @@ export function EditorProvider({ children }) {
       runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
     };
 
-    if (undoable) {
-      executeCommand(
-        new SetWorldSceneCommand({
-          world: current,
-          before: base,
-          after,
-          label,
-          onApply,
-        }),
-      );
-      bump();
-      return;
-    }
-
-    current.scene = after;
-    onApply(after);
-    bump();
+    updateWorldField({
+      world: current,
+      mode,
+      field: 'scene',
+      before: base,
+      after,
+      options: { undoable, label },
+      CommandClass: SetWorldSceneCommand,
+      executeCommand,
+      onApply,
+      bump,
+    });
   }, [mode, bump, executeCommand]);
 
   /**
@@ -2674,22 +2617,19 @@ export function EditorProvider({ children }) {
    */
   const commitWorldSceneGesture = useCallback((beforeSnapshot, label = 'Edit world scene') => {
     const current = worldRef.current;
-    if (!current || mode === 'play' || !beforeSnapshot) return;
-    const before = normalizeWorldScene(beforeSnapshot);
-    const after = normalizeWorldScene(current.scene);
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const onApply = (scene) => {
-      runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
-    };
-    recordCommand(
-      new SetWorldSceneCommand({
-        world: current,
-        before,
-        after,
-        label,
-        onApply,
-      }),
-    );
+    commitWorldFieldGesture({
+      world: current,
+      mode,
+      before: beforeSnapshot,
+      after: current?.scene,
+      label,
+      CommandClass: SetWorldSceneCommand,
+      recordCommand,
+      onApply: (scene) => {
+        runtimeRef.current?.sceneView?.applyWorldScene?.(scene);
+      },
+      normalize: normalizeWorldScene,
+    });
   }, [mode, recordCommand]);
 
   /** Level-authored WebGLRenderer look (tone mapping + shadows). */
@@ -2711,42 +2651,35 @@ export function EditorProvider({ children }) {
     const onApply = (renderer) => {
       runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
     };
-    if (undoable) {
-      executeCommand(
-        new SetWorldRendererCommand({
-          world: current,
-          before,
-          after,
-          label,
-          onApply,
-        }),
-      );
-      bump();
-      return;
-    }
-    current.renderer = after;
-    onApply(after);
-    bump();
+    updateWorldField({
+      world: current,
+      mode,
+      field: 'renderer',
+      before,
+      after,
+      options: { undoable, label },
+      CommandClass: SetWorldRendererCommand,
+      executeCommand,
+      onApply,
+      bump,
+    });
   }, [mode, bump, executeCommand]);
 
   const commitWorldRendererGesture = useCallback((beforeSnapshot, label = 'Edit world renderer') => {
     const current = worldRef.current;
-    if (!current || mode === 'play' || !beforeSnapshot) return;
-    const before = normalizeWorldRenderer(beforeSnapshot);
-    const after = normalizeWorldRenderer(current.renderer);
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const onApply = (renderer) => {
-      runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
-    };
-    recordCommand(
-      new SetWorldRendererCommand({
-        world: current,
-        before,
-        after,
-        label,
-        onApply,
-      }),
-    );
+    commitWorldFieldGesture({
+      world: current,
+      mode,
+      before: beforeSnapshot,
+      after: current?.renderer,
+      label,
+      CommandClass: SetWorldRendererCommand,
+      recordCommand,
+      onApply: (renderer) => {
+        runtimeRef.current?.sceneView?.applyWorldRenderer?.(renderer);
+      },
+      normalize: normalizeWorldRenderer,
+    });
   }, [mode, recordCommand]);
 
   const applyPostProcessingToView = useCallback((settings) => {
@@ -2809,6 +2742,7 @@ export function EditorProvider({ children }) {
   }, [mode, updateWorldPostProcessing]);
 
   const updateSelectedStaticMesh = useCallback((partial, options = {}) => {
+    // Collision fields are co-normalized — keep specialized before/after assembly.
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     if (isEditorActorLocked(world.getActor(actorId))) {
@@ -2836,7 +2770,7 @@ export function EditorProvider({ children }) {
         mesh[key] = after[key];
       }
       const actor = world.getActor(actorId);
-      if (actor) runtimeRef.current?.sceneView?.rebuildActorVisual?.(actor, world);
+      if (actor) rebuildSelectedActorVisual(actor, world);
       bump();
       return;
     }
@@ -2845,24 +2779,20 @@ export function EditorProvider({ children }) {
       { resync: true },
     );
     autoCapturePrefabOverrides([actorId]);
-  }, [world, mode, executeCommand, autoCapturePrefabOverrides, bump]);
+  }, [world, mode, isEditorActorLocked, setStatus, executeCommand, autoCapturePrefabOverrides, rebuildSelectedActorVisual, bump]);
 
   const commitStaticMeshGesture = useCallback((beforeSnapshot, label = 'Edit static mesh') => {
-    if (!world || mode === 'play' || !beforeSnapshot || selectedRef.current.length === 0) return;
-    const actorId = selectedRef.current[selectedRef.current.length - 1];
-    const mesh = world.getActor(actorId)?.getComponent('StaticMesh');
-    if (!mesh) return;
-    const before = {};
-    const after = {};
-    for (const key of Object.keys(beforeSnapshot)) {
-      before[key] = structuredClone(beforeSnapshot[key]);
-      after[key] = structuredClone(mesh[key]);
-    }
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    recordCommand(
-      new SetStaticMeshPropertiesCommand({ world, actorId, before, after, label }),
-    );
-    autoCapturePrefabOverrides([actorId]);
+    commitSelectedComponentGesture({
+      world,
+      mode,
+      selectedIds: selectedRef.current,
+      componentType: 'StaticMesh',
+      beforeSnapshot,
+      label,
+      CommandClass: SetStaticMeshPropertiesCommand,
+      recordCommand,
+      autoCapturePrefabOverrides,
+    });
   }, [world, mode, recordCommand, autoCapturePrefabOverrides]);
 
   const updateSelectedRamp = useCallback((partial) => {
@@ -4451,7 +4381,7 @@ export function EditorProvider({ children }) {
     if (!cmd) return;
     afterWorldMutation({ selectIds: selectedRef.current.filter((id) => worldRef.current?.getActor(id)) });
     setStatus(`Undo: ${cmd.label || 'edit'}`);
-  }, [mode, afterWorldMutation]);
+  }, [mode, afterWorldMutation, setStatus]);
 
   const redo = useCallback(() => {
     if (mode === 'play') return;
@@ -4459,7 +4389,7 @@ export function EditorProvider({ children }) {
     if (!cmd) return;
     afterWorldMutation({});
     setStatus(`Redo: ${cmd.label || 'edit'}`);
-  }, [mode, afterWorldMutation]);
+  }, [mode, afterWorldMutation, setStatus]);
 
   const play = useCallback(async () => {
     const runtime = runtimeRef.current;
@@ -4474,7 +4404,7 @@ export function EditorProvider({ children }) {
     } catch (err) {
       notify(`Play failed: ${err.message}`);
     }
-  }, [notify, setStatus]);
+  }, [notify, setStatus, setTool]);
 
   const stop = useCallback(() => {
     if (!runtimeRef.current) return;
@@ -4485,7 +4415,7 @@ export function EditorProvider({ children }) {
     clearSelectedSurfaceState();
     setStatus('Edit mode restored');
     bump();
-  }, [bump, clearGeometrySelectionState, clearSelectedSurfaceState]);
+  }, [bump, clearGeometrySelectionState, clearSelectedSurfaceState, setStatus]);
 
   const selectedActor = useMemo(() => {
     if (!world || selectedActorIds.length === 0) return null;

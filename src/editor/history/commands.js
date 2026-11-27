@@ -2,24 +2,16 @@ import { Actor } from '../../core/Actor.js';
 import { createComponentFromJSON } from '../../components/componentRegistry.js';
 import { getDescendants } from '../../core/hierarchy.js';
 import {
-  allowedSurfaceIdsForComponent,
-  normalizeFaceMaterials,
-  normalizeFaceUVs,
-} from '../../runtime/surfaces.js';
+  applyActorUvPatch,
+  applyPlainComponentPatch,
+  applySurfaceFields,
+  applyUvSurfaceComponentPatch,
+  createComponentPropertiesCommandClass,
+  createWorldFieldCommandClass,
+} from './componentPropertyCommands.js';
 
 function cloneActorJson(actor) {
   return structuredClone(actor.toJSON());
-}
-
-/** Keep faceMaterials / faceUVs normalized when history applies snapshots (Phase 2E.5 / 2F.0). */
-function applySurfaceFields(comp, state) {
-  const allowed = allowedSurfaceIdsForComponent(comp);
-  if ('faceMaterials' in state) {
-    comp.faceMaterials = normalizeFaceMaterials(state.faceMaterials, allowed);
-  }
-  if ('faceUVs' in state) {
-    comp.faceUVs = normalizeFaceUVs(state.faceUVs, allowed);
-  }
 }
 
 function restoreActorFromJson(data) {
@@ -366,456 +358,113 @@ export class JoinWallEndpointsCommand {
 /**
  * Patch LightComponent properties.
  */
-export class SetLightPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit light' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
+export const SetLightPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Light',
+  applyPatch: applyPlainComponentPatch,
+  defaultLabel: 'Edit light',
+});
 
-  do() {
-    this._apply(this.after);
-  }
+/** Patch PrimitiveMeshComponent properties (Batch 5). */
+export const SetPrimitiveMeshPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'PrimitiveMesh',
+  applyPatch: applyPlainComponentPatch,
+  defaultLabel: 'Edit primitive',
+});
 
-  undo() {
-    this._apply(this.before);
-  }
+/** Patch EnvironmentComponent properties (Batch 4). */
+export const SetEnvironmentPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Environment',
+  applyPatch: applyPlainComponentPatch,
+  defaultLabel: 'Edit environment',
+});
 
-  _apply(state) {
-    const light = this.world.getActor(this.actorId)?.getComponent('Light');
-    if (!light) return;
-    for (const key of Object.keys(state)) {
-      light[key] = state[key];
-    }
-  }
-}
+/** Replace map-authored world.scene settings (background, fog, environment, sky). */
+export const SetWorldSceneCommand = createWorldFieldCommandClass({
+  field: 'scene',
+  defaultLabel: 'Edit world scene',
+});
 
-/**
- * Patch PrimitiveMeshComponent properties (Batch 5).
- */
-export class SetPrimitiveMeshPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit primitive' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
+/** Replace map-authored world.ambient settings (scene fill). */
+export const SetWorldAmbientCommand = createWorldFieldCommandClass({
+  field: 'ambient',
+  defaultLabel: 'Edit world ambient',
+});
 
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const comp = this.world.getActor(this.actorId)?.getComponent('PrimitiveMesh');
-    if (!comp) return;
-    for (const key of Object.keys(state)) {
-      comp[key] = state[key];
-    }
-  }
-}
-
-/**
- * Patch EnvironmentComponent properties (Batch 4).
- */
-export class SetEnvironmentPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit environment' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const env = this.world.getActor(this.actorId)?.getComponent('Environment');
-    if (!env) return;
-    for (const key of Object.keys(state)) {
-      env[key] = state[key];
-    }
-  }
-}
-
-/**
- * Replace map-authored world.scene settings (background, fog, environment, sky).
- */
-export class SetWorldSceneCommand {
-  constructor({
-    world,
-    before,
-    after,
-    label = 'Edit world scene',
-    onApply = null,
-  }) {
-    this.world = world;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-    this.onApply = onApply;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    if (!this.world) return;
-    this.world.scene = structuredClone(state);
-    this.onApply?.(this.world.scene);
-  }
-}
-
-/**
- * Replace map-authored world.ambient settings (scene fill).
- */
-export class SetWorldAmbientCommand {
-  constructor({
-    world,
-    before,
-    after,
-    label = 'Edit world ambient',
-    onApply = null,
-  }) {
-    this.world = world;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-    this.onApply = onApply;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    if (!this.world) return;
-    this.world.ambient = structuredClone(state);
-    this.onApply?.(this.world.ambient);
-  }
-}
-
-/**
- * Replace map-authored world.renderer settings.
- */
-export class SetWorldRendererCommand {
-  constructor({
-    world,
-    before,
-    after,
-    label = 'Edit world renderer',
-    onApply = null,
-  }) {
-    this.world = world;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-    this.onApply = onApply;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    if (!this.world) return;
-    this.world.renderer = structuredClone(state);
-    this.onApply?.(this.world.renderer);
-  }
-}
+/** Replace map-authored world.renderer settings. */
+export const SetWorldRendererCommand = createWorldFieldCommandClass({
+  field: 'renderer',
+  defaultLabel: 'Edit world renderer',
+});
 
 /**
  * Replace map-authored post-processing settings on the World.
  * `onApply` notifies the live SceneView (kept out of the command for testability).
  */
-export class SetWorldPostProcessingCommand {
-  constructor({
-    world,
-    before,
-    after,
-    label = 'Edit post-processing',
-    onApply = null,
-  }) {
-    this.world = world;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-    this.onApply = onApply;
-  }
+export const SetWorldPostProcessingCommand = createWorldFieldCommandClass({
+  field: 'postProcessing',
+  defaultLabel: 'Edit post-processing',
+});
 
-  do() {
-    this._apply(this.after);
-  }
+/** Patch StairComponent properties. */
+export const SetStairPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Stair',
+  defaultLabel: 'Edit stairs',
+  applyPatch: (stair, state) => applyUvSurfaceComponentPatch(stair, state, {
+    stepCount: (comp, value) => {
+      comp.stepCount = Math.max(1, Math.round(Number(value) || 1));
+    },
+  }),
+});
 
-  undo() {
-    this._apply(this.before);
-  }
+/** Patch RampComponent properties. */
+export const SetRampPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Ramp',
+  defaultLabel: 'Edit ramp',
+  applyPatch: (ramp, state) => applyUvSurfaceComponentPatch(ramp, state),
+});
 
-  _apply(state) {
-    if (!this.world) return;
-    this.world.postProcessing = structuredClone(state);
-    this.onApply?.(this.world.postProcessing);
-  }
-}
+/** Patch ColumnComponent properties. */
+export const SetColumnPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Column',
+  defaultLabel: 'Edit column',
+  applyPatch: (column, state) => applyUvSurfaceComponentPatch(column, state, {
+    sides: (comp, value) => {
+      comp.sides = Math.max(3, Math.min(64, Math.round(Number(value) || 3)));
+    },
+  }),
+});
 
-/**
- * Patch StairComponent properties.
- */
-export class SetStairPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit stairs' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
+/** Patch CurvedWallComponent properties. */
+export const SetCurvedWallPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'CurvedWall',
+  defaultLabel: 'Edit curved wall',
+  applyPatch: (wall, state) => applyUvSurfaceComponentPatch(wall, state, {
+    curveResolution: (comp, value) => {
+      comp.curveResolution = Math.max(4, Math.min(128, Math.round(Number(value) || 4)));
+    },
+    sweepAngle: (comp, value) => {
+      comp.sweepAngle = Math.max(1, Math.min(360, Number(value) || 1));
+    },
+  }),
+});
 
-  do() {
-    this._apply(this.after);
-  }
+/** Patch ArchComponent properties. */
+export const SetArchPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'Arch',
+  defaultLabel: 'Edit arch',
+  applyPatch: (arch, state) => applyUvSurfaceComponentPatch(arch, state, {
+    curveResolution: (comp, value) => {
+      comp.curveResolution = Math.max(4, Math.min(64, Math.round(Number(value) || 4)));
+    },
+  }),
+});
 
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const stair = this.world.getActor(this.actorId)?.getComponent('Stair');
-    if (!stair) return;
-    for (const key of Object.keys(state)) {
-      if (key === 'faceMaterials' || key === 'faceUVs') continue;
-      if (key === 'uv' && state.uv) {
-        stair.uv = {
-          scale: { ...(state.uv.scale || stair.uv.scale) },
-          offset: { ...(state.uv.offset || stair.uv.offset) },
-          rotation: state.uv.rotation ?? stair.uv.rotation,
-        };
-      } else if (key === 'stepCount') {
-        stair.stepCount = Math.max(1, Math.round(Number(state.stepCount) || 1));
-      } else {
-        stair[key] = state[key];
-      }
-    }
-    applySurfaceFields(stair, state);
-  }
-}
-
-/**
- * Patch RampComponent properties.
- */
-export class SetRampPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit ramp' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const ramp = this.world.getActor(this.actorId)?.getComponent('Ramp');
-    if (!ramp) return;
-    for (const key of Object.keys(state)) {
-      if (key === 'faceMaterials' || key === 'faceUVs') continue;
-      if (key === 'uv' && state.uv) {
-        ramp.uv = {
-          scale: { ...(state.uv.scale || ramp.uv.scale) },
-          offset: { ...(state.uv.offset || ramp.uv.offset) },
-          rotation: state.uv.rotation ?? ramp.uv.rotation,
-        };
-      } else {
-        ramp[key] = state[key];
-      }
-    }
-    applySurfaceFields(ramp, state);
-  }
-}
-
-/**
- * Patch ColumnComponent properties.
- */
-export class SetColumnPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit column' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const column = this.world.getActor(this.actorId)?.getComponent('Column');
-    if (!column) return;
-    for (const key of Object.keys(state)) {
-      if (key === 'faceMaterials' || key === 'faceUVs') continue;
-      if (key === 'uv' && state.uv) {
-        column.uv = {
-          scale: { ...(state.uv.scale || column.uv.scale) },
-          offset: { ...(state.uv.offset || column.uv.offset) },
-          rotation: state.uv.rotation ?? column.uv.rotation,
-        };
-      } else if (key === 'sides') {
-        column.sides = Math.max(3, Math.min(64, Math.round(Number(state.sides) || 3)));
-      } else {
-        column[key] = state[key];
-      }
-    }
-    applySurfaceFields(column, state);
-  }
-}
-
-/**
- * Patch CurvedWallComponent properties.
- */
-export class SetCurvedWallPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit curved wall' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const wall = this.world.getActor(this.actorId)?.getComponent('CurvedWall');
-    if (!wall) return;
-    for (const key of Object.keys(state)) {
-      if (key === 'faceMaterials' || key === 'faceUVs') continue;
-      if (key === 'uv' && state.uv) {
-        wall.uv = {
-          scale: { ...(state.uv.scale || wall.uv.scale) },
-          offset: { ...(state.uv.offset || wall.uv.offset) },
-          rotation: state.uv.rotation ?? wall.uv.rotation,
-        };
-      } else if (key === 'curveResolution') {
-        wall.curveResolution = Math.max(4, Math.min(128, Math.round(Number(state.curveResolution) || 4)));
-      } else if (key === 'sweepAngle') {
-        wall.sweepAngle = Math.max(1, Math.min(360, Number(state.sweepAngle) || 1));
-      } else {
-        wall[key] = state[key];
-      }
-    }
-    applySurfaceFields(wall, state);
-  }
-}
-
-/**
- * Patch ArchComponent properties.
- */
-export class SetArchPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit arch' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const arch = this.world.getActor(this.actorId)?.getComponent('Arch');
-    if (!arch) return;
-    for (const key of Object.keys(state)) {
-      if (key === 'faceMaterials' || key === 'faceUVs') continue;
-      if (key === 'uv' && state.uv) {
-        arch.uv = {
-          scale: { ...(state.uv.scale || arch.uv.scale) },
-          offset: { ...(state.uv.offset || arch.uv.offset) },
-          rotation: state.uv.rotation ?? arch.uv.rotation,
-        };
-      } else if (key === 'curveResolution') {
-        arch.curveResolution = Math.max(4, Math.min(64, Math.round(Number(state.curveResolution) || 4)));
-      } else {
-        arch[key] = state[key];
-      }
-    }
-    applySurfaceFields(arch, state);
-  }
-}
-
-/**
- * Patch StaticMeshComponent properties.
- */
-export class SetStaticMeshPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'Edit mesh' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const mesh = this.world.getActor(this.actorId)?.getComponent('StaticMesh');
-    if (!mesh) return;
-    for (const key of Object.keys(state)) {
-      mesh[key] = state[key];
-    }
-  }
-}
+/** Patch StaticMeshComponent properties. */
+export const SetStaticMeshPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'StaticMesh',
+  applyPatch: applyPlainComponentPatch,
+  defaultLabel: 'Edit mesh',
+});
 
 /**
  * Reparent actors while storing before/after parentId + local transform.
@@ -1060,40 +709,19 @@ export class CompositeCommand {
 
 /**
  * Patch ConvexBrush material / UV / face / color / collidable fields.
+ * Intentional whitelist (not a plain full-key copy).
  */
-export class SetConvexBrushPropertiesCommand {
-  constructor({ world, actorId, before, after, label = 'ConvexBrush properties' }) {
-    this.world = world;
-    this.actorId = actorId;
-    this.before = structuredClone(before);
-    this.after = structuredClone(after);
-    this.label = label;
-  }
-
-  do() {
-    this._apply(this.after);
-  }
-
-  undo() {
-    this._apply(this.before);
-  }
-
-  _apply(state) {
-    const convex = this.world.getActor(this.actorId)?.getComponent('ConvexBrush');
-    if (!convex) return;
+export const SetConvexBrushPropertiesCommand = createComponentPropertiesCommandClass({
+  componentType: 'ConvexBrush',
+  defaultLabel: 'ConvexBrush properties',
+  applyPatch: (convex, state) => {
     if ('materialId' in state) convex.materialId = state.materialId;
     applySurfaceFields(convex, state);
-    if ('uv' in state && state.uv) {
-      convex.uv = {
-        scale: { ...(state.uv.scale || convex.uv.scale) },
-        offset: { ...(state.uv.offset || convex.uv.offset) },
-        rotation: state.uv.rotation ?? convex.uv.rotation,
-      };
-    }
+    if ('uv' in state && state.uv) applyActorUvPatch(convex, state.uv);
     if ('color' in state) convex.color = state.color;
     if ('collidable' in state) convex.collidable = state.collidable;
-  }
-}
+  },
+});
 
 /**
  * Batch 9 — replace world.authoringLayers tree (create/rename/color/reorder/reparent/delete).
