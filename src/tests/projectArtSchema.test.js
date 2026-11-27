@@ -175,6 +175,27 @@ describe('Project Art — ASSET_CATEGORIES + templates', () => {
     });
   });
 
+  it('Character template bakes pose and include-objects wording', () => {
+    const withWeapons = composeTemplateAssetPrompt({
+      templateId: 'character',
+      characterPose: 'a-pose',
+      includeObjects: true,
+      includeTiling: false,
+    });
+    expect(withWeapons.promptText.toLowerCase()).toMatch(/a-pose/);
+    expect(withWeapons.promptText.toLowerCase()).toMatch(/weapon|held/);
+    expect(withWeapons.promptText.toLowerCase()).not.toMatch(/neutral pose/);
+
+    const bare = composeTemplateAssetPrompt({
+      templateId: 'character',
+      characterPose: '',
+      includeObjects: false,
+      includeTiling: false,
+    });
+    expect(bare.promptText.toLowerCase()).toMatch(/exclude held|character only/);
+    expect(bare.promptText.toLowerCase()).toMatch(/neutral pose/);
+  });
+
   it('composeTemplateAssetPrompt wall_texture recreates reference material + tiling', () => {
     const result = composeTemplateAssetPrompt({
       assetCategory: 'wall_texture',

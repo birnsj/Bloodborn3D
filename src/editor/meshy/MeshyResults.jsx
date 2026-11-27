@@ -11,12 +11,22 @@ import {
   subscribeMeshyUi,
 } from './meshyUiStore.js';
 import { MeshyModelPreview } from './MeshyModelPreview.jsx';
+import {
+  fetchMeshyTextureMaps,
+  importMeshyTextureMap,
+  meshyStagingPreviewUrl,
+  requestMeshyTextureMapDownload,
+} from '../../io/meshyClient.js';
+import { MESHY_MAP_SLOTS } from '../../dev/meshy/meshyPbrMapTypes.js';
 
 /**
  * Meshy results / preview / import (right column).
  */
 export function MeshyResults() {
   const [ui, setUi] = useState(() => getMeshyUiState());
+  const [maps, setMaps] = useState([]);
+  const [mapsBusy, setMapsBusy] = useState(false);
+  const [mapsNote, setMapsNote] = useState('');
   const { notify, setStatus, selectAsset, refreshRegistry } = useAssetBrowser();
   const { prompt } = useEditorDialogs();
   const { openFromEvent } = useEditorContextMenu();
@@ -27,6 +37,26 @@ export function MeshyResults() {
   const job = ui.job;
   const hasModel = Boolean(job?.modelUrl) && job?.phase === 'succeeded';
   const phaseLabel = describePhase(ui);
+
+  const refreshMaps = useCallback(async () => {
+    if (!job?.taskId) {
+      setMaps([]);
+      return;
+    }
+    try {
+      const listed = await fetchMeshyTextureMaps({ jobId: job.jobId, taskId: job.taskId });
+      setMaps(listed.maps || []);
+      setMapsNote(listed.note || (listed.embeddedInGlb
+        ? 'Maps were embedded in the GLB; Fetch extracts separate files (free).'
+        : ''));
+    } catch (err) {
+      setMapsNote(err.message || String(err));
+    }
+  }, [job?.taskId, job?.jobId]);
+
+  useEffect(() => {
+    refreshMaps();
+  }, [refreshMaps]);
 
   const onImport = useCallback(async () => {
     try {
@@ -175,6 +205,104 @@ export function MeshyResults() {
           </span>
         )}
       </div>
+
+      {hasModel && (
+        <details className="bb-meshy-results__maps" open {...helpProps('meshy.pbrMaps')}>
+          <summary>PBR / texture maps</summary>
+          <p className="bb-muted">
+            Inspect maps from this completed task without spending credits.
+            Emission appears only when Meshy returns it (typically Meshy 6 texture below 8K).
+          </p>
+          <div className="bb-meshy-results__map-actions">
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={mapsBusy || !job?.taskId}
+              onClick={async () => {
+                try {
+                  setMapsBusy(true);
+                  setStatus('Fetching Meshy texture maps (no generation spend)…');
+                  const listed = await requestMeshyTextureMapDownload({
+                    jobId: job.jobId,
+                    taskId: job.taskId,
+                  });
+                  setMaps(listed.maps || []);
+                  setMapsNote(`Fetched ${(listed.maps || []).length} map(s)`);
+                  setStatus('Meshy texture maps ready');
+                } catch (err) {
+                  notify(err.message || String(err));
+                } finally {
+                  setMapsBusy(false);
+                }
+              }}
+            >
+              {mapsBusy ? 'Fetching…' : 'Fetch PBR maps'}
+            </button>
+            <button
+              type="button"
+              className="bb-btn bb-btn--ghost"
+              disabled={mapsBusy}
+              onClick={() => refreshMaps()}
+            >
+              Refresh
+            </button>
+          </div>
+          {mapsNote && <p className="bb-muted">{mapsNote}</p>}
+          <ul className="bb-meshy-results__map-list">
+            {MESHY_MAP_SLOTS.map((slot) => {
+              const found = maps.find((m) => m.id === slot.id);
+              const preview = found?.relativePath
+                ? meshyStagingPreviewUrl(found.relativePath)
+                : null;
+              return (
+                <li key={slot.id} className="bb-meshy-results__map-item">
+                  <div className="bb-meshy-results__map-thumb">
+                    {preview ? (
+                      <img src={preview} alt={slot.label} />
+                    ) : (
+                      <span className="bb-muted">{found ? 'Ready' : '—'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <strong>{slot.label}</strong>
+                    <div className="bb-muted">
+                      {found
+                        ? `${found.fileName || found.source}${found.bytes != null ? ` · ${(found.bytes / 1024).toFixed(0)} KB` : ''}`
+                        : 'Not returned for this task'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="bb-btn bb-btn--ghost"
+                    disabled={!found?.localPath || mapsBusy}
+                    onClick={async () => {
+                      try {
+                        setMapsBusy(true);
+                        const result = await importMeshyTextureMap({
+                          jobId: job.jobId,
+                          taskId: job.taskId,
+                          mapId: slot.id,
+                          assetBaseName: ui.reference?.title || 'Meshy',
+                        });
+                        await refreshRegistry?.();
+                        if (result?.asset?.id) selectAsset?.(result.asset.id);
+                        notify(`Imported ${slot.label} → ${result?.asset?.name || result?.asset?.id}`);
+                        setStatus(`Imported texture ${result?.asset?.id || ''}`);
+                      } catch (err) {
+                        notify(err.message || String(err));
+                      } finally {
+                        setMapsBusy(false);
+                      }
+                    }}
+                  >
+                    Import
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
 
       {(job?.settings || job?.provenance) && (
         <details className="bb-meshy-results__meta">

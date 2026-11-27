@@ -4,8 +4,10 @@ import * as THREE from 'three';
 import {
   clampViewportPrefs,
   defaultShowFogForCameraMode,
+  defaultShowMistForCameraMode,
   defaultShowPostProcessingForCameraMode,
   resolvePaneShowFog,
+  resolvePaneShowMist,
   resolvePaneShowPostProcessing,
 } from '../editor/viewport/viewportPrefs.js';
 import { orientPaneToCameraMode } from '../editor/viewport/viewportCameras.js';
@@ -17,15 +19,17 @@ import {
 } from '../runtime/postprocessing/PostProcessingController.js';
 
 describe('viewport fog / PP prefs', () => {
-  it('defaults fog and PP on for perspective, off for ortho', () => {
+  it('defaults fog and PP on for perspective, off for ortho; mist off', () => {
     expect(defaultShowFogForCameraMode('perspective')).toBe(true);
     expect(defaultShowFogForCameraMode('top')).toBe(false);
     expect(defaultShowFogForCameraMode('isometric')).toBe(false);
+    expect(defaultShowMistForCameraMode('perspective')).toBe(false);
+    expect(defaultShowMistForCameraMode('top')).toBe(false);
     expect(defaultShowPostProcessingForCameraMode('perspective')).toBe(true);
     expect(defaultShowPostProcessingForCameraMode('front')).toBe(false);
   });
 
-  it('clampViewportPrefs fills showFog / showPostProcessing from camera mode', () => {
+  it('clampViewportPrefs fills showFog / showMist / showPostProcessing from camera mode', () => {
     const p = clampViewportPrefs({
       layoutMode: 'dual-h',
       panes: [
@@ -34,65 +38,88 @@ describe('viewport fog / PP prefs', () => {
       ],
     });
     expect(p.panes[0].showFog).toBe(true);
+    expect(p.panes[0].showMist).toBe(false);
     expect(p.panes[0].showPostProcessing).toBe(true);
     expect(p.panes[1].showFog).toBe(false);
+    expect(p.panes[1].showMist).toBe(false);
     expect(p.panes[1].showPostProcessing).toBe(false);
   });
 
-  it('preserves explicit per-pane fog / PP toggles', () => {
+  it('preserves explicit per-pane fog / mist / PP toggles', () => {
     const p = clampViewportPrefs({
       panes: [
-        { id: 'pane-0', cameraMode: 'perspective', showFog: false, showPostProcessing: false },
+        {
+          id: 'pane-0',
+          cameraMode: 'perspective',
+          showFog: false,
+          showMist: true,
+          showPostProcessing: false,
+        },
         { id: 'pane-1', cameraMode: 'top', showFog: true, showPostProcessing: true },
       ],
     });
     expect(p.panes[0].showFog).toBe(false);
+    expect(p.panes[0].showMist).toBe(true);
     expect(p.panes[0].showPostProcessing).toBe(false);
     expect(p.panes[1].showFog).toBe(true);
     expect(p.panes[1].showPostProcessing).toBe(true);
   });
 
-  it('resolvePaneShowFog reads pane and paneState', () => {
+  it('resolvePaneShowFog / Mist read pane and paneState', () => {
     expect(resolvePaneShowFog({ cameraMode: 'top' })).toBe(false);
     expect(resolvePaneShowFog({ cameraMode: 'top', showFog: true })).toBe(true);
     expect(resolvePaneShowFog({ paneState: { showFog: true, cameraMode: 'top' } })).toBe(true);
+    expect(resolvePaneShowMist({ cameraMode: 'perspective' })).toBe(false);
+    expect(resolvePaneShowMist({ cameraMode: 'perspective', showMist: true })).toBe(true);
+    expect(resolvePaneShowMist({ paneState: { showMist: true } })).toBe(true);
     expect(resolvePaneShowPostProcessing({
       cameraMode: 'perspective',
       showPostProcessing: false,
     })).toBe(false);
   });
 
-  it('orientPaneToCameraMode resets fog/PP defaults for the new mode', () => {
+  it('orientPaneToCameraMode resets fog/mist/PP defaults for the new mode', () => {
     const fromPersp = orientPaneToCameraMode({
       id: 'pane-0',
       cameraMode: 'perspective',
       showFog: true,
+      showMist: true,
       showPostProcessing: true,
       position: [6, 5, 8],
       target: [0, 1.5, 0],
     }, 'top');
     expect(fromPersp.cameraMode).toBe('top');
     expect(fromPersp.showFog).toBe(false);
+    expect(fromPersp.showMist).toBe(false);
     expect(fromPersp.showPostProcessing).toBe(false);
 
     const back = orientPaneToCameraMode(fromPersp, 'perspective');
     expect(back.showFog).toBe(true);
+    expect(back.showMist).toBe(false);
     expect(back.showPostProcessing).toBe(true);
   });
 
-  it('buildViewportPanes forwards showFog / showPostProcessing', () => {
+  it('buildViewportPanes forwards showFog / showMist / showPostProcessing', () => {
     const prefs = clampViewportPrefs({
       layoutMode: 'dual-h',
       panes: [
-        { id: 'pane-0', cameraMode: 'perspective', showFog: true, showPostProcessing: false },
+        {
+          id: 'pane-0',
+          cameraMode: 'perspective',
+          showFog: true,
+          showMist: true,
+          showPostProcessing: false,
+        },
         { id: 'pane-1', cameraMode: 'top', showFog: false, showPostProcessing: false },
       ],
     });
     const panes = buildViewportPanes(prefs, 200, 100, null);
     expect(panes).toHaveLength(2);
     expect(panes[0].showFog).toBe(true);
+    expect(panes[0].showMist).toBe(true);
     expect(panes[0].showPostProcessing).toBe(false);
     expect(panes[1].showFog).toBe(false);
+    expect(panes[1].showMist).toBe(false);
   });
 });
 

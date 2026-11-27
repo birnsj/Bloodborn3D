@@ -145,6 +145,7 @@ import {
   isOrthographicMode,
   normalizeCameraMode,
   resolvePaneShowFog,
+  resolvePaneShowMist,
   resolvePaneShowPostProcessing,
 } from './viewport/viewportPrefs.js';
 import { paneScissorFromDomRect } from './viewport/paneScissor.js';
@@ -156,6 +157,21 @@ const DEFAULT_VIEWPORT_COLORS = {
   selection: 0xffcc33,
   subtract: 0xc23b4a,
 };
+
+/**
+ * Hide ViewHelper −X/−Y/−Z sprites. Three.js draws them as black discs at
+ * opacity 0.2; against the editor grid they look like soft alpha artifacts.
+ * @param {import('three/addons/helpers/ViewHelper.js').ViewHelper} helper
+ */
+export function hideViewHelperNegativeAxes(helper) {
+  if (!helper?.traverse) return;
+  helper.traverse((obj) => {
+    const t = obj.userData?.type;
+    if (t === 'negX' || t === 'negY' || t === 'negZ') {
+      obj.visible = false;
+    }
+  });
+}
 
 /**
  * Three.js adapter: builds and syncs visual representation of a World.
@@ -1070,8 +1086,10 @@ export class SceneView {
         const displayState = applyDisplayMode(this.scene, lights, pane.displayMode || 'lit');
         const ortho = isOrthographicMode(pane.cameraMode) || cam?.isOrthographicCamera;
         // Pane Show Fog is independent of World Settings. Ortho defaults off in prefs;
-        // atmosphere (mist/volume) stays perspective-only even if ortho fog is forced on.
+        // atmosphere stays perspective-only even if ortho fog is forced on.
+        // Mist chip gates particle mist only; distance fog uses the Fog chip.
         const wantFog = resolvePaneShowFog(pane);
+        const wantMist = resolvePaneShowMist(pane);
         const showAtmosphere = wantFog && !ortho;
         const wantPp = resolvePaneShowPostProcessing(pane);
         const usePostProcess = this._shouldUsePostProcessing({
@@ -1094,6 +1112,7 @@ export class SceneView {
           this.scene.backgroundBlurriness = authoredBgBlurriness;
         }
         syncCameraAtmosphereLayer(cam, showAtmosphere);
+        this.atmosphere?.setPaneMistVisible?.(wantMist);
         this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
         // Sky / env surfaces / lensflare: only re-traverse when perspective↔ortho flips.
         const perspectiveVisible = !ortho;
@@ -1147,6 +1166,8 @@ export class SceneView {
       this.worldEnvironment?.setPerspectiveVisible?.(true);
       setLensflarePerspectiveVisible(this.scene, true);
       setEnvironmentSurfacesPerspectiveVisible(this.scene, true);
+      // Play / next single draw should see authored mist again (pane chip is per-scissor only).
+      this.atmosphere?.setPaneMistVisible?.(true);
       renderer.toneMapping = prevToneMapping;
       renderer.toneMappingExposure = prevExposure;
       renderer.autoClear = prevAutoClear;
@@ -1165,6 +1186,7 @@ export class SceneView {
     // Play / single-canvas path: always use authored fog + atmosphere in perspective.
     const showAtmosphere = !ortho;
     syncCameraAtmosphereLayer(camera, showAtmosphere);
+    this.atmosphere?.setPaneMistVisible?.(true);
     this.atmosphere?.setPerspectiveVisible?.(showAtmosphere);
     this.worldEnvironment?.setPerspectiveVisible?.(!ortho);
     setLensflarePerspectiveVisible(this.scene, !ortho);
@@ -1207,6 +1229,9 @@ export class SceneView {
     if (!helper) {
       helper = new ViewHelper(camera, this.canvas);
       helper.setLabels?.('X', 'Y', 'Z');
+      // Three.js ViewHelper draws -X/-Y/-Z as black sprites at opacity 0.2.
+      // Against the grid they read as soft alpha-circle artifacts — hide them.
+      hideViewHelperNegativeAxes(helper);
       this._viewHelpers.set(paneId, helper);
     } else {
       helper.camera = camera;

@@ -192,6 +192,24 @@ describe('Batch 9 visibility fingerprint + ViewHelper smoke', () => {
     expect(typeof ViewHelper).toBe('function');
   });
 
+  it('hides ViewHelper negative-axis alpha discs', async () => {
+    const { hideViewHelperNegativeAxes } = await import('../runtime/SceneView.js');
+    const neg = [
+      { userData: { type: 'negX' }, visible: true },
+      { userData: { type: 'negY' }, visible: true },
+      { userData: { type: 'negZ' }, visible: true },
+    ];
+    const pos = { userData: { type: 'posX' }, visible: true };
+    const helper = {
+      traverse(fn) {
+        for (const obj of [...neg, pos]) fn(obj);
+      },
+    };
+    hideViewHelperNegativeAxes(helper);
+    expect(neg.every((o) => o.visible === false)).toBe(true);
+    expect(pos.visible).toBe(true);
+  });
+
   it('prefab capture strips authoringLayerId', async () => {
     const { createPrefabFromActors } = await import('../prefabs/prefabOps.js');
     const world = new World({ name: 'PrefabStrip' });

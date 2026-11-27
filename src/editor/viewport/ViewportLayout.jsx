@@ -136,6 +136,12 @@ export function ViewportLayout({
                   ));
                   onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
                 }}
+                onToggleShowMist={() => {
+                  const panes = prefs.panes.map((p) => (
+                    p.id === pane.id ? { ...p, showMist: p.showMist !== true } : p
+                  ));
+                  onChangePrefs({ ...prefs, panes, activePaneId: pane.id });
+                }}
                 onToggleShowPostProcessing={() => {
                   const panes = prefs.panes.map((p) => (
                     p.id === pane.id

@@ -25,10 +25,13 @@ import {
   getMeshyStatus,
   pollMeshyJob,
   readMeshyStagingFile,
+  fetchMeshyJobTextureMaps,
   recoverMeshyJob,
   recoverMeshyJobsFromDisk,
+  resolveMeshyMapFile,
   saveReferenceImageToStaging,
 } from '../src/dev/meshy/meshySession.js';
+import { listStagingMeshyMaps } from '../src/dev/meshy/meshyPbrMaps.js';
 import {
   DEFAULT_JSON_BODY_LIMIT,
   DEFAULT_UPLOAD_LIMIT,
@@ -314,6 +317,78 @@ export function meshyApiPlugin() {
               );
             }
             sendJson(res, 200, { ok: true, job: job ? publicJob(job) : null });
+            return;
+          }
+
+          if (req.method === 'GET' && action === 'texture-maps') {
+            const taskId = url.searchParams.get('taskId') || '';
+            const jobId = url.searchParams.get('jobId') || '';
+            const job = jobId ? getMeshyJob(jobId) : null;
+            const id = taskId || job?.taskId;
+            if (!id) {
+              sendJson(res, 400, {
+                ok: false,
+                code: 'TASK_REQUIRED',
+                error: 'taskId or jobId required',
+              });
+              return;
+            }
+            sendJson(res, 200, await listStagingMeshyMaps(STAGING_ROOT, id));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'fetch-texture-maps') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await fetchMeshyJobTextureMaps({
+              jobId: body.jobId || null,
+              taskId: body.taskId || null,
+              projectRoot: PROJECT_ROOT,
+              stagingRoot: STAGING_ROOT,
+            }));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'import-texture-map') {
+            const body = JSON.parse(await readBody(req));
+            const job = body.jobId ? getMeshyJob(body.jobId) : null;
+            const taskId = body.taskId || job?.taskId;
+            const mapId = String(body.mapId || '');
+            if (!taskId || !mapId) {
+              sendJson(res, 400, {
+                ok: false,
+                code: 'MAP_REQUIRED',
+                error: 'taskId/jobId and mapId are required',
+              });
+              return;
+            }
+            const resolved = await resolveMeshyMapFile({
+              taskId,
+              mapId,
+              projectRoot: PROJECT_ROOT,
+              stagingRoot: STAGING_ROOT,
+            });
+            const buf = await fs.readFile(resolved.map.localPath);
+            const assetName = String(
+              body.name || `${body.assetBaseName || 'Meshy'} ${resolved.map.label}`,
+            ).trim();
+            const { importTextureBuffer } = await import('./assetFileApi.js');
+            const result = await importTextureBuffer(
+              buf,
+              resolved.map.fileName || `${mapId}.png`,
+              {
+                name: assetName,
+                tags: ['meshy', 'pbr', mapId, 'ai-generated'],
+              },
+            );
+            sendJson(res, 200, {
+              ok: true,
+              asset: result.asset || result,
+              map: {
+                ...resolved.map,
+                meshyTaskId: taskId,
+                meshyJobId: job?.jobId || null,
+              },
+            });
             return;
           }
 

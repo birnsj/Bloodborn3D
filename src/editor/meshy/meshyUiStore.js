@@ -16,9 +16,11 @@ import {
   uploadMeshyReference,
 } from '../../io/meshyClient.js';
 import {
+  GAME_CHARACTER_PRESET,
   GAME_PROP_PRESET,
   createDefaultMeshyFormValues,
   estimateImageTo3dCredits,
+  presetForAssetCategory,
 } from '../../dev/meshy/meshyModels.js';
 
 const LISTENERS = new Set();
@@ -176,7 +178,30 @@ export async function meshyLogout() {
 }
 
 export function meshySetFormValue(key, value) {
-  const formValues = { ...state.formValues, [key]: value };
+  let formValues = { ...state.formValues, [key]: value };
+  // Switching category applies the matching preset while preserving mesh tweaks
+  // only when staying within the same category's character/prop fields.
+  if (key === 'asset_category') {
+    const preset = presetForAssetCategory(value);
+    formValues = {
+      ...formValues,
+      ...preset,
+      // Keep the user's current mesh/texture choices when flipping category.
+      model_type: state.formValues.model_type || preset.model_type,
+      ai_model: state.formValues.ai_model || preset.ai_model,
+      target_polycount: state.formValues.target_polycount ?? preset.target_polycount,
+      topology: state.formValues.topology || preset.topology,
+      should_texture: state.formValues.should_texture !== false,
+      enable_pbr: state.formValues.enable_pbr !== false,
+      texture_model: state.formValues.texture_model || preset.texture_model,
+      texture_resolution: state.formValues.texture_resolution || preset.texture_resolution,
+      asset_category: value === 'character' ? 'character' : 'prop',
+      pose_mode: value === 'character' ? (state.formValues.pose_mode || '') : '',
+      include_objects: value === 'character'
+        ? (state.formValues.include_objects !== false)
+        : false,
+    };
+  }
   // Keep valid combos: if PBR on, force a PBR-capable texture model.
   if (key === 'enable_pbr' && value === true) {
     formValues.should_texture = true;
@@ -202,6 +227,10 @@ export function meshySetFormValue(key, value) {
     formValues.model_type = 'smart-topology';
     formValues.topology = 'triangle';
   }
+  if (formValues.asset_category !== 'character') {
+    formValues.pose_mode = '';
+    formValues.include_objects = false;
+  }
   setState({
     formValues,
     estimate: null,
@@ -217,6 +246,13 @@ export function meshyApplyPreset(preset = GAME_PROP_PRESET) {
     localCreditEstimate: refreshLocalEstimate(formValues),
   });
 }
+
+/** Apply Game Prop or Character preset by category id. */
+export function meshyApplyCategoryPreset(category = 'prop') {
+  return meshyApplyPreset(presetForAssetCategory(category));
+}
+
+export { GAME_CHARACTER_PRESET, GAME_PROP_PRESET };
 
 export function meshySetReference(ref) {
   setState({

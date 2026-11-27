@@ -205,6 +205,8 @@ export function OpenArtResults() {
           formValues: { ...ui.formValues },
           tileHorizontal: Boolean(aiUi.promptComposition?.tileHorizontal),
           tileVertical: Boolean(aiUi.promptComposition?.tileVertical),
+          characterPose: aiUi.promptComposition?.characterPose || '',
+          includeObjects: aiUi.promptComposition?.includeObjects !== false,
           // Template the user generated from (current selection wins over the handoff origin).
           promptTemplateId: aiUi.selectedPromptTemplateId || origin?.promptTemplateId || null,
           assetCategory: aiUi.selectedPromptTemplateId || origin?.assetCategory
@@ -265,13 +267,23 @@ export function OpenArtResults() {
     if (!hasResult || !ui.previewUrl) return;
     try {
       const { sendOpenArtResultToMeshy } = await import('../projectArt/generationHandoff.js');
+      const templateId = aiUi.selectedPromptTemplateId
+        || aiUi.generationOrigin?.promptTemplateId
+        || aiUi.generationOrigin?.assetCategory
+        || null;
       const res = await sendOpenArtResultToMeshy({
         previewUrl: ui.previewUrl,
-        title: 'OpenArt 3D reference',
+        title: templateId === 'character' ? 'OpenArt character reference' : 'OpenArt 3D reference',
         provenance: {
           openArtJobId: ui.job?.id || ui.job?.jobId || null,
           prompt: getOpenArtComposedPrompt() || ui.prompt,
-          generationOrigin: aiUi.generationOrigin || null,
+          generationOrigin: {
+            ...(aiUi.generationOrigin || {}),
+            promptTemplateId: templateId,
+            assetCategory: templateId || aiUi.generationOrigin?.assetCategory || null,
+            characterPose: aiUi.promptComposition?.characterPose || '',
+            includeObjects: aiUi.promptComposition?.includeObjects !== false,
+          },
         },
       });
       if (res?.message) {
@@ -281,7 +293,10 @@ export function OpenArtResults() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [hasResult, ui.previewUrl, ui.job, ui.prompt, aiUi.generationOrigin, setStatus, notify]);
+  }, [
+    hasResult, ui.previewUrl, ui.job, ui.prompt, aiUi.generationOrigin,
+    aiUi.selectedPromptTemplateId, aiUi.promptComposition, setStatus, notify,
+  ]);
 
   const openResultsContextMenu = useCallback((event) => {
     openFromEvent(event, [

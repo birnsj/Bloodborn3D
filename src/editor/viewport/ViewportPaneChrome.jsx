@@ -181,12 +181,14 @@ export function ViewportPaneChrome({
   onCameraMode,
   onDisplayMode,
   onToggleShowFog,
+  onToggleShowMist,
   onToggleShowPostProcessing,
   onLayoutMode,
   onResetCamera,
   onToggleMaximize,
 }) {
   const fogOn = pane.showFog !== false;
+  const mistOn = pane.showMist === true;
   const ppOn = pane.showPostProcessing !== false;
   return (
     <div
@@ -222,6 +224,20 @@ export function ViewportPaneChrome({
         {...helpProps('viewport.showFog')}
       >
         Fog
+      </button>
+      <button
+        type="button"
+        className={`bb-viewport-pane-chip bb-viewport-pane-chip--action${mistOn ? ' is-active' : ''}`}
+        title={mistOn ? 'Hide mist particles in this viewport' : 'Show mist particles in this viewport'}
+        aria-pressed={mistOn}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleShowMist?.();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        {...helpProps('viewport.showMist')}
+      >
+        Mist
       </button>
       <button
         type="button"

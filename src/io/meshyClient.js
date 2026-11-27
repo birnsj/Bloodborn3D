@@ -119,3 +119,33 @@ export function importMeshyMesh({ jobId, name } = {}) {
 export function discardMeshyJob(jobId) {
   return meshyFetch('discard', { method: 'POST', body: { jobId } });
 }
+
+/** List staged PBR / texture maps for a completed task (no spend). */
+export function fetchMeshyTextureMaps({ jobId = null, taskId = null } = {}) {
+  const query = {};
+  if (jobId) query.jobId = jobId;
+  if (taskId) query.taskId = taskId;
+  return meshyFetch('texture-maps', { query });
+}
+
+/** Re-download --all-assets for an existing SUCCEEDED task (no generation spend). */
+export function requestMeshyTextureMapDownload({ jobId = null, taskId = null } = {}) {
+  return meshyFetch('fetch-texture-maps', {
+    method: 'POST',
+    body: { jobId, taskId },
+  });
+}
+
+/** Import one map file into the project texture registry. */
+export function importMeshyTextureMap({
+  jobId = null,
+  taskId = null,
+  mapId,
+  name = null,
+  assetBaseName = null,
+} = {}) {
+  return meshyFetch('import-texture-map', {
+    method: 'POST',
+    body: { jobId, taskId, mapId, name, assetBaseName },
+  });
+}

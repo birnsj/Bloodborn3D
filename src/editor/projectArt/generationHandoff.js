@@ -471,7 +471,7 @@ export async function sendProjectArtToMeshy({
     meshyConnect,
     meshyApplyPreset,
   } = await import('../meshy/meshyUiStore.js');
-  const { GAME_PROP_PRESET } = await import('../../dev/meshy/meshyModels.js');
+  const { presetForAssetCategory } = await import('../../dev/meshy/meshyModels.js');
 
   let file;
   let provenance = {
@@ -530,8 +530,19 @@ export async function sendProjectArtToMeshy({
   setArtSaveTargetFolder(folderPath || '');
   setConceptSaveTargetAreaId(null);
 
+  const categoryHint = resolveMeshyAssetCategory({
+    folderPath: folderPath || primary.relativePath || '',
+    assetCategory: primary.assetCategory
+      || primary.provenance?.assetCategory
+      || openArtAssociation?.assetCategory
+      || openArtAssociation?.promptTemplateId
+      || null,
+    promptTemplateId: openArtAssociation?.promptTemplateId || null,
+  });
+  const preset = presetForAssetCategory(categoryHint);
+
   await meshyConnect().catch(() => {});
-  meshyApplyPreset(GAME_PROP_PRESET);
+  meshyApplyPreset(preset);
   const uploaded = await uploadMeshyReference(file);
   meshyApplySeed({
     reference: {
@@ -541,13 +552,15 @@ export async function sendProjectArtToMeshy({
       source: region ? 'project-art-region' : 'project-art',
       provenance,
     },
-    settings: { ...GAME_PROP_PRESET },
+    settings: { ...preset },
     provenance,
   });
 
   return {
     ok: true,
-    message: 'Sent to Meshy — configure settings and estimate before spending',
+    message: categoryHint === 'character'
+      ? 'Sent to Meshy as Character — set pose / include objects, then estimate before spending'
+      : 'Sent to Meshy — configure settings and estimate before spending',
     stagingPath: uploaded.relativePath,
   };
 }
@@ -572,7 +585,7 @@ export async function sendOpenArtResultToMeshy({
     meshyConnect,
     meshyApplyPreset,
   } = await import('../meshy/meshyUiStore.js');
-  const { GAME_PROP_PRESET } = await import('../../dev/meshy/meshyModels.js');
+  const { presetForAssetCategory } = await import('../../dev/meshy/meshyModels.js');
 
   const res = await fetch(previewUrl);
   const blob = await res.blob();
@@ -581,8 +594,23 @@ export async function sendOpenArtResultToMeshy({
   selectAiProvider('meshy');
   setAiAssetsSection('generation');
 
+  const origin = provenance?.generationOrigin || provenance || {};
+  const categoryHint = resolveMeshyAssetCategory({
+    assetCategory: origin.assetCategory || null,
+    promptTemplateId: origin.promptTemplateId || null,
+  });
+  const preset = {
+    ...presetForAssetCategory(categoryHint),
+    pose_mode: normalizePoseMode(origin.characterPose ?? origin.pose_mode),
+    include_objects: origin.includeObjects != null
+      ? Boolean(origin.includeObjects)
+      : (categoryHint === 'character'
+        ? origin.include_objects !== false
+        : false),
+  };
+
   await meshyConnect().catch(() => {});
-  meshyApplyPreset(GAME_PROP_PRESET);
+  meshyApplyPreset(preset);
   const uploaded = await uploadMeshyReference(file);
   const prov = {
     ...(provenance || {}),
@@ -597,12 +625,35 @@ export async function sendOpenArtResultToMeshy({
       source: 'openart-result',
       provenance: prov,
     },
-    settings: { ...GAME_PROP_PRESET },
+    settings: { ...preset },
     provenance: prov,
   });
 
   return {
     ok: true,
-    message: 'OpenArt result sent to Meshy — estimate before spending',
+    message: categoryHint === 'character'
+      ? 'OpenArt character sent to Meshy — confirm pose / objects, then estimate'
+      : 'OpenArt result sent to Meshy — estimate before spending',
   };
+}
+
+/** Map OpenArt / Project Art hints to Meshy asset_category. */
+export function resolveMeshyAssetCategory({
+  folderPath = '',
+  assetCategory = null,
+  promptTemplateId = null,
+} = {}) {
+  const id = String(promptTemplateId || assetCategory || '').toLowerCase();
+  if (id === 'character' || id === 'characters') return 'character';
+  const folder = String(folderPath || '').toLowerCase();
+  if (/(^|\/)characters?(\/|$)/.test(folder)) return 'character';
+  return 'prop';
+}
+
+export function normalizePoseMode(value) {
+  let pose = String(value || '').trim().toLowerCase();
+  if (pose === 'tpose') pose = 't-pose';
+  if (pose === 'apose') pose = 'a-pose';
+  if (pose === 't-pose' || pose === 'a-pose') return pose;
+  return '';
 }

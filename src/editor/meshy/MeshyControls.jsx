@@ -15,12 +15,24 @@ import {
   projectArtPreviewUrl,
 } from '../projectArt/projectArtStore.js';
 import {
+  GAME_CHARACTER_PRESET,
+  GAME_PROP_PRESET,
+  MESHY_ASSET_CATEGORIES,
+  MESHY_POSE_MODES,
   MODEL_TYPES,
   availableResolutionsForTexture,
   availableTextureModels,
   geometryModelsForType,
   estimateImageTo3dCredits,
 } from '../../dev/meshy/meshyModels.js';
+import {
+  MESHY_DECIMATION_MODES,
+  MESHY_GEOMETRY_RESOLUTIONS,
+  MESHY_ORIGIN_OPTIONS,
+  MESHY_OUTPUT_FORMATS,
+  capabilityForImageTo3dSetting,
+  summarizeImageTo3dSettings,
+} from '../../dev/meshy/meshyCapabilities.js';
 import {
   getMeshyUiState,
   meshyApplyPreset,
@@ -60,6 +72,8 @@ export function MeshyControls() {
 
   const trayRefs = aiUi.generationReferences || [];
   const form = ui.formValues || {};
+  const assetCategory = form.asset_category === 'character' ? 'character' : 'prop';
+  const isCharacter = assetCategory === 'character';
   const modelType = form.model_type || MODEL_TYPES.smartTopology;
   const geometryOptions = useMemo(
     () => geometryModelsForType(modelType),
@@ -122,14 +136,14 @@ export function MeshyControls() {
         estimate = await meshyEstimate();
       }
       const credits = estimate?.credits ?? localCredits;
+      const summary = summarizeImageTo3dSettings({
+        ...form,
+        asset_category: assetCategory,
+      }).join('\n');
       const ok = await confirm(
         `Spend approximately ${credits} Meshy credits on one Image-to-3D generation?\n\n`
-        + `Model: ${form.ai_model}\n`
-        + `Topology: ${form.model_type}\n`
-        + `Target faces: ${form.target_polycount}\n`
-        + `Textures: ${form.should_texture ? `${form.texture_model} @ ${form.texture_resolution}` : 'off'}\n`
-        + `PBR: ${form.enable_pbr ? 'yes' : 'no'}\n\n`
-        + 'This will not auto-retry if it fails.',
+        + `${summary}\n`
+        + '\nThis will not auto-retry if it fails.',
         {
           title: 'Approve Meshy spend',
           confirmLabel: 'Generate',
@@ -143,7 +157,7 @@ export function MeshyControls() {
     } catch (err) {
       notify(err.message || String(err));
     }
-  }, [ui.estimate, localCredits, form, confirm, notify, setStatus]);
+  }, [ui.estimate, localCredits, form, isCharacter, confirm, notify, setStatus]);
 
   const balance = ui.status?.balance?.balance;
   const connected = Boolean(ui.status?.ok);
@@ -250,10 +264,12 @@ export function MeshyControls() {
             type="button"
             className="bb-btn bb-btn--ghost"
             disabled={ui.busy}
-            onClick={() => meshyApplyPreset()}
+            onClick={() => meshyApplyPreset(
+              isCharacter ? GAME_CHARACTER_PRESET : GAME_PROP_PRESET,
+            )}
             {...helpProps('meshy.preset')}
           >
-            Game Prop Preset
+            {isCharacter ? 'Character Preset' : 'Game Prop Preset'}
           </button>
         </div>
         <input
@@ -312,6 +328,53 @@ export function MeshyControls() {
       <div className="bb-meshy-controls__settings" {...helpProps('meshy.settings')}>
         <span className="bb-field-caption">Generation settings</span>
 
+        <label className="bb-field" {...helpProps('meshy.category')}>
+          <span className="bb-field-caption">Category</span>
+          <select
+            className="bb-select"
+            value={assetCategory}
+            disabled={ui.busy}
+            onChange={(e) => meshySetFormValue('asset_category', e.target.value)}
+          >
+            {MESHY_ASSET_CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+        </label>
+
+        {isCharacter && (
+          <>
+            <label className="bb-field" {...helpProps('meshy.pose')}>
+              <span className="bb-field-caption">Pose</span>
+              <select
+                className="bb-select"
+                value={form.pose_mode || ''}
+                disabled={ui.busy}
+                onChange={(e) => meshySetFormValue('pose_mode', e.target.value)}
+              >
+                {MESHY_POSE_MODES.map((p) => (
+                  <option key={p.id || 'default'} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="bb-field bb-field--row" {...helpProps('meshy.includeObjects')}>
+              <input
+                type="checkbox"
+                checked={form.include_objects !== false}
+                disabled={ui.busy}
+                onChange={(e) => meshySetFormValue('include_objects', e.target.checked)}
+              />
+              <span className="bb-field-caption">Include objects (weapons / held props)</span>
+            </label>
+            <p className="bb-muted">
+              Meshy builds whatever is in the reference image. Leave Include objects on when
+              weapons should stay in the mesh; turn it off as a reminder to use a character-only
+              sketch (no held weapons).
+            </p>
+          </>
+        )}
+
         <label className="bb-field">
           <span className="bb-field-caption">Mesh type</span>
           <select
@@ -339,92 +402,281 @@ export function MeshyControls() {
           </select>
         </label>
 
-        <label className="bb-field">
-          <span className="bb-field-caption">Target polygon count</span>
-          <input
-            className="bb-input"
-            type="number"
-            min={100}
-            max={modelType === MODEL_TYPES.smartTopology ? 30000 : 300000}
-            step={100}
-            value={form.target_polycount}
-            disabled={ui.busy}
-            onChange={(e) => meshySetFormValue('target_polycount', Number(e.target.value))}
-          />
-        </label>
+        {(() => {
+          const remeshCap = capabilityForImageTo3dSetting('should_remesh', form);
+          const polyCap = capabilityForImageTo3dSetting('target_polycount', form);
+          const topoCap = capabilityForImageTo3dSetting('topology', form);
+          const geoResCap = capabilityForImageTo3dSetting('geometry_resolution', form);
+          const decCap = capabilityForImageTo3dSetting('decimation_mode', form);
+          const preCap = capabilityForImageTo3dSetting('save_pre_remeshed_model', form);
+          const pbrCap = capabilityForImageTo3dSetting('enable_pbr', form);
+          const enhanceCap = capabilityForImageTo3dSetting('image_enhancement', form);
+          const lightCap = capabilityForImageTo3dSetting('remove_lighting', form);
+          const mvCap = capabilityForImageTo3dSetting('multi_view_thumbnails', form);
+          const promptCap = capabilityForImageTo3dSetting('texture_prompt', form);
+          return (
+            <>
+              <label className="bb-field" {...helpProps('meshy.geometryResolution')}>
+                <span className="bb-field-caption">Geometry resolution</span>
+                <select
+                  className="bb-select"
+                  value={form.geometry_resolution || 'standard'}
+                  disabled={ui.busy || !geoResCap.available}
+                  onChange={(e) => meshySetFormValue('geometry_resolution', e.target.value)}
+                >
+                  {MESHY_GEOMETRY_RESOLUTIONS.map((r) => (
+                    <option key={r.id} value={r.id}>{r.label}</option>
+                  ))}
+                </select>
+                {!geoResCap.available && <p className="bb-muted">{geoResCap.reason}</p>}
+                {geoResCap.available && geoResCap.note && <p className="bb-muted">{geoResCap.note}</p>}
+              </label>
 
-        <label className="bb-field">
-          <span className="bb-field-caption">Topology</span>
-          <select
-            className="bb-select"
-            value={form.topology || 'triangle'}
-            disabled={ui.busy || modelType === MODEL_TYPES.smartTopology}
-            onChange={(e) => meshySetFormValue('topology', e.target.value)}
-          >
-            <option value="triangle">Triangle</option>
-            {modelType === MODEL_TYPES.standard && (
-              <option value="quad">Quad</option>
-            )}
-          </select>
-        </label>
+              <label className="bb-field bb-field--row" {...helpProps('meshy.remesh')}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.should_remesh) && remeshCap.available}
+                  disabled={ui.busy || !remeshCap.available}
+                  onChange={(e) => meshySetFormValue('should_remesh', e.target.checked)}
+                />
+                <span className="bb-field-caption">Remesh (Standard)</span>
+              </label>
+              {!remeshCap.available && <p className="bb-muted">{remeshCap.reason}</p>}
 
-        <label className="bb-field bb-field--row">
-          <input
-            type="checkbox"
-            checked={form.should_texture !== false}
-            disabled={ui.busy}
-            onChange={(e) => meshySetFormValue('should_texture', e.target.checked)}
-          />
-          <span className="bb-field-caption">Generate textures</span>
-        </label>
+              <label className="bb-field" {...helpProps('meshy.polycount')}>
+                <span className="bb-field-caption">Target polygon count</span>
+                <input
+                  className="bb-input"
+                  type="number"
+                  min={100}
+                  max={modelType === MODEL_TYPES.smartTopology ? 30000 : 300000}
+                  step={100}
+                  value={form.target_polycount}
+                  disabled={ui.busy || !polyCap.available}
+                  onChange={(e) => meshySetFormValue('target_polycount', Number(e.target.value))}
+                />
+                {!polyCap.available && <p className="bb-muted">{polyCap.reason}</p>}
+              </label>
 
-        <label className="bb-field bb-field--row">
-          <input
-            type="checkbox"
-            checked={Boolean(form.enable_pbr)}
-            disabled={ui.busy || form.should_texture === false}
-            onChange={(e) => meshySetFormValue('enable_pbr', e.target.checked)}
-          />
-          <span className="bb-field-caption">Generate PBR maps</span>
-        </label>
+              <label className="bb-field" {...helpProps('meshy.decimation')}>
+                <span className="bb-field-caption">Adaptive decimation</span>
+                <select
+                  className="bb-select"
+                  value={form.decimation_mode || ''}
+                  disabled={ui.busy || !decCap.available}
+                  onChange={(e) => meshySetFormValue('decimation_mode', e.target.value)}
+                >
+                  {MESHY_DECIMATION_MODES.map((m) => (
+                    <option key={m.id || 'off'} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+                {!decCap.available && <p className="bb-muted">{decCap.reason}</p>}
+                {decCap.available && decCap.note && <p className="bb-muted">{decCap.note}</p>}
+              </label>
 
-        {form.should_texture !== false && (
-          <>
-            <label className="bb-field">
-              <span className="bb-field-caption">Texture model</span>
-              <select
-                className="bb-select"
-                value={form.texture_model || 'meshy-7'}
-                disabled={ui.busy}
-                onChange={(e) => meshySetFormValue('texture_model', e.target.value)}
-              >
-                {textureOptions.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                    {m.supportsPbr ? '' : ' (no PBR)'}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <label className="bb-field" {...helpProps('meshy.topology')}>
+                <span className="bb-field-caption">Topology</span>
+                <select
+                  className="bb-select"
+                  value={form.topology || 'triangle'}
+                  disabled={ui.busy || !topoCap.available || modelType === MODEL_TYPES.smartTopology}
+                  onChange={(e) => meshySetFormValue('topology', e.target.value)}
+                >
+                  <option value="triangle">Triangle</option>
+                  {modelType === MODEL_TYPES.standard && (
+                    <option value="quad">Quad</option>
+                  )}
+                </select>
+                {!topoCap.available && <p className="bb-muted">{topoCap.reason}</p>}
+              </label>
 
-            <label className="bb-field">
-              <span className="bb-field-caption">Texture resolution</span>
-              <select
-                className="bb-select"
-                value={form.texture_resolution || '2k'}
-                disabled={ui.busy}
-                onChange={(e) => meshySetFormValue('texture_resolution', e.target.value)}
-              >
-                {resolutionOptions.map((r) => (
-                  <option key={r} value={r}>{r.toUpperCase()}</option>
-                ))}
-              </select>
-            </label>
-          </>
-        )}
+              <label className="bb-field bb-field--row" {...helpProps('meshy.preRemesh')}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.save_pre_remeshed_model) && preCap.available}
+                  disabled={ui.busy || !preCap.available}
+                  onChange={(e) => meshySetFormValue('save_pre_remeshed_model', e.target.checked)}
+                />
+                <span className="bb-field-caption">Save pre-remesh GLB</span>
+              </label>
+              {!preCap.available && <p className="bb-muted">{preCap.reason}</p>}
+
+              <label className="bb-field bb-field--row">
+                <input
+                  type="checkbox"
+                  checked={form.should_texture !== false}
+                  disabled={ui.busy}
+                  onChange={(e) => meshySetFormValue('should_texture', e.target.checked)}
+                />
+                <span className="bb-field-caption">Generate textures</span>
+              </label>
+
+              <label className="bb-field bb-field--row" {...helpProps('meshy.pbr')}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.enable_pbr) && pbrCap.available}
+                  disabled={ui.busy || !pbrCap.available}
+                  onChange={(e) => meshySetFormValue('enable_pbr', e.target.checked)}
+                />
+                <span className="bb-field-caption">Generate PBR maps</span>
+              </label>
+              {!pbrCap.available && <p className="bb-muted">{pbrCap.reason}</p>}
+              {pbrCap.available && pbrCap.note && <p className="bb-muted">{pbrCap.note}</p>}
+
+              {form.should_texture !== false && (
+                <>
+                  <label className="bb-field">
+                    <span className="bb-field-caption">Texture model</span>
+                    <select
+                      className="bb-select"
+                      value={form.texture_model || 'meshy-7'}
+                      disabled={ui.busy}
+                      onChange={(e) => meshySetFormValue('texture_model', e.target.value)}
+                    >
+                      {textureOptions.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                          {m.supportsPbr ? '' : ' (no PBR)'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="bb-field">
+                    <span className="bb-field-caption">Texture resolution</span>
+                    <select
+                      className="bb-select"
+                      value={form.texture_resolution || '2k'}
+                      disabled={ui.busy}
+                      onChange={(e) => meshySetFormValue('texture_resolution', e.target.value)}
+                    >
+                      {resolutionOptions.map((r) => (
+                        <option key={r} value={r}>{r.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="bb-field" {...helpProps('meshy.texturePrompt')}>
+                    <span className="bb-field-caption">Texture prompt</span>
+                    <input
+                      className="bb-input"
+                      type="text"
+                      maxLength={800}
+                      value={form.texture_prompt || ''}
+                      disabled={ui.busy || !promptCap.available}
+                      onChange={(e) => meshySetFormValue('texture_prompt', e.target.value)}
+                      placeholder="Optional text guidance"
+                    />
+                    {!promptCap.available && <p className="bb-muted">{promptCap.reason}</p>}
+                  </label>
+                </>
+              )}
+
+              <label className="bb-field bb-field--row" {...helpProps('meshy.imageEnhancement')}>
+                <input
+                  type="checkbox"
+                  checked={form.image_enhancement === true}
+                  disabled={ui.busy || !enhanceCap.available}
+                  onChange={(e) => meshySetFormValue(
+                    'image_enhancement',
+                    e.target.checked ? true : false,
+                  )}
+                />
+                <span className="bb-field-caption">Image enhancement</span>
+              </label>
+              {!enhanceCap.available && <p className="bb-muted">{enhanceCap.reason}</p>}
+
+              <label className="bb-field bb-field--row" {...helpProps('meshy.removeLighting')}>
+                <input
+                  type="checkbox"
+                  checked={form.remove_lighting === true}
+                  disabled={ui.busy || !lightCap.available}
+                  onChange={(e) => meshySetFormValue(
+                    'remove_lighting',
+                    e.target.checked ? true : false,
+                  )}
+                />
+                <span className="bb-field-caption">Remove baked lighting</span>
+              </label>
+              {!lightCap.available && <p className="bb-muted">{lightCap.reason}</p>}
+
+              <label className="bb-field bb-field--row" {...helpProps('meshy.autoSize')}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.auto_size)}
+                  disabled={ui.busy}
+                  onChange={(e) => meshySetFormValue('auto_size', e.target.checked)}
+                />
+                <span className="bb-field-caption">Automatic sizing</span>
+              </label>
+
+              <label className="bb-field" {...helpProps('meshy.origin')}>
+                <span className="bb-field-caption">Origin placement</span>
+                <select
+                  className="bb-select"
+                  value={form.origin_at || 'bottom'}
+                  disabled={ui.busy}
+                  onChange={(e) => meshySetFormValue('origin_at', e.target.value)}
+                >
+                  {MESHY_ORIGIN_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="bb-field bb-field--row">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.alpha_thumbnail)}
+                  disabled={ui.busy}
+                  onChange={(e) => meshySetFormValue('alpha_thumbnail', e.target.checked)}
+                />
+                <span className="bb-field-caption">Alpha thumbnail</span>
+              </label>
+
+              <label className="bb-field bb-field--row">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.multi_view_thumbnails) && mvCap.available}
+                  disabled={ui.busy || !mvCap.available}
+                  onChange={(e) => meshySetFormValue('multi_view_thumbnails', e.target.checked)}
+                />
+                <span className="bb-field-caption">Multi-view thumbnails</span>
+              </label>
+              {!mvCap.available && <p className="bb-muted">{mvCap.reason}</p>}
+
+              <fieldset className="bb-field" {...helpProps('meshy.formats')}>
+                <span className="bb-field-caption">Output formats</span>
+                <div className="bb-meshy-controls__formats">
+                  {MESHY_OUTPUT_FORMATS.map((fmt) => {
+                    const selected = (form.target_formats || ['glb']).includes(fmt.id);
+                    return (
+                      <label key={fmt.id} className="bb-field bb-field--row">
+                        <input
+                          type="checkbox"
+                          checked={selected || fmt.id === 'glb'}
+                          disabled={ui.busy || fmt.id === 'glb'}
+                          onChange={(e) => {
+                            const cur = new Set(form.target_formats || ['glb']);
+                            cur.add('glb');
+                            if (e.target.checked) cur.add(fmt.id);
+                            else if (fmt.id !== 'glb') cur.delete(fmt.id);
+                            meshySetFormValue('target_formats', [...cur]);
+                          }}
+                        />
+                        <span className="bb-field-caption">{fmt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="bb-muted">GLB is required for BloodBound import. Extra formats stay in staging.</p>
+              </fieldset>
+            </>
+          );
+        })()}
 
         <p className="bb-muted">
-          Output format: GLB. Estimated cost:
+          Estimated cost:
           {' '}
           <strong>{localCredits}</strong>
           {' '}

@@ -98,11 +98,11 @@ export const assetGenerationLesson = {
       id: 'meshy-generate',
       title: 'Smart Topology props and import',
       body:
-        'Use Game Prop Preset (T2.5, ~5k triangles, meshy-7 PBR @ 2K, GLB). Estimate (binds the exact CLI argv + dry-run), approve spend once, then inspect the staged model (textured / untextured / wireframe). Import Model writes a local mesh with pivot at bottom-center and character-like meshes scaled to ~1.75 m — place it in the Level Editor at scale 1. Discarding a result does not delete an imported asset. Paid tasks are never auto-retried; ambiguous CLI exit 10 requires recovery before another submit.',
-      highlight: ['meshy.preset', 'meshy.generate', 'meshy.import'],
-      verify: { type: 'manualConfirm', label: 'I understand Meshy estimate → approve → import' },
+        'Use Game Prop or Character preset. Settings cover pose (Character), geometry resolution, remesh/decimation (Standard), PBR, formats, auto-size, and more — unavailable options explain why. Estimate binds CLI argv + dry-run; approve spend once (confirmation lists every selected setting). After success, Fetch PBR maps pulls separate albedo/normal/metallic/roughness files with no generation spend; Import writes maps into textures. Import Model pivots feet to origin (~1.75 m for characters).',
+      highlight: ['meshy.preset', 'meshy.generate', 'meshy.import', 'meshy.pbrMaps'],
+      verify: { type: 'manualConfirm', label: 'I understand Meshy estimate → approve → import / PBR maps' },
       explain:
-        'meshy-n1 cannot enable PBR — the preset uses meshy-7 for PBR maps. Jobs recover from .meshy-staging after editor restart.',
+        'meshy-n1 cannot enable PBR — the preset uses meshy-7. Emission only when Meshy returns it. Jobs recover from .meshy-staging after editor restart.',
     },
   ],
 };

@@ -3,7 +3,12 @@
  * Builds production-oriented prompts from a template, designer instruction,
  * optional selected-region note, and reference titles.
  */
-import { hasTilingLanguage, tilingInstruction } from '../aiAssets/promptComposition.js';
+import {
+  characterObjectsInstruction,
+  characterPoseInstruction,
+  hasTilingLanguage,
+  tilingInstruction,
+} from '../aiAssets/promptComposition.js';
 
 const ORTHOGRAPHIC_CONSTRAINT =
   'Front-facing orthographic view, neutral even lighting, no perspective, no vanishing point, flat to camera.';
@@ -265,6 +270,8 @@ export function composeTemplateAssetPrompt({
   tileVertical = false,
   referenceTitles = [],
   includeTiling = true,
+  characterPose = '',
+  includeObjects = true,
 } = {}) {
   const tpl = getPromptTemplate(templateId || assetCategory) || getPromptTemplate('other');
   const notes = [
@@ -297,7 +304,26 @@ export function composeTemplateAssetPrompt({
     parts.push(ISOLATED_CONSTRAINT);
     notes.push('Appended isolated-object constraint.');
   }
-  for (const c of tpl.technicalConstraints) parts.push(c);
+  for (const c of tpl.technicalConstraints) {
+    // Character pose dropdown replaces the generic "neutral pose" constraint.
+    if (tpl.id === 'character' && characterPose
+      && String(c).toLowerCase().includes('neutral pose')) {
+      continue;
+    }
+    parts.push(c);
+  }
+
+  if (tpl.id === 'character') {
+    const poseLine = characterPoseInstruction(characterPose);
+    if (poseLine) {
+      parts.push(poseLine);
+      notes.push(`Appended Character pose: ${characterPose}.`);
+    }
+    parts.push(characterObjectsInstruction(includeObjects !== false));
+    notes.push(includeObjects !== false
+      ? 'Appended include-objects (weapons / held props).'
+      : 'Appended character-only (exclude held objects).');
+  }
 
   let promptText = parts.join(' ').replace(/\s+/g, ' ').trim();
 
@@ -337,6 +363,8 @@ export function assembleRegionTemplatePrompt({
   referenceTitles = [],
   itemTitle = '',
   includeTiling = true,
+  characterPose = '',
+  includeObjects = true,
 } = {}) {
   const region = String(regionDescription || '').trim();
   const title = String(itemTitle || '').trim();
@@ -355,6 +383,8 @@ export function assembleRegionTemplatePrompt({
     tileVertical,
     referenceTitles,
     includeTiling,
+    characterPose,
+    includeObjects,
   });
   result.notes.push(
     'Cropped region is submitted as the image reference; the model interprets its visual characteristics.',

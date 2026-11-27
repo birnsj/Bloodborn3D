@@ -2,7 +2,7 @@
  * Meshy Image-to-3D model catalog, validation, and credit estimates.
  * Sourced from https://docs.meshy.ai/en/api/{models,pricing,image-to-3d} (Nov 2026).
  *
- * Scope: static environment props via Image-to-3D only.
+ * Scope: static environment props and character Image-to-3D.
  * Deprecated geometry model `meshy-7` is intentionally omitted.
  */
 
@@ -12,6 +12,26 @@ export const MODEL_TYPES = Object.freeze({
   standard: 'standard',
   smartTopology: 'smart-topology',
 });
+
+/** Editor asset category for Image-to-3D (drives Character-only controls). */
+export const MESHY_ASSET_CATEGORIES = Object.freeze([
+  Object.freeze({ id: 'prop', label: 'Game Prop' }),
+  Object.freeze({ id: 'character', label: 'Character' }),
+]);
+
+/**
+ * Meshy `pose_mode` for characters. Empty string = omit (no pose constraint).
+ * Book/API: a-pose | t-pose; leave out for default.
+ */
+export const MESHY_POSE_MODES = Object.freeze([
+  Object.freeze({ id: '', label: 'Default' }),
+  Object.freeze({ id: 't-pose', label: 'T-pose' }),
+  Object.freeze({ id: 'a-pose', label: 'A-pose' }),
+]);
+
+export const MESHY_POSE_MODE_IDS = Object.freeze(
+  MESHY_POSE_MODES.map((p) => p.id),
+);
 
 /** Geometry models exposed in the editor (non-deprecated). */
 export const GEOMETRY_MODELS = Object.freeze([
@@ -99,6 +119,9 @@ export const DEFAULT_TEXTURE_BY_GEOMETRY = Object.freeze({
 export const GAME_PROP_PRESET = Object.freeze({
   id: 'game-prop',
   label: 'Game Prop (Smart Topology)',
+  asset_category: 'prop',
+  pose_mode: '',
+  include_objects: false,
   model_type: MODEL_TYPES.smartTopology,
   ai_model: 'meshy-t2.5',
   target_polycount: 5000,
@@ -107,9 +130,56 @@ export const GAME_PROP_PRESET = Object.freeze({
   enable_pbr: true,
   texture_model: 'meshy-7',
   texture_resolution: '2k',
+  texture_prompt: '',
   target_formats: Object.freeze(['glb']),
   should_remesh: false,
+  decimation_mode: '',
+  save_pre_remeshed_model: false,
+  geometry_resolution: 'standard',
+  // Omit / false for Smart Topology — API 400 if sent true.
+  image_enhancement: null,
+  remove_lighting: null,
+  auto_size: false,
+  origin_at: 'bottom',
+  alpha_thumbnail: false,
+  multi_view_thumbnails: false,
 });
+
+/**
+ * Character Image-to-3D preset — same mesh/texture defaults as Game Prop,
+ * with Character category controls (pose_mode, include_objects).
+ */
+export const GAME_CHARACTER_PRESET = Object.freeze({
+  id: 'game-character',
+  label: 'Game Character (Smart Topology)',
+  asset_category: 'character',
+  pose_mode: '',
+  include_objects: true,
+  model_type: MODEL_TYPES.smartTopology,
+  ai_model: 'meshy-t2.5',
+  target_polycount: 5000,
+  topology: 'triangle',
+  should_texture: true,
+  enable_pbr: true,
+  texture_model: 'meshy-7',
+  texture_resolution: '2k',
+  texture_prompt: '',
+  target_formats: Object.freeze(['glb']),
+  should_remesh: false,
+  decimation_mode: '',
+  save_pre_remeshed_model: false,
+  geometry_resolution: 'standard',
+  image_enhancement: null,
+  remove_lighting: null,
+  auto_size: false,
+  origin_at: 'bottom',
+  alpha_thumbnail: false,
+  multi_view_thumbnails: false,
+});
+
+export function presetForAssetCategory(category) {
+  return category === 'character' ? GAME_CHARACTER_PRESET : GAME_PROP_PRESET;
+}
 
 export function getGeometryModel(id) {
   return GEOMETRY_MODELS.find((m) => m.id === id) || null;
@@ -261,12 +331,166 @@ export function validateImageTo3dSettings(input = {}) {
       error: `geometry_resolution “${geometryResolution}” requires meshy-7.1`,
     };
   }
+  if ((geometryResolution === '2k' || geometryResolution === '4k')
+    && modelType === MODEL_TYPES.smartTopology) {
+    return {
+      ok: false,
+      code: 'INVALID_GEOMETRY_RESOLUTION',
+      error: 'geometry_resolution 2k/4k is not available with Smart Topology',
+    };
+  }
 
+  const allowedFormats = new Set(['glb', 'obj', 'fbx', 'stl', 'usdz', '3mf']);
   const formats = Array.isArray(input.target_formats) && input.target_formats.length
     ? input.target_formats.map((f) => String(f).toLowerCase())
     : ['glb'];
+  for (const f of formats) {
+    if (!allowedFormats.has(f)) {
+      return {
+        ok: false,
+        code: 'INVALID_FORMAT',
+        error: `Unsupported target format “${f}”`,
+      };
+    }
+  }
   if (!formats.includes('glb')) {
     formats.unshift('glb');
+  }
+
+  const assetCategory = input.asset_category === 'character' ? 'character' : 'prop';
+  let poseMode = String(input.pose_mode || '').trim().toLowerCase();
+  if (poseMode === 'tpose') poseMode = 't-pose';
+  if (poseMode === 'apose') poseMode = 'a-pose';
+  if (poseMode === 'auto') poseMode = ''; // CLI "auto" ≡ omit (API default)
+  if (poseMode && !MESHY_POSE_MODE_IDS.includes(poseMode)) {
+    return {
+      ok: false,
+      code: 'INVALID_POSE_MODE',
+      error: `pose_mode must be empty, "t-pose", or "a-pose" (got “${input.pose_mode}”)`,
+    };
+  }
+  // Pose constraint is Character-only in the editor; reject if set on props.
+  if (assetCategory !== 'character') {
+    if (poseMode) {
+      return {
+        ok: false,
+        code: 'INVALID_POSE_MODE',
+        error: 'pose_mode is Character-only — switch Category to Character or clear Pose',
+      };
+    }
+    poseMode = '';
+  }
+
+  const shouldRemesh = modelType === MODEL_TYPES.smartTopology
+    ? false
+    : Boolean(input.should_remesh);
+
+  let decimationMode = input.decimation_mode == null || input.decimation_mode === ''
+    ? ''
+    : String(input.decimation_mode);
+  if (decimationMode) {
+    if (!['1', '2', '3', '4'].includes(decimationMode)) {
+      return {
+        ok: false,
+        code: 'INVALID_DECIMATION',
+        error: 'decimation_mode must be 1–4 or empty',
+      };
+    }
+    if (modelType === MODEL_TYPES.smartTopology) {
+      return {
+        ok: false,
+        code: 'INVALID_DECIMATION',
+        error: 'decimation_mode is ignored/rejected on Smart Topology — clear it or use Standard + Remesh',
+      };
+    }
+    if (!shouldRemesh) {
+      return {
+        ok: false,
+        code: 'INVALID_DECIMATION',
+        error: 'decimation_mode requires should_remesh: true',
+      };
+    }
+  }
+
+  const savePreRemesh = Boolean(input.save_pre_remeshed_model);
+  if (savePreRemesh && (modelType === MODEL_TYPES.smartTopology || !shouldRemesh)) {
+    return {
+      ok: false,
+      code: 'INVALID_PRE_REMESH',
+      error: 'save_pre_remeshed_model requires Standard mesh type with Remesh on',
+    };
+  }
+
+  // image_enhancement: API default true, but 400 on smart-topology / meshy-6-lite.
+  let imageEnhancement = input.image_enhancement;
+  if (imageEnhancement === true || imageEnhancement === false) {
+    if (imageEnhancement === true
+      && (modelType === MODEL_TYPES.smartTopology || aiModelId === 'meshy-6-lite')) {
+      return {
+        ok: false,
+        code: 'INVALID_IMAGE_ENHANCEMENT',
+        error: 'image_enhancement is not supported for Smart Topology or meshy-6-lite',
+      };
+    }
+  } else {
+    imageEnhancement = null; // omit from request
+  }
+
+  // remove_lighting: 400 on smart-topology / n1 / 6-lite.
+  let removeLighting = input.remove_lighting;
+  if (removeLighting === true || removeLighting === false) {
+    if (removeLighting === true) {
+      if (modelType === MODEL_TYPES.smartTopology) {
+        return {
+          ok: false,
+          code: 'INVALID_REMOVE_LIGHTING',
+          error: 'remove_lighting returns 400 with Smart Topology',
+        };
+      }
+      if (textureModelId === 'meshy-n1' || textureModelId === 'meshy-6-lite') {
+        return {
+          ok: false,
+          code: 'INVALID_REMOVE_LIGHTING',
+          error: `${textureModelId} refuses remove_lighting: true`,
+        };
+      }
+    }
+  } else {
+    removeLighting = null;
+  }
+
+  let texturePrompt = shouldTexture ? String(input.texture_prompt || '').trim() : '';
+  if (texturePrompt && textureModelId === 'meshy-n1') {
+    return {
+      ok: false,
+      code: 'INVALID_TEXTURE_PROMPT',
+      error: 'texture_prompt is not allowed with meshy-n1',
+    };
+  }
+  if (texturePrompt.length > 800) {
+    return {
+      ok: false,
+      code: 'INVALID_TEXTURE_PROMPT',
+      error: 'texture_prompt max length is 800 characters',
+    };
+  }
+
+  const autoSize = Boolean(input.auto_size);
+  const originAt = String(input.origin_at || 'bottom').toLowerCase();
+  if (originAt !== 'bottom' && originAt !== 'center') {
+    return {
+      ok: false,
+      code: 'INVALID_ORIGIN',
+      error: 'origin_at must be “bottom” or “center”',
+    };
+  }
+  const multiViewThumbs = Boolean(input.multi_view_thumbnails);
+  if (multiViewThumbs && !autoSize) {
+    return {
+      ok: false,
+      code: 'INVALID_THUMBNAILS',
+      error: 'multi_view_thumbnails requires auto_size: true',
+    };
   }
 
   const settings = {
@@ -278,13 +502,26 @@ export function validateImageTo3dSettings(input = {}) {
     enable_pbr: enablePbr && shouldTexture,
     texture_model: shouldTexture ? textureModelId : undefined,
     texture_resolution: shouldTexture ? textureResolution : undefined,
+    texture_prompt: texturePrompt || undefined,
     target_formats: formats,
-    should_remesh: modelType === MODEL_TYPES.smartTopology
-      ? false
-      : Boolean(input.should_remesh),
+    should_remesh: shouldRemesh,
+    decimation_mode: decimationMode || undefined,
+    save_pre_remeshed_model: savePreRemesh,
     geometry_resolution: geometryResolution === '2k' || geometryResolution === '4k'
       ? geometryResolution
       : 'standard',
+    image_enhancement: imageEnhancement,
+    remove_lighting: removeLighting,
+    auto_size: autoSize,
+    origin_at: originAt,
+    alpha_thumbnail: Boolean(input.alpha_thumbnail),
+    multi_view_thumbnails: multiViewThumbs,
+    // Editor-only fields (pose_mode is also an API key when set).
+    asset_category: assetCategory,
+    include_objects: assetCategory === 'character'
+      ? input.include_objects !== false
+      : false,
+    pose_mode: poseMode,
   };
 
   return { ok: true, settings };
@@ -341,20 +578,49 @@ export function buildImageTo3dRequestBody(settings, { imageUrl } = {}) {
     ai_model: s.ai_model,
     should_texture: s.should_texture,
     target_formats: s.target_formats,
-    target_polycount: s.target_polycount,
-    topology: s.topology,
   };
   if (s.should_texture) {
     body.texture_model = s.texture_model;
     body.texture_resolution = s.texture_resolution;
     body.enable_pbr = Boolean(s.enable_pbr);
+    if (s.texture_prompt) body.texture_prompt = s.texture_prompt;
   }
-  if (s.model_type === MODEL_TYPES.standard) {
+  if (s.model_type === MODEL_TYPES.smartTopology) {
+    body.target_polycount = s.target_polycount;
+    body.topology = 'triangle';
+  } else {
     body.should_remesh = Boolean(s.should_remesh);
+    if (s.should_remesh) {
+      body.topology = s.topology || 'triangle';
+      if (s.decimation_mode) {
+        body.decimation_mode = Number(s.decimation_mode);
+      } else {
+        body.target_polycount = s.target_polycount;
+      }
+      if (s.save_pre_remeshed_model) body.save_pre_remeshed_model = true;
+    }
     if (s.geometry_resolution === '2k' || s.geometry_resolution === '4k') {
       body.geometry_resolution = s.geometry_resolution;
     }
   }
+  // Book/API: omit pose_mode entirely for default (no constraint).
+  if (s.pose_mode === 't-pose' || s.pose_mode === 'a-pose') {
+    body.pose_mode = s.pose_mode;
+  }
+  if (s.image_enhancement === true || s.image_enhancement === false) {
+    body.image_enhancement = s.image_enhancement;
+  }
+  if (s.remove_lighting === true || s.remove_lighting === false) {
+    body.remove_lighting = s.remove_lighting;
+  }
+  if (s.auto_size) {
+    body.auto_size = true;
+    body.origin_at = s.origin_at || 'bottom';
+    if (s.multi_view_thumbnails) body.multi_view_thumbnails = true;
+  } else if (s.origin_at && s.origin_at !== 'bottom') {
+    body.origin_at = s.origin_at;
+  }
+  if (s.alpha_thumbnail) body.alpha_thumbnail = true;
   return body;
 }
 

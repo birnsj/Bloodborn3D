@@ -40,6 +40,7 @@ function makeIsolatedSceneView() {
   view.gizmo = { updateScreenScale: vi.fn() };
   view.atmosphere = {
     setPerspectiveVisible: vi.fn(),
+    setPaneMistVisible: vi.fn(),
     update: vi.fn(),
     captureDepth: vi.fn(),
     applyFogSettings: vi.fn(),
@@ -119,6 +120,42 @@ describe('SceneView.renderViewports isolation', () => {
     expect(fogSeen[1].atmosphere).toBe(false);
     expect(view.scene.fog).toBe(authored);
     expect(authored.density).toBeCloseTo(0.04);
+  });
+
+  it('keeps distance fog on while pane Mist chip is off', () => {
+    const view = makeIsolatedSceneView();
+    const authored = view.scene.fog;
+    const fogSeen = [];
+    view._drawScene = function draw(_camera, opts) {
+      fogSeen.push({ fog: this.scene.fog, atmosphere: opts.atmosphere });
+    };
+
+    view.renderViewports([
+      {
+        paneId: 'pane-0',
+        rect: { x: 0, y: 0, width: 400, height: 200 },
+        cameraMode: 'perspective',
+        displayMode: 'lit',
+        showFog: true,
+        showMist: false,
+        paneState: {
+          id: 'pane-0',
+          cameraMode: 'perspective',
+          showFog: true,
+          showMist: false,
+          position: [6, 5, 8],
+          target: [0, 1.5, 0],
+          frustumSize: 12,
+        },
+      },
+    ]);
+
+    expect(fogSeen[0].fog).toBe(authored);
+    expect(fogSeen[0].atmosphere).toBe(true);
+    expect(view.atmosphere.setPaneMistVisible).toHaveBeenCalledWith(false);
+    expect(view.atmosphere.setPerspectiveVisible).toHaveBeenCalledWith(true);
+    // Restored for Play / single draws after the multi-pane pass.
+    expect(view.atmosphere.setPaneMistVisible).toHaveBeenLastCalledWith(true);
   });
 
   it('honors explicit Show Fog on an ortho pane for distance fog only', () => {

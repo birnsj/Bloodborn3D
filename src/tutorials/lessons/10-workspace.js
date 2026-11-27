@@ -63,10 +63,10 @@ export const workspaceLesson = {
     },
     {
       id: 'fog-pp-chips',
-      title: 'Fog and PP chips',
-      body: 'Each pane has Fog and PP chips. Fog toggles distance fog / atmosphere for that pane only. PP toggles post-processing preview (perspective Lit; needs map PP enabled). Multi-pane layouts keep ortho clear while Perspective keeps look.',
-      highlight: ['viewport.showFog', 'viewport.showPostProcessing'],
-      verify: { type: 'manualConfirm', label: 'I found Fog and PP' },
+      title: 'Fog, Mist, and PP chips',
+      body: 'Each pane has Fog, Mist, and PP chips. Fog toggles distance fog; Mist toggles particle mist (off by default). PP toggles post-processing preview (perspective Lit; needs map PP enabled). Multi-pane layouts keep ortho clear while Perspective keeps look.',
+      highlight: ['viewport.showFog', 'viewport.showMist', 'viewport.showPostProcessing'],
+      verify: { type: 'manualConfirm', label: 'I found Fog, Mist, and PP' },
       explain: 'World Fog & Atmosphere and Post Processing lessons author the look; these chips only preview per pane.',
     },
     {

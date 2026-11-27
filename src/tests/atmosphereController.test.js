@@ -62,6 +62,25 @@ describe('AtmosphereController', () => {
     expect(atmosphere.root.visible).toBe(true);
   });
 
+  it('pane Mist chip hides mist particles without killing noise layers', () => {
+    atmosphere.applyFogSettings({ type: 'linear', mist: true, noise: true, mistCount: 20 });
+    expect(atmosphere._mist.visible).toBe(true);
+    expect(atmosphere.root.visible).toBe(true);
+    atmosphere.setPaneMistVisible(false);
+    expect(atmosphere._mist.visible).toBe(false);
+    expect(atmosphere.root.visible).toBe(true);
+    atmosphere.setPaneMistVisible(true);
+    expect(atmosphere._mist.visible).toBe(true);
+  });
+
+  it('pane Mist off hides root when mist is the only atmosphere layer', () => {
+    atmosphere.applyFogSettings({ type: 'linear', mist: true, mistCount: 10 });
+    expect(atmosphere.root.visible).toBe(true);
+    atmosphere.setPaneMistVisible(false);
+    expect(atmosphere.root.visible).toBe(false);
+    expect(atmosphere._mist.visible).toBe(false);
+  });
+
   it('keeps atmosphere meshes on a dedicated layer for ortho masking', () => {
     atmosphere.applyFogSettings({
       type: 'linear',

@@ -78,6 +78,7 @@ export function buildViewportPanes(prefs, width, height, sceneView) {
       cameraMode: pane?.cameraMode || 'perspective',
       displayMode: pane?.displayMode || 'lit',
       showFog: pane?.showFog,
+      showMist: pane?.showMist,
       showPostProcessing: pane?.showPostProcessing,
       paneState: pane || null,
     };

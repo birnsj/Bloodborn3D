@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   defaultShowFogForCameraMode,
+  defaultShowMistForCameraMode,
   defaultShowPostProcessingForCameraMode,
   normalizeCameraMode,
 } from './viewportPrefs.js';
@@ -132,6 +133,7 @@ export function orientPaneToCameraMode(pane, cameraMode) {
       ...pane,
       cameraMode: mode,
       showFog: defaultShowFogForCameraMode(mode),
+      showMist: defaultShowMistForCameraMode(mode),
       showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
       position: [position.x, position.y, position.z],
       target,
@@ -144,6 +146,7 @@ export function orientPaneToCameraMode(pane, cameraMode) {
     ...pane,
     cameraMode: mode,
     showFog: defaultShowFogForCameraMode(mode),
+    showMist: defaultShowMistForCameraMode(mode),
     showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
     position: [position.x, position.y, position.z],
     target,

@@ -55,7 +55,7 @@ describe('AI Assets prompt composition — tiling', () => {
   it('does not mutate the editable prompt stored in OpenArt UI state', () => {
     openArtSetPrompt('editable body');
     setPromptComposition({ tileHorizontal: true, tileVertical: false });
-    expect(getAiAssetsUiState().promptComposition).toEqual({
+    expect(getAiAssetsUiState().promptComposition).toMatchObject({
       tileHorizontal: true,
       tileVertical: false,
     });
@@ -64,9 +64,11 @@ describe('AI Assets prompt composition — tiling', () => {
   });
 
   it('defaults tiling flags to unchecked in the AI Assets store', () => {
-    expect(getAiAssetsUiState().promptComposition).toEqual({
+    expect(getAiAssetsUiState().promptComposition).toMatchObject({
       tileHorizontal: false,
       tileVertical: false,
+      characterPose: '',
+      includeObjects: true,
     });
   });
 });

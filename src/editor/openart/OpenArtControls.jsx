@@ -18,6 +18,7 @@ import {
   subscribeAiAssetsUi,
 } from '../aiAssets/aiAssetsUiStore.js';
 import { composeGenerationPrompt } from '../aiAssets/promptComposition.js';
+import { MESHY_POSE_MODES } from '../../dev/meshy/meshyModels.js';
 import {
   ASSET_CATEGORIES,
   assembleRegionTemplatePrompt,
@@ -210,6 +211,8 @@ export function OpenArtControls() {
 
   const tileHorizontal = Boolean(aiUi.promptComposition?.tileHorizontal);
   const tileVertical = Boolean(aiUi.promptComposition?.tileVertical);
+  const characterPose = String(aiUi.promptComposition?.characterPose || '');
+  const includeObjects = aiUi.promptComposition?.includeObjects !== false;
   const composedPrompt = useMemo(
     () => composeGenerationPrompt({
       prompt: ui.prompt,
@@ -256,6 +259,8 @@ export function OpenArtControls() {
       tileVertical,
       referenceTitles,
       includeTiling: false,
+      characterPose,
+      includeObjects,
     };
     const result = (activeRegion || hasCroppedRef)
       ? assembleRegionTemplatePrompt({
@@ -274,8 +279,8 @@ export function OpenArtControls() {
       usedRegion: Boolean(activeRegion || hasCroppedRef),
     };
   }, [
-    trayRefs, templateId, instruction, tileHorizontal, tileVertical, activeRegion,
-    aiUi.generationOrigin, ui.referenceStagingPath,
+    trayRefs, templateId, instruction, tileHorizontal, tileVertical, characterPose,
+    includeObjects, activeRegion, aiUi.generationOrigin, ui.referenceStagingPath,
   ]);
 
   const applyTemplatePrompt = useCallback(async ({
@@ -480,6 +485,43 @@ export function OpenArtControls() {
               {template.description}
               {constraintSummary ? ` Constraints: ${constraintSummary}.` : ''}
             </p>
+          )}
+
+          {templateId === 'character' && (
+            <div className="bb-openart__character-options" {...helpProps('openart.characterOptions')}>
+              <label className="bb-field">
+                <span className="bb-field-caption">Pose</span>
+                <select
+                  className="bb-select"
+                  value={characterPose}
+                  disabled={ui.busy}
+                  onChange={(e) => {
+                    setPromptComposition({ characterPose: e.target.value });
+                    openArtClearEstimate();
+                  }}
+                >
+                  {MESHY_POSE_MODES.map((p) => (
+                    <option key={p.id || 'default'} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="bb-field bb-field--row">
+                <input
+                  type="checkbox"
+                  checked={includeObjects}
+                  disabled={ui.busy}
+                  onChange={(e) => {
+                    setPromptComposition({ includeObjects: e.target.checked });
+                    openArtClearEstimate();
+                  }}
+                />
+                <span className="bb-field-caption">Include objects (weapons / held props)</span>
+              </label>
+              <p className="bb-muted bb-openart__template-help">
+                Pose and Include objects are baked into Compose Prompt for Character sketches
+                headed to Meshy.
+              </p>
+            </div>
           )}
 
           {activeRegion && (

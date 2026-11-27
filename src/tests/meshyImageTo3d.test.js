@@ -3,8 +3,10 @@
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import {
+  GAME_CHARACTER_PRESET,
   GAME_PROP_PRESET,
   availableTextureModels,
+  buildImageTo3dRequestBody,
   estimateImageTo3dCredits,
   validateImageTo3dSettings,
 } from '../dev/meshy/meshyModels.js';
@@ -158,6 +160,74 @@ describe('Meshy CLI argv construction', () => {
       settings: GAME_PROP_PRESET,
       imagePath: 'relative.png',
     })).toThrow(/absolute/i);
+  });
+
+  it('forwards Character pose_mode and omits it for Default', () => {
+    const withPose = buildImageTo3dCreateArgv({
+      settings: { ...GAME_CHARACTER_PRESET, pose_mode: 'a-pose' },
+      imagePath,
+    });
+    expect(withPose).toContain('--pose-mode');
+    expect(withPose).toContain('a-pose');
+
+    const defaultPose = buildImageTo3dCreateArgv({
+      settings: GAME_CHARACTER_PRESET,
+      imagePath,
+    });
+    expect(defaultPose).not.toContain('--pose-mode');
+  });
+});
+
+describe('Meshy Character category', () => {
+  it('accepts Character preset with pose and include_objects', () => {
+    const result = validateImageTo3dSettings({
+      ...GAME_CHARACTER_PRESET,
+      pose_mode: 't-pose',
+      include_objects: true,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.settings.asset_category).toBe('character');
+    expect(result.settings.pose_mode).toBe('t-pose');
+    expect(result.settings.include_objects).toBe(true);
+  });
+
+  it('rejects pose_mode on Game Prop instead of silently clearing', () => {
+    const result = validateImageTo3dSettings({
+      ...GAME_PROP_PRESET,
+      pose_mode: 'a-pose',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('INVALID_POSE_MODE');
+    // UI clears pose when switching to Prop; empty pose on prop still validates.
+    expect(validateImageTo3dSettings({
+      ...GAME_PROP_PRESET,
+      pose_mode: '',
+    }).ok).toBe(true);
+  });
+
+  it('puts pose_mode on the API body only when set', () => {
+    const posed = buildImageTo3dRequestBody(
+      { ...GAME_CHARACTER_PRESET, pose_mode: 't-pose' },
+      { imageUrl: 'file:///ref.png' },
+    );
+    expect(posed.pose_mode).toBe('t-pose');
+    expect(posed.include_objects).toBeUndefined();
+    expect(posed.asset_category).toBeUndefined();
+
+    const plain = buildImageTo3dRequestBody(
+      GAME_CHARACTER_PRESET,
+      { imageUrl: 'file:///ref.png' },
+    );
+    expect(plain.pose_mode).toBeUndefined();
+  });
+
+  it('rejects invalid pose_mode', () => {
+    const result = validateImageTo3dSettings({
+      ...GAME_CHARACTER_PRESET,
+      pose_mode: 'dance',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('INVALID_POSE_MODE');
   });
 });
 

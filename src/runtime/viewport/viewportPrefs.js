@@ -56,6 +56,15 @@ export function defaultShowFogForCameraMode(cameraMode) {
   return normalizeCameraMode(cameraMode) === 'perspective';
 }
 
+/**
+ * Mist particle preview defaults: off in every pane.
+ * Distance fog stays independent (Fog chip); Mist is opt-in so alpha discs
+ * do not appear until the author wants them.
+ */
+export function defaultShowMistForCameraMode(_cameraMode) {
+  return false;
+}
+
 /** Post-processing preview defaults: on for perspective, off otherwise. */
 export function defaultShowPostProcessingForCameraMode(cameraMode) {
   return normalizeCameraMode(cameraMode) === 'perspective';
@@ -70,6 +79,17 @@ export function resolvePaneShowFog(pane) {
   if (typeof pane?.paneState?.showFog === 'boolean') return pane.paneState.showFog;
   const mode = pane?.cameraMode || pane?.paneState?.cameraMode;
   return defaultShowFogForCameraMode(mode);
+}
+
+/**
+ * Resolve whether a pane should show Mist particles this frame.
+ * Explicit pane.showMist wins; otherwise default off (Fog chip is separate).
+ */
+export function resolvePaneShowMist(pane) {
+  if (typeof pane?.showMist === 'boolean') return pane.showMist;
+  if (typeof pane?.paneState?.showMist === 'boolean') return pane.paneState.showMist;
+  const mode = pane?.cameraMode || pane?.paneState?.cameraMode;
+  return defaultShowMistForCameraMode(mode);
 }
 
 /**
@@ -92,6 +112,7 @@ function defaultPane(id, cameraMode) {
     cameraMode: mode,
     displayMode: 'lit',
     showFog: defaultShowFogForCameraMode(mode),
+    showMist: defaultShowMistForCameraMode(mode),
     showPostProcessing: defaultShowPostProcessingForCameraMode(mode),
     position: [...DEFAULT_POSE.position],
     target: [...DEFAULT_POSE.target],
@@ -189,6 +210,9 @@ export function clampViewportPrefs(partial = {}) {
       showFog: typeof src.showFog === 'boolean'
         ? src.showFog
         : defaultShowFogForCameraMode(cameraMode),
+      showMist: typeof src.showMist === 'boolean'
+        ? src.showMist
+        : defaultShowMistForCameraMode(cameraMode),
       showPostProcessing: typeof src.showPostProcessing === 'boolean'
         ? src.showPostProcessing
         : defaultShowPostProcessingForCameraMode(cameraMode),

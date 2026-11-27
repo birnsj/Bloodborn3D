@@ -572,9 +572,11 @@ export async function pollMeshyJob({
 async function downloadJobGlb(job, staging, executable) {
   const outDir = path.join(staging, 'models', job.taskId);
   await fs.mkdir(outDir, { recursive: true });
+  // --all-assets pulls separate PBR maps when present (base/normal/metallic/roughness).
+  // Free for already-SUCCEEDED tasks — no generation spend.
   await downloadImageTo3dTask(job.taskId, outDir, {
     executable,
-    allAssets: false,
+    allAssets: Boolean(job.settings?.enable_pbr || job.settings?.should_texture !== false),
   });
 
   const glbPath = await findDownloadedGlb(outDir);
@@ -636,6 +638,75 @@ async function findDownloadedThumb(dir) {
 
 export function getMeshyJob(jobId) {
   return jobs.get(jobId) || null;
+}
+
+/**
+ * Re-download a SUCCEEDED task with --all-assets so separate PBR map files
+ * land in staging. Does not create a new generation (no credit spend).
+ */
+export async function fetchMeshyJobTextureMaps({
+  jobId = null,
+  taskId = null,
+  projectRoot,
+  stagingRoot = null,
+} = {}) {
+  const staging = stagingRoot || defaultStagingRoot(projectRoot);
+  const status = await getMeshyStatus(projectRoot);
+  if (!status.cli?.ok) {
+    throw new MeshyCliError(status.code || 'CLI_MISSING', status.error || 'Meshy CLI missing');
+  }
+
+  let job = jobId ? (jobs.get(jobId) || await readJobSidecar(staging, jobId)) : null;
+  const id = taskId || job?.taskId;
+  if (!id) {
+    throw new MeshyCliError('TASK_REQUIRED', 'taskId or jobId with a Meshy task is required');
+  }
+
+  const outDir = path.join(staging, 'models', id, 'all-assets');
+  await fs.mkdir(outDir, { recursive: true });
+  await downloadImageTo3dTask(id, outDir, {
+    executable: status.cli.executable,
+    allAssets: true,
+  });
+
+  const { listStagingMeshyMaps } = await import('./meshyPbrMaps.js');
+  const listed = await listStagingMeshyMaps(staging, id);
+  if (job) {
+    job.textureMaps = listed.maps;
+    job.textureMapsFetchedAt = Date.now();
+    await writeJobSidecar(staging, job);
+  }
+  return { ok: true, taskId: id, jobId: job?.jobId || null, ...listed };
+}
+
+/**
+ * Resolve a local staging map file for import (absolute path + slot).
+ */
+export async function resolveMeshyMapFile({
+  taskId,
+  mapId,
+  projectRoot,
+  stagingRoot = null,
+} = {}) {
+  const staging = stagingRoot || defaultStagingRoot(projectRoot);
+  const { listStagingMeshyMaps } = await import('./meshyPbrMaps.js');
+  let listed = await listStagingMeshyMaps(staging, taskId);
+  if (!listed.maps.some((m) => m.id === mapId && m.localPath)) {
+    await fetchMeshyJobTextureMaps({
+      taskId,
+      projectRoot,
+      stagingRoot: staging,
+    });
+    listed = await listStagingMeshyMaps(staging, taskId);
+  }
+  const map = listed.maps.find((m) => m.id === mapId);
+  if (!map?.localPath) {
+    throw new MeshyCliError(
+      'MAP_NOT_FOUND',
+      `No local file for map “${mapId}” — it may be missing from this task (e.g. emission on meshy-7)`,
+    );
+  }
+  return { ok: true, map, listed };
 }
 
 export async function recoverMeshyJobsFromDisk({ stagingRoot, projectRoot } = {}) {
@@ -721,9 +792,20 @@ export async function recoverMeshyJob({
 }
 
 export async function readMeshyStagingFile(stagingRoot, relativePath) {
-  const abs = path.resolve(stagingRoot, relativePath);
-  const root = path.resolve(stagingRoot);
-  if (!abs.startsWith(root)) {
+  // Separator-aware containment — reject `..` and prefix tricks (C6 API safety).
+  let abs;
+  try {
+    const cleaned = String(relativePath || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+    if (!cleaned || cleaned.includes('..')) {
+      throw new MeshyCliError('PATH_ESCAPE', 'Invalid staging path');
+    }
+    const root = path.resolve(stagingRoot);
+    abs = path.resolve(root, cleaned);
+    if (abs !== root && !abs.startsWith(root + path.sep)) {
+      throw new MeshyCliError('PATH_ESCAPE', 'Invalid staging path');
+    }
+  } catch (err) {
+    if (err instanceof MeshyCliError) throw err;
     throw new MeshyCliError('PATH_ESCAPE', 'Invalid staging path');
   }
   return fs.readFile(abs);

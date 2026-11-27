@@ -842,7 +842,7 @@ export const HELP_CONTENT = {
 
   'meshy.controls': {
     title: 'Meshy settings',
-    body: 'Configure Image-to-3D: Smart Topology vs Standard, polycount, textures, PBR, and credit estimate. Generation never starts from a handoff alone.',
+    body: 'Configure Image-to-3D: category (Game Prop / Character), Smart Topology vs Standard, polycount, textures, PBR, and credit estimate. Character adds pose and include-objects. Generation never starts from a handoff alone.',
   },
   'meshy.connect': {
     title: 'Log in to Meshy',
@@ -854,12 +854,85 @@ export const HELP_CONTENT = {
     body: 'Source image for Image-to-3D. Import a file, pick a Project Art tray reference, or use Send to Meshy / Send Region to Meshy from the library.',
   },
   'meshy.preset': {
-    title: 'Game Prop preset',
-    body: 'Applies Smart Topology (meshy-t2.5), 5,000 triangles, textures on, PBR on with meshy-7 at 2K, GLB output. N1 cannot enable PBR.',
+    title: 'Meshy category preset',
+    body: 'Applies Smart Topology (meshy-t2.5), 5,000 triangles, textures on, PBR on with meshy-7 at 2K, GLB output. Character preset also enables Character category controls (pose / include objects). N1 cannot enable PBR.',
+  },
+  'meshy.category': {
+    title: 'Meshy asset category',
+    body: 'Game Prop for environment objects. Character unlocks pose (Default / T-pose / A-pose) and Include objects for humanoid Image-to-3D.',
+    tips: 'Pose maps to Meshy pose_mode. Include objects is a workflow reminder and OpenArt Character prompt option — Meshy meshes whatever is in the reference image.',
+  },
+  'meshy.pose': {
+    title: 'Character pose',
+    body: 'Forwards Meshy pose_mode: Default omits the flag; T-pose / A-pose constrain the generated character for rigging. A-pose keeps limbs clearer for auto-rig.',
+  },
+  'meshy.includeObjects': {
+    title: 'Include objects',
+    body: 'When on, keep held weapons and props from the sketch in the character mesh. When off, prefer a character-only reference (empty hands). Meshy has no separate strip-objects API — the reference image decides.',
   },
   'meshy.settings': {
     title: 'Meshy generation settings',
-    body: 'Only valid model/parameter combinations are offered. Smart Topology is triangle-only. PBR requires a PBR-capable texture model (meshy-7 or meshy-6-lite). Settings are forwarded to `meshy image-to-3d create`.',
+    body: 'Full Image-to-3D controls: mesh type, geometry resolution, remesh, adaptive decimation, topology, textures/PBR, image enhancement, auto-size, origin, and output formats. Unavailable options explain why — invalid selections are rejected, not silently dropped. Settings go to `meshy image-to-3d create`.',
+  },
+  'meshy.geometryResolution': {
+    title: 'Geometry resolution',
+    body: 'Standard, Ultra 2K, or Ultra 4K. Ultra needs meshy-7.1 (Standard mesh type) and adds +5 credits.',
+  },
+  'meshy.remesh': {
+    title: 'Remesh',
+    body: 'Runs the remesh phase on Standard meshes. Smart Topology ignores remesh — use target polycount on T2 / T2.5 instead.',
+  },
+  'meshy.polycount': {
+    title: 'Target polygon count',
+    body: 'Face target for Smart Topology, or for Standard remesh when adaptive decimation is off.',
+  },
+  'meshy.decimation': {
+    title: 'Adaptive decimation',
+    body: 'Levels 1–4 override target polycount during remesh. Requires Standard + Remesh.',
+  },
+  'meshy.topology': {
+    title: 'Topology',
+    body: 'Triangle or quad-dominant remesh output. Smart Topology is triangle-only.',
+  },
+  'meshy.preRemesh': {
+    title: 'Save pre-remesh GLB',
+    body: 'Also store the pre-remesh model. Requires Remesh on Standard meshes.',
+  },
+  'meshy.pbr': {
+    title: 'PBR maps',
+    body: 'Returns normal, metallic, and roughness with the base color. Emission only on Meshy 6 texture below 8K. meshy-n1 cannot enable PBR.',
+  },
+  'meshy.texturePrompt': {
+    title: 'Texture prompt',
+    body: 'Optional text guidance for texturing (max 800 chars). Not allowed with meshy-n1.',
+  },
+  'meshy.imageEnhancement': {
+    title: 'Image enhancement',
+    body: 'Optimize the input image before generation. Not supported on Smart Topology or meshy-6-lite (API returns 400).',
+  },
+  'meshy.removeLighting': {
+    title: 'Remove baked lighting',
+    body: 'Strip highlights/shadows from the base color. Refused by Smart Topology, meshy-n1, and meshy-6-lite.',
+  },
+  'meshy.autoSize': {
+    title: 'Automatic sizing',
+    body: 'Estimate real-world height with AI vision and resize the model. Origin defaults to bottom unless Origin placement changes.',
+  },
+  'meshy.origin': {
+    title: 'Origin placement',
+    body: 'bottom or center. Most useful with Automatic sizing.',
+  },
+  'meshy.formats': {
+    title: 'Output formats',
+    body: 'GLB is required for BloodBound import. Optional OBJ/FBX/STL/USDZ/3MF stay in staging when selected.',
+  },
+  'meshy.pbrMaps': {
+    title: 'PBR map inspector',
+    body: 'Lists albedo, normal, metallic, roughness, and emission (when returned) from a completed Meshy task. Fetch PBR maps re-downloads --all-assets — no generation credits. Import writes each map into the texture registry and keeps staging sources.',
+  },
+  'openart.characterOptions': {
+    title: 'Character pose / objects',
+    body: 'Shown when the Character prompt template is selected. Pose and Include objects are baked into Compose Prompt so the sketch is Meshy-ready (T/A-pose, weapons kept or excluded).',
   },
   'meshy.estimate': {
     title: 'Estimate Meshy cost',
@@ -1108,8 +1181,13 @@ export const HELP_CONTENT = {
   },
   'viewport.showFog': {
     title: 'Show Fog',
-    body: 'Toggles distance fog and moving atmosphere for this viewport pane only. Does not change World Settings fog authorship.',
+    body: 'Toggles distance fog for this viewport pane only. Does not change World Settings fog authorship. Mist particles use the separate Mist chip.',
     tips: 'Off by default in orthographic panes (they also use a dark editor clear instead of the map background). Perspective and Play keep authored fog unless you turn this chip off.',
+  },
+  'viewport.showMist': {
+    title: 'Show Mist',
+    body: 'Toggles world-space Mist particles for this viewport pane only. Independent of the Fog chip (distance fog). Requires Mist enabled in World → Fog & Atmosphere.',
+    tips: 'Off by default so soft alpha discs stay out of construction views. Play always shows authored mist. Noise / Volumetric still follow the Fog chip.',
   },
   'viewport.showPostProcessing': {
     title: 'Show Post-Processing',
@@ -1118,7 +1196,7 @@ export const HELP_CONTENT = {
   },
   'viewport.layout': {
     title: 'Viewport Layout',
-    body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own Cam, View, Fog, and PP chips.',
+    body: 'Split the level viewport into one, two, three, or four panes. Each pane has its own Cam, View, Fog, Mist, and PP chips.',
     tips: 'Also under View → Viewport Layout. Maximize expands the active pane; Restore returns to the split. Space maximizes in multi-pane (jumps in Play).',
   },
   'viewport.reset': {

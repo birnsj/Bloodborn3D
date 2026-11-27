@@ -359,6 +359,8 @@ export class AtmosphereController {
 
     this._fog = normalizeWorldFog(null);
     this._perspectiveVisible = true;
+    /** Pane Mist chip — independent of distance fog / other atmosphere layers. */
+    this._paneMistVisible = true;
     this._time = 0;
     this._particleTex = createSoftParticleTexture();
 
@@ -392,12 +394,17 @@ export class AtmosphereController {
     this.applyFogSettings(this._fog);
   }
 
+  _mistLayerActive() {
+    const f = this._fog;
+    return Boolean(f.mist && f.type !== 'none' && this._paneMistVisible);
+  }
+
   _needsDepth() {
     const f = this._fog;
     return Boolean(
       this._perspectiveVisible
       && f.type !== 'none'
-      && (f.mist || f.noise || f.volumetric),
+      && (this._mistLayerActive() || f.noise || f.volumetric),
     );
   }
 
@@ -511,7 +518,7 @@ export class AtmosphereController {
       this._rebuildMist(f.mistCount);
     }
     if (this._mist && this._mistMat) {
-      this._mist.visible = Boolean(f.mist) && f.type !== 'none';
+      this._mist.visible = this._mistLayerActive();
       this._mistMat.uniforms.uOpacity.value = f.mistOpacity;
       this._mistMat.uniforms.uColor.value.copy(color);
       this._mistMat.uniforms.uSize.value = f.mistSize;
@@ -555,10 +562,22 @@ export class AtmosphereController {
     this._syncRootVisibility();
   }
 
+  /**
+   * Pane Mist chip: show/hide mist particles without touching distance fog,
+   * noise sheets, or volumetric volume.
+   */
+  setPaneMistVisible(visible) {
+    this._paneMistVisible = Boolean(visible);
+    if (this._mist) this._mist.visible = this._mistLayerActive();
+    this._syncRootVisibility();
+  }
+
   _syncRootVisibility() {
     const f = this._fog;
-    const any = f.type !== 'none' && (f.mist || f.noise || f.volumetric);
+    const any = f.type !== 'none'
+      && (this._mistLayerActive() || f.noise || f.volumetric);
     this.root.visible = Boolean(any && this._perspectiveVisible);
+    if (this._mist) this._mist.visible = this._mistLayerActive() && this.root.visible;
   }
 
   /**
@@ -571,7 +590,7 @@ export class AtmosphereController {
     const clampedDt = Math.max(0, Math.min(0.1, dt));
     this._time += clampedDt;
 
-    if (f.mist && this._mist) {
+    if (this._mistLayerActive() && this._mist) {
       this._updateMist(camera, clampedDt);
     }
 

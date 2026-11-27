@@ -54,5 +54,29 @@ export function defaultPromptComposition() {
   return {
     tileHorizontal: false,
     tileVertical: false,
+    /** Character template only: '' | 't-pose' | 'a-pose' */
+    characterPose: '',
+    /** Character template only: keep held weapons / props in the sketch. */
+    includeObjects: true,
   };
+}
+
+/** Pose constraint sentence for Character template composition. */
+export function characterPoseInstruction(poseMode = '') {
+  const pose = String(poseMode || '').trim().toLowerCase();
+  if (pose === 't-pose' || pose === 'tpose') {
+    return 'Full body in a clear T-pose (arms straight out to the sides), even lighting.';
+  }
+  if (pose === 'a-pose' || pose === 'apose') {
+    return 'Full body in a clear A-pose (arms angled down and away from the torso), even lighting.';
+  }
+  return '';
+}
+
+/** Include / exclude held objects for Character template composition. */
+export function characterObjectsInstruction(includeObjects = true) {
+  if (includeObjects) {
+    return 'Include any held weapons or objects from the reference sketch as part of the character.';
+  }
+  return 'Character only — exclude held weapons and loose objects; show empty hands.';
 }

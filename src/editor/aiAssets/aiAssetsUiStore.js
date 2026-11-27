@@ -350,6 +350,12 @@ export function setPromptComposition(patch = {}) {
     tileVertical: patch.tileVertical !== undefined
       ? Boolean(patch.tileVertical)
       : Boolean(prev.tileVertical),
+    characterPose: patch.characterPose !== undefined
+      ? String(patch.characterPose || '')
+      : String(prev.characterPose || ''),
+    includeObjects: patch.includeObjects !== undefined
+      ? Boolean(patch.includeObjects)
+      : (prev.includeObjects !== false),
   };
   state = { ...state, promptComposition: next };
   emit();

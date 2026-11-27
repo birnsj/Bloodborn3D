@@ -526,13 +526,20 @@ export function buildImageTo3dCreateArgv({
   assertLocalImagePath(imagePath);
   const s = validated.settings;
 
+  const formats = Array.isArray(s.target_formats) && s.target_formats.length
+    ? s.target_formats.join(',')
+    : 'glb';
+
   const argv = [
     'image-to-3d', 'create',
     '--image-url', imagePath,
     '--model-type', s.model_type,
     '--should-texture', boolFlag(s.should_texture),
-    '--target-formats', 'glb',
+    '--target-formats', formats,
   ];
+
+  // Extra API fields without dedicated CLI flags (or that need remesh bundling).
+  const data = {};
 
   if (s.model_type === MODEL_TYPES.smartTopology) {
     argv.push('--ai-model', s.ai_model);
@@ -540,22 +547,23 @@ export function buildImageTo3dCreateArgv({
   } else {
     // Standard: default geometry is meshy-7.1. Other geometry models + remesh /
     // topology go through --data (flags win over data for overlapping keys).
-    const data = {};
     if (s.ai_model && s.ai_model !== 'meshy-7.1' && s.ai_model !== 'latest') {
       data.ai_model = s.ai_model;
     }
     if (s.should_remesh) {
       data.should_remesh = true;
       data.topology = s.topology || 'triangle';
-      data.target_polycount = s.target_polycount;
+      if (s.decimation_mode) {
+        data.decimation_mode = Number(s.decimation_mode);
+      } else {
+        data.target_polycount = s.target_polycount;
+      }
+      if (s.save_pre_remeshed_model) data.save_pre_remeshed_model = true;
     } else {
       data.should_remesh = false;
     }
     if (s.geometry_resolution === '2k' || s.geometry_resolution === '4k') {
       argv.push('--geometry-resolution', s.geometry_resolution);
-    }
-    if (Object.keys(data).length) {
-      argv.push('--data', JSON.stringify(data));
     }
   }
 
@@ -563,6 +571,30 @@ export function buildImageTo3dCreateArgv({
     if (s.texture_model) argv.push('--texture-model', s.texture_model);
     if (s.texture_resolution) argv.push('--texture-resolution', s.texture_resolution);
     argv.push('--enable-pbr', boolFlag(Boolean(s.enable_pbr)));
+    if (s.texture_prompt) argv.push('--texture-prompt', s.texture_prompt);
+  }
+
+  // Character pose constraint — omit flag for Default (no pose_mode).
+  if (s.pose_mode === 't-pose' || s.pose_mode === 'a-pose') {
+    argv.push('--pose-mode', s.pose_mode);
+  }
+
+  if (s.image_enhancement === true || s.image_enhancement === false) {
+    argv.push('--image-enhancement', boolFlag(s.image_enhancement));
+  }
+  if (s.remove_lighting === true || s.remove_lighting === false) {
+    argv.push('--remove-lighting', boolFlag(s.remove_lighting));
+  }
+
+  if (s.auto_size) data.auto_size = true;
+  if (s.origin_at && (s.auto_size || s.origin_at !== 'bottom')) {
+    data.origin_at = s.origin_at;
+  }
+  if (s.alpha_thumbnail) data.alpha_thumbnail = true;
+  if (s.multi_view_thumbnails) data.multi_view_thumbnails = true;
+
+  if (Object.keys(data).length) {
+    argv.push('--data', JSON.stringify(data));
   }
 
   if (asyncMode) argv.push('--async');
@@ -584,10 +616,20 @@ export const CLI_IMAGE_TO_3D_PARAMS = Object.freeze([
   'enable_pbr',
   'texture_model',
   'texture_resolution',
+  'texture_prompt',
   'target_formats',
   'geometry_resolution',
   'should_remesh',
+  'decimation_mode',
+  'save_pre_remeshed_model',
   'topology',
+  'pose_mode',
+  'image_enhancement',
+  'remove_lighting',
+  'auto_size',
+  'origin_at',
+  'alpha_thumbnail',
+  'multi_view_thumbnails',
   'async',
   'operationId',
 ]);
