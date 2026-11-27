@@ -1,7 +1,7 @@
 # Batch 8 — Textures acceptance
 
 **Baseline ship:** `86a8b05` (1,094 tests)  
-**Closure commit:** _(this commit)_  
+**Closure commit:** `1780af3`  
 **Level:** `public/levels/acceptance-textures.json`  
 **Harness:** `src/dev/textureAcceptanceClosure.js` (phased CDP)  
 **Academy:** lesson 29 (`textures`)  
