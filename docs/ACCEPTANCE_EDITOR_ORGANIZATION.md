@@ -1,9 +1,12 @@
 # Batch 9 — Editor Organization and Viewport Tools
 
+**Ship baseline:** `a625593` (1,131 tests)  
+**Closure commit:** _(this document’s ship)_  
 **Level:** `public/levels/acceptance-layers.json`  
+**Harness:** `src/dev/layersAcceptanceClosure.js`  
 **Academy:** lesson 30 (`editor-layers`)  
-**Tests:** `src/tests/batch9AuthoringLayers.test.js`  
-**Baseline prior:** Batch 8 UV closure (`dc5f925` / `aa20925`)
+**Screenshots:** `docs/acceptance-layers/`  
+**Regression tests:** `src/tests/batch9AuthoringLayers.test.js`, `src/tests/batch9AcceptanceClosure.test.js`
 
 ## Architecture
 
@@ -12,48 +15,69 @@
 | Layer tree + `activeLayerId` | `world.authoringLayers` | Serialized; seed defaults Architecture / Props / Lighting / Environment / Gameplay |
 | Actor membership | `actor.authoringLayerId` | ID only; null resolves to Architecture (or first root) |
 | Editor filters | `EditorContext.layerUi` | `hidden` / `locked` / `solo` — **session only**, never level JSON |
+| Lock enforcement | `authoringLayerGuards.js` + EditorContext command paths | Not UI-disable-only |
 | Viewport filter | `SceneView` edit mode | `group.visible` ∧ layer filter; Play ignores `layerUi` |
 | Parenting / Cells / Prefabs | Unchanged | Layers do not replace hierarchy |
 | `THREE.Layers` | Atmosphere bit 2 only | **No** mapping from authoring layers |
 
-**TextureHelper:** **Deferred** — Texture Inspector already covers 2D sampling diagnostics; a second helper would overlap without adding authoring value.
+**TextureHelper:** **Deferred** — Texture Inspector covers 2D sampling diagnostics.
 
-## Deliverables
+## Defects corrected (closure)
 
-| Item | Status |
-| --- | --- |
-| Hierarchical layers + cycle-safe reparent | Done |
-| Delete requires reassignment; never deletes actors | Done |
-| Nested effective visibility/lock | Done |
-| Solo restore of prior hidden map | Done |
-| Undo commands for tree / membership / active | Done |
-| Creation / duplicate / prefab stamp Active layer | Done |
-| Prefab save strips `authoringLayerId` | Done |
-| Fingerprint rebuild trap fixed (`visible` out of content FP) | Done |
-| Layers dock + Outliner chips/filter + Details assign | Done |
-| Per-pane ViewHelper (perspective) | Done |
-| Academy 30 + Help + acceptance level | Done |
+| Severity | Defect | Fix |
+| --- | --- | --- |
+| P1 | Duplication appeared to follow Active layer rather than source membership | `duplicateActors` explicitly copies `authoringLayerId`; create/place still stamp Active |
+| P1 | Layer lock not enforced across shared edit paths | `authoringLayerGuards` + guards on create/delete/duplicate/transform/geometry/material/Details/prefab-related edits; blocked status feedback; no create into locked Active layer |
 
 ## Closure checklist
 
 | Criterion | Result | Notes |
 | --- | --- | --- |
-| Nested layers | **Passed** | Detail Props under Props in acceptance level |
-| Solo restore | **Passed** | Unit + UI: previousHidden restored on clear |
-| Layer hide non-destructive (no CSG rebuild) | **Passed** | `group.visible` only; fingerprint excludes `actor.visible` |
-| Prefab cross-level | **Passed** | Strip on save; Active layer on place |
-| Multi-viewport ViewHelper | **Passed** | Per-pane helper; perspective only |
-| Play with hidden layers | **Passed** | `editMode` false → layer filter off |
+| Nested layers | **Passed** | Detail Props under Props; browser Layers panel |
+| Solo restore | **Passed** | Unit + harness workflow |
+| Layer hide non-destructive (no CSG rebuild) | **Passed** | Harness: `rebuildDelta: 0`; fingerprint excludes `actor.visible` |
+| Duplication preserves source layer | **Passed** | Single / multi / hierarchy / cell / prefab instance + undo tests |
+| New create / prefab place uses Active | **Passed** | Stamp / assign Active unchanged |
+| Lock enforcement (command paths) | **Passed** | Guards + mixed selection partition tests; layer UI remains usable to unlock |
+| Prevent create into locked Active | **Passed** | `rejectIfActiveLayerLocked` |
+| Prefab strip + cross-level place | **Passed** | Strip on save; Active on place |
+| Outliner chips / filter / Details assign | **Passed** | Browser + unit |
+| Layers panel CRUD / nested / counts | **Passed** | Browser: Window → Layers; recolor menu |
+| Multi-viewport ViewHelper | **Passed** | Perspective only; quad screenshot; helper map size 1 in mixed ortho/persp |
+| Play ignores layer UI | **Passed** | `editMode` false → layer filter off |
 | Backward compat | **Passed** | Missing `authoringLayers` seeds defaults |
-| No THREE.Layers map | **Documented** | Authoring layers stay separate |
-| TextureHelper | **Deferred** | Rationale above |
+| Hidden actors not pickable | **Passed** | `pickWorldHits` / marquee skip |
+| Hidden lights stop contributing | **Passed** | Whole actor `group.visible = false` (Three light parent visibility) |
+| Runtime / collision unaffected | **Passed** | Filters edit-mode only; Play ignores `layerUi` |
+| Mansion single/quad FPS vs Batch 8 (~84 / ~18.7) | **Unverified** | Long CDP mansion measure aborted in closure session; layer ops confirmed non-rebuild (`toggle20x` ~0.1 ms on acceptance level). Re-run `phasePerf()` locally when convenient |
+| TextureHelper | **Deferred** | Texture Inspector |
+| THREE.Layers mapping | **Deferred / rejected** | Stay separate (documented) |
+| VideoTexture / KTX2 encode / baked lighting / brush displacement / multi-viewport render debt / extended texture lifecycle | **Deferred** | Unchanged from prior batches |
 
-## Performance
+## CSG / visibility limitations
 
-Use the same method as Batch 8: `measureFrameTimes(seconds, { warmupFrames })` on the gothic mansion under comparable viewport prefs. Authoring-layer filters are O(actors) visibility toggles with no mesh rebuild; ViewHelper is a small ortho overlay per perspective pane.
+- Layer hide is **visual + pick** only. Subtractive carve remains baked into additive / world-solid meshes; hiding a cutter does **not** un-carve.
+- World-solid batch visibility is per World Solid **actor group**, not per solid fragment inside a batched mesh.
+- Hierarchies spanning layers: each actor’s own membership drives filter; parent `actor.visible` hierarchy still applies via `isEffectivelyVisible`.
+
+## Performance (method)
+
+Same as Batch 8: `measureFrameTimes(seconds, { warmupFrames })` via `window.__bloodboundViewport`.
+
+```js
+import('/src/dev/layersAcceptanceClosure.js').then((m) => m.runAll()).then(console.log)
+```
+
+Verified in-session on acceptance-layers: layer hide/show does not increment `actorRebuilds`. Gothic mansion median FPS vs Batch 8 baseline left **Unverified** (see checklist).
+
+## Screenshots
+
+- `docs/acceptance-layers/01-layers-panel.png` — Layers dock + Outliner chips + ViewHelper corner
+- `docs/acceptance-layers/02-quad-viewhelper.png` — Four-pane layout; perspective ViewHelper only
 
 ## Non-goals (explicit)
 
 - Mapping authoring layers → `THREE.Layers` for GPU layer masks
 - Replacing Outliner parent tree with a layer tree
 - TextureHelper / advanced texture diagnostics beyond Texture Inspector
+- Unrelated rendering optimization

@@ -73,6 +73,12 @@ import {
   getActiveAuthoringLayerId,
 } from './authoringLayerStamp.js';
 import {
+  isEditorActorLocked as checkEditorActorLocked,
+  isActiveAuthoringLayerLocked,
+  partitionEditableActorIds,
+  lockedLayerFeedback,
+} from './authoringLayerGuards.js';
+import {
   deleteAuthoringLayer,
   normalizeAuthoringLayersState,
   normalizeAuthoringLayer,
@@ -81,7 +87,6 @@ import {
   getDefaultAuthoringLayerId,
   getLayerDescendantIds,
   resolveAuthoringLayerId,
-  isActorAuthoringLayerLocked,
 } from '../core/authoringLayers.js';
 import {
   emptyGeometrySelection,
@@ -161,7 +166,6 @@ import {
   getWorldTransform,
   reparentActor,
   setWorldTransform,
-  isEffectivelyLocked,
 } from '../core/hierarchy.js';
 import {
   createPrefabFromActors,
@@ -339,14 +343,6 @@ export function EditorProvider({ children }) {
   const layerUiRef = useRef(layerUi);
   layerUiRef.current = layerUi;
 
-  /** Actor lock including editor-only authoring-layer lock (edit mode only). */
-  const isEditorActorLocked = useCallback((actor) => {
-    if (!actor || !worldRef.current) return false;
-    if (isEffectivelyLocked(actor, worldRef.current)) return true;
-    if (mode === 'play') return false;
-    return isActorAuthoringLayerLocked(actor, worldRef.current, layerUiRef.current);
-  }, [mode]);
-
   // Push session layer UI into SceneView so visibility/pick stay in sync without rebuild.
   useEffect(() => {
     runtimeRef.current?.sceneView?.setLayerUi?.(layerUi);
@@ -391,6 +387,37 @@ export function EditorProvider({ children }) {
   gridRef.current = gridSize;
   const gridSnapRef = useRef(gridSnap);
   gridSnapRef.current = gridSnap;
+
+  /** Actor lock including editor-only authoring-layer lock (edit mode only). */
+  const isEditorActorLocked = useCallback((actor) => (
+    checkEditorActorLocked(actor, worldRef.current, layerUiRef.current, {
+      playMode: mode === 'play',
+    })
+  ), [mode]);
+
+  const rejectIfActiveLayerLocked = useCallback((action = 'create') => {
+    if (!isActiveAuthoringLayerLocked(worldRef.current, layerUiRef.current, {
+      playMode: mode === 'play',
+    })) {
+      return false;
+    }
+    setStatus(`Cannot ${action}: the Active authoring layer is locked. Unlock it in the Layers panel.`);
+    return true;
+  }, [mode, setStatus]);
+
+  /** Editable subset of selection; status feedback when anything is blocked. */
+  const takeEditableSelection = useCallback((action = 'edit') => {
+    const ids = selectedRef.current;
+    const { editable, blocked } = partitionEditableActorIds(
+      ids,
+      worldRef.current,
+      layerUiRef.current,
+      { playMode: mode === 'play' },
+    );
+    const msg = lockedLayerFeedback(blocked.length, ids.length, action);
+    if (msg) setStatus(msg);
+    return editable;
+  }, [mode, setStatus]);
 
   const historyRef = useRef(null);
   if (!historyRef.current) {
@@ -1030,6 +1057,7 @@ export function EditorProvider({ children }) {
 
   const createBrushAtBounds = useCallback((kind, min, max) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('create')) return null;
 
     if (kind === 'ramp') {
       const actor = createRampFromBounds({
@@ -1167,29 +1195,24 @@ export function EditorProvider({ children }) {
     if (isSubtract) reportCutterConvexConflicts();
     setTool('select');
     return actor;
-  }, [world, mode, executeCommand, rejectSubtractIfTooComplex, reportCutterConvexConflicts]);
+  }, [world, mode, executeCommand, rejectSubtractIfTooComplex, reportCutterConvexConflicts, rejectIfActiveLayerLocked]);
 
   const deleteSelected = useCallback(() => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
-    const ids = selectedRef.current.filter((id) => {
-      const actor = world.getActor(id);
-      return actor && !isEditorActorLocked(actor);
-    });
-    if (!ids.length) {
-      setStatus('Selection is locked');
-      return;
-    }
+    const ids = takeEditableSelection('delete');
+    if (!ids.length) return;
     executeCommand(
       new RemoveActorsCommand({ world, actorIds: ids, label: 'Delete' }),
       { selectIds: [] },
     );
-  }, [world, mode, executeCommand, isEditorActorLocked, setStatus]);
+  }, [world, mode, executeCommand, takeEditableSelection]);
 
   const duplicateSelected = useCallback(({ offset = null, label = 'Duplicate' } = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return [];
-    const actors = selectedRef.current
-      .map((id) => world.getActor(id))
-      .filter(Boolean);
+    // Duplication preserves each source actor's authoringLayerId (never Active stamp).
+    // Locked actors (actor flag or authoring layer) are skipped.
+    const editableIds = takeEditableSelection('duplicate');
+    const actors = editableIds.map((id) => world.getActor(id)).filter(Boolean);
     if (actors.length === 0) return [];
     const copies = duplicateActors(actors, {
       // Alt+gizmo drag uses zero offset — the drag places the copies.
@@ -1214,7 +1237,7 @@ export function EditorProvider({ children }) {
       { selectIds: ids },
     );
     return ids;
-  }, [world, mode, executeCommand, rejectSubtractIfTooComplex]);
+  }, [world, mode, executeCommand, rejectSubtractIfTooComplex, takeEditableSelection]);
 
   /**
    * Sync-only: record prefab overrides for edited actors and return undo commands.
@@ -1642,11 +1665,26 @@ export function EditorProvider({ children }) {
   const beginFaceMoveDrag = useCallback(() => {
     if (!world || mode === 'play') return false;
     const sel = geometrySelectionRef.current;
-    const start = captureGeometryMoveStart(world, sel);
+    const actorIds = [...new Set((sel?.items || []).map((it) => it.actorId))];
+    const { editable, blocked } = partitionEditableActorIds(
+      actorIds,
+      world,
+      layerUiRef.current,
+      { playMode: false },
+    );
+    if (blocked.length) {
+      setStatus(lockedLayerFeedback(blocked.length, actorIds.length, 'edit geometry'));
+    }
+    if (!editable.length) return false;
+    const filteredSel = {
+      ...sel,
+      items: (sel?.items || []).filter((it) => editable.includes(it.actorId)),
+    };
+    const start = captureGeometryMoveStart(world, filteredSel);
     if (!start.length) return false;
     faceMovePreviewRef.current = { start, lastValid: null, lastResult: null };
     return true;
-  }, [world, mode]);
+  }, [world, mode, setStatus]);
 
   /**
    * Commit the current face-move preview as one undo step, or restore start if invalid.
@@ -1873,6 +1911,7 @@ export function EditorProvider({ children }) {
 
   const createCell = useCallback((name = 'Cell', position) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('create')) return null;
     const snap = gridSnapRef.current;
     const g = snap ? gridRef.current : 1;
     const cell = createCellActor({
@@ -1901,7 +1940,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const actor = world.getActor(actorId);
-    if (!actor) return;
+    if (!actor || isEditorActorLocked(actor)) {
+      if (actor) setStatus('Cannot edit flags: actor or authoring layer is locked.');
+      return;
+    }
     const before = {};
     const after = {};
     for (const key of Object.keys(partial)) {
@@ -1941,14 +1983,23 @@ export function EditorProvider({ children }) {
   const assignActorsToAuthoringLayer = useCallback((actorIds, layerId) => {
     if (!world || mode === 'play' || !actorIds?.length || !layerId) return;
     ensureAuthoringLayers();
+    const { editable, blocked } = partitionEditableActorIds(
+      actorIds,
+      world,
+      layerUiRef.current,
+      { playMode: mode === 'play' },
+    );
+    const msg = lockedLayerFeedback(blocked.length, actorIds.length, 'assign layer');
+    if (msg) setStatus(msg);
+    if (!editable.length) return;
     executeCommand(
       new SetActorsAuthoringLayerCommand({
         world,
-        assignments: actorIds.map((actorId) => ({ actorId, authoringLayerId: layerId })),
+        assignments: editable.map((actorId) => ({ actorId, authoringLayerId: layerId })),
       }),
       { resync: true },
     );
-  }, [world, mode, ensureAuthoringLayers, executeCommand]);
+  }, [world, mode, ensureAuthoringLayers, executeCommand, setStatus]);
 
   const assignSelectedToAuthoringLayer = useCallback((layerId) => {
     assignActorsToAuthoringLayer(selectedRef.current, layerId);
@@ -2131,6 +2182,10 @@ export function EditorProvider({ children }) {
     const actor = world.getActor(actorId);
     const brush = actor?.getComponent('Brush');
     if (!brush) return;
+    if (isEditorActorLocked(actor)) {
+      setStatus('Cannot edit brush: actor or authoring layer is locked.');
+      return;
+    }
 
     if (partial.size) {
       const before = {
@@ -2323,6 +2378,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const { undoable = true, label = 'Edit light' } = options;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit light: actor or authoring layer is locked.');
+      return;
+    }
     const light = world.getActor(actorId)?.getComponent('Light');
     if (!light) return;
     const before = {};
@@ -2373,6 +2432,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const { undoable = true, label = 'Edit environment' } = options;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit environment: actor or authoring layer is locked.');
+      return;
+    }
     const env = world.getActor(actorId)?.getComponent('Environment');
     if (!env) return;
     const before = {};
@@ -2419,6 +2482,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const { undoable = true, label = 'Edit primitive' } = options;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit primitive: actor or authoring layer is locked.');
+      return;
+    }
     const comp = world.getActor(actorId)?.getComponent('PrimitiveMesh');
     if (!comp) return;
     const merged = normalizePrimitiveMeshFields({ ...comp, ...partial });
@@ -2745,6 +2812,10 @@ export function EditorProvider({ children }) {
   const updateSelectedStaticMesh = useCallback((partial, options = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit static mesh: actor or authoring layer is locked.');
+      return;
+    }
     const mesh = world.getActor(actorId)?.getComponent('StaticMesh');
     if (!mesh) return;
     const { undoable = true, label = 'Edit static mesh' } = options;
@@ -2798,6 +2869,10 @@ export function EditorProvider({ children }) {
   const updateSelectedRamp = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit ramp: actor or authoring layer is locked.');
+      return;
+    }
     const ramp = world.getActor(actorId)?.getComponent('Ramp');
     if (!ramp) return;
     const before = {};
@@ -2841,6 +2916,10 @@ export function EditorProvider({ children }) {
   const updateSelectedStair = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit stair: actor or authoring layer is locked.');
+      return;
+    }
     const stair = world.getActor(actorId)?.getComponent('Stair');
     if (!stair) return;
     const before = {};
@@ -2914,6 +2993,10 @@ export function EditorProvider({ children }) {
   const updateSelectedColumn = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit column: actor or authoring layer is locked.');
+      return;
+    }
     const column = world.getActor(actorId)?.getComponent('Column');
     if (!column) return;
     const before = {};
@@ -2963,6 +3046,10 @@ export function EditorProvider({ children }) {
   const updateSelectedCurvedWall = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit curved wall: actor or authoring layer is locked.');
+      return;
+    }
     const wall = world.getActor(actorId)?.getComponent('CurvedWall');
     if (!wall) return;
     const before = {};
@@ -3127,6 +3214,10 @@ export function EditorProvider({ children }) {
   const updateSelectedArch = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
+    if (isEditorActorLocked(world.getActor(actorId))) {
+      setStatus('Cannot edit arch: actor or authoring layer is locked.');
+      return;
+    }
     const arch = world.getActor(actorId)?.getComponent('Arch');
     if (!arch) return;
     const before = {};
@@ -3175,6 +3266,7 @@ export function EditorProvider({ children }) {
 
   const placeMeshAsset = useCallback((asset, position, options = {}) => {
     if (!world || mode === 'play' || !asset?.id) return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     // Prefer live registry meta so Asset Viewer pivot Apply is inherited even if
@@ -3206,6 +3298,7 @@ export function EditorProvider({ children }) {
 
   const placeLight = useCallback((lightType = 'point', position, options = {}) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     const actor = createLightActor({
@@ -3229,6 +3322,7 @@ export function EditorProvider({ children }) {
 
   const placeEnvironment = useCallback((envType = 'water2', position, options = {}) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     const actor = createEnvironmentActor({
@@ -3254,6 +3348,7 @@ export function EditorProvider({ children }) {
 
   const placePrimitiveMesh = useCallback((primitive = 'box', position, options = {}) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     let actor;
@@ -3284,6 +3379,7 @@ export function EditorProvider({ children }) {
 
   const placePlayerSpawn = useCallback((position, options = {}) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const snap = options.gridSnap ?? gridSnapRef.current;
     const g = snap ? (options.gridSize ?? gridRef.current) : 1;
     const actor = createPlayerSpawnActor({
@@ -3329,6 +3425,7 @@ export function EditorProvider({ children }) {
 
   const placePrefabAsset = useCallback(async (assetOrId, position, options = {}) => {
     if (!world || mode === 'play') return null;
+    if (rejectIfActiveLayerLocked('place')) return null;
     const id = typeof assetOrId === 'string' ? assetOrId : assetOrId?.id;
     if (!id) return null;
     let definition = getPrefabDefinitionSync(id);
@@ -3643,6 +3740,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const actor = world.getActor(actorId);
+    if (isEditorActorLocked(actor)) {
+      setStatus('Cannot edit convex brush: actor or authoring layer is locked.');
+      return;
+    }
     const convex = actor?.getComponent('ConvexBrush');
     if (!convex) return;
     const before = {
@@ -3780,6 +3881,10 @@ export function EditorProvider({ children }) {
     const sel = geometrySelectionRef.current;
     if (sel?.mode !== 'face' || !sel.primary) {
       return { ok: false, code: 'NO_FACE', message: 'Select a single face to extrude.' };
+    }
+    if (isEditorActorLocked(world.getActor(sel.primary.actorId))) {
+      setStatus('Cannot extrude: actor or authoring layer is locked.');
+      return { ok: false, code: 'LOCKED' };
     }
     const planned = planFaceExtrusion(world, {
       actorId: sel.primary.actorId,
@@ -4044,6 +4149,10 @@ export function EditorProvider({ children }) {
     }
     const actor = world.getActor(target.actorId);
     if (!actor) return;
+    if (isEditorActorLocked(actor)) {
+      setStatus('Cannot edit surface: actor or authoring layer is locked.');
+      return;
+    }
     const brush = actor.getComponent('Brush');
     const convex = actor.getComponent('ConvexBrush');
     const ramp = actor.getComponent('Ramp');
@@ -4255,6 +4364,11 @@ export function EditorProvider({ children }) {
 
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
+    const primaryId = selectedRef.current[selectedRef.current.length - 1];
+    if (primaryId && isEditorActorLocked(world?.getActor(primaryId))) {
+      setStatus('Cannot assign material: actor or authoring layer is locked.');
+      return;
+    }
     // Surface redirect only while Surface tool is active with a live pick.
     // Stale selectedSurface (e.g. after load / leave Surface) must not steal actor assigns.
     if (shouldApplyMaterialToSurface({
@@ -4314,6 +4428,10 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const actor = world.getActor(actorId);
+    if (isEditorActorLocked(actor)) {
+      setStatus('Cannot rename: actor or authoring layer is locked.');
+      return;
+    }
     if (!actor || actor.name === name) return;
     executeCommand(
       new RenameActorCommand({
@@ -4527,6 +4645,7 @@ export function EditorProvider({ children }) {
     assignSelectedToCell,
     setSelectedActorFlags,
     layerUi,
+    isEditorActorLocked,
     setActiveAuthoringLayer,
     assignActorsToAuthoringLayer,
     assignSelectedToAuthoringLayer,

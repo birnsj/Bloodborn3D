@@ -23,14 +23,14 @@ export const editorLayersLesson = {
     {
       id: 'hide-lock-solo',
       title: 'Hide, lock, and solo',
-      body: 'Eye/lock/solo on a layer are editor filters only — they never mutate actor.visible / actor.locked or rebuild CSG. Nested effective visibility is self ∧ ancestors. Solo saves the prior hidden map and restores it when cleared. Play/Stop ignores layer UI so runtime visibility stays authored.',
+      body: 'Eye/lock/solo on a layer are editor filters only — they never mutate actor.visible / actor.locked or rebuild CSG. Nested effective visibility/lock is self ∧ ancestors. Solo saves the prior hidden map and restores it when cleared. Locked layers block edits/deletion/duplication via shared command paths (status feedback); unlock in Layers to continue. New creates refuse a locked Active layer. Play/Stop ignores layer UI.',
       highlight: 'panel.layers',
       verify: { type: 'manualConfirm' },
     },
     {
       id: 'prefabs',
-      title: 'Prefabs and cross-level place',
-      body: 'Saving a prefab strips map-specific authoringLayerId values. Placing a prefab assigns every spawned actor to the current Active layer so assets stay portable across maps.',
+      title: 'Prefabs, duplicate, and cross-level place',
+      body: 'Duplication copies each source actor’s authoringLayerId (never the Active layer). Saving a prefab strips map-specific layer IDs; placing a prefab assigns every spawned actor to the current Active layer so assets stay portable across maps.',
       highlight: 'panel.layers',
       verify: { type: 'manualConfirm' },
     },

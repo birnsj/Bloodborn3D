@@ -118,6 +118,23 @@ export function LayersPanel({ docked = false } = {}) {
         },
       },
       {
+        id: 'recolor',
+        label: 'Recolor…',
+        onSelect: async () => {
+          const color = await prompt('Hex color (#rrggbb)', {
+            title: 'Layer Color',
+            initialValue: layer.color || '#888888',
+          });
+          if (color == null) return;
+          const next = String(color).trim();
+          if (/^#[0-9a-fA-F]{6}$/.test(next)) {
+            updateAuthoringLayer(layer.id, { color: next });
+          } else {
+            setStatus?.('Color must be #rrggbb');
+          }
+        },
+      },
+      {
         id: 'child',
         label: 'New Child Layer',
         onSelect: async () => {

@@ -160,6 +160,9 @@ export function duplicateActors(actors, { offset = { x: 25, y: 0, z: 0 }, gridSi
     const data = structuredClone(actor.toJSON());
     data.id = idMap.get(actor.id);
     data.name = `${actor.name} Copy`;
+    // Preserve source membership explicitly (do not stamp Active layer).
+    // Keep null when source has null so resolve-to-default stays consistent.
+    data.authoringLayerId = actor.authoringLayerId || null;
     if (data.parentId && idMap.has(data.parentId)) {
       data.parentId = idMap.get(data.parentId);
     }

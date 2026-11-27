@@ -1138,8 +1138,8 @@ export const HELP_CONTENT = {
   },
   'panel.layers': {
     title: 'Layers',
-    body: 'Hierarchical authoring layers for organizing the level. Set Active for new actor membership; eye/lock/solo filter the viewport in edit mode only. Drag Outliner actors onto a layer to assign. Nested visibility/lock is self ∧ ancestors; solo restores the prior hidden map when cleared.',
-    tips: 'Window → Layers. Prefab assets strip map layer IDs; place assigns the Active layer. Not mapped to THREE.Layers.',
+    body: 'Hierarchical authoring layers for organizing the level. Set Active for new actor membership; eye/lock/solo filter the viewport in edit mode only. Drag Outliner actors onto a layer to assign. Nested visibility/lock is self ∧ ancestors; solo restores the prior hidden map when cleared. Lock blocks edits through shared command paths (not only disabled UI); Layers controls stay available so you can unlock.',
+    tips: 'Window → Layers. Duplicate keeps source membership; new create/prefab place uses Active. Prefab assets strip map layer IDs. Not mapped to THREE.Layers.',
   },
   'layers.new': {
     title: 'New Layer',
