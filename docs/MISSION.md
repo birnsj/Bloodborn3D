@@ -67,9 +67,13 @@ A new workspace must not create a parallel save format, asset store or undo syst
    Three.js-specific concepts in saved data; do not tailor schemas to any one engine (e.g. Unreal) until chosen.
 4. ~~AI providers in scope~~ **DECIDED (designer):** keep all three: OpenArt, Meshy and the Google Drive library.
 5. ~~Performance target~~ **DECIDED (designer):** 60 FPS in the single perspective view on the integrated test
-   level; the four-pane view only needs to be usable (no fixed number). Last measured (C6, DPR 1.5, 671×507):
-   29.8 FPS single, 9.0 quad. Causes are documented in `AUDIT_LEVEL_EDITOR_FOUNDATION.md` (F3, F18, F19) and
-   `ACCEPTANCE_CONSOLIDATION_C5/C6.md`; no new profiling has been done for this target yet.
+   level; the four-pane view only needs to be usable. Proposed refinement **[CONFIRM]:** 60 FPS in the standalone
+   player and editor Play, 30 FPS floor for the four-pane view, judged by frame time (budget 16.7 ms) on a modest
+   machine, not on the fastest one. Frame rate is limited by the display's refresh rate (vsync), not by the app.
+   Earlier docs (C6, DPR 1.5, 671×507, editor): 29.8 FPS single, 9.0 quad.
+   Measured 2026-11-27 in the standalone player on the integrated level, 2439×1899 canvas: CPU render cost
+   2.6 ms per frame (2,839 draw calls, 101,810 triangles). Shadows are about 70% of it (3 shadow lights, 174
+   casters = 2,652 of the draw calls); shadows off = 0.8 ms. GPU time not yet measured.
 
 ## Related documents
 
