@@ -1,7 +1,7 @@
 # Batch 9 — Editor Organization and Viewport Tools
 
 **Ship baseline:** `a625593` (1,131 tests)  
-**Closure commit:** _(this document’s ship)_  
+**Closure commit:** `eb2f4f1`  
 **Level:** `public/levels/acceptance-layers.json`  
 **Harness:** `src/dev/layersAcceptanceClosure.js`  
 **Academy:** lesson 30 (`editor-layers`)  
