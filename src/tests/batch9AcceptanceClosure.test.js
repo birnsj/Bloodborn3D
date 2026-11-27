@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Actor } from '../core/Actor.js';
 import { World } from '../core/World.js';
-import { BrushComponent } from '../components/BrushComponent.js';
 import { HistoryStack } from '../editor/history/HistoryStack.js';
 import { AddActorsCommand } from '../editor/history/commands.js';
 import { createBrushFromBounds, duplicateActors } from '../editor/brushFactory.js';

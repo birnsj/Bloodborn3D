@@ -151,15 +151,6 @@ describe('Batch 8 UV regression — world-aligned brushes and surfaces', () => {
     const geom = createBrushBoxGeometry(size, {});
     const uv = geom.attributes.uv;
     const pos = geom.attributes.position;
-    // Sample a few vertices: density frame matches geometry UV with identity actor UV.
-    for (const i of [0, 4, 8, 16]) {
-      const local = {
-        x: pos.getX(i) * 100,
-        y: pos.getY(i) * 100,
-        z: pos.getZ(i) * 100,
-      };
-      // Determine face roughly by dominant normal axis from face groups — use density on pz for front face verts.
-    }
     // Corner of +Z face (indices 16–19 in box geometry).
     for (let i = 16; i < 20; i += 1) {
       const local = {

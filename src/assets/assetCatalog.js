@@ -1,5 +1,5 @@
 import { ASSET_FOLDERS } from '../data/sampleAssets.js';
-import { ASSET_KINDS, findAsset, normalizeRegistry } from './AssetRegistry.js';
+import { ASSET_KINDS, findAsset, folderForKind, normalizeRegistry } from './AssetRegistry.js';
 import { publicAssetUrl } from '../io/assetFileApi.js';
 
 export { ASSET_FOLDERS };
@@ -91,16 +91,6 @@ function buildPreview(entry, materialDef) {
     };
   }
   return { kind: 'badge', note: entry.kind };
-}
-
-function folderForKind(kind) {
-  switch (kind) {
-    case 'texture': return 'Textures';
-    case 'mesh': return 'Meshes';
-    case 'material': return 'Materials';
-    case 'prefab': return 'Prefabs';
-    default: return 'Misc';
-  }
 }
 
 export function listCatalogAssets(registry, { folder, query, materialDefs = {} } = {}) {

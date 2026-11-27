@@ -4,8 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { publicAssetUrl } from '../../io/assetFileApi.js';
-import { buildMeshAssetReport, formatBytes } from '../../assets/meshInspect.js';
-import { inspectMeshRoot } from '../../assets/meshInspect.js';
+import { buildMeshAssetReport, inspectMeshRoot } from '../../assets/meshInspect.js';
 import {
   exportMeshRoot,
   downloadExportedMesh,
@@ -14,10 +13,7 @@ import {
 import { simplifySceneRoot } from '../../assets/meshSimplify.js';
 import { generateLodLevelsFromRoot, DEFAULT_LOD_RATIOS, DEFAULT_LOD_DISTANCES_EU } from '../../assets/meshLodGenerate.js';
 import { describeCompressionSupport } from '../../runtime/gltfCompression.js';
-import {
-  assetPivotPresetOffset,
-  PIVOT_PRESET_LABELS,
-} from '../../rules/pivotEdit.js';
+import { assetPivotPresetOffset } from '../../rules/pivotEdit.js';
 import { normalizeContentOffset } from '../../core/contentOffset.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 

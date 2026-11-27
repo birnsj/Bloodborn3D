@@ -102,10 +102,6 @@ export function packGlb(json, bin = Buffer.alloc(0)) {
   return out;
 }
 
-function mat4Identity() {
-  return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-}
-
 function mat4Multiply(a, b) {
   const out = new Array(16);
   for (let col = 0; col < 4; col += 1) {

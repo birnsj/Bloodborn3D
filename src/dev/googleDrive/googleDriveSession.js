@@ -9,7 +9,6 @@ import {
   beginGoogleDriveLogin,
   clearGoogleDriveTokens,
   getGoogleDriveAuthStatus,
-  loadOAuthClientConfig,
 } from './googleDriveAuth.js';
 import {
   FOLDER_MIME,

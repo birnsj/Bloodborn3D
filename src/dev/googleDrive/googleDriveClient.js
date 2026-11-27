@@ -38,55 +38,6 @@ function withKey(url, apiKey) {
   return u.toString();
 }
 
-async function driveFetch(projectRoot, urlPath, {
-  query = {},
-  requireUser = true,
-  raw = false,
-  timeoutMs = 60_000,
-} = {}) {
-  const { headers, apiKey } = await authHeaders(projectRoot, { requireUser });
-  const url = new URL(`${DRIVE_BASE}${urlPath}`);
-  for (const [k, v] of Object.entries(query)) {
-    if (v == null || v === '') continue;
-    url.searchParams.set(k, String(v));
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(withKey(url.toString(), apiKey), {
-      headers,
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      let message = `Google Drive HTTP ${res.status}`;
-      try {
-        const j = JSON.parse(text);
-        message = j?.error?.message || message;
-      } catch {
-        if (text) message = text.slice(0, 300);
-      }
-      let code = 'DRIVE_HTTP_ERROR';
-      if (res.status === 401 || res.status === 403) code = 'AUTH_FAILED';
-      if (res.status === 404) code = 'NOT_FOUND';
-      throw new GoogleDriveAuthError(code, message, { status: res.status });
-    }
-    if (raw) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      return { buffer: buf, contentType: res.headers.get('content-type') || 'application/octet-stream' };
-    }
-    return res.json();
-  } catch (err) {
-    if (err instanceof GoogleDriveAuthError) throw err;
-    if (err?.name === 'AbortError') {
-      throw new GoogleDriveAuthError('TIMEOUT', `Drive request timed out after ${timeoutMs}ms`);
-    }
-    throw new GoogleDriveAuthError('NETWORK', err.message || String(err));
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export async function getDriveFileMeta(projectRoot, fileId, { resourceKey = null, requireUser = true } = {}) {
   const query = {
     supportsAllDrives: 'true',
@@ -232,7 +183,7 @@ export function extensionForMime(mime, fallbackName = '') {
 
 export async function writeCacheFile(cacheRoot, fileId, buffer, filename) {
   await fs.mkdir(cacheRoot, { recursive: true });
-  const safe = String(filename || fileId).replace(/[^\w.\-]+/g, '_');
+  const safe = String(filename || fileId).replace(/[^\w.-]+/g, '_');
   const rel = path.join(fileId, safe);
   const abs = path.join(cacheRoot, rel);
   await fs.mkdir(path.dirname(abs), { recursive: true });

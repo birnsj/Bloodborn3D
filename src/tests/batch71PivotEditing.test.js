@@ -167,13 +167,9 @@ describe('Batch 7.1 presets + history', () => {
       boundingBoxCenterMeters: { x: 0, y: 1, z: 0 },
     };
     const offset = assetPivotPresetOffset('bottomCenter', meta);
-    // Bottom of 2m tall mesh centered at y=1m is y=0 → contentOffset y = 0? 
-    // target pivot = bottom = center.y - half = 100 - 100 = 0 eu → offset = -0
-    // Wait: center eu = 100, half = 100, min.y = 0, target = {0,0,0}, offset = -target = 0
-    // For a mesh with origin at bottom already, bottomCenter → 0. For center at 1m:
-    // min.y = 0, target bottomCenter = {x:0,y:0,z:0}, offset = {0,0,0}
-    // For center at y=1m with size 2m, bottom is at 0 in mesh space — mesh origin often at 0.
-    // If we want pivot at bottom (0) and mesh origin is at 0, contentOffset stays 0.
+    expect(offset.x).toBeCloseTo(0);
+    expect(offset.y).toBeCloseTo(0);
+    expect(offset.z).toBeCloseTo(0);
     // If mesh origin is at geometric center (bounds center 0,0,0 with size 2):
     const metaCentered = {
       boundingBoxMeters: { x: 1, y: 2, z: 1 },

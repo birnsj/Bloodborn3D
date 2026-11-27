@@ -321,6 +321,7 @@ export function AssetViewer({ docked = false } = {}) {
                     onClick={() => selectAsset(asset.id)}
                     onDoubleClick={() => openPreview(asset)}
                     onContextMenu={(event) => {
+                      suppressNativeImageMenu(event);
                       if (!selected) selectAsset(asset.id);
                       const moveTargets = (folders || []).filter((f) => f !== asset.folder);
                       openFromEvent(event, [

@@ -1,10 +1,37 @@
 # BloodBound3D Roadmap
 
-Approved product/technical roadmap. Implementation status is recorded here as phases complete; see also [`TECHNICAL_STATUS.md`](./TECHNICAL_STATUS.md) for audit findings and debt.
+Approved product/technical roadmap. Implementation status is recorded here as phases complete; see also [`TECHNICAL_STATUS.md`](./TECHNICAL_STATUS.md) for audit findings and debt, and [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md) for the Level Editor foundation consolidation audit.
 
 ## Baseline
 
-Stabilized repository at Phase 2D completion (`91bc115` and successors). Actor/component model, editor units (100 = 1 m), and engine-neutral level serialization (`schemaVersion` 1–2) are frozen constraints.
+Stabilized repository at Phase 2D completion (`91bc115` and successors). Actor/component model, editor units (100 = 1 m), and level serialization (`schemaVersion` **1–3**; write 2 or 3) are frozen constraints. Production dependencies remain lean (`three@0.187`, React 19, Rapier, postprocessing, dockview, uuid). Subtractive World Solid product cap is **512** solids (historical evals at **64** are superseded — preserve those measurements as history).
+
+## Workspaces (navigation order)
+
+Recorded from `WORKSPACES` in `src/editor/layout/layoutPrefs.js`:
+
+1. Level Editor  
+2. World Map  
+3. Characters  
+4. Animation  
+5. Materials *(substantial implementation — Phase 2E.4)*  
+6. Visual Scripting  
+7. Dialogue  
+8. UI Editor  
+9. AI Assets *(substantial implementation — Phase 2H.1C–1E)*
+
+## Current development sequence
+
+1. **Foundation consolidation** (docs/lint/hygiene first — consolidation C1; then approved follow-ups such as M8 / EditorContext only with designer approval)  
+2. **Phase 2G** rule-based map generator *(reserved — not started)*  
+3. **Level Editor** integrated acceptance  
+4. **World Map**
+
+Materials and AI Assets already received substantial implementation and are not gated behind World Map.
+
+### Three.js capability expansion
+
+Batches **1–9** and pivot editing (**Batch 7.1**) are **complete**. See [`THREEJS_CAPABILITY_INVENTORY.md`](./THREEJS_CAPABILITY_INVENTORY.md). Outstanding deferred items (encode authoring, VideoTexture, TextureHelper, brush displacement tessellation, mansion FPS re-measure) remain inventoried there — do not treat Unverified/Deferred rows as freshly re-proven.
 
 ---
 
@@ -328,10 +355,20 @@ Play unchanged aside from the new budget. See `docs/ACCEPTANCE_SOLID_LIMIT_512.m
 
 ---
 
+## Foundation consolidation (pre-2G)
+
+Authoritative audit: [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md).
+
+| Pass | Goal | Status |
+| --- | --- | --- |
+| **C1** | Documentation reconciliation; oxlint ignore `public/vendor`; safe unused cleanup; consolidate `folderForKind`; remove dead Component `onStart`/`onUpdate`/`onStop` | **Done** — `ACCEPTANCE_CONSOLIDATION_C1.md` |
+| M8 / EditorContext / geometry–render debt | Runtime→editor imports; EditorContext partition; carve broadphase; etc. | **Not started** — requires explicit approval |
+
+Do **not** begin M8 extraction or EditorContext restructuring without approval. Do **not** begin Phase 2G until consolidation gates the designer accepts are complete and generation is directed.
+
 ## Phase 2G — Rule-Based Map Generation (reserved)
 
-Reserved. Not started. Do not begin until Phase **2F.7** is complete (satisfied by **2F.7G**) and the
-designer directs work to start. See Phase 2F non-goals and `PHASE_2F_SPEC.md`.
+Reserved. Not started. Prerequisites D1–D3 and solid limit **512** are in place; true CSG remains out of scope. Do not begin until the designer directs work to start after foundation consolidation. See Phase 2F non-goals, `PHASE_2F_SPEC.md`, and the foundation audit Phase 2G readiness section.
 
 ---
 

@@ -116,7 +116,6 @@ export function Viewport() {
     pivotEditMode,
     setPivotEditMode,
     gizmoSpace,
-    setGizmoSpace,
     scaleHandleStyle,
     setTransformMode,
     cycleScaleTransform,

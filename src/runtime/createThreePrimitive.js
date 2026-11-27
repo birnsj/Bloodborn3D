@@ -10,7 +10,6 @@ import {
   validatePrimitiveAllocation,
 } from '../components/PrimitiveMeshComponent.js';
 import { toMeters } from '../core/units.js';
-import { createThreeMaterial, assetUrl } from './materialFactory.js';
 import { disposeOwnedMaterial } from './gpuResources.js';
 
 const DEG = Math.PI / 180;
@@ -287,7 +286,7 @@ export async function buildPrimitiveGeometryAsync(fields) {
  * @returns {Promise<{ root: THREE.Object3D, mesh: THREE.Mesh, dispose: () => void }>}
  */
 export async function createThreePrimitiveFromComponent(comp, {
-  resolveTextureUrl = null,
+  resolveTextureUrl: _resolveTextureUrl = null,
   fallbackColor = 0x8a9099,
 } = {}) {
   const f = normalizePrimitiveMeshFields(comp);
@@ -296,15 +295,8 @@ export async function createThreePrimitiveFromComponent(comp, {
 
   let material;
   let ownedMaterial = true;
-  if (f.materialId && typeof resolveTextureUrl === 'function') {
-    try {
-      const defUrl = assetUrl(`materials/${f.materialId}.json`);
-      // Prefer registry-backed createThreeMaterial via caller-supplied definition fetch.
-      // SceneView passes a material factory closure instead when available.
-    } catch {
-      /* fall through */
-    }
-  }
+  // Material resolution uses caller-supplied `_resolvedMaterial` / SceneView factory.
+  // Do not fetch material JSON here — that path was never wired and left unused locals.
 
   if (comp._resolvedMaterial) {
     material = comp._resolvedMaterial;

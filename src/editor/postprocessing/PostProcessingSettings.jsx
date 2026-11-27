@@ -163,9 +163,6 @@ function EffectParamControl({
 
   if (param.type === 'vec3') {
     const v = value || { x: 0, y: 0, z: 0 };
-    const setAxis = (axis, n) => {
-      onChange({ ...v, [axis]: n });
-    };
     return (
       <div className="bb-field">
         <span className="bb-field__label">{param.label}</span>

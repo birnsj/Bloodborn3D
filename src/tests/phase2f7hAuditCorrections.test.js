@@ -9,7 +9,6 @@ import { World } from '../core/World.js';
 import { Transform } from '../core/Transform.js';
 import { BrushComponent } from '../components/BrushComponent.js';
 import { PlayerSpawnComponent } from '../components/PlayerSpawnComponent.js';
-import { StaticMeshComponent } from '../components/StaticMeshComponent.js';
 import { getWorldTransform } from '../core/hierarchy.js';
 import { HistoryStack } from '../editor/history/HistoryStack.js';
 import {

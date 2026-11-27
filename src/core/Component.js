@@ -14,9 +14,6 @@ export class Component {
 
   onAttach(_actor) {}
   onDetach() {}
-  onStart() {}
-  onUpdate(_dt) {}
-  onStop() {}
 
   toJSON() {
     const { actor: _actor, ...rest } = this;

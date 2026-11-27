@@ -84,7 +84,6 @@ import {
   normalizeAuthoringLayer,
   createAuthoringLayerId,
   wouldCreateLayerCycle,
-  getDefaultAuthoringLayerId,
   getLayerDescendantIds,
   resolveAuthoringLayerId,
 } from '../core/authoringLayers.js';

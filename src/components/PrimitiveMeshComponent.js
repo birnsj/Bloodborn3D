@@ -243,7 +243,7 @@ export function serializePrimitiveMeshFields(comp) {
 
 /** Authorable snapshot for undo (omit id/type/enabled). */
 export function primitiveMeshAuthorableSnapshot(comp) {
-  const { id, type, enabled, ...rest } = serializePrimitiveMeshFields(comp);
+  const { id: _id, type: _type, enabled: _enabled, ...rest } = serializePrimitiveMeshFields(comp);
   return rest;
 }
 

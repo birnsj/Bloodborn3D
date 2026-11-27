@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { World } from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { Transform } from '../core/Transform.js';
-import { BrushComponent } from '../components/BrushComponent.js';
 import { StaticMeshComponent } from '../components/StaticMeshComponent.js';
 import { createBrushFromBounds } from '../editor/brushFactory.js';
 import {

@@ -1,18 +1,21 @@
 # BloodBound3D — Technical Status
 
-Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md).
+Records what is implemented, which audit findings were fixed, and what remains. Product roadmap lives in [`ROADMAP.md`](./ROADMAP.md). Authoritative Level Editor foundation audit: [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md). Consolidation C1: [`ACCEPTANCE_CONSOLIDATION_C1.md`](./ACCEPTANCE_CONSOLIDATION_C1.md).
 
-- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.7** complete (final gate **2F.7G**).
-- **Finding IDs** (C1, H1, …) are the audit's own.
+- **Basis:** read-only technical audit of commit `42c37d0`, followed by stabilization (`91bc115`), Phase **2E complete**, Phase **2F.0–2F.7** complete (final gate **2F.7G**), Three.js capability Batches **1–9** + pivot editing (**7.1**) complete, foundation audit at `33ba9b9` / documented at `764a430`.
+- **Finding IDs** (C1, H1, …) are the early stabilization audit's own unless prefixed as foundation **F#**.
 
 ## 1. Verification (current)
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **783 / 783 pass** (incl. `pipelineHardening.test.js`) |
-| `npm run lint` | exit 0, warnings only (no errors) |
-| `npm run build` | succeeds; single ~6 MB chunk (unchanged, see debt) |
+| `npm test` | **1154 / 1154 pass** (125 files; was 1151 at audit baseline `33ba9b9`) |
+| `npm run lint` | exit 0 · **186** first-party warnings · **0** vendor (`public/vendor/**` ignored as of C1); see `ACCEPTANCE_CONSOLIDATION_C1.md` |
+| `npm run build` | succeeds; single ~**8.0 MB** JS chunk (gzip ~2.7 MB) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
+| Dependencies (prod) | `three@0.187.0`, `react@19.3.1`, `@dimforge/rapier3d-compat@0.21.0`, `postprocessing@6.39.6`, `dockview-react@8.9.1`, `uuid@14.0.3` |
+| Level schemas | Read **1–3**; write **2** (no ConvexBrush) or **3** (ConvexBrush present) |
+| Subtractive solid cap | `MAX_SUBTRACT_SOLIDS = **512**` (supersedes historical **64** measurements — annotate, do not erase) |
 | Phase 2E | Complete (2E.0–2E.5); see prior rows / mansion acceptance |
 | Phase 2F.0 | ConvexBrush architecture; convert / render / hull collision / schema 3; `phase2f0ConvexBrush.test.js` |
 | Phase 2F.1 | Face mode; `phase2f1FaceEditing.test.js`; `acceptance-face-editing.json`; browser PASS (`34af8bd`) |
@@ -30,16 +33,16 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Phase 2F.7G | Final regression / profiling / stress; CI; see `ACCEPTANCE_STABILIZATION.md` |
 | Phase 2F.7H | Independent audit corrections (carve invalidation, GLB textures, epochs, dispose, validate, spawn); see `ACCEPTANCE_AUDIT_CORRECTIONS.md` |
 | **Phase 2F.7** | **Complete** (incl. 2F.7H corrections) |
-| Phase 2G prerequisites | Audit defects D1 (additive carve invalidation), D2 (subtractive complexity validated on load / save / Play), D3 (geometry payload validation); see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
-| Phase 2G scale eval | Evaluation only — solid limit still **64**. Carve fine past 1k solids; draw-call/material-per-solid path is the wall. Practical next budget **512** if raised; larger maps need decomposition/batching. See `EVAL_SUBTRACTIVE_SCALE.md`. |
+| Phase 2G prerequisites | Audit defects D1–D3; see `ACCEPTANCE_PREREQUISITES.md`. Map generation **not** started. |
+| Phase 2G scale eval | Historical eval at caps 64–1024; product limit raised to **512**. See `EVAL_SUBTRACTIVE_SCALE.md`. *(Earlier notes that “solid limit still 64” are superseded.)* |
 | Phase 2G rendering integration | World Solid batching + shared cutter materials **default ON**; picking / clipped UV / indexed UV / cutter z-fight corrected. See `ACCEPTANCE_SUBTRACTIVE_RENDERING.md`. |
 | Phase 2G solid limit | `MAX_SUBTRACT_SOLIDS = 512`. Load / save / edit / Play reject over-cap with structured diagnostics. See `ACCEPTANCE_SOLID_LIMIT_512.md`. |
-| Phase 2H.1A OpenArt PoC | Official CLI adapter + dev-only `/api/openart`; estimate/approve gate; staging import into existing texture/material pipeline. No generation UI. See `ACCEPTANCE_OPENART_POC.md`. |
-| Phase 2H.1B OpenArt Editor | Generation panel in Asset Viewer + optional dock; dynamic CLI models/params; explicit spend confirm; import texture / create material; mocked tests + browser harness. See `ACCEPTANCE_OPENART_EDITOR.md`. |
-| Phase 2H.1C AI Assets Workspace | AI Assets three-column workspace; OpenArt live; ComfyUI/Meshy Coming Soon; standalone OpenArt folder/dock removed. See `ACCEPTANCE_AI_ASSETS_WORKSPACE.md`. |
-| Phase 2H.1D Concept Library | Areas/concepts/prompts JSON DB under `concept-library/`; import + OpenArt save; Generate Asset seed; vision unsupported extension point. See `ACCEPTANCE_CONCEPT_LIBRARY.md`. |
-| Phase 2H.1E Project Art Library | Filesystem `project-art/` browser + `.bb-art/library.json`; collections; refs tray; template prompts; Asset Generation handoff. See `ACCEPTANCE_PROJECT_ART_LIBRARY.md`. |
+| Three.js Batches 1–9 | **Complete** — env/materials/lights/water-mirrors/primitives/static meshes/asset tools + pivot (7.1)/textures/layers. See `THREEJS_CAPABILITY_INVENTORY.md`. |
+| Pivot editing (Batch 7.1) | **Complete** — actor + asset `contentOffset`; see `ACCEPTANCE_PIVOT_EDITING.md`. |
+| Phase 2H.1A–1E | OpenArt PoC → editor → AI Assets workspace → Concept Library → Project Art Library. See respective `ACCEPTANCE_*.md`. |
 | Pipeline hardening (post-`08e15fd`) | OpenArt spend reservation / ambiguous failure / job recovery; atomic asset registry + mutex; concept-library request serialization; upload limits + magic bytes; localhost-only OpenArt API; transform coerceFiniteNumber. See `ACCEPTANCE_PIPELINE_HARDENING.md`. |
+| Foundation audit | `docs/AUDIT_LEVEL_EDITOR_FOUNDATION.md` (baseline `33ba9b9`) |
+| Consolidation C1 | Docs + lint hygiene + `folderForKind` + dead Component hooks — see `ACCEPTANCE_CONSOLIDATION_C1.md` |
 
 ## 2. Implemented systems
 
@@ -47,9 +50,9 @@ Status is what the code does today, not an intent.
 
 | System | State | Notes |
 | --- | --- | --- |
-| Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | No Three.js / React dependency. Transforms are local to `parentId`. |
+| Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | Engine-neutral intent; `World` still imports runtime postprocessing normalize (foundation **F20**). Transforms are local to `parentId`. |
 | Component types | Implemented | Brush, **ConvexBrush**, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
-| Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads 1–3; rejects other versions (see M9). |
+| Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads **1–3**; rejects other versions (see M9). |
 | Rendering (`SceneView`) | Implemented | Incremental sync for ordinary edits (2F.7C); full sync for load / Play restore / recovery. ConvexBrush grouped per-face mesh. |
 | Physics (`PhysicsWorld`) | Implemented | Rapier colliders per brush / **convex hull** / ramp / stair / column / arch / curved wall / mitered wall; **fixed 60 Hz** step; StaticMesh box uses asset bounds + center (2F.7F). |
 | ConvexBrush (2F.0) | Implemented | Engine-neutral geometry; Convert from Brush (blocked for subtract/openings/cutter overlap); cutter∩ConvexBrush reported. |
@@ -74,7 +77,7 @@ Status is what the code does today, not an intent.
 | Editor shell | Implemented | Dock layout with named layouts, themes, UI scale, Edit → Settings, hover help, shortcut reference. |
 | Tutorials | Implemented | 13 lessons with starter levels under `public/levels/tutorials/`. |
 | Session recorder | Implemented | Record button in the toolbar. |
-| Non-level workspaces | Partial | **Materials** (2E.4) and **AI Assets** (2H.1C–1E, Project Art Library + generation) are implemented. World Map, Characters, Animation, Visual Scripting, Dialogue, UI Editor remain `PlaceholderWorkspace`. |
+| Workspaces (nav order) | Partial | 1 Level Editor · 2 World Map · 3 Characters · 4 Animation · 5 Materials · 6 Visual Scripting · 7 Dialogue · 8 UI Editor · 9 AI Assets. **Materials** and **AI Assets** have substantial implementation; others remain placeholders except Level Editor. |
 | Structural UV (2E.0) | Implemented | Local tiling at 100 eu; actor UV + material UV composition; stairs/ramps density-corrected. |
 | Surface selection (2E.1) | Implemented | Toolbar **Surface** mode; semantic `faceMaterials` IDs; emissive highlight; actor material fallback. Brush/miter/openings/ramp/stair/column/arch/curved wall. |
 | Per-surface UV (2E.2) | Implemented | `faceUVs[surfaceId]` after actor UV; Details Scale/Offset/Rotation + Reset; identity preserves authored look; undo/save/prefab via component JSON. |
@@ -96,7 +99,7 @@ Status is what the code does today, not an intent.
 | M4 | Failed texture / mesh loads were cached as `null` forever. | `createRetryableCache` shares in-flight requests and caches successes, but evicts nullish or rejected results. | `runtime/retryableCache.js`, `materialFactory.js`, `meshLoader.js` | `retryableAssetLoads.test.js` |
 | M5 | `_applyBrushMaterials` attached or leaked materials after the scene was rebuilt. | Re-checks the sync token after each material load and disposes the late material (textures included). Replaced materials are disposed with their textures. | `runtime/SceneView.js` | `sceneViewStaleMaterials.test.js` |
 | M7 | The render loop ran while the tab was hidden. | The loop is suspended on `visibilitychange` and resumes without a time jump; no duplicate frames after repeated toggles; the listener is removed on dispose. | `runtime/GameRuntime.js` | `gameRuntimeLifecycle.test.js` |
-| M9 | Any `schemaVersion` was accepted. | Versions 1–2 load. Newer, older-than-1, non-integer or non-numeric versions are rejected with an explicit message naming the supported range. All shipped levels still load. No migration framework was added. | `serialization/LevelDeserializer.js`, `LevelSerializer.js` | `levelSchemaVersion.test.js` |
+| M9 | Any `schemaVersion` was accepted. | Versions **1–3** load (3 = ConvexBrush). Newer, older-than-1, non-integer or non-numeric versions are rejected with an explicit message naming the supported range. All shipped levels still load. No migration framework was added. | `serialization/LevelDeserializer.js`, `LevelSerializer.js` | `levelSchemaVersion.test.js` |
 | M11 | Play/Stop cleared undo history. | History is no longer cleared. Safe because every command addresses actors by id, the world instance persists, and Stop restores identical ids. | `editor/EditorContext.jsx` | `editorLifecycle.test.js`, `gameRuntimeLifecycle.test.js` |
 
 Behavior changes to be aware of:
@@ -107,20 +110,25 @@ Behavior changes to be aware of:
 
 ## 4. Remaining audit findings (not addressed)
 
-These were out of scope for the pass and are unchanged.
+Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md).
 
 | ID | Severity | Finding |
 | --- | --- | --- |
 | M6 | Medium | **Closed in 2F.7C** — ordinary edits use `syncIncremental`; full sync retained for load / Play restore / recovery. |
-| M8 | Medium | `SceneView` (runtime) still imports some editor helpers. Partial mitigation in 2F.7D (`worldSolidFit` moved); residual deferred. |
+| M8 / F2 | High/Med | `SceneView` (runtime) still imports editor factories / gizmo / viewport prefs. Partial mitigation in 2F.7D (`worldSolidFit` moved); **deferred — do not start without approval**. |
 | M10 | Medium | **Closed in 2F.7F** — StaticMesh box uses `boundingBoxMeters` + `boundingBoxCenterMeters` (fallback 1 m cube at origin). |
-| M | Medium | Level-switch can leave extra `renderer.info.textures` vs return-to-same-level baseline (shared material cache). Geometries stable (2F.7G). |
+| M / F8 | Medium | Level-switch can leave extra `renderer.info.textures` vs return-to-same-level baseline (shared material cache). Geometries stable (2F.7G). |
+| F1 | High | EditorContext multi-responsibility hub (~170 public keys) — **deferred** (no partitioning in C1). |
+| F3 | High | Quad multi-viewport below ≥30 FPS target (~17.5–19.6 median historically; Batch 9 mansion re-measure **Unverified**). Architectural N-camera cost. |
+| F4 / F16 / F17 | High | AABB-only carve; 512-solid fragmentation; World Solid render ≠ collision volumes — Phase 2G design ceilings. |
+| F5 | Medium | **Closed in consolidation C1** — status/roadmap/prereq docs reconciled. |
+| F7 | Medium | **Closed in consolidation C1** — `public/vendor` ignored; first-party unused cleaned; hooks warnings retained. |
+| F10 | Low | **Closed in consolidation C1** — single `folderForKind` in `AssetRegistry`. |
+| F11 (hooks) | Low | **Closed in consolidation C1** — removed unused `onStart`/`onUpdate`/`onStop`. `World.clear` O(n²) **deferred** (measured pass). |
 | L | Low | Stair-assist is now grounded + ledge-probed (2F.7F); remaining assist feel tweaks are design, not defects. |
-| L | Low | `GameRuntime.stop()` / `restoreAuthoredSnapshot()` clear the world with an O(n²) loop (`World.clear` → `removeActor` filters the array each time). |
-| L | Low | `Component.js` defines `onStart` / `onUpdate` / `onStop`, which nothing calls (only `onAttach` / `onDetach` are invoked, by `Actor`). |
-| L | Low | `EditorContext.jsx` and `SceneView.js` are large. Not recommended to split without a concrete need. |
-| L | Low | ~80+ lint warnings remain (mostly React hooks / refs-during-render / export-components). Unused-import/var set cleared in 2F.7D. |
-| L | Low | Production build is one ~6 MB chunk. |
+| L / F1 / F13 | Low | `EditorContext.jsx` and `SceneView.js` are large. SceneView largely coherent; EditorContext partitioning deferred. |
+| L / F7 | Low | First-party lint warnings remain (mostly React hooks / refs / export-components / set-state-in-effect). Vendor noise eliminated from reporting. |
+| L / F9 | Low | Production build is one ~8 MB chunk. |
 | L | Low | The dev file APIs (`vite-plugins/`) have no authentication; path traversal is rejected. Dev-only. |
 
 ## 5. Observations made during this pass (not fixed, not yet confirmed as defects)
@@ -138,11 +146,25 @@ These were out of scope for the pass and are unchanged.
 - Persistence / data integrity — **done** in Phase **2F.7E** (`ACCEPTANCE_DATA_INTEGRITY.md`).
 - Physics / collision hardening — **done** in Phase **2F.7F** (`ACCEPTANCE_PHYSICS.md`).
 - Final regression / profiling / CI — **done** in Phase **2F.7G** (`ACCEPTANCE_STABILIZATION.md`).
-- Runtime/editor dependency separation (M8) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview.
+- Consolidation C1 (docs / lint / F10 / dead Component hooks) — **done** (`ACCEPTANCE_CONSOLIDATION_C1.md`).
+- Runtime/editor dependency separation (M8 / F2) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview. **Requires approval.**
+- EditorContext partitioning (F1) — **requires approval**; not started.
+- `World.clear` O(n²) (F11 remainder) — deferred measured pass.
+- Carve broadphase + World Solid spatial chunking; stair material batching (F4/F18/F19).
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Level-switch texture `renderer.info` retention (shared caches) — monitor; geometries already stable.
-- Splitting the single production chunk.
+- Splitting the single production chunk (~8 MB).
 - Remaining React hooks / refs-during-render lint warnings (dedicated pass; avoid drive-by dep array changes).
+- Re-measure mansion single/quad FPS post-Batch 9 (**Unverified** vs Batch 8).
+
+### Development sequence (current)
+
+1. **Foundation consolidation** (C1 in progress / subsequent approved passes)
+2. **Phase 2G** rule-based map generator (reserved — not started)
+3. **Level Editor** integrated acceptance
+4. **World Map**
+
+Materials and AI Assets already have substantial implementation outside this sequence.
 
 ## 7. Manual acceptance tests
 
@@ -155,7 +177,7 @@ These need a real browser, GPU, display and pointer-lock; they cannot be run in 
 5. **Play/Stop.** Orbit/fly the editor camera somewhere distinctive, press Play, then Stop: the camera returns to the same view. Undo/Redo still work after Stop. Click Play rapidly several times: one session only. Repeat Play/Stop 20+ times and watch memory in the browser task manager (Rapier worlds are freed).
 6. **Hidden tab.** Start Play, switch to another tab for ~10 seconds, return: rendering resumes with no physics jump. In Edit mode, confirm GPU/CPU use drops while the tab is hidden.
 7. **Asset retry.** Make a texture or mesh URL fail (rename the file), load the level, restore the file, trigger a resync (any edit): the asset appears without a page reload.
-8. **Future schema.** Edit a copy of a level to `"schemaVersion": 3` and open it: an explicit "Unsupported level schemaVersion 3" message appears, and the current level is untouched.
+8. **Unsupported schema.** Edit a copy of a level to an unsupported `"schemaVersion"` (e.g. **4**, or `0`): an explicit unsupported-schema message appears naming the supported range (**1–3**), and the current level is untouched. *(Schema **3** is valid for ConvexBrush levels — do not treat 3 as unsupported.)*
 9. **Existing visuals (unchanged, still worth a spot check).** Mitered corners, openings, curved walls and stairs; edge snapping for walls/floors, pivot snapping for props and lights; the four color themes and UI scale.
 10. **Phase 2E.1 surfaces.** File → `acceptance-surfaces.json`. Enable **Surface**, click faces on wall/ramp/stair/column/arch/curved wall: highlight + Details “Selected Surface”. Assign a Content Browser material; Undo/Redo; Save/reload. Confirm Select mode still picks whole actors and actor material remains the fallback.
 11. **Phase 2E.3 Align to Neighbor.** File → `acceptance-surfaces.json`. Confirm **Align Wall A** / **Align Wall B** show continuous stone on adjoining `pz` faces. Enable **Align**, click A’s `pz` (amber reference), then B’s `pz` — target `faceUVs` updates; Undo restores prior UVs. Click a column/curved/non-coplanar face as target: status rejects and nothing changes. Esc returns to Select.

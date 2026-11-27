@@ -4,7 +4,6 @@
  *
  * Does not mutate acceptance-gothic-mansion.json. Saves to acceptance-integrated-editor.json.
  */
-import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { inspectMeshRoot } from '../assets/meshInspect.js';
 import { simplifySceneRoot } from '../assets/meshSimplify.js';

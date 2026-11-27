@@ -87,9 +87,13 @@ magnitude <= 36000. Shipped levels are far inside these (largest brush axis 2800
 
 ## Known limits after this phase
 
-- Validation does not make over-cap maps *possible*: a subtractive World Solid is still capped at
-  64 pieces (about 13–23 cutters in current maps). Map generation must pick a representation that
-  fits (see audit). Validation only guarantees the failure is loud and early.
+- Validation does not make over-cap maps *possible*. **Superseded product cap:** at the time of this
+  prerequisites pass the World Solid budget was **64** pieces (about 13–23 cutters in then-current
+  maps). The product limit was later raised to **`MAX_SUBTRACT_SOLIDS = 512`** — see
+  `ACCEPTANCE_SOLID_LIMIT_512.md` and `EVAL_SUBTRACTIVE_SCALE.md`. Preserve the historical 64-cap
+  measurements above; do not treat 64 as the current gate. Map generation must still pick a
+  representation that fits the **current** budget (fragmentation can exceed room count). Validation
+  only guarantees the failure is loud and early.
 - An in-memory world built by a generator and synced to the viewport without calling
   `validateWorldGeometry` is not checked until Play or save.
 - Re-carve on additive moves rebuilds the moved brush even if no cutter overlaps it (correct,
