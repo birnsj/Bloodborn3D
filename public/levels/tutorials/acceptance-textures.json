@@ -307,6 +307,114 @@
       ]
     },
     {
+      "id": "actor_b8_uv0",
+      "name": "Multi-UV UV0",
+      "transform": {
+        "position": { "x": -320, "y": 80, "z": 220 },
+        "rotation": { "x": 0, "y": 25, "z": 0 },
+        "scale": { "x": 90, "y": 90, "z": 90 }
+      },
+      "tags": ["mesh", "batch8", "uv"],
+      "components": [
+        {
+          "id": "comp_uv0",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_batch8_multi_uv",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": { "x": 0, "y": 0, "z": 0 },
+          "collisionOffset": { "x": 0, "y": 0, "z": 0 },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "MultiUvCube:0": "mat_batch8_uv0"
+          },
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_uv1",
+      "name": "Multi-UV UV1",
+      "transform": {
+        "position": { "x": -120, "y": 80, "z": 220 },
+        "rotation": { "x": 0, "y": -15, "z": 0 },
+        "scale": { "x": 90, "y": 90, "z": 90 }
+      },
+      "tags": ["mesh", "batch8", "uv"],
+      "components": [
+        {
+          "id": "comp_uv1",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_batch8_multi_uv",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": { "x": 0, "y": 0, "z": 0 },
+          "collisionOffset": { "x": 0, "y": 0, "z": 0 },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "MultiUvCube:0": "mat_batch8_uv1"
+          },
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
+      "id": "actor_b8_uv_missing",
+      "name": "Multi-UV Missing UV3",
+      "transform": {
+        "position": { "x": 80, "y": 80, "z": 220 },
+        "rotation": { "x": 0, "y": 10, "z": 0 },
+        "scale": { "x": 90, "y": 90, "z": 90 }
+      },
+      "tags": ["mesh", "batch8", "uv", "warning"],
+      "components": [
+        {
+          "id": "comp_uv_missing",
+          "type": "StaticMesh",
+          "enabled": true,
+          "assetId": "mesh_batch8_multi_uv",
+          "collidable": true,
+          "collisionType": "box",
+          "collisionSize": { "x": 0, "y": 0, "z": 0 },
+          "collisionOffset": { "x": 0, "y": 0, "z": 0 },
+          "collisionRadius": 0,
+          "collisionHeight": 0,
+          "castShadow": true,
+          "receiveShadow": true,
+          "renderOrder": 0,
+          "frustumCulled": true,
+          "showCollision": false,
+          "materialOverrides": {
+            "MultiUvCube:0": "mat_batch8_uv_missing"
+          },
+          "lodLevels": [],
+          "lodHysteresis": 0,
+          "lodPreview": -1,
+          "instancing": "off"
+        }
+      ]
+    },
+    {
       "id": "actor_b8_key",
       "name": "Key Light",
       "transform": {

@@ -49,12 +49,12 @@ vi.mock('three/addons/loaders/GLTFLoader.js', async () => {
 const { loadTexture, clearTextureCache } = await import('../runtime/materialFactory.js');
 const { loadGltfScene, clearMeshCache } = await import('../runtime/meshLoader.js');
 
-beforeEach(() => {
+beforeEach(async () => {
   loaders.textureCalls.length = 0;
   loaders.textureOutcomes.length = 0;
   loaders.gltfCalls.length = 0;
   loaders.gltfOutcomes.length = 0;
-  clearTextureCache();
+  await clearTextureCache();
   clearMeshCache();
 });
 

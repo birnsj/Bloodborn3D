@@ -17,10 +17,16 @@ import {
 import {
   DEFAULT_MAP_CHANNELS,
   channelForMapId,
+  collectMaterialUvChannelWarnings,
   inspectGeometryUvChannels,
   normalizeMapChannels,
   warnMissingUvChannel,
 } from '../assets/textureUvChannels.js';
+import {
+  clearTextureCache,
+  getTextureCacheSize,
+  invalidateTextureCacheMatching,
+} from '../runtime/materialFactory.js';
 import { normalizeMaterialDefinition } from '../materials/MaterialDefinition.js';
 import { listLessons } from '../tutorials/lessons/index.js';
 
@@ -111,6 +117,35 @@ describe('Batch 8 UV channels', () => {
     expect(info.channels).toEqual(expect.arrayContaining([0, 1]));
     expect(warnMissingUvChannel(info.channels, 0).ok).toBe(true);
     expect(warnMissingUvChannel(info.channels, 3).ok).toBe(false);
+    const warnings = collectMaterialUvChannelWarnings({
+      baseColorMapId: 'tex_x',
+      mapChannels: { baseColor: 3 },
+    }, info.channels);
+    expect(warnings.some((w) => /UV3/.test(w))).toBe(true);
+  });
+
+  it('ships multi-UV fixture GLB with uv/uv1/uv2', async () => {
+    const glbPath = path.join(rootDir, 'public/assets/meshes/mesh_batch8_multi_uv.glb');
+    expect(existsSync(glbPath)).toBe(true);
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    const buf = readFileSync(glbPath);
+    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    const loader = new GLTFLoader();
+    const gltf = await new Promise((resolve, reject) => {
+      loader.parse(ab, '', resolve, reject);
+    });
+    const info = inspectGeometryUvChannels(gltf.scene);
+    expect(info.channels).toEqual(expect.arrayContaining([0, 1, 2]));
+  });
+});
+
+describe('Batch 8 texture cache invalidation', () => {
+  it('invalidates matching keys without clearing unrelated entries', async () => {
+    await clearTextureCache();
+    expect(getTextureCacheSize()).toBe(0);
+    const removed = await invalidateTextureCacheMatching('does-not-exist.png');
+    expect(removed).toBe(0);
+    expect(getTextureCacheSize()).toBe(0);
   });
 });
 

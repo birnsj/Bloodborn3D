@@ -1941,7 +1941,7 @@
         }
       },
       "createdAt": 1796100000000,
-      "updatedAt": 1796100000000
+      "updatedAt": 1795737947473
     },
     {
       "id": "tex_batch8_wood_linear",
@@ -1980,7 +1980,7 @@
         }
       },
       "createdAt": 1796100000000,
-      "updatedAt": 1796100000000
+      "updatedAt": 1795737935933
     },
     {
       "id": "tex_batch8_floor_aniso",
@@ -2215,6 +2215,116 @@
       },
       "createdAt": 1796100000000,
       "updatedAt": 1795736232675
+    },
+    {
+      "id": "mesh_batch8_multi_uv",
+      "kind": "mesh",
+      "name": "Batch8 Multi-UV Cube",
+      "folder": "Meshes",
+      "path": "meshes/mesh_batch8_multi_uv.glb",
+      "originalName": "mesh_batch8_multi_uv.glb",
+      "tags": [
+        "batch8",
+        "uv",
+        "fixture"
+      ],
+      "meta": {
+        "relationship": "source",
+        "triangles": 48,
+        "hasUv0": true,
+        "hasUv1": true,
+        "hasUv2": true,
+        "defaultContentOffset": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "previewPath": "previews/mesh_batch8_multi_uv_mesh.png",
+        "previewBytes": 4588
+      },
+      "createdAt": 1796101000000,
+      "updatedAt": 1795736781686
+    },
+    {
+      "id": "mat_batch8_uv0",
+      "kind": "material",
+      "name": "Batch8 UV0 Albedo",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_uv0.json",
+      "originalName": "mat_batch8_uv0.json",
+      "tags": [
+        "batch8",
+        "uv"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.7,
+        "metalness": 0.05,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch8_uv0_sphere.png",
+        "previewBytes": 106153,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796101000000,
+      "updatedAt": 1795736781713
+    },
+    {
+      "id": "mat_batch8_uv1",
+      "kind": "material",
+      "name": "Batch8 UV1 Albedo",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_uv1.json",
+      "originalName": "mat_batch8_uv1.json",
+      "tags": [
+        "batch8",
+        "uv"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.7,
+        "metalness": 0.05,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch8_uv1_sphere.png",
+        "previewBytes": 46330,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796101000000,
+      "updatedAt": 1795736782457
+    },
+    {
+      "id": "mat_batch8_uv_missing",
+      "kind": "material",
+      "name": "Batch8 Missing UV3",
+      "folder": "Materials",
+      "path": "materials/mat_batch8_uv_missing.json",
+      "originalName": "mat_batch8_uv_missing.json",
+      "tags": [
+        "batch8",
+        "uv"
+      ],
+      "meta": {
+        "baseColor": "#ffffff",
+        "roughness": 0.8,
+        "metalness": 0.05,
+        "shadingModel": "standard",
+        "hasBaseMap": true,
+        "hasNormalMap": false,
+        "hasRoughnessMap": false,
+        "previewPath": "previews/mat_batch8_uv_missing_sphere.png",
+        "previewBytes": 43420,
+        "previewRenderer": "webgl",
+        "previewStyle": "sphere-fill"
+      },
+      "createdAt": 1796101000000,
+      "updatedAt": 1795736782688
     }
   ]
 }

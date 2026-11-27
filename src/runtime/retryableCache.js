@@ -37,6 +37,38 @@ export function createRetryableCache() {
       entries.clear();
     },
 
+    /**
+     * Delete entries whose keys match `test(key)`. Optionally inspect settled values.
+     * @param {(key: string, value: unknown) => boolean | Promise<boolean>} test
+     * @returns {Promise<number>} number of deleted entries
+     */
+    async invalidateWhere(test) {
+      const keys = [...entries.keys()];
+      let removed = 0;
+      for (const key of keys) {
+        const promise = entries.get(key);
+        if (!promise) continue;
+        let value = null;
+        try {
+          value = await promise;
+        } catch {
+          value = null;
+        }
+        // Only delete if still the same in-flight entry.
+        if (entries.get(key) !== promise) continue;
+        if (await test(key, value)) {
+          entries.delete(key);
+          removed += 1;
+        }
+      }
+      return removed;
+    },
+
+    /** Snapshot of cache keys (diagnostics / acceptance). */
+    keys() {
+      return [...entries.keys()];
+    },
+
     get size() {
       return entries.size;
     },

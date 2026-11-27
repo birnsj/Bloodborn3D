@@ -70,6 +70,7 @@ import {
   createFallbackBrushMaterial,
   assetUrl,
 } from './materialFactory.js';
+import { inspectGeometryUvChannels } from '../assets/textureUvChannels.js';
 import {
   createThreeLightFromComponent,
   setLensflarePerspectiveVisible,
@@ -2167,13 +2168,16 @@ export class SceneView {
       if (!matId) return;
       const def = await resolveDef(matId);
       if (!stillCurrent() || !def) return;
+      const uvChannels = inspectGeometryUvChannels(mesh).channels;
       const mat = await createThreeMaterial(def, mapResolver, {
         maxAnisotropy: this.maxAnisotropy,
+        availableUvChannels: uvChannels,
       });
       if (!stillCurrent()) {
         disposeMaterial(mat);
         return;
       }
+      if (mesh.userData) mesh.userData.bbUvWarnings = mat.userData?.bbUvWarnings || [];
       const prev = mesh.material;
       mesh.material = mat;
       if (prev && prev !== mat) {
@@ -2185,6 +2189,8 @@ export class SceneView {
 
     const defaultDef = await resolveDef(comp.materialId);
     if (!stillCurrent()) return;
+    const uvChannels = inspectGeometryUvChannels(mesh).channels;
+    const surfaceWarnings = [];
 
     for (let i = 0; i < surfaceIds.length; i += 1) {
       const surfaceId = surfaceIds[i];
@@ -2197,10 +2203,14 @@ export class SceneView {
 
       const mat = await createThreeMaterial(def, mapResolver, {
         maxAnisotropy: this.maxAnisotropy,
+        availableUvChannels: uvChannels,
       });
       if (!stillCurrent()) {
         disposeMaterial(mat);
         return;
+      }
+      if (mat.userData?.bbUvWarnings?.length) {
+        surfaceWarnings.push(...mat.userData.bbUvWarnings);
       }
       for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
         if (mat[key]) mat[key].anisotropy = this.maxAnisotropy;
@@ -2209,6 +2219,7 @@ export class SceneView {
       mesh.material[i] = mat;
       disposeMaterial(old);
     }
+    if (mesh.userData) mesh.userData.bbUvWarnings = surfaceWarnings;
     mesh.material.needsUpdate = true;
     if (this.selectedSurface?.actorId === mesh.userData.actorId) {
       this._refreshSurfaceHighlight();
@@ -2237,6 +2248,8 @@ export class SceneView {
 
     const defaultDef = await resolveDef(comp.materialId);
     if (!stillCurrent()) return;
+    const uvChannels = inspectGeometryUvChannels(mesh).channels;
+    const faceWarnings = [];
 
     for (let i = 0; i < FACE_KEYS.length; i += 1) {
       const faceKey = FACE_KEYS[i];
@@ -2247,11 +2260,17 @@ export class SceneView {
       if (!stillCurrent()) return;
 
       if (def) {
-        const mat = await createThreeMaterial(def, mapResolver);
+        const mat = await createThreeMaterial(def, mapResolver, {
+          maxAnisotropy: this.maxAnisotropy,
+          availableUvChannels: uvChannels,
+        });
         // Actor rebuilt / world synced while textures loaded — release, do not attach.
         if (!stillCurrent()) {
           disposeMaterial(mat);
           return;
+        }
+        if (mat.userData?.bbUvWarnings?.length) {
+          faceWarnings.push(...mat.userData.bbUvWarnings);
         }
         for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
           if (mat[key]) mat[key].anisotropy = this.maxAnisotropy;
@@ -2261,6 +2280,7 @@ export class SceneView {
         disposeMaterial(old);
       }
     }
+    if (mesh.userData) mesh.userData.bbUvWarnings = faceWarnings;
     // Re-apply after async material swap (World Solid outer hull stays invisible).
     this._applyHiddenHullFaces?.(mesh);
     mesh.material.needsUpdate = true;
@@ -2311,12 +2331,16 @@ export class SceneView {
           const path = resolver?.getMeshUrl?.(assetId);
           return path ? (assetUrl(path) || path) : null;
         },
-        createMaterial: async (materialId) => {
+        createMaterial: async (materialId, meshHint = null) => {
           if (!materialId || !resolver?.getMaterialDefinition) return null;
           const def = await resolver.getMaterialDefinition(materialId);
           if (!def) return null;
+          const uvChannels = meshHint
+            ? inspectGeometryUvChannels(meshHint).channels
+            : [];
           return createThreeMaterial(def, mapResolver, {
             maxAnisotropy: this.maxAnisotropy,
+            availableUvChannels: uvChannels,
           });
         },
         stamp: (root) => {

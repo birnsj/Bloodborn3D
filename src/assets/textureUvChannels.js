@@ -132,3 +132,22 @@ export function warnMissingUvChannel(availableChannels, requestedChannel) {
   }
   return { ok: true, warning: null };
 }
+
+/**
+ * Collect missing-channel warnings for every assigned map on a material definition.
+ * @returns {string[]}
+ */
+export function collectMaterialUvChannelWarnings(definition = {}, availableChannels = []) {
+  const def = definition && typeof definition === 'object' ? definition : {};
+  const channels = normalizeMapChannels(def.mapChannels);
+  const warnings = [];
+  for (const [mapIdField, channelKey] of Object.entries(MAP_ID_TO_CHANNEL_KEY)) {
+    if (!def[mapIdField]) continue;
+    const requested = channels[channelKey] ?? DEFAULT_MAP_CHANNELS[channelKey] ?? 0;
+    const result = warnMissingUvChannel(availableChannels, requested);
+    if (!result.ok && result.warning) {
+      warnings.push(`${channelKey}: ${result.warning}`);
+    }
+  }
+  return warnings;
+}

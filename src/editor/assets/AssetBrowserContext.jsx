@@ -41,7 +41,7 @@ import {
   isSupportedMeshImportName,
   formatFromFileName,
 } from '../../assets/meshFormatIO.js';
-import { clearTextureCache } from '../../runtime/materialFactory.js';
+import { invalidateTextureCacheMatching } from '../../runtime/materialFactory.js';
 import { normalizePrefabDefinition } from '../../prefabs/PrefabDefinition.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { reportEditorMessage } from '../../ui/dialogs/reportEditorMessage.js';
@@ -370,7 +370,8 @@ export function AssetBrowserProvider({ children }) {
   const replaceTexture = useCallback(async (id, file) => {
     setStatus(`Updating texture ${id}…`);
     const result = await replaceTextureFile(id, file);
-    clearTextureCache();
+    const pathFrag = result.asset?.path || id;
+    await invalidateTextureCacheMatching(pathFrag);
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
     return result.asset;
@@ -488,8 +489,9 @@ export function AssetBrowserProvider({ children }) {
     const result = await patchTextureAssetMeta(assetId, metaPatch);
     setRegistry(normalizeRegistry(result.registry));
     setRevision((r) => r + 1);
-    // Sampler changes invalidate cached GPU textures for this asset URL family.
-    clearTextureCache();
+    // Sampler changes: invalidate only this asset's cache keys (not every texture).
+    const pathFrag = result.asset?.path || assetId;
+    await invalidateTextureCacheMatching(pathFrag);
     return result.asset;
   }, []);
 

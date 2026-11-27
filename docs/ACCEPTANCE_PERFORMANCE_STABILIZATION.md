@@ -147,4 +147,4 @@ Remaining quad cost is inherent **N independent scissor scene draws** (shared ge
 | Unit tests | **1,085 passed** |
 | Lint / build | Pass (warnings only; pre-existing) |
 | Commit | `c20031a` |
-| Batch 8 | **Not started** |
+| Batch 8 | **Complete** — see `docs/ACCEPTANCE_TEXTURES.md` |

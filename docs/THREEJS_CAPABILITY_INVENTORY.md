@@ -15,7 +15,7 @@
 **Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.  
 **Batch 7.1 status:** **Complete** — actor + asset pivot editing (`contentOffset`), Asset Viewer interactive pivot gizmo, presets, local/world, undo, acceptance level. See `docs/ACCEPTANCE_PIVOT_EDITING.md`.  
 **Pre-Batch 8 performance:** **Stabilized** — multi-viewport shadow reuse, lit display short-circuit, ortho RT skip, profiling median/p95 + `info.reset`. Quad ≥30 FPS target not met (architectural). See `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`.  
-**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`.
+**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. Final acceptance closure: multi-UV GLB + channel warnings, selective GPU cache invalidate, KTX2 Content Browser import, prefab/lifecycle/perf (no Batch 8 regression). VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`.
 
 ### Principles
 
@@ -548,9 +548,10 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 | P0 | KTX2 compressed texture import / decode | **Complete** (encode still Deferred from Batch 7) |
 | P2 | VideoTexture authoring (optional env screens) | **Deferred** |
 
-**Acceptance:** `docs/ACCEPTANCE_TEXTURES.md`, `public/levels/acceptance-textures.json`, Academy lesson 29 (`textures`).  
+**Acceptance:** `docs/ACCEPTANCE_TEXTURES.md`, `public/levels/acceptance-textures.json`, Academy lesson 29 (`textures`), harness `src/dev/textureAcceptanceClosure.js`.  
+**Closure:** selective `invalidateTextureCacheMatching`; bind-time `bbUvWarnings`; multi-UV fixture `mesh_batch8_multi_uv.glb`; mansion single ~84 / quad ~18.7 FPS (parity with pre-Batch 8 stabilization).  
 **Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.  
-**Note:** Dedicated lightmap UV channel baking remains **Deferred**; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking. VideoTexture deferred.
+**Note:** Dedicated lightmap UV channel baking remains **Deferred**; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking. VideoTexture deferred. Do **not** start Batch 9 from this closure.
 
 ### Batch 9 — Editor organization & viewport tools
 

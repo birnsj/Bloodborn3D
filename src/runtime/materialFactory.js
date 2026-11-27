@@ -11,7 +11,11 @@ import {
   normalizeTextureSampler,
   normalizeTextureTransform,
 } from '../assets/textureSampling.js';
-import { channelForMapId, normalizeMapChannels } from '../assets/textureUvChannels.js';
+import {
+  channelForMapId,
+  collectMaterialUvChannelWarnings,
+  normalizeMapChannels,
+} from '../assets/textureUvChannels.js';
 
 const textureCache = createRetryableCache();
 const loader = new THREE.TextureLoader();
@@ -146,8 +150,44 @@ export function loadTexture(url, options = {}) {
   }));
 }
 
-export function clearTextureCache() {
-  textureCache.clear();
+/**
+ * Dispose shared cached textures and clear the map.
+ * Materials hold owned clones; shared originals must be disposed explicitly.
+ */
+export async function clearTextureCache() {
+  await textureCache.invalidateWhere((_key, tex) => {
+    if (tex?.isTexture || tex?.isCompressedTexture) {
+      try { tex.dispose?.(); } catch { /* ignore */ }
+    }
+    return true;
+  });
+}
+
+/**
+ * Invalidate only cache entries whose key contains `fragment` (usually asset path
+ * or URL stem). Avoids unrelated texture reloads when one asset Apply lands.
+ * @returns {Promise<number>} removed entry count
+ */
+export async function invalidateTextureCacheMatching(fragment) {
+  const needle = String(fragment || '')
+    .replace(/^\/assets\//, '')
+    .split('?')[0];
+  if (!needle) return 0;
+  return textureCache.invalidateWhere((key, tex) => {
+    if (!key.includes(needle)) return false;
+    if (tex?.isTexture || tex?.isCompressedTexture) {
+      try { tex.dispose?.(); } catch { /* ignore */ }
+    }
+    return true;
+  });
+}
+
+export function getTextureCacheSize() {
+  return textureCache.size;
+}
+
+export function getTextureCacheKeys() {
+  return textureCache.keys();
 }
 
 export function assetUrl(path) {
@@ -311,6 +351,10 @@ export async function createThreeMaterial(definition, mapResolver = () => null, 
     clone.needsUpdate = true;
     assign(clone);
   };
+
+  if (Array.isArray(options.availableUvChannels)) {
+    mat.userData.bbUvWarnings = collectMaterialUvChannelWarnings(def, options.availableUvChannels);
+  }
 
   await applyMap('baseColorMapId', (t) => { mat.map = t; });
   await applyMap('alphaMapId', (t) => { mat.alphaMap = t; }, { normal: true });

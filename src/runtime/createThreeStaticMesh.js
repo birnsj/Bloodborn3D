@@ -20,7 +20,6 @@ export async function applyStaticMaterialOverrides(root, overrides, createMateri
     return collectMaterialSlots(root);
   }
   const slots = collectMaterialSlots(root);
-  const cache = new Map();
   let meshIndex = 0;
   const tasks = [];
 
@@ -38,14 +37,17 @@ export async function applyStaticMaterialOverrides(root, overrides, createMateri
   });
 
   for (const task of tasks) {
-    let mat = cache.get(task.materialId);
-    if (!mat) {
-      mat = await createMaterial(task.materialId);
-      if (mat) cache.set(task.materialId, mat);
-    }
+    // Per-mesh create so UV-channel warnings reflect that geometry's attributes.
+    const mat = await createMaterial(task.materialId, task.obj);
     if (!mat) continue;
     // Each mesh gets its own clone so disposing one actor cannot free another's override.
     const owned = mat.clone();
+    if (owned.userData) {
+      owned.userData.bbUvWarnings = mat.userData?.bbUvWarnings || [];
+      owned.userData.bbMapChannels = mat.userData?.bbMapChannels;
+    }
+    task.obj.userData = task.obj.userData || {};
+    task.obj.userData.bbUvWarnings = owned.userData?.bbUvWarnings || [];
     if (task.isArray) {
       task.obj.material[task.matIndex] = owned;
     } else {
