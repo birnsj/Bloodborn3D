@@ -48,4 +48,5 @@ not import editor. The rest below holds in the code today but is **not** test-en
 
 Run `npm test`, `npm run lint` (do not increase the warning count) and `npm run build`.
 Report what was verified automatically versus what needs manual browser verification.
+New tests should be named by feature, not by phase, and added to `docs/TEST_MAP.md`.
 Keep docs in sync: update `TECHNICAL_STATUS.md` and `ROADMAP.md` when status changes.
