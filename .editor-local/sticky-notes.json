@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "visible": true,
+  "byLevel": {
+    "test-room.json": [
+      {
+        "id": "note-mwzhwhf5-gey2z",
+        "text": "",
+        "x": 11.297510127631982,
+        "y": 50.21424307565542,
+        "w": 180,
+        "h": 120,
+        "color": "green"
+      }
+    ]
+  }
+}

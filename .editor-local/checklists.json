@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "visible": true,
+  "project": [],
+  "byLevel": {
+    "test-room.json": [
+      {
+        "id": "item-mwzikpup-fvh50",
+        "text": "Finish Game",
+        "done": false
+      }
+    ]
+  }
+}

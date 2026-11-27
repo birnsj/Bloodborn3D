@@ -38,6 +38,11 @@ concept-library/images/
 project-art/.bb-art/thumbs/**
 !project-art/.bb-art/thumbs/.gitkeep
 
+# Editor-local: track sticky notes + checklists with the project; ignore other local junk
+.editor-local/*
+!.editor-local/sticky-notes.json
+!.editor-local/checklists.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
