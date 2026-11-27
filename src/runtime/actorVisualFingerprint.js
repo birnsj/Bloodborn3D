@@ -16,7 +16,11 @@ function stable(value) {
   return out;
 }
 
-/** Component + visibility fingerprint (no transform / parent). */
+/**
+ * Component fingerprint (no transform / parent).
+ * Actor.visible is intentionally excluded — Outliner/layer hide toggles
+ * group.visible via a lightweight path (no mesh/CSG rebuild).
+ */
 export function actorContentFingerprint(actor) {
   if (!actor) return '';
   const components = (actor.components || []).map((comp) => {
@@ -28,7 +32,6 @@ export function actorContentFingerprint(actor) {
     });
   });
   return JSON.stringify({
-    visible: actor.visible !== false,
     name: actor.name || '',
     components,
   });

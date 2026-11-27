@@ -44,6 +44,8 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     scene: normalizeWorldScene(data.scene),
     renderer: normalizeWorldRenderer(data.renderer),
     postProcessing: data.postProcessing ?? null,
+    // Missing authoringLayers → seed defaults (backward compatible; actors keep null → resolve on use).
+    authoringLayers: data.authoringLayers ?? null,
   });
 
   for (const actorData of data.actors) {

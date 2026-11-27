@@ -279,6 +279,7 @@ export function DetailsPanel({ docked = false } = {}) {
     duplicateSelected,
     reparentSelected,
     setSelectedActorFlags,
+    assignSelectedToAuthoringLayer,
     createCell,
     assignSelectedToCell,
     createPrefabFromSelection,
@@ -566,6 +567,27 @@ export function DetailsPanel({ docked = false } = {}) {
                   checked={Boolean(selectedActor.locked)}
                   onChange={(e) => setSelectedActorFlags({ locked: e.target.checked })}
                 />
+              </label>
+              <label className="bb-field" {...helpProps('details.authoringLayer')}>
+                <span className="bb-field__label">Authoring Layer</span>
+                <select
+                  className="bb-select"
+                  disabled={disabled || !(world?.authoringLayers?.layers?.length)}
+                  value={
+                    selectedActor.authoringLayerId
+                    || world?.authoringLayers?.activeLayerId
+                    || world?.authoringLayers?.layers?.[0]?.id
+                    || ''
+                  }
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    if (id) assignSelectedToAuthoringLayer(id);
+                  }}
+                >
+                  {(world?.authoringLayers?.layers || []).map((layer) => (
+                    <option key={layer.id} value={layer.id}>{layer.name}</option>
+                  ))}
+                </select>
               </label>
               <div className="bb-details-actions">
                 <button

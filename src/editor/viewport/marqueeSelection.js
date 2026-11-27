@@ -66,16 +66,19 @@ export function boxIntersectsMarquee(box, camera, marquee) {
 
 /**
  * Select actor ids whose mesh groups intersect the marquee.
- * @param {Map<string, { group: THREE.Object3D }>} actorMeshes
+ * @param {Map<string, { group: THREE.Object3D, actor?: object }>} actorMeshes
  * @param {THREE.Camera} camera
  * @param {{minX,maxX,minY,maxY}} marquee
+ * @param {{ isSelectable?: (actorId: string, entry: object) => boolean }} [opts]
  */
-export function marqueeSelectActors(actorMeshes, camera, marquee) {
+export function marqueeSelectActors(actorMeshes, camera, marquee, opts = {}) {
   const ids = [];
   if (!actorMeshes || !camera || !marquee) return ids;
   const box = new THREE.Box3();
   for (const [actorId, entry] of actorMeshes) {
     if (!entry?.group) continue;
+    if (entry.group.visible === false) continue;
+    if (opts.isSelectable && !opts.isSelectable(actorId, entry)) continue;
     box.setFromObject(entry.group);
     if (boxIntersectsMarquee(box, camera, marquee)) ids.push(actorId);
   }

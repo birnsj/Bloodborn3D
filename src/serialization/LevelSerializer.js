@@ -12,6 +12,7 @@ import {
   normalizeWorldAmbient,
   normalizeWorldScene,
   normalizeWorldRenderer,
+  normalizeAuthoringLayersState,
 } from '../core/World.js';
 import { normalizePostProcessing } from '../runtime/postprocessing/postProcessingState.js';
 
@@ -45,6 +46,7 @@ export function serializeLevel(world) {
     scene: normalizeWorldScene(world.scene),
     renderer: normalizeWorldRenderer(world.renderer),
     postProcessing: normalizePostProcessing(world.postProcessing),
+    authoringLayers: normalizeAuthoringLayersState(world.authoringLayers, { seedIfEmpty: true }),
     actors: world.actors.map((actor) => actor.toJSON()),
   };
 }

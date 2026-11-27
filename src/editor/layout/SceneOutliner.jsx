@@ -7,9 +7,14 @@ import {
   IconSpawn,
 } from '../../ui/icons.jsx';
 import { getChildren, getRootActors } from '../../core/hierarchy.js';
+import {
+  normalizeAuthoringLayersState,
+  resolveAuthoringLayerId,
+} from '../../core/authoringLayers.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
+import { layerColorForActor } from './LayersPanel.jsx';
 
 const OUTLINER_DRAG = 'application/x-bloodbound-outliner-actor';
 
@@ -51,20 +56,29 @@ export function SceneOutliner({ docked = false } = {}) {
   void revision;
 
   const [query, setQuery] = useState('');
+  const [layerFilterId, setLayerFilterId] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [dropTargetId, setDropTargetId] = useState(null);
+
+  const authoringLayers = useMemo(
+    () => normalizeAuthoringLayersState(world?.authoringLayers, { seedIfEmpty: Boolean(world) }),
+    [world, world?.authoringLayers, revision],
+  );
 
   const filteredIds = useMemo(() => {
     if (!world) return null;
     const q = query.trim().toLowerCase();
-    if (!q) return null;
+    if (!q && !layerFilterId) return null;
     const ids = new Set();
     for (const a of world.actors) {
-      const match =
+      const layerOk = !layerFilterId
+        || resolveAuthoringLayerId(authoringLayers, a.authoringLayerId) === layerFilterId;
+      const match = !q || (
         a.name.toLowerCase().includes(q)
         || a.id.toLowerCase().includes(q)
-        || a.components.some((c) => c.type?.toLowerCase().includes(q));
-      if (match) {
+        || a.components.some((c) => c.type?.toLowerCase().includes(q))
+      );
+      if (match && layerOk) {
         ids.add(a.id);
         let p = a.parentId;
         while (p) {
@@ -74,7 +88,7 @@ export function SceneOutliner({ docked = false } = {}) {
       }
     }
     return ids;
-  }, [world, query, revision]);
+  }, [world, query, layerFilterId, authoringLayers, revision]);
 
   const roots = useMemo(() => {
     if (!world) return [];
@@ -226,6 +240,19 @@ export function SceneOutliner({ docked = false } = {}) {
             )}
           />
         </div>
+        <select
+          className="bb-select bb-outliner__layer-filter"
+          value={layerFilterId}
+          disabled={!world}
+          onChange={(e) => setLayerFilterId(e.target.value)}
+          title="Filter by authoring layer"
+          {...helpProps('outliner.layerFilter')}
+        >
+          <option value="">All layers</option>
+          {authoringLayers.layers.map((layer) => (
+            <option key={layer.id} value={layer.id}>{layer.name}</option>
+          ))}
+        </select>
         <div className="bb-outliner__actions">
           <button
             type="button"
@@ -377,6 +404,11 @@ function OutlinerNode({
           disabled={mode === 'play'}
           onClick={(e) => selectActor(actor.id, { additive: e.ctrlKey || e.metaKey })}
         >
+          <span
+            className="bb-outliner-layer-chip"
+            style={{ background: layerColorForActor(actor, world) }}
+            title="Authoring layer"
+          />
           <span className="bb-outliner-item__icon">{typeIcon(actor)}</span>
           <span className="bb-outliner-item__name">{actor.name}</span>
           <span className="bb-outliner-item__type">

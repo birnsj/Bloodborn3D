@@ -63,7 +63,26 @@ import {
   SetConvexBrushPropertiesCommand,
   SetConvexGeometryCommand,
   CompositeCommand,
+  SetAuthoringLayersTreeCommand,
+  SetActorsAuthoringLayerCommand,
+  SetActiveAuthoringLayerCommand,
 } from './history/commands.js';
+import {
+  stampAuthoringLayer,
+  assignAuthoringLayer,
+  getActiveAuthoringLayerId,
+} from './authoringLayerStamp.js';
+import {
+  deleteAuthoringLayer,
+  normalizeAuthoringLayersState,
+  normalizeAuthoringLayer,
+  createAuthoringLayerId,
+  wouldCreateLayerCycle,
+  getDefaultAuthoringLayerId,
+  getLayerDescendantIds,
+  resolveAuthoringLayerId,
+  isActorAuthoringLayerLocked,
+} from '../core/authoringLayers.js';
 import {
   emptyGeometrySelection,
   nextGeometrySelectionAfterActorChange,
@@ -307,6 +326,31 @@ export function EditorProvider({ children }) {
   const savedStateRef = useRef(null);
   if (!savedStateRef.current) savedStateRef.current = new SavedStateTracker();
   const [dirty, setDirty] = useState(false);
+
+  /**
+   * Batch 9 — editor-only layer UI (hidden/locked/solo). Not written to level JSON.
+   * Solo.previousHidden restores visibility when solo clears.
+   */
+  const [layerUi, setLayerUi] = useState(() => ({
+    hidden: new Set(),
+    locked: new Set(),
+    solo: { activeLayerId: null, previousHidden: null },
+  }));
+  const layerUiRef = useRef(layerUi);
+  layerUiRef.current = layerUi;
+
+  /** Actor lock including editor-only authoring-layer lock (edit mode only). */
+  const isEditorActorLocked = useCallback((actor) => {
+    if (!actor || !worldRef.current) return false;
+    if (isEffectivelyLocked(actor, worldRef.current)) return true;
+    if (mode === 'play') return false;
+    return isActorAuthoringLayerLocked(actor, worldRef.current, layerUiRef.current);
+  }, [mode]);
+
+  // Push session layer UI into SceneView so visibility/pick stay in sync without rebuild.
+  useEffect(() => {
+    runtimeRef.current?.sceneView?.setLayerUi?.(layerUi);
+  }, [layerUi]);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -994,6 +1038,7 @@ export function EditorProvider({ children }) {
         gridSize: gridRef.current,
         rise: DEFAULT_RAMP_RISE,
       });
+      stampAuthoringLayer(actor, world);
       executeCommand(
         new AddActorsCommand({
           world,
@@ -1013,6 +1058,7 @@ export function EditorProvider({ children }) {
         gridSize: gridRef.current,
         totalRise: WALL_MODULE_SIZE,
       });
+      stampAuthoringLayer(actor, world);
       executeCommand(
         new AddActorsCommand({
           world,
@@ -1032,6 +1078,7 @@ export function EditorProvider({ children }) {
         gridSize: gridRef.current,
         height: DEFAULT_COLUMN_HEIGHT,
       });
+      stampAuthoringLayer(actor, world);
       executeCommand(
         new AddActorsCommand({
           world,
@@ -1054,6 +1101,7 @@ export function EditorProvider({ children }) {
         openingHeight: DEFAULT_ARCH_OPENING_HEIGHT,
         archRise: DEFAULT_ARCH_RISE,
       });
+      stampAuthoringLayer(actor, world);
       executeCommand(
         new AddActorsCommand({
           world,
@@ -1073,6 +1121,7 @@ export function EditorProvider({ children }) {
         gridSize: gridRef.current,
         sweepAngle: DEFAULT_CURVED_WALL_SWEEP,
       });
+      stampAuthoringLayer(actor, world);
       executeCommand(
         new AddActorsCommand({
           world,
@@ -1096,6 +1145,7 @@ export function EditorProvider({ children }) {
       gridSize: gridRef.current,
       operation: isSubtract ? 'subtract' : 'add',
     });
+    stampAuthoringLayer(actor, world);
     // Tentative insert — reject without history if carve complexity overflows.
     world.addActor(actor);
     const complexity = validateWorldSubtractComplexity(world);
@@ -1121,12 +1171,19 @@ export function EditorProvider({ children }) {
 
   const deleteSelected = useCallback(() => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
-    const ids = [...selectedRef.current];
+    const ids = selectedRef.current.filter((id) => {
+      const actor = world.getActor(id);
+      return actor && !isEditorActorLocked(actor);
+    });
+    if (!ids.length) {
+      setStatus('Selection is locked');
+      return;
+    }
     executeCommand(
       new RemoveActorsCommand({ world, actorIds: ids, label: 'Delete' }),
       { selectIds: [] },
     );
-  }, [world, mode, executeCommand]);
+  }, [world, mode, executeCommand, isEditorActorLocked, setStatus]);
 
   const duplicateSelected = useCallback(({ offset = null, label = 'Duplicate' } = {}) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return [];
@@ -1402,7 +1459,7 @@ export function EditorProvider({ children }) {
     let touchedBrush = false;
     for (const u of updates) {
       const actor = world.getActor(u.actorId);
-      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (!actor || isEditorActorLocked(actor)) continue;
       const pos = u.position;
       if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y) || !Number.isFinite(pos?.z)) {
         continue;
@@ -1445,7 +1502,7 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play') return;
     for (const u of updates) {
       const actor = world.getActor(u.actorId);
-      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (!actor || isEditorActorLocked(actor)) continue;
       if (u.rotation) {
         actor.transform.rotation = {
           x: Number(u.rotation.x) || 0,
@@ -1469,7 +1526,7 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play') return;
     const actor = world.getActor(actorId);
     const brush = actor?.getComponent('Brush');
-    if (!brush || isEffectivelyLocked(actor, world)) return;
+    if (!brush || isEditorActorLocked(actor)) return;
     if (
       !Number.isFinite(worldPosition?.x)
       || !Number.isFinite(worldPosition?.y)
@@ -1674,7 +1731,7 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
     const actorId = selectedRef.current[selectedRef.current.length - 1];
     const actor = world.getActor(actorId);
-    if (!actor || isEffectivelyLocked(actor, world)) return;
+    if (!actor || isEditorActorLocked(actor)) return;
 
     // Details edits local transform values (relative to parent).
     const before = actor.transform.toJSON();
@@ -1721,7 +1778,7 @@ export function EditorProvider({ children }) {
     const changes = [];
     for (const actorId of selectedRef.current) {
       const actor = world.getActor(actorId);
-      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (!actor || isEditorActorLocked(actor)) continue;
       if (!actorSupportsPivotEdit(actor)) continue;
       const { before, after } = applyPivotPreset(actor, world, preset, resolver);
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
@@ -1747,7 +1804,7 @@ export function EditorProvider({ children }) {
     if (!world || mode === 'play' || selectedRef.current.length !== 1) return;
     const actorId = selectedRef.current[0];
     const actor = world.getActor(actorId);
-    if (!actor || isEffectivelyLocked(actor, world)) return;
+    if (!actor || isEditorActorLocked(actor)) return;
     if (!actorSupportsPivotEdit(actor)) return;
     const before = snapshotPivotState(actor, world);
     const next = {
@@ -1788,7 +1845,7 @@ export function EditorProvider({ children }) {
     const changes = [];
     for (const actorId of selectedRef.current) {
       const actor = world.getActor(actorId);
-      if (!actor || isEffectivelyLocked(actor, world)) continue;
+      if (!actor || isEditorActorLocked(actor)) continue;
       const before = {
         parentId: actor.parentId,
         transform: actor.transform.toJSON(),
@@ -1824,6 +1881,7 @@ export function EditorProvider({ children }) {
       gridSize: g,
       snapY: snap,
     });
+    stampAuthoringLayer(cell, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -1856,6 +1914,216 @@ export function EditorProvider({ children }) {
     );
     autoCapturePrefabOverrides([actorId]);
   }, [world, mode, executeCommand, autoCapturePrefabOverrides]);
+
+  const ensureAuthoringLayers = useCallback(() => {
+    if (!world) return null;
+    if (!world.authoringLayers?.layers?.length) {
+      world.authoringLayers = normalizeAuthoringLayersState(world.authoringLayers, { seedIfEmpty: true });
+    }
+    return world.authoringLayers;
+  }, [world]);
+
+  const setActiveAuthoringLayer = useCallback((layerId) => {
+    if (!world || mode === 'play') return;
+    const state = ensureAuthoringLayers();
+    if (!state || state.activeLayerId === layerId) return;
+    executeCommand(
+      new SetActiveAuthoringLayerCommand({
+        world,
+        beforeId: state.activeLayerId,
+        afterId: layerId,
+      }),
+      { resync: false },
+    );
+    bump();
+  }, [world, mode, ensureAuthoringLayers, executeCommand, bump]);
+
+  const assignActorsToAuthoringLayer = useCallback((actorIds, layerId) => {
+    if (!world || mode === 'play' || !actorIds?.length || !layerId) return;
+    ensureAuthoringLayers();
+    executeCommand(
+      new SetActorsAuthoringLayerCommand({
+        world,
+        assignments: actorIds.map((actorId) => ({ actorId, authoringLayerId: layerId })),
+      }),
+      { resync: true },
+    );
+  }, [world, mode, ensureAuthoringLayers, executeCommand]);
+
+  const assignSelectedToAuthoringLayer = useCallback((layerId) => {
+    assignActorsToAuthoringLayer(selectedRef.current, layerId);
+  }, [assignActorsToAuthoringLayer]);
+
+  const createAuthoringLayer = useCallback(({ name, parentId = null, color } = {}) => {
+    if (!world || mode === 'play') return null;
+    const before = structuredClone(ensureAuthoringLayers());
+    const siblings = before.layers.filter((l) => (l.parentId || null) === (parentId || null));
+    const sortIndex = siblings.reduce((m, l) => Math.max(m, l.sortIndex), -1) + 1;
+    const layer = normalizeAuthoringLayer({
+      id: createAuthoringLayerId(),
+      name: name || 'New Layer',
+      parentId: parentId || null,
+      color,
+      sortIndex,
+    });
+    if (parentId && wouldCreateLayerCycle(before.layers, layer.id, parentId)) {
+      notify('Cannot create layer: would form a cycle');
+      return null;
+    }
+    const after = {
+      ...before,
+      layers: [...before.layers, layer],
+    };
+    executeCommand(
+      new SetAuthoringLayersTreeCommand({
+        world,
+        before,
+        after,
+        label: 'Create authoring layer',
+      }),
+    );
+    bump();
+    return layer;
+  }, [world, mode, ensureAuthoringLayers, executeCommand, bump, notify]);
+
+  const updateAuthoringLayer = useCallback((layerId, partial) => {
+    if (!world || mode === 'play' || !layerId) return;
+    const before = structuredClone(ensureAuthoringLayers());
+    const idx = before.layers.findIndex((l) => l.id === layerId);
+    if (idx < 0) return;
+    const nextParent = partial.parentId !== undefined ? (partial.parentId || null) : before.layers[idx].parentId;
+    if (nextParent && wouldCreateLayerCycle(before.layers, layerId, nextParent)) {
+      notify('Cannot reparent layer: would form a cycle');
+      return;
+    }
+    const layers = before.layers.map((l) => {
+      if (l.id !== layerId) return l;
+      return normalizeAuthoringLayer({ ...l, ...partial, id: layerId, parentId: nextParent });
+    });
+    executeCommand(
+      new SetAuthoringLayersTreeCommand({
+        world,
+        before,
+        after: { ...before, layers },
+        label: 'Edit authoring layer',
+      }),
+    );
+    bump();
+  }, [world, mode, ensureAuthoringLayers, executeCommand, bump, notify]);
+
+  const reorderAuthoringLayers = useCallback((orderedIds, parentId = null) => {
+    if (!world || mode === 'play' || !orderedIds?.length) return;
+    const before = structuredClone(ensureAuthoringLayers());
+    const pid = parentId || null;
+    const order = new Map(orderedIds.map((id, i) => [id, i]));
+    const layers = before.layers.map((l) => {
+      if ((l.parentId || null) !== pid || !order.has(l.id)) return l;
+      return { ...l, sortIndex: order.get(l.id) };
+    });
+    executeCommand(
+      new SetAuthoringLayersTreeCommand({
+        world,
+        before,
+        after: { ...before, layers },
+        label: 'Reorder authoring layers',
+      }),
+    );
+    bump();
+  }, [world, mode, ensureAuthoringLayers, executeCommand, bump]);
+
+  const deleteAuthoringLayerById = useCallback((layerId, reassignToLayerId = null) => {
+    if (!world || mode === 'play' || !layerId) return false;
+    const before = structuredClone(ensureAuthoringLayers());
+    const actorIdsOnLayer = world.actors
+      .filter((a) => a.authoringLayerId === layerId)
+      .map((a) => a.id);
+    const result = deleteAuthoringLayer(before, layerId, {
+      reassignToLayerId,
+      actorIdsOnLayer,
+    });
+    if (!result.ok) {
+      notify(result.error || 'Delete layer failed');
+      return false;
+    }
+    executeCommand(
+      new SetAuthoringLayersTreeCommand({
+        world,
+        before,
+        after: result.nextState,
+        actorPatches: result.actorUpdates,
+        label: 'Delete authoring layer',
+      }),
+      { resync: true },
+    );
+    setLayerUi((prev) => {
+      const hidden = new Set(prev.hidden);
+      const locked = new Set(prev.locked);
+      hidden.delete(layerId);
+      locked.delete(layerId);
+      const solo = prev.solo?.activeLayerId === layerId
+        ? { activeLayerId: null, previousHidden: null }
+        : prev.solo;
+      return { ...prev, hidden, locked, solo };
+    });
+    bump();
+    return true;
+  }, [world, mode, ensureAuthoringLayers, executeCommand, bump, notify]);
+
+  const toggleAuthoringLayerHidden = useCallback((layerId) => {
+    if (!layerId) return;
+    setLayerUi((prev) => {
+      const hidden = new Set(prev.hidden);
+      if (hidden.has(layerId)) hidden.delete(layerId);
+      else hidden.add(layerId);
+      return { ...prev, hidden };
+    });
+  }, []);
+
+  const toggleAuthoringLayerLocked = useCallback((layerId) => {
+    if (!layerId) return;
+    setLayerUi((prev) => {
+      const locked = new Set(prev.locked);
+      if (locked.has(layerId)) locked.delete(layerId);
+      else locked.add(layerId);
+      return { ...prev, locked };
+    });
+  }, []);
+
+  const setAuthoringLayerSolo = useCallback((layerId) => {
+    setLayerUi((prev) => {
+      if (!layerId || prev.solo?.activeLayerId === layerId) {
+        // Clear solo — restore previous hidden map if any.
+        const restored = prev.solo?.previousHidden
+          ? new Set(prev.solo.previousHidden)
+          : prev.hidden;
+        return {
+          ...prev,
+          hidden: restored,
+          solo: { activeLayerId: null, previousHidden: null },
+        };
+      }
+      return {
+        ...prev,
+        solo: {
+          activeLayerId: layerId,
+          previousHidden: [...prev.hidden],
+        },
+      };
+    });
+  }, []);
+
+  const selectActorsInAuthoringLayer = useCallback((layerId, { includeDescendants = true } = {}) => {
+    if (!world || !layerId) return;
+    const state = ensureAuthoringLayers();
+    const ids = new Set([layerId]);
+    if (includeDescendants) {
+      for (const id of getLayerDescendantIds(state.layers, layerId)) ids.add(id);
+    }
+    const actorIds = world.actors
+      .filter((a) => ids.has(resolveAuthoringLayerId(state, a.authoringLayerId)))
+      .map((a) => a.id);
+    selectActors(actorIds);
+  }, [world, ensureAuthoringLayers, selectActors]);
 
   const updateSelectedBrush = useCallback((partial) => {
     if (!world || mode === 'play' || selectedRef.current.length === 0) return;
@@ -2924,6 +3192,7 @@ export function EditorProvider({ children }) {
       collisionType: options.collisionType,
       contentOffset: options.contentOffset ?? metaOffset ?? null,
     });
+    stampAuthoringLayer(actor, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -2946,6 +3215,7 @@ export function EditorProvider({ children }) {
       gridSize: g,
       snapY: options.snapY ?? snap,
     });
+    stampAuthoringLayer(actor, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -2970,6 +3240,7 @@ export function EditorProvider({ children }) {
       targetActorId: options.targetActorId,
       mapId: options.mapId,
     });
+    stampAuthoringLayer(actor, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -2999,6 +3270,7 @@ export function EditorProvider({ children }) {
       console.warn('[BloodBound] place primitive failed', err);
       return null;
     }
+    stampAuthoringLayer(actor, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -3020,6 +3292,7 @@ export function EditorProvider({ children }) {
       gridSize: g,
       snapY: options.snapY ?? false,
     });
+    stampAuthoringLayer(actor, world);
     executeCommand(
       new AddActorsCommand({
         world,
@@ -3080,6 +3353,9 @@ export function EditorProvider({ children }) {
       z: snap ? snapToGrid(raw.z, g) : raw.z,
     };
     const placed = instantiatePrefab(definition, world, { position: pos });
+    // Prefabs must not depend on map-specific layer IDs — assign active layer on place.
+    const activeLayer = getActiveAuthoringLayerId(world);
+    assignAuthoringLayer(placed.actors, activeLayer);
     // instantiate already added actors — capture JSON then remove so command owns add
     const actorsJson = placed.actors.map((a) => a.toJSON());
     for (const a of placed.actors) {
@@ -4250,6 +4526,18 @@ export function EditorProvider({ children }) {
     createCell,
     assignSelectedToCell,
     setSelectedActorFlags,
+    layerUi,
+    setActiveAuthoringLayer,
+    assignActorsToAuthoringLayer,
+    assignSelectedToAuthoringLayer,
+    createAuthoringLayer,
+    updateAuthoringLayer,
+    reorderAuthoringLayers,
+    deleteAuthoringLayerById,
+    toggleAuthoringLayerHidden,
+    toggleAuthoringLayerLocked,
+    setAuthoringLayerSolo,
+    selectActorsInAuthoringLayer,
     getWorldTransform: (actor) => (world && actor ? getWorldTransform(actor, world) : null),
     renameSelected,
     resizeBrushFace,

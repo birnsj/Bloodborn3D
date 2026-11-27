@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 2,
+  "name": "Acceptance — Authoring Layers",
+  "actors": [
+    {
+      "id": "cell_room",
+      "name": "Gothic Study",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "cell"
+      ],
+      "components": [
+        {
+          "id": "comp_cell",
+          "type": "Cell",
+          "enabled": true,
+          "color": "#4d7ea8"
+        }
+      ],
+      "authoringLayerId": "layer_arch"
+    },
+    {
+      "id": "actor_floor",
+      "name": "Floor",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 10,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "floor"
+      ],
+      "components": [
+        {
+          "id": "comp_floor",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 20,
+            "z": 600
+          },
+          "color": "#4a5560",
+          "collidable": true,
+          "operation": "add",
+          "materialId": null
+        }
+      ],
+      "authoringLayerId": "layer_props"
+    },
+    {
+      "id": "actor_ceiling",
+      "name": "Ceiling",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 310,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "ceiling"
+      ],
+      "components": [
+        {
+          "id": "comp_ceiling",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 20,
+            "z": 600
+          },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add",
+          "materialId": null
+        }
+      ],
+      "authoringLayerId": "layer_light"
+    },
+    {
+      "id": "actor_wall_n",
+      "name": "Wall North",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 160,
+          "z": -290
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "components": [
+        {
+          "id": "comp_wn",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 300,
+            "z": 20
+          },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_env"
+    },
+    {
+      "id": "actor_wall_s",
+      "name": "Wall South",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 160,
+          "z": 290
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "components": [
+        {
+          "id": "comp_ws",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 600,
+            "y": 300,
+            "z": 20
+          },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_game"
+    },
+    {
+      "id": "actor_wall_e",
+      "name": "Wall East",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 290,
+          "y": 160,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "components": [
+        {
+          "id": "comp_we",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 20,
+            "y": 300,
+            "z": 560
+          },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_props_detail"
+    },
+    {
+      "id": "actor_wall_w",
+      "name": "Wall West",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": -290,
+          "y": 160,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "structure",
+        "brush",
+        "wall"
+      ],
+      "components": [
+        {
+          "id": "comp_ww",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 20,
+            "y": 300,
+            "z": 560
+          },
+          "color": "#6a7080",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_arch"
+    },
+    {
+      "id": "actor_table",
+      "name": "Table",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 55,
+          "z": 40
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "prop",
+        "furniture",
+        "table"
+      ],
+      "components": [
+        {
+          "id": "comp_table",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 160,
+            "y": 70,
+            "z": 90
+          },
+          "color": "#5a4030",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_props"
+    },
+    {
+      "id": "actor_shelf",
+      "name": "Shelf",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": -200,
+          "y": 140,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "prop",
+        "furniture",
+        "shelf"
+      ],
+      "components": [
+        {
+          "id": "comp_shelf",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 140,
+            "y": 12,
+            "z": 40
+          },
+          "color": "#4a3828",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_light"
+    },
+    {
+      "id": "actor_shelf_2",
+      "name": "Shelf Upper",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": -200,
+          "y": 200,
+          "z": -200
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "prop",
+        "furniture",
+        "shelf"
+      ],
+      "components": [
+        {
+          "id": "comp_shelf2",
+          "type": "Brush",
+          "enabled": true,
+          "size": {
+            "x": 140,
+            "y": 12,
+            "z": 40
+          },
+          "color": "#4a3828",
+          "collidable": true,
+          "operation": "add"
+        }
+      ],
+      "authoringLayerId": "layer_env"
+    },
+    {
+      "id": "actor_player_spawn",
+      "name": "Player Spawn",
+      "parentId": "cell_room",
+      "transform": {
+        "position": {
+          "x": 0,
+          "y": 20,
+          "z": 180
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "tags": [
+        "spawn",
+        "gameplay"
+      ],
+      "components": [
+        {
+          "id": "comp_spawn",
+          "type": "PlayerSpawn",
+          "enabled": true,
+          "eyeHeight": 160,
+          "moveSpeed": 450
+        }
+      ],
+      "authoringLayerId": "layer_game"
+    }
+  ],
+  "authoringLayers": {
+    "schemaVersion": 1,
+    "layers": [
+      {
+        "id": "layer_arch",
+        "name": "Architecture",
+        "parentId": null,
+        "color": "#6b8cae",
+        "sortIndex": 0
+      },
+      {
+        "id": "layer_props",
+        "name": "Props",
+        "parentId": null,
+        "color": "#c4a35a",
+        "sortIndex": 1
+      },
+      {
+        "id": "layer_light",
+        "name": "Lighting",
+        "parentId": null,
+        "color": "#e0c35a",
+        "sortIndex": 2
+      },
+      {
+        "id": "layer_env",
+        "name": "Environment",
+        "parentId": null,
+        "color": "#5a9e6f",
+        "sortIndex": 3
+      },
+      {
+        "id": "layer_game",
+        "name": "Gameplay",
+        "parentId": null,
+        "color": "#c45a6b",
+        "sortIndex": 4
+      },
+      {
+        "id": "layer_props_detail",
+        "name": "Detail Props",
+        "parentId": "layer_props",
+        "color": "#a67c3a",
+        "sortIndex": 0
+      }
+    ],
+    "activeLayerId": "layer_arch"
+  }
+}

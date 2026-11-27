@@ -465,6 +465,12 @@ export function AppMenuBar() {
               close={close}
               onClick={() => togglePanel('tutorialsVisible')}
             />
+            <Item
+              label={`${layout.layersVisible ? 'Hide' : 'Show'} Layers`}
+              close={close}
+              onClick={() => togglePanel('layersVisible')}
+              helpId="panel.layers"
+            />
             <Sep />
             <Item
               label="Maximize Active View"

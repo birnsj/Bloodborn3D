@@ -4,6 +4,7 @@ import { ContentBrowser } from './ContentBrowser.jsx';
 import { AssetViewer } from './AssetViewer.jsx';
 import { Viewport } from '../Viewport.jsx';
 import { TutorialsPanel } from '../../tutorials/TutorialsPanel.jsx';
+import { LayersPanel } from './LayersPanel.jsx';
 
 function DockPanelShell({ children, className = '' }) {
   return (
@@ -69,6 +70,16 @@ function TutorialsDockPanel() {
   );
 }
 
+function LayersDockPanel() {
+  return (
+    <DockPanelShell className="bb-dock-panel--layers">
+      <div data-bb-tutorial="panel.layers" className="bb-dock-panel__fill">
+        <LayersPanel docked />
+      </div>
+    </DockPanelShell>
+  );
+}
+
 /** Registered dockview component map (stable identity). */
 export const dockviewComponents = {
   viewport: ViewportDockPanel,
@@ -77,4 +88,5 @@ export const dockviewComponents = {
   content: ContentDockPanel,
   assetViewer: AssetViewerDockPanel,
   tutorials: TutorialsDockPanel,
+  layers: LayersDockPanel,
 };

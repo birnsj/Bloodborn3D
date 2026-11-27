@@ -31,7 +31,7 @@ const SECTIONS = [
   {
     id: 'editor',
     title: 'Editor & play',
-    ids: ['testing', 'workspace'],
+    ids: ['testing', 'workspace', 'editor-layers'],
   },
   {
     id: 'art',
@@ -42,6 +42,7 @@ const SECTIONS = [
       'post-processing',
       'world-fog-atmosphere',
       'world-environment',
+      'textures',
     ],
   },
 ];

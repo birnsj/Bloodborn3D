@@ -758,6 +758,10 @@ export function Viewport() {
             runtime.sceneView,
           );
           runtime.setViewportPanes(panes);
+          // ViewHelper axis clicks orbit around the same focus as OrbitControls.
+          if (controls?.target) {
+            runtime.sceneView.setViewHelperCenter?.(controls.target);
+          }
         } else {
           runtime.setViewportPanes(null);
         }
@@ -1485,9 +1489,27 @@ export function Viewport() {
       return;
     }
 
-    const { nx, ny, camera, localX, localY } = pointerNorm(e, { activate: false });
+    const { nx, ny, camera, localX, localY, paneId, paneRect } = pointerNorm(e, { activate: false });
     const sceneView = runtimeRef.current.sceneView;
     const cam = camera || sceneView.camera;
+
+    // Axis ViewHelper (perspective panes) — consume before scene picks.
+    if (paneRect && cam && !cam.isOrthographicCamera) {
+      const canvasH = shellSizeRef.current.height || 1;
+      const scissor = {
+        x: Math.round(paneRect.x || 0),
+        y: Math.round(canvasH - (paneRect.y || 0) - (paneRect.height || 0)),
+        width: Math.max(1, Math.round(paneRect.width || 0)),
+        height: Math.max(1, Math.round(paneRect.height || 0)),
+      };
+      if (orbitRef.current?.target) {
+        sceneView.setViewHelperCenter?.(orbitRef.current.target);
+      }
+      if (sceneView.handleViewHelperClick?.(e, paneId, cam, scissor)) {
+        e.preventDefault();
+        return;
+      }
+    }
 
     // Create tools: start footprint drag on construction plane
     if (tool === 'box' || tool === 'wall' || tool === 'floor' || tool === 'ceiling' || tool === 'ramp' || tool === 'stair' || tool === 'column' || tool === 'arch' || tool === 'archRoman' || tool === 'archGothic' || tool === 'curvedWall' || tool === 'subtract') {
@@ -2205,7 +2227,14 @@ export function Viewport() {
           && Math.abs(marquee.maxY - marquee.minY) < 0.01);
       if (!tiny && sceneView && cam) {
         if (drag.mode === 'actor') {
-          const ids = marqueeSelectActors(sceneView._actorMeshes, cam, marquee);
+          const ids = marqueeSelectActors(sceneView._actorMeshes, cam, marquee, {
+            isSelectable: (_id, entry) => {
+              const actor = entry?.actor;
+              if (!actor) return true;
+              if (sceneView._isActorEditorLocked?.(actor, actor.world)) return false;
+              return sceneView._isActorEditorVisible?.(actor, actor.world) !== false;
+            },
+          });
           if (drag.additive && selectedActorIds.length) {
             const set = new Set(selectedActorIds);
             for (const id of ids) set.add(id);

@@ -25,6 +25,7 @@ import {
 
 const EDIT_FILL_BASE_INTENSITY = 0.06;
 const EDIT_FILL2_BASE_INTENSITY = 0.03;
+import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
 import { BrushGizmo } from '../editor/BrushGizmo.js';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import {
@@ -33,7 +34,12 @@ import {
   getWorldMatrix,
   getWorldTransform,
   isEffectivelyVisible,
+  isEffectivelyLocked,
 } from '../core/hierarchy.js';
+import {
+  isActorAuthoringLayerVisible,
+  isActorAuthoringLayerLocked,
+} from '../core/authoringLayers.js';
 import { contentOffsetToMeters } from '../core/contentOffset.js';
 import { mat4TransformPoint } from '../core/math3d.js';
 import {
@@ -158,6 +164,11 @@ export class SceneView {
   constructor({ canvas, editMode = true } = {}) {
     this.canvas = canvas;
     this.editMode = editMode;
+    /**
+     * Batch 9 — editor-only authoring layer UI filters (hidden/locked/solo).
+     * Never written to level JSON; ignored while editMode is false (Play).
+     */
+    this.layerUi = null;
     /** Unreal-style Game View (G) — hides editor helpers while editing. */
     this.gameView = false;
     this.viewportColors = { ...DEFAULT_VIEWPORT_COLORS };
@@ -250,10 +261,19 @@ export class SceneView {
 
     /** @type {Map<string, THREE.Camera>} Independent cameras per viewport pane */
     this._paneCameras = new Map();
+    /**
+     * Batch 9 — per-pane ViewHelper (perspective only).
+     * @type {Map<string, import('three/addons/helpers/ViewHelper.js').ViewHelper>}
+     */
+    this._viewHelpers = new Map();
+    /** Shared orbit focus for ViewHelper axis clicks (meters). */
+    this._viewHelperCenter = new THREE.Vector3(0, 1.5, 0);
     /** Active pane id for input / Play capture (legacy `this.camera` mirrors it). */
     this.activePaneId = 'pane-0';
     this._gridPlane = 'xz';
     this._size = { width: 1, height: 1 };
+    this._viewHelperDim = 128;
+    this._viewHelperMargin = 8;
 
     /** Editor-only: preview map post-processing in perspective lit panes. */
     this.postProcessingPreview = true;
@@ -806,6 +826,43 @@ export class SceneView {
     if (!editMode) this.gameView = false;
     this._syncAmbientFromWorld();
     this._applyEditorOverlayVisibility();
+    this.applyEditorVisibilityFilters();
+  }
+
+  /**
+   * Push editor-only authoring-layer filters and refresh group.visible without rebuild.
+   * @param {{ hidden?: Set|string[], locked?: Set|string[], solo?: object }|null} layerUi
+   */
+  setLayerUi(layerUi) {
+    this.layerUi = layerUi || null;
+    this.applyEditorVisibilityFilters();
+  }
+
+  /**
+   * Edit mode: authored hierarchy visibility ∧ authoring-layer filters.
+   * Play mode: authored hierarchy visibility only.
+   */
+  _isActorEditorVisible(actor, world = actor?.world || this.world) {
+    if (!actor) return false;
+    if (!isEffectivelyVisible(actor, world)) return false;
+    if (!this.editMode) return true;
+    return isActorAuthoringLayerVisible(actor, world, this.layerUi);
+  }
+
+  _isActorEditorLocked(actor, world = actor?.world || this.world) {
+    if (!actor) return false;
+    if (isEffectivelyLocked(actor, world)) return true;
+    if (!this.editMode) return false;
+    return isActorAuthoringLayerLocked(actor, world, this.layerUi);
+  }
+
+  /** Lightweight visibility pass — never rebuilds meshes / CSG. */
+  applyEditorVisibilityFilters(world = this.world) {
+    for (const entry of this._actorMeshes.values()) {
+      const actor = entry?.actor || world?.getActor?.(entry?.group?.userData?.actorId);
+      if (!entry?.group || !actor) continue;
+      entry.group.visible = this._isActorEditorVisible(actor, world || actor.world);
+    }
   }
 
   /**
@@ -1041,6 +1098,16 @@ export class SceneView {
           this.scene.backgroundBlurriness = authoredBgBlurriness;
           restoreDisplayMode(displayState);
         }
+
+        // Axis ViewHelper — perspective panes only; after scene draw so depth clears locally.
+        if (
+          this.editMode
+          && this._showEditorOverlays()
+          && !isOrthographicMode(pane.cameraMode)
+          && !cam?.isOrthographicCamera
+        ) {
+          this._renderViewHelperForPane(pane.paneId || pane.id, cam, scissor, dt);
+        }
       }
     } finally {
       if (shadowMap) {
@@ -1089,6 +1156,85 @@ export class SceneView {
       showPostProcessing: true,
     });
     this._drawScene(camera, { usePostProcess, atmosphere: showAtmosphere, scissor: null });
+    if (this.editMode && this._showEditorOverlays() && !ortho) {
+      this._renderViewHelperForPane(
+        this.activePaneId || 'pane-0',
+        camera,
+        { x: 0, y: 0, width: fullW, height: fullH },
+        dt,
+      );
+    }
+  }
+
+  /** Sync ViewHelper orbit focus from OrbitControls target (meters). */
+  setViewHelperCenter(x, y, z) {
+    if (x && typeof x === 'object') {
+      this._viewHelperCenter.set(x.x, x.y, x.z);
+    } else {
+      this._viewHelperCenter.set(Number(x) || 0, Number(y) || 0, Number(z) || 0);
+    }
+  }
+
+  _ensureViewHelper(paneId, camera) {
+    let helper = this._viewHelpers.get(paneId);
+    if (!helper) {
+      helper = new ViewHelper(camera, this.canvas);
+      helper.setLabels?.('X', 'Y', 'Z');
+      this._viewHelpers.set(paneId, helper);
+    } else {
+      helper.camera = camera;
+    }
+    helper.center.copy(this._viewHelperCenter);
+    return helper;
+  }
+
+  /**
+   * Draw ViewHelper in the bottom-right of a pane scissor (CSS px, WebGL bottom-left).
+   */
+  _renderViewHelperForPane(paneId, camera, scissor, dt = 0) {
+    if (!camera || !scissor || !this.canvas) return;
+    const helper = this._ensureViewHelper(paneId, camera);
+    const dim = this._viewHelperDim;
+    const margin = this._viewHelperMargin;
+    const left = Math.max(0, scissor.x + scissor.width - dim - margin);
+    const bottom = Math.max(0, scissor.y + margin);
+    helper.location = {
+      top: null,
+      left,
+      right: 0,
+      bottom,
+    };
+    if (helper.animating) helper.update(dt || 1 / 60);
+    // Temporarily expand scissor so helper can clearDepth/draw in its corner.
+    const renderer = this.renderer;
+    const prevScissorTest = renderer.getScissorTest();
+    renderer.setScissorTest(true);
+    renderer.setScissor(scissor.x, scissor.y, scissor.width, scissor.height);
+    renderer.setViewport(scissor.x, scissor.y, scissor.width, scissor.height);
+    helper.render(renderer);
+    renderer.setScissorTest(prevScissorTest);
+  }
+
+  /**
+   * Route a pointer event to the ViewHelper for the pane under the cursor.
+   * @returns {boolean} true if the helper consumed the click
+   */
+  handleViewHelperClick(event, paneId, camera, paneScissor) {
+    if (!this.editMode || !this._showEditorOverlays() || !camera || camera.isOrthographicCamera) {
+      return false;
+    }
+    if (!paneScissor) return false;
+    const helper = this._ensureViewHelper(paneId || this.activePaneId || 'pane-0', camera);
+    const dim = this._viewHelperDim;
+    const margin = this._viewHelperMargin;
+    helper.location = {
+      top: null,
+      left: Math.max(0, paneScissor.x + paneScissor.width - dim - margin),
+      right: 0,
+      bottom: Math.max(0, paneScissor.y + margin),
+    };
+    helper.center.copy(this._viewHelperCenter);
+    return Boolean(helper.handleClick(event));
   }
 
   clearWorldMeshes() {
@@ -1139,6 +1285,7 @@ export class SceneView {
     this.setSelection(this.selectedActorIds);
     if (this.selectedSurface) this._refreshSurfaceHighlight();
     this._applyEditorOverlayVisibility();
+    this.applyEditorVisibilityFilters(world);
   }
 
   /**
@@ -1269,6 +1416,7 @@ export class SceneView {
     this.setSelection(this.selectedActorIds, world);
     if (this.selectedSurface) this._refreshSurfaceHighlight();
     this._applyEditorOverlayVisibility();
+    this.applyEditorVisibilityFilters(world);
   }
 
   /** Re-parent Three groups when actor.parentId changes without mesh rebuild. */
@@ -1390,7 +1538,7 @@ export class SceneView {
     entry.group.scale.set(scale.x, scale.y, scale.z);
     // Content frame (pivot × contentOffset) — geometry lives here.
     this._syncContentRoot(entry.group, actor);
-    entry.group.visible = isEffectivelyVisible(actor, actor.world);
+    entry.group.visible = this._isActorEditorVisible(actor, actor.world);
     entry.transformFingerprint = actorTransformFingerprint(actor);
     // Spot / directional lights need target matrices current after the group moves.
     entry.group.updateMatrixWorld(true);
@@ -1520,7 +1668,7 @@ export class SceneView {
 
     const scale = actor.transform.scale;
     group.scale.set(scale.x, scale.y, scale.z);
-    group.visible = isEffectivelyVisible(actor, world);
+    group.visible = this._isActorEditorVisible(actor, world);
 
     // Register before component visuals so async loads can read visualEpoch.
     // High-water survives delete so undo/redo recreate never reuses a generation.
@@ -3337,6 +3485,8 @@ export class SceneView {
       if (!actorId) continue;
       const entry = this._actorMeshes.get(actorId);
       const actor = entry?.actor;
+      if (actor && !this._isActorEditorVisible(actor, actor.world)) continue;
+      if (actor && this._isActorEditorLocked(actor, actor.world)) continue;
       const comp = getStructuralComponent(actor);
       if (!comp) continue;
       const surfaceId = surfaceIdFromHit(inter.object, inter.faceIndex);
@@ -3645,6 +3795,8 @@ export class SceneView {
 
       const entry = actorId ? this._actorMeshes.get(actorId) : null;
       const actor = entry?.actor || null;
+      // Skip layer-hidden / actor-hidden in edit mode (Play uses authored visibility only via group.visible).
+      if (actor && !this._isActorEditorVisible(actor, actor.world)) continue;
       const tags = actor?.tags ? [...actor.tags] : [];
       let brushKind = null;
       if (tags.includes('ceiling')) brushKind = 'ceiling';
@@ -3670,8 +3822,8 @@ export class SceneView {
         normal: { x: n.x, y: n.y, z: n.z },
         tags,
         brushKind,
-        locked: Boolean(actor?.locked),
-        visible: actor ? isEffectivelyVisible(actor, actor.world) : true,
+        locked: actor ? this._isActorEditorLocked(actor, actor.world) : false,
+        visible: actor ? this._isActorEditorVisible(actor, actor.world) : true,
         editorOnly: Boolean(inter.object.userData.editorOnly),
         placeable: inter.object.userData.placeable !== false,
         collidable: actor?.getComponent?.('Brush')?.collidable
@@ -4023,6 +4175,10 @@ export class SceneView {
       this.gizmo.dispose();
       this.gizmo = null;
     }
+    for (const helper of this._viewHelpers.values()) {
+      helper.dispose?.();
+    }
+    this._viewHelpers.clear();
     if (this.gridHelper) {
       this.scene.remove(this.gridHelper);
       disposeObject(this.gridHelper);

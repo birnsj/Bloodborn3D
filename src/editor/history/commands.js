@@ -1094,3 +1094,119 @@ export class SetConvexBrushPropertiesCommand {
     if ('collidable' in state) convex.collidable = state.collidable;
   }
 }
+
+/**
+ * Batch 9 — replace world.authoringLayers tree (create/rename/color/reorder/reparent/delete).
+ * Actor reassignment for deletes is applied via companion SetActorsAuthoringLayerCommand
+ * or included actorPatches on this command.
+ */
+export class SetAuthoringLayersTreeCommand {
+  constructor({
+    world,
+    before,
+    after,
+    actorPatches = null,
+    label = 'Edit authoring layers',
+    onApply = null,
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.actorPatches = actorPatches
+      ? actorPatches.map((p) => structuredClone(p))
+      : null;
+    this.label = label;
+    this.onApply = onApply;
+    this._beforeActors = null;
+  }
+
+  do() {
+    if (this.actorPatches?.length && !this._beforeActors) {
+      this._beforeActors = this.actorPatches.map(({ actorId }) => {
+        const actor = this.world.getActor(actorId);
+        return {
+          actorId,
+          authoringLayerId: actor?.authoringLayerId || null,
+        };
+      });
+    }
+    this._apply(this.after, this.actorPatches);
+  }
+
+  undo() {
+    this._apply(this.before, this._beforeActors);
+  }
+
+  _apply(state, patches) {
+    this.world.authoringLayers = structuredClone(state);
+    if (patches?.length) {
+      for (const { actorId, authoringLayerId } of patches) {
+        const actor = this.world.getActor(actorId);
+        if (actor) actor.authoringLayerId = authoringLayerId || null;
+      }
+    }
+    this.onApply?.(this.world.authoringLayers);
+  }
+}
+
+/** Batch 9 — assign one or more actors to an authoring layer. */
+export class SetActorsAuthoringLayerCommand {
+  constructor({ world, assignments, label = 'Assign authoring layer' }) {
+    this.world = world;
+    this.label = label;
+    this.after = assignments.map((a) => ({
+      actorId: a.actorId,
+      authoringLayerId: a.authoringLayerId || null,
+    }));
+    this.before = this.after.map(({ actorId }) => {
+      const actor = world.getActor(actorId);
+      return {
+        actorId,
+        authoringLayerId: actor?.authoringLayerId || null,
+      };
+    });
+  }
+
+  do() {
+    this._apply(this.after);
+  }
+
+  undo() {
+    this._apply(this.before);
+  }
+
+  _apply(list) {
+    for (const { actorId, authoringLayerId } of list) {
+      const actor = this.world.getActor(actorId);
+      if (actor) actor.authoringLayerId = authoringLayerId || null;
+    }
+  }
+}
+
+/** Batch 9 — change active authoring layer (serialized with the level). */
+export class SetActiveAuthoringLayerCommand {
+  constructor({ world, beforeId, afterId, label = 'Set active authoring layer', onApply = null }) {
+    this.world = world;
+    this.beforeId = beforeId || null;
+    this.afterId = afterId || null;
+    this.label = label;
+    this.onApply = onApply;
+  }
+
+  do() {
+    this._apply(this.afterId);
+  }
+
+  undo() {
+    this._apply(this.beforeId);
+  }
+
+  _apply(id) {
+    if (!this.world.authoringLayers) return;
+    this.world.authoringLayers = {
+      ...this.world.authoringLayers,
+      activeLayerId: id,
+    };
+    this.onApply?.(id);
+  }
+}

@@ -7,10 +7,12 @@ import {
   normalizePostProcessing,
   DEFAULT_POST_PROCESSING,
 } from '../runtime/postprocessing/postProcessingState.js';
+import { normalizeAuthoringLayersState } from './authoringLayers.js';
 
 /** @typedef {'additive' | 'subtractive'} MapMode */
 
 export { normalizePostProcessing, DEFAULT_POST_PROCESSING };
+export { normalizeAuthoringLayersState };
 
 export function normalizeMapMode(value) {
   return value === 'subtractive' ? 'subtractive' : 'additive';
@@ -454,6 +456,7 @@ export class World {
     scene = null,
     renderer = null,
     postProcessing = null,
+    authoringLayers = null,
   } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
@@ -467,6 +470,8 @@ export class World {
     this.renderer = normalizeWorldRenderer(renderer);
     /** Map-authored post-processing (pmndrs effects). Missing → disabled defaults. */
     this.postProcessing = normalizePostProcessing(postProcessing);
+    /** Batch 9 — hierarchical authoring layers (independent of parenting / THREE.Layers). */
+    this.authoringLayers = normalizeAuthoringLayersState(authoringLayers, { seedIfEmpty: true });
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -516,6 +521,7 @@ export class World {
       scene: normalizeWorldScene(this.scene),
       renderer: normalizeWorldRenderer(this.renderer),
       postProcessing: normalizePostProcessing(this.postProcessing),
+      authoringLayers: normalizeAuthoringLayersState(this.authoringLayers, { seedIfEmpty: true }),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

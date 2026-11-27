@@ -15,7 +15,8 @@
 **Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.  
 **Batch 7.1 status:** **Complete** — actor + asset pivot editing (`contentOffset`), Asset Viewer interactive pivot gizmo, presets, local/world, undo, acceptance level. See `docs/ACCEPTANCE_PIVOT_EDITING.md`.  
 **Pre-Batch 8 performance:** **Stabilized** — multi-viewport shadow reuse, lit display short-circuit, ortho RT skip, profiling median/p95 + `info.reset`. Quad ≥30 FPS target not met (architectural). See `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`.  
-**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. Final acceptance + UV regression closure: transform center defaults `(0,0)`; map channels default UV0; multi-UV / selective cache / KTX2 / prefab / lifecycle / perf verified. VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`. Do **not** start Batch 9.
+**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. Final acceptance + UV regression closure: transform center defaults `(0,0)`; map channels default UV0; multi-UV / selective cache / KTX2 / prefab / lifecycle / perf verified. VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`.
+**Batch 9 status:** **Complete** — hierarchical authoring layers (independent of parenting/Cells/Prefabs/`THREE.Layers`), Layers dock, Outliner/Details, editor-only hide/lock/solo, creation/prefab stamping, SceneView filters + fingerprint rebuild fix, ViewHelper. TextureHelper Deferred. See `docs/ACCEPTANCE_EDITOR_ORGANIZATION.md`.
 
 ### Principles
 
@@ -551,20 +552,21 @@ These are known follow-ups or accepted design decisions. They do **not** reopen 
 **Acceptance:** `docs/ACCEPTANCE_TEXTURES.md`, `public/levels/acceptance-textures.json`, Academy lesson 29 (`textures`), harness `src/dev/textureAcceptanceClosure.js`.  
 **Closure:** selective `invalidateTextureCacheMatching`; bind-time `bbUvWarnings`; multi-UV fixture `mesh_batch8_multi_uv.glb`; mansion single ~84 / quad ~18.7 FPS (parity with pre-Batch 8 stabilization).  
 **Depends on:** Batch 7 KTX2. **Feeds** Batch 2/4.  
-**Note:** Dedicated lightmap UV channel baking remains **Deferred**; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking. VideoTexture deferred. Do **not** start Batch 9 from this closure.
+**Note:** Dedicated lightmap UV channel baking remains **Deferred**; Batch 8 UV-channel UI is a supporting dependency, not a substitute for baking. VideoTexture deferred.
 
-### Batch 9 — Editor organization & viewport tools
+### Batch 9 — Editor organization & viewport tools — **Complete**
 
-| Pri | Item |
-|-----|------|
-| P0 | Authoring layers enum + actor assignment |
-| P0 | Layer visibility / lock / solo in Outliner + viewport filter |
-| P1 | Layer-aware creation default |
-| P1 | ViewHelper |
-| P2 | TextureHelper / advanced diagnostics |
-| P2 | Optional mapping authoring layers → THREE.Layers for render perf (document carefully) |
+| Pri | Item | Status |
+|-----|------|--------|
+| P0 | Hierarchical authoring layers + actor assignment | **Done** |
+| P0 | Layer visibility / lock / solo (editor-only) + SceneView filter | **Done** |
+| P1 | Layer-aware creation / duplicate / prefab place | **Done** |
+| P1 | ViewHelper (per perspective pane) | **Done** |
+| P2 | TextureHelper / advanced diagnostics | **Deferred** (Texture Inspector) |
+| P2 | Mapping authoring layers → THREE.Layers | **Rejected** (documented; stay separate) |
 
-**Depends on:** soft — can start early; avoid coupling to prefabs/cells.
+**Acceptance:** `docs/ACCEPTANCE_EDITOR_ORGANIZATION.md`, `public/levels/acceptance-layers.json`, Academy lesson 30 (`editor-layers`).  
+**Depends on:** soft — independent of prefabs/cells parenting.
 
 ### Cross-batch dependency graph
 

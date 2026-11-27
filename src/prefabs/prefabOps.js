@@ -90,6 +90,8 @@ export function createPrefabFromActors(world, actorIds, {
     } else {
       delete json.prefab;
     }
+    // Prefab assets must not embed map-specific authoring layer IDs.
+    delete json.authoringLayerId;
     return json;
   });
 

@@ -522,6 +522,11 @@ export const HELP_CONTENT = {
     title: 'Locked',
     body: 'When locked, gizmo moves and geometry edits are blocked for this actor (and effectively for descendants of locked ancestors).',
   },
+  'details.authoringLayer': {
+    title: 'Authoring Layer',
+    body: 'Membership in a hierarchical authoring layer (Architecture, Props, Lighting, …). Independent of parenting, Cells, and Prefabs. New actors use the Active layer from the Layers panel.',
+    tips: 'Layer hide/lock/solo are editor filters only — they do not change this actor’s Visible/Locked flags.',
+  },
   'details.newCell': {
     title: 'New Cell',
     body: 'Creates a Cell actor at the world origin and selects it. Use parenting to assign room contents to the cell.',
@@ -1130,6 +1135,28 @@ export const HELP_CONTENT = {
     title: 'Tutorials',
     body: 'Guided lessons (Academy) with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
     tips: 'Help → Tutorials… or Window → Tutorials. Covers building, workspace Fog/PP chips, World Fog & Atmosphere, Post Processing, Project Art Library, and Asset Generation.',
+  },
+  'panel.layers': {
+    title: 'Layers',
+    body: 'Hierarchical authoring layers for organizing the level. Set Active for new actor membership; eye/lock/solo filter the viewport in edit mode only. Drag Outliner actors onto a layer to assign. Nested visibility/lock is self ∧ ancestors; solo restores the prior hidden map when cleared.',
+    tips: 'Window → Layers. Prefab assets strip map layer IDs; place assigns the Active layer. Not mapped to THREE.Layers.',
+  },
+  'layers.new': {
+    title: 'New Layer',
+    body: 'Creates a top-level authoring layer. Right-click a layer for New Child Layer, rename, delete (with actor reassignment), or select-all-in-layer.',
+  },
+  'layers.assignSelection': {
+    title: 'Assign Selection',
+    body: 'Moves the current selection onto the Active authoring layer (undoable).',
+  },
+  'outliner.layerFilter': {
+    title: 'Filter by Layer',
+    body: 'Shows only actors on the chosen authoring layer (and their ancestors for hierarchy context). Does not replace parent-based Outliner tree.',
+  },
+  'viewport.viewHelper': {
+    title: 'ViewHelper',
+    body: 'Corner axis gizmo on perspective panes. Click an axis to animate the camera toward that view around the orbit focus. Hidden in orthographic panes and Play.',
+    tips: 'TextureHelper is deferred — use the Texture Inspector for sampling diagnostics.',
   },
   'settings.dialog': {
     title: 'Editor Settings',

@@ -34,6 +34,8 @@ export const DEFAULT_LAYOUT = {
   assetViewerVisible: true,
   /** Tutorials panel starts closed; open via Help → Tutorials. */
   tutorialsVisible: false,
+  /** Layers panel starts closed; open via Window → Layers. */
+  layersVisible: false,
   viewportMaximized: false,
   /** Single/multi viewport chrome (also stored on named layouts). */
   viewportView: { ...DEFAULT_VIEWPORT_VIEW },
@@ -69,6 +71,7 @@ export function clampLayout(partial = {}) {
   next.contentVisible = Boolean(next.contentVisible);
   next.assetViewerVisible = next.assetViewerVisible !== false;
   next.tutorialsVisible = Boolean(next.tutorialsVisible);
+  next.layersVisible = Boolean(next.layersVisible);
   delete next.openartVisible; // retired — OpenArt lives in AI Assets workspace
   next.viewportMaximized = false;
   next.viewportView = normalizeViewportView(next.viewportView);
