@@ -20,6 +20,7 @@ import {
   suppressNativeImageMenu,
   useEditorContextMenu,
 } from '../../ui/contextMenu/EditorContextMenu.jsx';
+import { isContentCategory } from '../../assets/contentFolders.js';
 /**
  * Bottom Asset Viewer — lists assets from the Content Browser folder.
  * Double-click opens a temporary preview window (not embedded in the panel).
@@ -29,8 +30,10 @@ export function AssetViewer({ docked = false } = {}) {
   const { layout, patch } = useLayout();
   const {
     selectedAssetId,
+    selectedAssetIds,
     selectedAsset,
     selectAsset,
+    selectAssetInList,
     searchQuery,
     setSearchQuery,
     queryAssets,
@@ -44,6 +47,7 @@ export function AssetViewer({ docked = false } = {}) {
     dragMime,
     notify,
     folders,
+    registry,
     mutateFolders,
   } = useAssetBrowser();
   const {
@@ -67,6 +71,11 @@ export function AssetViewer({ docked = false } = {}) {
   const assets = useMemo(
     () => queryAssets(folder),
     [queryAssets, folder, searchQuery],
+  );
+  const assetIds = useMemo(() => assets.map((a) => a.id), [assets]);
+  const selectedAssetIdSet = useMemo(
+    () => new Set(selectedAssetIds || []),
+    [selectedAssetIds],
   );
 
   useEffect(() => {
@@ -309,7 +318,7 @@ export function AssetViewer({ docked = false } = {}) {
         ) : (
           <ul className={`bb-asset-list bb-asset-list--${viewMode}`}>
             {assets.map((asset) => {
-              const selected = asset.id === selectedAssetId;
+              const selected = selectedAssetIdSet.has(asset.id);
               const size = viewMode === 'grid' ? thumbSize : listThumbSize;
               return (
                 <li key={asset.id}>
@@ -318,12 +327,18 @@ export function AssetViewer({ docked = false } = {}) {
                     className={`bb-asset-tile${selected ? ' is-selected' : ''}`}
                     draggable
                     onDragStart={(e) => beginAssetDrag(e, asset)}
-                    onClick={() => selectAsset(asset.id)}
+                    onClick={(e) => selectAssetInList(asset.id, assetIds, e)}
                     onDoubleClick={() => openPreview(asset)}
                     onContextMenu={(event) => {
                       suppressNativeImageMenu(event);
                       if (!selected) selectAsset(asset.id);
-                      const moveTargets = (folders || []).filter((f) => f !== asset.folder);
+                      const moveIds = selected && selectedAssetIds.length > 1
+                        ? selectedAssetIds
+                        : [asset.id];
+                      const moveTargets = (folders || []).filter((f) => (
+                        f !== asset.folder
+                        && !isContentCategory(f, registry?.folderMeta)
+                      ));
                       openFromEvent(event, [
                         {
                           id: 'preview',
@@ -337,28 +352,37 @@ export function AssetViewer({ docked = false } = {}) {
                         },
                         {
                           id: 'move-to',
-                          label: 'Move To Folder',
+                          label: moveIds.length > 1
+                            ? `Move ${moveIds.length} To Folder`
+                            : 'Move To Folder',
                           disabled: !moveTargets.length || !mutateFolders,
                           submenu: moveTargets.map((target) => ({
                             id: `move-${target}`,
                             label: target,
                             onSelect: async () => {
                               try {
-                                await mutateFolders({
-                                  type: 'move-asset',
-                                  assetId: asset.id,
-                                  folder: target,
-                                });
-                                notify?.(`Moved ${asset.name} to ${target}`);
+                                for (const assetId of moveIds) {
+                                  await mutateFolders({
+                                    type: 'move-asset',
+                                    assetId,
+                                    folder: target,
+                                  });
+                                }
+                                notify?.(
+                                  moveIds.length > 1
+                                    ? `Moved ${moveIds.length} assets to ${target}`
+                                    : `Moved ${asset.name} to ${target}`,
+                                  { dialog: false },
+                                );
                               } catch (err) {
-                                notify?.(err.message || 'Could not move asset');
+                                notify?.(err.message || 'Could not move asset', { dialog: true });
                               }
                             },
                           })),
                         },
                       ]);
                     }}
-                    title={`${asset.name} (${asset.type}) — double-click to preview`}
+                    title={`${asset.name} (${asset.type}) — Shift range, Ctrl toggle, Alt remove — double-click to preview`}
                     {...helpProps('content.asset')}
                   >
                     <AssetThumbnail asset={asset} size={size} />

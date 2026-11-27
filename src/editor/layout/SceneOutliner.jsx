@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import {
   IconBrush,
+  IconCategory,
   IconLight,
   IconSearch,
   IconSpawn,
@@ -11,13 +12,26 @@ import {
   normalizeAuthoringLayersState,
   resolveAuthoringLayerId,
 } from '../../core/authoringLayers.js';
+import {
+  buildOutlinerDisplayRoots,
+  normalizeOutlinerLayout,
+} from '../../core/outlinerLayout.js';
+import { normalizeIconColor } from '../../core/iconColor.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
 import { layerColorForActor } from './LayersPanel.jsx';
+import {
+  dataTransferHasType,
+  getListDropEdge,
+  LIST_DROP_AFTER,
+  LIST_DROP_BEFORE,
+  LIST_DROP_INTO,
+  listDropEdgeClass,
+} from '../dnd/listDropEdge.js';
 
 const OUTLINER_DRAG = 'application/x-bloodbound-outliner-actor';
-
+const OUTLINER_CATEGORY_DRAG = 'application/x-bloodbound-outliner-category';
 
 function typeIcon(actor) {
   if (actor.prefab?.prefabId) {
@@ -33,6 +47,40 @@ function typeIcon(actor) {
   return <IconBrush />;
 }
 
+function dropEdgeToken(edge) {
+  if (edge === LIST_DROP_BEFORE) return 'before';
+  if (edge === LIST_DROP_INTO) return 'into';
+  return 'after';
+}
+
+/** Category + actor ids that currently have children (for Collapse All). */
+function collectCollapsibleOutlinerIds(displayRoots, world, out = []) {
+  for (const node of displayRoots || []) {
+    if (node.kind === 'category') {
+      if (node.children?.length) {
+        out.push(node.id);
+        for (const actor of node.children) {
+          collectCollapsibleActorIds(actor.id, world, out);
+        }
+      }
+      continue;
+    }
+    if (node.kind === 'actor' && node.actor) {
+      collectCollapsibleActorIds(node.actor.id, world, out);
+    }
+  }
+  return out;
+}
+
+function collectCollapsibleActorIds(actorId, world, out) {
+  const kids = getChildren(actorId, world);
+  if (!kids.length) return;
+  out.push(actorId);
+  for (const child of kids) {
+    collectCollapsibleActorIds(child.id, world, out);
+  }
+}
+
 export function SceneOutliner({ docked = false } = {}) {
   const {
     world,
@@ -42,6 +90,7 @@ export function SceneOutliner({ docked = false } = {}) {
     mode,
     revision,
     reparentSelected,
+    reorderSelectedBeside,
     createCell,
     setSelectedActorFlags,
     renameSelected,
@@ -50,15 +99,20 @@ export function SceneOutliner({ docked = false } = {}) {
     createPrefabFromSelection,
     unpackSelectedPrefab,
     setStatus,
+    createOutlinerCategory,
+    renameOutlinerCategoryById,
+    deleteOutlinerCategoryById,
+    setOutlinerCategoryIconColorById,
+    placeOutlinerRoots,
   } = useEditor();
-  const { prompt, confirm } = useEditorDialogs();
+  const { prompt, confirm, pickColor } = useEditorDialogs();
   const { openFromEvent } = useEditorContextMenu();
   void revision;
 
   const [query, setQuery] = useState('');
   const [layerFilterId, setLayerFilterId] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
-  const [dropTargetId, setDropTargetId] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null); // { id, edge }
 
   const authoringLayers = useMemo(
     () => normalizeAuthoringLayersState(world?.authoringLayers, { seedIfEmpty: Boolean(world) }),
@@ -90,10 +144,10 @@ export function SceneOutliner({ docked = false } = {}) {
     return ids;
   }, [world, query, layerFilterId, authoringLayers, revision]);
 
-  const roots = useMemo(() => {
-    if (!world) return [];
-    return getRootActors(world).filter((a) => !filteredIds || filteredIds.has(a.id));
-  }, [world, filteredIds, revision]);
+  const { nodes: displayRoots } = useMemo(() => {
+    if (!world) return { nodes: [], layout: normalizeOutlinerLayout(null, null) };
+    return buildOutlinerDisplayRoots(world, world.outliner);
+  }, [world, world?.outliner, world?.actors, revision]);
 
   const toggleCollapse = (id) => {
     setCollapsed((prev) => {
@@ -104,14 +158,92 @@ export function SceneOutliner({ docked = false } = {}) {
     });
   };
 
-  const onDropOn = (targetId, asChild) => {
-    setDropTargetId(null);
+  const collapseAll = () => {
+    if (!world) return;
+    setCollapsed(new Set(collectCollapsibleOutlinerIds(displayRoots, world)));
+  };
+
+  const onDropOnActor = (targetId, edge = LIST_DROP_INTO) => {
+    setDropTarget(null);
     if (mode === 'play') return;
-    if (asChild) reparentSelected(targetId);
-    else {
-      const target = world?.getActor(targetId);
-      reparentSelected(target?.parentId || null);
+    if (edge === LIST_DROP_INTO) {
+      reparentSelected(targetId);
+      return;
     }
+    reorderSelectedBeside(targetId, edge);
+    if (placeOutlinerRoots && selectedActorIds.length) {
+      const roots = new Set(getRootActors(world).map((a) => a.id));
+      const moving = selectedActorIds.filter((id) => roots.has(id) || !world.getActor(id)?.parentId);
+      if (moving.length && roots.has(targetId)) {
+        placeOutlinerRoots(moving, { targetId, edge: dropEdgeToken(edge) });
+      }
+    }
+  };
+
+  const onDropOnCategory = (categoryId, edge = LIST_DROP_INTO) => {
+    setDropTarget(null);
+    if (mode === 'play' || !placeOutlinerRoots || !selectedActorIds.length) return;
+    const token = dropEdgeToken(edge);
+    placeOutlinerRoots(selectedActorIds, {
+      targetId: categoryId,
+      edge: token === 'into' ? 'into' : token,
+    });
+  };
+
+  const addCategory = async () => {
+    const name = await prompt('Category name', {
+      title: 'Add Outliner Category',
+      initialValue: 'New Category',
+    });
+    if (name == null) return;
+    createOutlinerCategory?.(String(name).trim() || 'New Category');
+    setStatus?.(`Added category “${String(name).trim() || 'New Category'}”`);
+  };
+
+  const openCategoryMenu = (event, category) => {
+    if (mode === 'play') return;
+    openFromEvent(event, [
+      {
+        id: 'rename',
+        label: 'Rename Category…',
+        onSelect: async () => {
+          const name = await prompt('Category name', {
+            title: 'Rename Category',
+            initialValue: category.name,
+          });
+          if (name == null || name === category.name) return;
+          renameOutlinerCategoryById?.(category.id, name);
+        },
+      },
+      {
+        id: 'icon-color',
+        label: 'Icon Color…',
+        onSelect: async () => {
+          const current = normalizeIconColor(category.iconColor) || '#8490a4';
+          const color = await pickColor('Pick an icon color. Most-used colors are remembered.', {
+            title: 'Icon Color',
+            initialValue: current,
+            allowClear: true,
+          });
+          if (color == null) return;
+          const next = color === '' ? null : normalizeIconColor(color);
+          setOutlinerCategoryIconColorById?.(category.id, next);
+        },
+      },
+      {
+        id: 'delete',
+        label: 'Delete Category',
+        danger: true,
+        onSelect: async () => {
+          const ok = await confirm(
+            `Delete category “${category.name}”? Actors in the section stay in the level.`,
+            { title: 'Delete Category', confirmLabel: 'Delete', tone: 'warning' },
+          );
+          if (!ok) return;
+          deleteOutlinerCategoryById?.(category.id);
+        },
+      },
+    ]);
   };
 
   const openActorContextMenu = (event, actor) => {
@@ -145,6 +277,22 @@ export function SceneOutliner({ docked = false } = {}) {
         },
       },
       {
+        id: 'icon-color',
+        label: 'Icon Color…',
+        disabled: count > 1,
+        onSelect: async () => {
+          const current = normalizeIconColor(actor.iconColor) || '#8490a4';
+          const color = await pickColor('Pick an icon color. Most-used colors are remembered.', {
+            title: 'Icon Color',
+            initialValue: current,
+            allowClear: true,
+          });
+          if (color == null) return;
+          const next = color === '' ? null : normalizeIconColor(color);
+          setSelectedActorFlags({ iconColor: next });
+        },
+      },
+      {
         id: 'duplicate',
         label: count > 1 ? `Duplicate ${count} Actors` : 'Duplicate',
         onSelect: () => duplicateSelected(),
@@ -169,8 +317,7 @@ export function SceneOutliner({ docked = false } = {}) {
         disabled: count < 1,
         onSelect: () => reparentSelected(null),
       },
-      { id: 'sep-create', separator: true },
-      {
+      { id: 'sep-create', separator: true },      {
         id: 'create-cell',
         label: 'Create Cell',
         onSelect: () => createCell(),
@@ -218,6 +365,26 @@ export function SceneOutliner({ docked = false } = {}) {
     ]);
   };
 
+  const renderActorNode = (actor, depth) => (
+    <OutlinerNode
+      key={actor.id}
+      actor={actor}
+      world={world}
+      depth={depth}
+      filteredIds={filteredIds}
+      collapsed={collapsed}
+      toggleCollapse={toggleCollapse}
+      selectedActorIds={selectedActorIds}
+      selectActor={selectActor}
+      mode={mode}
+      dropTarget={dropTarget}
+      setDropTarget={setDropTarget}
+      onDropOn={onDropOnActor}
+      setSelectedActorFlags={setSelectedActorFlags}
+      onActorContextMenu={openActorContextMenu}
+    />
+  );
+
   return (
     <aside className={`bb-panel-chrome bb-outliner${docked ? ' bb-panel-chrome--docked' : ''}`}>
       {!docked && (
@@ -256,7 +423,30 @@ export function SceneOutliner({ docked = false } = {}) {
         <div className="bb-outliner__actions">
           <button
             type="button"
-            className="bb-btn"
+            className="bb-btn bb-btn--ghost"
+            disabled={!world || mode === 'play'}
+            onClick={() => { void addCategory(); }}
+            title="Add category section header"
+            {...helpProps(
+              'outliner.category',
+              mode === 'play' ? 'Unavailable during Play mode.' : null,
+            )}
+          >
+            Category
+          </button>
+          <button
+            type="button"
+            className="bb-btn bb-btn--ghost"
+            disabled={!world}
+            onClick={collapseAll}
+            title="Collapse all categories and hierarchies"
+            {...helpProps('outliner.collapseAll')}
+          >
+            Collapse All
+          </button>
+          <button
+            type="button"
+            className="bb-btn bb-btn--ghost"
             disabled={!world || mode === 'play'}
             onClick={() => createCell()}
             title="Create empty cell"
@@ -269,7 +459,7 @@ export function SceneOutliner({ docked = false } = {}) {
           </button>
           <button
             type="button"
-            className="bb-btn"
+            className="bb-btn bb-btn--ghost"
             disabled={!world || mode === 'play' || selectedActorIds.length === 0}
             onClick={() => reparentSelected(null)}
             title="Unparent selection"
@@ -287,15 +477,24 @@ export function SceneOutliner({ docked = false } = {}) {
       <div
         className="bb-panel-chrome__body bb-outliner__body"
         onDragOver={(e) => {
-          if ([...e.dataTransfer.types].includes(OUTLINER_DRAG)) {
-            e.preventDefault();
-            setDropTargetId('__root__');
-          }
+          if (!dataTransferHasType(e.dataTransfer, [OUTLINER_DRAG, OUTLINER_CATEGORY_DRAG])) return;
+          e.preventDefault();
+          setDropTarget({ id: '__root__', edge: LIST_DROP_INTO });
         }}
-        onDragLeave={() => setDropTargetId(null)}
+        onDragLeave={() => setDropTarget(null)}
         onDrop={(e) => {
           e.preventDefault();
-          setDropTargetId(null);
+          setDropTarget(null);
+          const catId = e.dataTransfer.getData(OUTLINER_CATEGORY_DRAG);
+          if (catId && placeOutlinerRoots) {
+            // Drop category at end of list
+            const order = normalizeOutlinerLayout(world?.outliner, world).rootOrder;
+            const last = order[order.length - 1];
+            if (last && last !== catId) {
+              placeOutlinerRoots([catId], { targetId: last, edge: 'after' });
+            }
+            return;
+          }
           reparentSelected(null);
         }}
       >
@@ -303,30 +502,102 @@ export function SceneOutliner({ docked = false } = {}) {
           <p className="bb-muted">No level loaded</p>
         ) : (
           <>
-            <div className={`bb-outliner__root${dropTargetId === '__root__' ? ' is-drop' : ''}`}>
+            <div className={`bb-outliner__root bb-list-drop-line${dropTarget?.id === '__root__' ? ` ${listDropEdgeClass(LIST_DROP_INTO)}` : ''}`}>
               {world.name}
             </div>
             <ul className="bb-outliner-list">
-              {roots.map((actor) => (
-                <OutlinerNode
-                  key={actor.id}
-                  actor={actor}
-                  world={world}
-                  depth={0}
-                  filteredIds={filteredIds}
-                  collapsed={collapsed}
-                  toggleCollapse={toggleCollapse}
-                  selectedActorIds={selectedActorIds}
-                  selectActor={selectActor}
-                  mode={mode}
-                  dropTargetId={dropTargetId}
-                  setDropTargetId={setDropTargetId}
-                  onDropOn={onDropOn}
-                  setSelectedActorFlags={setSelectedActorFlags}
-                  onActorContextMenu={openActorContextMenu}
-                />
-              ))}
-              {roots.length === 0 && (
+              {displayRoots.map((node) => {
+                if (node.kind === 'category') {
+                  const hasKids = node.children.length > 0;
+                  const isCollapsed = collapsed.has(node.id);
+                  const dropEdge = dropTarget?.id === node.id ? dropTarget.edge : null;
+                  const visibleChildren = node.children.filter(
+                    (a) => !filteredIds || filteredIds.has(a.id),
+                  );
+                  if (filteredIds && !visibleChildren.length && query.trim()) {
+                    return null;
+                  }
+                  return (
+                    <li key={node.id}>
+                      <div
+                        className={`bb-outliner-row bb-outliner-row--category bb-list-drop-line${dropEdge ? ` ${listDropEdgeClass(dropEdge)}` : ''}`}
+                        onContextMenu={(e) => openCategoryMenu(e, node)}
+                        onDragOver={(e) => {
+                          if (!dataTransferHasType(e.dataTransfer, [OUTLINER_DRAG, OUTLINER_CATEGORY_DRAG])) {
+                            return;
+                          }
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const edge = getListDropEdge(e.clientY, e.currentTarget, { allowInto: true });
+                          setDropTarget({ id: node.id, edge });
+                        }}
+                        onDragLeave={() => {
+                          if (dropTarget?.id === node.id) setDropTarget(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const edge = dropTarget?.id === node.id
+                            ? dropTarget.edge
+                            : getListDropEdge(e.clientY, e.currentTarget, { allowInto: true });
+                          setDropTarget(null);
+                          const dragCat = e.dataTransfer.getData(OUTLINER_CATEGORY_DRAG);
+                          if (dragCat) {
+                            placeOutlinerRoots?.([dragCat], {
+                              targetId: node.id,
+                              edge: dropEdgeToken(edge) === 'into' ? 'after' : dropEdgeToken(edge),
+                            });
+                            return;
+                          }
+                          onDropOnCategory(node.id, edge);
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="bb-outliner-twist bb-content-category-twist"
+                          disabled={!hasKids}
+                          aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+                          onClick={() => {
+                            if (hasKids) toggleCollapse(node.id);
+                          }}
+                        >
+                          {hasKids ? (isCollapsed ? '▸' : '▾') : '·'}
+                        </button>
+                        <button
+                          type="button"
+                          className={`bb-outliner-category${isCollapsed ? ' is-collapsed' : ''}`}
+                          draggable={mode !== 'play'}
+                          disabled={mode === 'play'}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(OUTLINER_CATEGORY_DRAG, node.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onClick={() => {
+                            if (hasKids) toggleCollapse(node.id);
+                          }}
+                          {...helpProps('outliner.category')}
+                        >
+                          <span
+                            className="bb-list-icon"
+                            style={node.iconColor ? { color: node.iconColor } : undefined}
+                          >
+                            <IconCategory />
+                          </span>
+                          <span className="bb-outliner-category__name">{node.name}</span>
+                        </button>
+                      </div>
+                      {hasKids && !isCollapsed && (
+                        <ul className="bb-outliner-list">
+                          {visibleChildren.map((actor) => renderActorNode(actor, 1))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                }
+                if (filteredIds && !filteredIds.has(node.actor.id)) return null;
+                return renderActorNode(node.actor, 0);
+              })}
+              {displayRoots.length === 0 && (
                 <li className="bb-muted">No matching actors</li>
               )}
             </ul>
@@ -347,8 +618,8 @@ function OutlinerNode({
   selectedActorIds,
   selectActor,
   mode,
-  dropTargetId,
-  setDropTargetId,
+  dropTarget,
+  setDropTarget,
   onDropOn,
   setSelectedActorFlags,
   onActorContextMenu,
@@ -359,12 +630,12 @@ function OutlinerNode({
   const isCollapsed = collapsed.has(actor.id);
   const selected = selectedActorIds.includes(actor.id);
   const isCell = Boolean(actor.getComponent('Cell'));
-  const isDrop = dropTargetId === actor.id;
+  const dropEdge = dropTarget?.id === actor.id ? dropTarget.edge : null;
 
   return (
     <li>
       <div
-        className={`bb-outliner-row${selected ? ' is-selected' : ''}${isDrop ? ' is-drop' : ''}${actor.visible === false ? ' is-hidden' : ''}${actor.locked ? ' is-locked' : ''}`}
+        className={`bb-outliner-row bb-list-drop-line${selected ? ' is-selected' : ''}${dropEdge ? ` ${listDropEdgeClass(dropEdge)}` : ''}${actor.visible === false ? ' is-hidden' : ''}${actor.locked ? ' is-locked' : ''}`}
         style={{ paddingLeft: 6 + depth * 12 }}
         draggable={mode !== 'play'}
         {...helpProps('outliner.row')}
@@ -374,16 +645,24 @@ function OutlinerNode({
           e.dataTransfer.effectAllowed = 'move';
         }}
         onDragOver={(e) => {
-          if (![...e.dataTransfer.types].includes(OUTLINER_DRAG)) return;
+          if (!dataTransferHasType(e.dataTransfer, [OUTLINER_DRAG])) return;
           e.preventDefault();
           e.stopPropagation();
-          setDropTargetId(actor.id);
+          const edge = getListDropEdge(e.clientY, e.currentTarget, { allowInto: true });
+          setDropTarget({ id: actor.id, edge });
+        }}
+        onDragLeave={() => {
+          if (dropTarget?.id === actor.id) setDropTarget(null);
         }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onDropOn(actor.id, true);
+          const edge = dropTarget?.id === actor.id
+            ? dropTarget.edge
+            : getListDropEdge(e.clientY, e.currentTarget, { allowInto: true });
+          onDropOn(actor.id, edge);
         }}
+        onDragEnd={() => setDropTarget(null)}
         onContextMenu={(e) => onActorContextMenu?.(e, actor)}
       >
         <button
@@ -409,7 +688,12 @@ function OutlinerNode({
             style={{ background: layerColorForActor(actor, world) }}
             title="Authoring layer"
           />
-          <span className="bb-outliner-item__icon">{typeIcon(actor)}</span>
+          <span
+            className="bb-outliner-item__icon"
+            style={actor.iconColor ? { color: actor.iconColor } : undefined}
+          >
+            {typeIcon(actor)}
+          </span>
           <span className="bb-outliner-item__name">{actor.name}</span>
           <span className="bb-outliner-item__type">
             {isCell
@@ -468,8 +752,8 @@ function OutlinerNode({
               selectedActorIds={selectedActorIds}
               selectActor={selectActor}
               mode={mode}
-              dropTargetId={dropTargetId}
-              setDropTargetId={setDropTargetId}
+              dropTarget={dropTarget}
+              setDropTarget={setDropTarget}
               onDropOn={onDropOn}
               setSelectedActorFlags={setSelectedActorFlags}
               onActorContextMenu={onActorContextMenu}

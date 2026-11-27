@@ -5,6 +5,8 @@ import {
   ASSET_DRAG_MIME_MATERIAL,
 } from '../../assets/assetCatalog.js';
 import { CREATE_DRAG_MIME } from '../creation/creationTools.js';
+import { ChecklistPanel } from '../checklists/ChecklistPanel.jsx';
+import { StickyNotesLayer } from '../stickyNotes/StickyNotesLayer.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { dockviewComponents } from './dockPanels.jsx';
 import { bloodboundDockTheme } from './dockTheme.js';
@@ -106,7 +108,14 @@ export function LevelDockWorkspace() {
     let restored = false;
     if (isValidDockLayout(saved)) {
       try {
-        api.fromJSON(saved);
+        // Strip always-renderer before restore — its overlay lets WebGL cover side panels.
+        const cleaned = structuredClone(saved);
+        if (cleaned?.panels) {
+          for (const panel of Object.values(cleaned.panels)) {
+            if (panel?.renderer === 'always') delete panel.renderer;
+          }
+        }
+        api.fromJSON(cleaned);
         ensureViewportPanel(api);
         restored = true;
       } catch {
@@ -157,6 +166,9 @@ export function LevelDockWorkspace() {
           'closeAll',
         ]}
       />
+      {/* Above all dock panels so notes can park over Outliner / Content / Details. */}
+      <StickyNotesLayer />
+      <ChecklistPanel />
     </div>
   );
 }

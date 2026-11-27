@@ -6,9 +6,6 @@ import { useEditorSettings } from './EditorSettingsContext.jsx';
 import { useEditorDialogs } from '../ui/dialogs/EditorDialogContext.jsx';
 import { useEditorContextMenu } from '../ui/contextMenu/EditorContextMenu.jsx';
 import {
-  viewportColorsFromSettings,
-} from './editorSettingsPrefs.js';
-import {
   snapToGrid,
   WALL_MODULE_SIZE,
 } from '../core/units.js';
@@ -50,6 +47,7 @@ import { useLayout } from './layout/LayoutContext.jsx';
 import { viewScaleFactor } from './layout/viewScale.js';
 import { ViewportLayout } from './viewport/ViewportLayout.jsx';
 import {
+  applyEditorViewportLook,
   buildViewportPanes,
   capturePanePoses,
   configureOrbitForPane,
@@ -327,7 +325,7 @@ export function Viewport() {
         const invert = editorSettingsRef.current?.cameraInvertY;
         baseRotateUp(invert ? -angle : angle);
       };
-      runtime.setViewportColors?.(viewportColorsFromSettings(prefs));
+      applyEditorViewportLook(runtime, prefs);
       runtime.setPlayLookOptions?.({
         sensitivityMul: prefs?.playLookSensitivity ?? 1,
         invertY: Boolean(prefs?.cameraInvertY),
@@ -838,9 +836,7 @@ export function Viewport() {
   ]);
 
   useEffect(() => {
-    const runtime = runtimeRef.current;
-    if (!runtime) return;
-    runtime.setViewportColors?.(viewportColorsFromSettings(editorSettings));
+    applyEditorViewportLook(runtimeRef.current, editorSettings);
   }, [
     runtimeRef,
     editorSettings.viewportBackground,
@@ -848,6 +844,9 @@ export function Viewport() {
     editorSettings.viewportGridMinor,
     editorSettings.viewportSelection,
     editorSettings.viewportSubtract,
+    editorSettings.showSubtractVolumes,
+    editorSettings.subtractVolumeOpacity,
+    editorSettings.showLightHelpers,
   ]);
 
   useEffect(() => {

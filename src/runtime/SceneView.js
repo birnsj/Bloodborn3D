@@ -32,6 +32,12 @@ export class SceneView {
     /** Unreal-style Game View (G) — hides editor helpers while editing. */
     this.gameView = false;
     this.viewportColors = { ...DEFAULT_VIEWPORT_COLORS };
+    /** Edit-mode subtract fill visibility (edge lines always remain). */
+    this.subtractFillVisible = true;
+    /** Edit-mode subtract fill opacity (0–1). Edge lines stay opaque. */
+    this.subtractFillOpacity = 0.14;
+    /** Edit-mode light gizmos (THREE.Light objects stay active either way). */
+    this.lightHelpersVisible = true;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.viewportColors.background);
 

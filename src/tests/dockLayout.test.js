@@ -109,7 +109,8 @@ describe('dock layout defaults', () => {
       referencePanel: 'outliner',
       direction: 'below',
     });
-    expect(api.addPanel.mock.calls[0][0].renderer).toBe('always');
+    // Viewport must not use dockview's always-renderer (overlay paints over side panels).
+    expect(api.addPanel.mock.calls[0][0].renderer).toBeUndefined();
   });
 
   it('validates serialized dock layouts and rejects garbage', () => {

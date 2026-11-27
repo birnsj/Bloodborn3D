@@ -220,6 +220,14 @@ export class GameRuntime {
     this.sceneView.setViewportColors(colors, this.world);
   }
 
+  setSubtractDisplay(options) {
+    this.sceneView.setSubtractDisplay?.(options);
+  }
+
+  setLightHelpersVisible(visible) {
+    this.sceneView.setLightHelpersVisible?.(visible);
+  }
+
   setPlayLookOptions({ sensitivityMul, invertY } = {}) {
     if (sensitivityMul != null && Number.isFinite(sensitivityMul)) {
       this.playLook.sensitivityMul = sensitivityMul;

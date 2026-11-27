@@ -71,6 +71,35 @@ export class SceneSettingsMethods {
     }
   }
 
+  /**
+   * Show/hide editor light gizmos. Actual light contribution is unchanged.
+   */
+  setLightHelpersVisible(visible) {
+    if (typeof visible === 'boolean') this.lightHelpersVisible = visible;
+    this._applyLightHelpersVisibility();
+  }
+
+  _applyLightHelpersVisibility() {
+    const show = this.lightHelpersVisible !== false;
+    for (const entry of this._actorMeshes.values()) {
+      entry.group?.traverse?.((obj) => {
+        if (obj.userData?.bbLightGizmo) obj.visible = show;
+      });
+    }
+  }
+
+  /**
+   * Show/hide the translucent subtract fill and set its opacity.
+   * Border/edge lines stay visible and fully opaque either way.
+   */
+  setSubtractDisplay({ visible, opacity } = {}) {
+    if (typeof visible === 'boolean') this.subtractFillVisible = visible;
+    if (typeof opacity === 'number' && Number.isFinite(opacity)) {
+      this.subtractFillOpacity = Math.min(1, Math.max(0, opacity));
+    }
+    this._applySubtractDisplayToMeshes();
+  }
+
   _applySubtractColorsToMeshes() {
     const color = this.viewportColors.subtract;
     for (const entry of this._actorMeshes.values()) {
@@ -80,9 +109,62 @@ export class SceneSettingsMethods {
       });
       // Edge lines paired with subtract meshes (no brushOperation flag on edges).
       entry.group.traverse((obj) => {
+        if (obj.userData?.brushOperation === 'subtract-edges') {
+          if (obj.material?.color) obj.material.color.setHex(color);
+          return;
+        }
         if (!obj.isLineSegments || !obj.userData?.editorOnly) return;
         if (obj.material?.color && entry.actor?.getComponent?.('Brush')?.operation === 'subtract') {
           obj.material.color.setHex(color);
+        }
+      });
+    }
+    this._applySubtractDisplayToMeshes();
+  }
+
+  _applySubtractDisplayToMeshes() {
+    const fillVisible = this.subtractFillVisible !== false;
+    const fillOpacity = Number.isFinite(this.subtractFillOpacity)
+      ? this.subtractFillOpacity
+      : 0.14;
+    if (this._sharedCutterMaterials?.fill) {
+      this._sharedCutterMaterials.fill.opacity = fillOpacity;
+      this._sharedCutterMaterials.fill.transparent = true;
+      this._sharedCutterMaterials.fill.depthWrite = false;
+      this._sharedCutterMaterials.fill.needsUpdate = true;
+    }
+    if (this._sharedCutterMaterials?.line) {
+      this._sharedCutterMaterials.line.transparent = false;
+      this._sharedCutterMaterials.line.opacity = 1;
+      this._sharedCutterMaterials.line.needsUpdate = true;
+    }
+    for (const entry of this._actorMeshes.values()) {
+      entry.group?.traverse?.((obj) => {
+        if (obj.userData?.brushOperation === 'subtract') {
+          obj.visible = fillVisible;
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const mat of mats) {
+            if (!mat) continue;
+            mat.transparent = true;
+            mat.opacity = fillOpacity;
+            mat.depthWrite = false;
+            mat.needsUpdate = true;
+          }
+          return;
+        }
+        if (obj.userData?.brushOperation === 'subtract-edges' || (
+          obj.isLineSegments
+          && obj.userData?.editorOnly
+          && entry.actor?.getComponent?.('Brush')?.operation === 'subtract'
+        )) {
+          obj.visible = true;
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const mat of mats) {
+            if (!mat) continue;
+            mat.transparent = false;
+            mat.opacity = 1;
+            mat.needsUpdate = true;
+          }
         }
       });
     }

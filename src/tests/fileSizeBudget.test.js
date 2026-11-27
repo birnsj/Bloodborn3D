@@ -18,7 +18,7 @@ const SLACK = 100;
 
 /** path (relative to src/) -> maximum allowed lines. Lower these as files are split. */
 const BUDGETS = {
-  'editor/Viewport.jsx': 2787,
+  'editor/Viewport.jsx': 2786,
   'editor/projectArt/ProjectArtLibraryPanel.jsx': 2429,
   'editor/layout/DetailsPanel.jsx': 1864,
   // Help text table: content, not logic, so it gets more room.

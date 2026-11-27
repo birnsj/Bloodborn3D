@@ -4,6 +4,7 @@ import {
   normalizeContentOffset,
   contentOffsetIsIdentity,
 } from './contentOffset.js';
+import { normalizeIconColor } from './iconColor.js';
 
 function normalizePrefabLink(prefab) {
   if (!prefab?.prefabId) return null;
@@ -37,6 +38,7 @@ export class Actor {
     visible = true,
     locked = false,
     authoringLayerId = null,
+    iconColor = null,
     prefab = null,
     contentOffset = null,
   } = {}) {
@@ -55,6 +57,8 @@ export class Actor {
     this.parentId = parentId || null;
     this.visible = visible !== false;
     this.locked = Boolean(locked);
+    /** Optional Outliner icon tint (#rrggbb). Editor chrome only. */
+    this.iconColor = normalizeIconColor(iconColor);
     /** Batch 9 — membership in world.authoringLayers (independent of parentId). */
     this.authoringLayerId = authoringLayerId ? String(authoringLayerId) : null;
     /** @type {null | object} Prefab instance linkage (engine-neutral). */
@@ -113,6 +117,9 @@ export class Actor {
     if (this.authoringLayerId) {
       json.authoringLayerId = this.authoringLayerId;
     }
+    if (this.iconColor) {
+      json.iconColor = this.iconColor;
+    }
     if (this.prefab?.prefabId) {
       json.prefab = normalizePrefabLink(this.prefab);
     }
@@ -132,6 +139,7 @@ export class Actor {
       visible: data.visible !== false,
       locked: Boolean(data.locked),
       authoringLayerId: data.authoringLayerId || null,
+      iconColor: data.iconColor || null,
       prefab: data.prefab || null,
       contentOffset: data.contentOffset || null,
       components,

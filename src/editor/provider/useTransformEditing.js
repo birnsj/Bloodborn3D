@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { snapToGrid } from '../../core/units.js';
 import { getBrushSnapSize, snapCenterByEdges } from '../gridSnap.js';
-import { AddActorsCommand, SetTransformsCommand, SetPivotCommand, SetBrushGeometryCommand, SetBrushOpeningsCommand, ReparentActorsCommand, SetActorFlagsCommand, SetConvexGeometryCommand, CompositeCommand } from '../history/commands.js';
+import { AddActorsCommand, SetTransformsCommand, SetPivotCommand, SetBrushGeometryCommand, SetBrushOpeningsCommand, ReparentActorsCommand, SetActorOrderCommand, SetActorFlagsCommand, SetConvexGeometryCommand, CompositeCommand } from '../history/commands.js';
 import { stampAuthoringLayer } from '../authoringLayerStamp.js';
 import { partitionEditableActorIds, lockedLayerFeedback } from '../authoringLayerGuards.js';
 import { applyGeometryMove, captureGeometryMoveStart, snapWorldDelta } from '../geometryEditing/faceMove.js';
@@ -619,6 +619,85 @@ const commitTransforms = useCallback((changes, label = 'Move') => {
     );
   }, [world, mode, executeCommand]);
 
+  /**
+   * Drop beside an Outliner row: reparent to the anchor's parent if needed, then
+   * place the selection before/after the anchor in world.actors order.
+   */
+  const reorderSelectedBeside = useCallback((anchorId, position = 'after') => {
+    if (!world || mode === 'play' || !anchorId || selectedRef.current.length === 0) return;
+    const anchor = world.getActor(anchorId);
+    if (!anchor) return;
+    const parentId = anchor.parentId || null;
+    const movingIds = selectedRef.current.filter((id) => {
+      if (id === anchorId) return false;
+      const actor = world.getActor(id);
+      return Boolean(actor) && !isEditorActorLocked(actor);
+    });
+    if (!movingIds.length) return;
+
+    const reparentChanges = [];
+    for (const actorId of movingIds) {
+      const actor = world.getActor(actorId);
+      if (!actor) continue;
+      if ((actor.parentId || null) === parentId) continue;
+      const before = {
+        parentId: actor.parentId,
+        transform: actor.transform.toJSON(),
+      };
+      const result = reparentActor(actor, parentId, world);
+      if (!result.ok || !result.changed) {
+        actor.parentId = before.parentId;
+        actor.transform.copyFrom(before.transform);
+        continue;
+      }
+      reparentChanges.push({
+        actorId,
+        before,
+        after: {
+          parentId: actor.parentId,
+          transform: actor.transform.toJSON(),
+        },
+      });
+      actor.parentId = before.parentId;
+      actor.transform.copyFrom(before.transform);
+    }
+
+    const beforeIds = world.actors.map((a) => a.id);
+    const movingSet = new Set(movingIds);
+    const without = beforeIds.filter((id) => !movingSet.has(id));
+    const anchorIdx = without.indexOf(anchorId);
+    if (anchorIdx < 0) return;
+    const insertAt = position === 'before' ? anchorIdx : anchorIdx + 1;
+    const afterIds = [...without.slice(0, insertAt), ...movingIds, ...without.slice(insertAt)];
+    const orderChanged = afterIds.some((id, i) => id !== beforeIds[i]);
+
+    const commands = [];
+    if (reparentChanges.length) {
+      commands.push(new ReparentActorsCommand({
+        world,
+        changes: reparentChanges,
+        label: parentId ? 'Parent' : 'Unparent',
+      }));
+    }
+    if (orderChanged) {
+      commands.push(new SetActorOrderCommand({
+        world,
+        beforeIds,
+        afterIds,
+        label: 'Reorder',
+      }));
+    }
+    if (!commands.length) return;
+    if (commands.length === 1) {
+      executeCommand(commands[0], { resync: true });
+      return;
+    }
+    executeCommand(
+      new CompositeCommand({ commands, label: 'Reorder' }),
+      { resync: true },
+    );
+  }, [world, mode, executeCommand]);
+
   const createCell = useCallback((name = 'Cell', position) => {
     if (!world || mode === 'play') return null;
     if (rejectIfActiveLayerLocked('create')) return null;
@@ -682,6 +761,7 @@ const commitTransforms = useCallback((changes, label = 'Move') => {
     previewBrushGeometry,
     previewFaceMove,
     reparentSelected,
+    reorderSelectedBeside,
     setSelectedActorFlags,
     updateSelectedContentOffset,
     updateSelectedTransform,

@@ -9,6 +9,13 @@ import {
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useEditorContextMenu } from '../../ui/contextMenu/EditorContextMenu.jsx';
+import {
+  dataTransferHasType,
+  getListDropEdge,
+  LIST_DROP_BEFORE,
+  LIST_DROP_INTO,
+  listDropEdgeClass,
+} from '../dnd/listDropEdge.js';
 
 const OUTLINER_DRAG = 'application/x-bloodbound-outliner-actor';
 const LAYER_DRAG = 'application/x-bloodbound-authoring-layer';
@@ -36,13 +43,13 @@ export function LayersPanel({ docked = false } = {}) {
     selectActorsInAuthoringLayer,
     setStatus,
   } = useEditor();
-  const { prompt, confirm } = useEditorDialogs();
+  const { prompt, confirm, pickColor } = useEditorDialogs();
   const { openFromEvent } = useEditorContextMenu();
   void revision;
 
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
-  const [dropLayerId, setDropLayerId] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null); // { id, edge }
 
   const state = useMemo(
     () => normalizeAuthoringLayersState(world?.authoringLayers, { seedIfEmpty: Boolean(world) }),
@@ -121,17 +128,12 @@ export function LayersPanel({ docked = false } = {}) {
         id: 'recolor',
         label: 'Recolor…',
         onSelect: async () => {
-          const color = await prompt('Hex color (#rrggbb)', {
+          const color = await pickColor('Pick a layer color. Most-used colors are remembered.', {
             title: 'Layer Color',
             initialValue: layer.color || '#888888',
           });
-          if (color == null) return;
-          const next = String(color).trim();
-          if (/^#[0-9a-fA-F]{6}$/.test(next)) {
-            updateAuthoringLayer(layer.id, { color: next });
-          } else {
-            setStatus?.('Color must be #rrggbb');
-          }
+          if (color == null || color === '') return;
+          updateAuthoringLayer(layer.id, { color });
         },
       },
       {
@@ -234,8 +236,8 @@ export function LayersPanel({ docked = false } = {}) {
                 counts={counts}
                 layerUi={layerUi}
                 disabled={disabled}
-                dropLayerId={dropLayerId}
-                setDropLayerId={setDropLayerId}
+                dropTarget={dropTarget}
+                setDropTarget={setDropTarget}
                 onActivate={setActiveAuthoringLayer}
                 onToggleHidden={toggleAuthoringLayerHidden}
                 onToggleLocked={toggleAuthoringLayerLocked}
@@ -270,8 +272,8 @@ function LayerNode({
   counts,
   layerUi,
   disabled,
-  dropLayerId,
-  setDropLayerId,
+  dropTarget,
+  setDropTarget,
   onActivate,
   onToggleHidden,
   onToggleLocked,
@@ -295,28 +297,40 @@ function LayerNode({
   const isLocked = layerUi.locked?.has?.(layer.id);
   const isSolo = layerUi.solo?.activeLayerId === layer.id;
   const count = counts[layer.id] || 0;
-  const isDrop = dropLayerId === layer.id;
+  const dropEdge = dropTarget?.id === layer.id ? dropTarget.edge : null;
 
   return (
     <li>
       <div
-        className={`bb-layers-row${isActive ? ' is-active' : ''}${isHidden ? ' is-hidden' : ''}${isLocked ? ' is-locked' : ''}${isDrop ? ' is-drop' : ''}`}
+        className={`bb-layers-row bb-list-drop-line${isActive ? ' is-active' : ''}${isHidden ? ' is-hidden' : ''}${isLocked ? ' is-locked' : ''}${dropEdge ? ` ${listDropEdgeClass(dropEdge)}` : ''}`}
         style={{ paddingLeft: 4 + depth * 12 }}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu(e, layer);
         }}
         onDragOver={(e) => {
-          const types = [...e.dataTransfer.types];
-          if (types.includes(OUTLINER_DRAG) || types.includes(LAYER_DRAG)) {
-            e.preventDefault();
-            setDropLayerId(layer.id);
-          }
+          if (!dataTransferHasType(e.dataTransfer, [OUTLINER_DRAG, LAYER_DRAG])) return;
+          e.preventDefault();
+          const isActorDrag = dataTransferHasType(e.dataTransfer, [OUTLINER_DRAG]);
+          const edge = getListDropEdge(e.clientY, e.currentTarget, {
+            // Actor drops always assign into the layer; layer drags use insert lines.
+            allowInto: true,
+            edgeRatio: isActorDrag ? 0.5 : 0.28,
+          });
+          setDropTarget({
+            id: layer.id,
+            edge: isActorDrag ? LIST_DROP_INTO : edge,
+          });
         }}
-        onDragLeave={() => setDropLayerId(null)}
+        onDragLeave={() => {
+          if (dropTarget?.id === layer.id) setDropTarget(null);
+        }}
         onDrop={(e) => {
           e.preventDefault();
-          setDropLayerId(null);
+          const edge = dropTarget?.id === layer.id
+            ? dropTarget.edge
+            : getListDropEdge(e.clientY, e.currentTarget, { allowInto: true });
+          setDropTarget(null);
           if (disabled) return;
           const actorId = e.dataTransfer.getData(OUTLINER_DRAG);
           if (actorId) {
@@ -325,12 +339,27 @@ function LayerNode({
             return;
           }
           const dragLayerId = e.dataTransfer.getData(LAYER_DRAG);
-          if (dragLayerId && dragLayerId !== layer.id) {
+          if (!dragLayerId || dragLayerId === layer.id) return;
+
+          if (edge === LIST_DROP_INTO) {
             onUpdate(dragLayerId, { parentId: layer.id });
             const siblings = getLayerChildren(layers, layer.id).map((l) => l.id);
             if (!siblings.includes(dragLayerId)) siblings.push(dragLayerId);
             onReorder(siblings, layer.id);
+            return;
           }
+
+          const parentId = layer.parentId || null;
+          onUpdate(dragLayerId, { parentId });
+          const siblings = getLayerChildren(layers, parentId)
+            .map((l) => l.id)
+            .filter((id) => id !== dragLayerId);
+          const idx = siblings.indexOf(layer.id);
+          const insertAt = edge === LIST_DROP_BEFORE
+            ? Math.max(0, idx)
+            : (idx < 0 ? siblings.length : idx + 1);
+          siblings.splice(insertAt, 0, dragLayerId);
+          onReorder(siblings, parentId);
         }}
       >
         <button
@@ -351,6 +380,7 @@ function LayerNode({
             e.dataTransfer.setData(LAYER_DRAG, layer.id);
             e.dataTransfer.effectAllowed = 'move';
           }}
+          onDragEnd={() => setDropTarget(null)}
         />
         <button
           type="button"
@@ -427,8 +457,8 @@ function LayerNode({
           counts={counts}
           layerUi={layerUi}
           disabled={disabled}
-          dropLayerId={dropLayerId}
-          setDropLayerId={setDropLayerId}
+          dropTarget={dropTarget}
+          setDropTarget={setDropTarget}
           onActivate={onActivate}
           onToggleHidden={onToggleHidden}
           onToggleLocked={onToggleLocked}

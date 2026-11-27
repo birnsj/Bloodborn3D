@@ -16,6 +16,7 @@ export function createEmptyRegistry() {
   return {
     schemaVersion: ASSET_REGISTRY_SCHEMA_VERSION,
     folders: [],
+    folderMeta: {},
     assets: [],
   };
 }
@@ -29,9 +30,13 @@ export function normalizeRegistry(raw) {
   const folders = Array.isArray(raw.folders)
     ? raw.folders.map((f) => String(f || '').trim()).filter(Boolean)
     : [];
+  const folderMeta = raw.folderMeta && typeof raw.folderMeta === 'object' && !Array.isArray(raw.folderMeta)
+    ? { ...raw.folderMeta }
+    : {};
   return {
     schemaVersion: ASSET_REGISTRY_SCHEMA_VERSION,
     folders,
+    folderMeta,
     assets,
   };
 }

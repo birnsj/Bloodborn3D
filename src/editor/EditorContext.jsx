@@ -19,6 +19,7 @@ import { useLevelLifecycle } from './provider/useLevelLifecycle.js';
 import { useSelectionAndCreation } from './provider/useSelectionAndCreation.js';
 import { useTransformEditing } from './provider/useTransformEditing.js';
 import { useAuthoringLayers } from './provider/useAuthoringLayers.js';
+import { useOutlinerLayout } from './provider/useOutlinerLayout.js';
 import { useBrushEditing } from './provider/useBrushEditing.js';
 import { useComponentAndWorldEditing } from './provider/useComponentAndWorldEditing.js';
 import { useParametricShapeEditing } from './provider/useParametricShapeEditing.js';
@@ -499,6 +500,7 @@ export function EditorProvider({ children }) {
     previewBrushGeometry,
     previewFaceMove,
     reparentSelected,
+    reorderSelectedBeside,
     setSelectedActorFlags,
     updateSelectedContentOffset,
     updateSelectedTransform,
@@ -546,6 +548,19 @@ export function EditorProvider({ children }) {
     selectedRef,
     setLayerUi,
     setStatus,
+    world,
+  });
+
+  const {
+    createOutlinerCategory,
+    renameOutlinerCategoryById,
+    deleteOutlinerCategoryById,
+    setOutlinerCategoryIconColorById,
+    placeOutlinerRoots,
+  } = useOutlinerLayout({
+    bump,
+    executeCommand,
+    mode,
     world,
   });
 
@@ -960,6 +975,7 @@ export function EditorProvider({ children }) {
     revertSelectedPrefabOverride,
     applySelectedMaterialToBrush,
     reparentSelected,
+    reorderSelectedBeside,
     createCell,
     assignSelectedToCell,
     setSelectedActorFlags,
@@ -976,6 +992,11 @@ export function EditorProvider({ children }) {
     toggleAuthoringLayerLocked,
     setAuthoringLayerSolo,
     selectActorsInAuthoringLayer,
+    createOutlinerCategory,
+    renameOutlinerCategoryById,
+    deleteOutlinerCategoryById,
+    setOutlinerCategoryIconColorById,
+    placeOutlinerRoots,
     getWorldTransform: (actor) => (world && actor ? getWorldTransform(actor, world) : null),
     renameSelected,
     resizeBrushFace,

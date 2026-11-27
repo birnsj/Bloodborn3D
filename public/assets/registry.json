@@ -1,5 +1,35 @@
 {
   "schemaVersion": 1,
+  "folders": [
+    "Meshes",
+    "Materials",
+    "Textures",
+    "New Category",
+    "Environments",
+    "test",
+    "Prefabs",
+    "Audio",
+    "AI Assets",
+    "Characters",
+    "Characters/Models",
+    "Characters/Textures",
+    "Characters/Textures/PRINCIPAL BUGGELSBY",
+    "Characters/Textures/P-test",
+    "Characters/Textures/BEAUTY PAGEANT QUEEN 1966",
+    "Characters/Textures/The Plague Doctor - Dr Pestilence"
+  ],
+  "folderMeta": {
+    "New Category": {
+      "kind": "category"
+    },
+    "Characters": {
+      "kind": "category",
+      "iconColor": "#5ec28a"
+    },
+    "Characters/Models": {
+      "iconColor": "#e0d070"
+    }
+  },
   "assets": [
     {
       "id": "tex_verify_wall",
@@ -788,12 +818,13 @@
       "id": "mesh_c34066cb0284",
       "kind": "mesh",
       "name": "PRINCIPAL BUGGELSBY.jpg",
-      "folder": "Meshes",
+      "folder": "Characters/Models",
       "path": "meshes/mesh_c34066cb0284.glb",
       "originalName": "PRINCIPAL BUGGELSBY.jpg.glb",
       "tags": [
         "meshy",
-        "ai-generated"
+        "ai-generated",
+        "character"
       ],
       "meta": {
         "format": "glb",
@@ -886,18 +917,19 @@
         "previewBytes": 68686
       },
       "createdAt": 1795672805859,
-      "updatedAt": 1795674243104
+      "updatedAt": 1795808548861
     },
     {
       "id": "mesh_169ce4c7d120",
       "kind": "mesh",
       "name": "P-test",
-      "folder": "Meshes",
+      "folder": "Characters/Models",
       "path": "meshes/mesh_169ce4c7d120.glb",
       "originalName": "P-test.glb",
       "tags": [
         "meshy",
-        "ai-generated"
+        "ai-generated",
+        "character"
       ],
       "meta": {
         "format": "glb",
@@ -987,18 +1019,19 @@
         "previewBytes": 13027
       },
       "createdAt": 1795673380114,
-      "updatedAt": 1795673997075
+      "updatedAt": 1795808548893
     },
     {
       "id": "mesh_34f557c0b8ee",
       "kind": "mesh",
       "name": "BEAUTY PAGEANT QUEEN 1966.jpg",
-      "folder": "Meshes",
+      "folder": "Characters/Models",
       "path": "meshes/mesh_34f557c0b8ee.glb",
       "originalName": "BEAUTY PAGEANT QUEEN 1966.jpg.glb",
       "tags": [
         "meshy",
-        "ai-generated"
+        "ai-generated",
+        "character"
       ],
       "meta": {
         "format": "glb",
@@ -1092,18 +1125,19 @@
         "previewBytes": 70768
       },
       "createdAt": 1795676577617,
-      "updatedAt": 1795676654807
+      "updatedAt": 1795808548917
     },
     {
       "id": "mesh_b18711df23cd",
       "kind": "mesh",
       "name": "The Plague Doctor - Dr Pestilence.jpg",
-      "folder": "Meshes",
+      "folder": "Characters/Models",
       "path": "meshes/mesh_b18711df23cd.glb",
       "originalName": "The Plague Doctor - Dr Pestilence.jpg.glb",
       "tags": [
         "meshy",
-        "ai-generated"
+        "ai-generated",
+        "character"
       ],
       "meta": {
         "format": "glb",
@@ -1197,7 +1231,7 @@
         "previewBytes": 75032
       },
       "createdAt": 1795677128324,
-      "updatedAt": 1795677161808
+      "updatedAt": 1795808548940
     },
     {
       "id": "tex_batch1_studio",
@@ -2325,6 +2359,294 @@
       },
       "createdAt": 1796101000000,
       "updatedAt": 1795736782688
+    },
+    {
+      "id": "tex_fe27f533752b",
+      "kind": "texture",
+      "name": "PRINCIPAL BUGGELSBY image_0",
+      "folder": "Characters/Textures/PRINCIPAL BUGGELSBY",
+      "path": "textures/tex_fe27f533752b.jpg",
+      "originalName": "image_0.jpg",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_c34066cb0284"
+      ],
+      "meta": {
+        "format": "jpg",
+        "bytes": 3335250,
+        "sourceMeshId": "mesh_c34066cb0284",
+        "extractedFromGlb": true,
+        "imageIndex": 0
+      },
+      "createdAt": 1795808548877,
+      "updatedAt": 1795808548877
+    },
+    {
+      "id": "tex_fe6227088372",
+      "kind": "texture",
+      "name": "PRINCIPAL BUGGELSBY image_1",
+      "folder": "Characters/Textures/PRINCIPAL BUGGELSBY",
+      "path": "textures/tex_fe6227088372.png",
+      "originalName": "image_1.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_c34066cb0284"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1414944,
+        "sourceMeshId": "mesh_c34066cb0284",
+        "extractedFromGlb": true,
+        "imageIndex": 1
+      },
+      "createdAt": 1795808548887,
+      "updatedAt": 1795808548887
+    },
+    {
+      "id": "tex_f1190e8555c3",
+      "kind": "texture",
+      "name": "PRINCIPAL BUGGELSBY image_2",
+      "folder": "Characters/Textures/PRINCIPAL BUGGELSBY",
+      "path": "textures/tex_f1190e8555c3.png",
+      "originalName": "image_2.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_c34066cb0284"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 4173220,
+        "sourceMeshId": "mesh_c34066cb0284",
+        "extractedFromGlb": true,
+        "imageIndex": 2
+      },
+      "createdAt": 1795808548893,
+      "updatedAt": 1795808548893
+    },
+    {
+      "id": "tex_273206b1c539",
+      "kind": "texture",
+      "name": "P-test image_0",
+      "folder": "Characters/Textures/P-test",
+      "path": "textures/tex_273206b1c539.jpg",
+      "originalName": "image_0.jpg",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_169ce4c7d120"
+      ],
+      "meta": {
+        "format": "jpg",
+        "bytes": 3335250,
+        "sourceMeshId": "mesh_169ce4c7d120",
+        "extractedFromGlb": true,
+        "imageIndex": 0
+      },
+      "createdAt": 1795808548908,
+      "updatedAt": 1795808548908
+    },
+    {
+      "id": "tex_86259b216be7",
+      "kind": "texture",
+      "name": "P-test image_1",
+      "folder": "Characters/Textures/P-test",
+      "path": "textures/tex_86259b216be7.png",
+      "originalName": "image_1.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_169ce4c7d120"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1414944,
+        "sourceMeshId": "mesh_169ce4c7d120",
+        "extractedFromGlb": true,
+        "imageIndex": 1
+      },
+      "createdAt": 1795808548912,
+      "updatedAt": 1795808548912
+    },
+    {
+      "id": "tex_1a51c7d1f22b",
+      "kind": "texture",
+      "name": "P-test image_2",
+      "folder": "Characters/Textures/P-test",
+      "path": "textures/tex_1a51c7d1f22b.png",
+      "originalName": "image_2.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_169ce4c7d120"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 4173220,
+        "sourceMeshId": "mesh_169ce4c7d120",
+        "extractedFromGlb": true,
+        "imageIndex": 2
+      },
+      "createdAt": 1795808548917,
+      "updatedAt": 1795808548917
+    },
+    {
+      "id": "tex_0d3c204ba731",
+      "kind": "texture",
+      "name": "BEAUTY PAGEANT QUEEN 1966 image_0",
+      "folder": "Characters/Textures/BEAUTY PAGEANT QUEEN 1966",
+      "path": "textures/tex_0d3c204ba731.jpg",
+      "originalName": "image_0.jpg",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_34f557c0b8ee"
+      ],
+      "meta": {
+        "format": "jpg",
+        "bytes": 3444510,
+        "sourceMeshId": "mesh_34f557c0b8ee",
+        "extractedFromGlb": true,
+        "imageIndex": 0
+      },
+      "createdAt": 1795808548930,
+      "updatedAt": 1795808548930
+    },
+    {
+      "id": "tex_19c41884afd1",
+      "kind": "texture",
+      "name": "BEAUTY PAGEANT QUEEN 1966 image_1",
+      "folder": "Characters/Textures/BEAUTY PAGEANT QUEEN 1966",
+      "path": "textures/tex_19c41884afd1.png",
+      "originalName": "image_1.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_34f557c0b8ee"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1589678,
+        "sourceMeshId": "mesh_34f557c0b8ee",
+        "extractedFromGlb": true,
+        "imageIndex": 1
+      },
+      "createdAt": 1795808548933,
+      "updatedAt": 1795808548933
+    },
+    {
+      "id": "tex_e9f459564c6f",
+      "kind": "texture",
+      "name": "BEAUTY PAGEANT QUEEN 1966 image_2",
+      "folder": "Characters/Textures/BEAUTY PAGEANT QUEEN 1966",
+      "path": "textures/tex_e9f459564c6f.png",
+      "originalName": "image_2.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_34f557c0b8ee"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 4104085,
+        "sourceMeshId": "mesh_34f557c0b8ee",
+        "extractedFromGlb": true,
+        "imageIndex": 2
+      },
+      "createdAt": 1795808548940,
+      "updatedAt": 1795808548940
+    },
+    {
+      "id": "tex_8d55fbdab10e",
+      "kind": "texture",
+      "name": "The Plague Doctor - Dr Pestilence image_0",
+      "folder": "Characters/Textures/The Plague Doctor - Dr Pestilence",
+      "path": "textures/tex_8d55fbdab10e.jpg",
+      "originalName": "image_0.jpg",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_b18711df23cd"
+      ],
+      "meta": {
+        "format": "jpg",
+        "bytes": 2980083,
+        "sourceMeshId": "mesh_b18711df23cd",
+        "extractedFromGlb": true,
+        "imageIndex": 0
+      },
+      "createdAt": 1795808548949,
+      "updatedAt": 1795808548949
+    },
+    {
+      "id": "tex_36f219449dbe",
+      "kind": "texture",
+      "name": "The Plague Doctor - Dr Pestilence image_1",
+      "folder": "Characters/Textures/The Plague Doctor - Dr Pestilence",
+      "path": "textures/tex_36f219449dbe.png",
+      "originalName": "image_1.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_b18711df23cd"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 1337061,
+        "sourceMeshId": "mesh_b18711df23cd",
+        "extractedFromGlb": true,
+        "imageIndex": 1
+      },
+      "createdAt": 1795808548952,
+      "updatedAt": 1795808548952
+    },
+    {
+      "id": "tex_33c0c044e6c6",
+      "kind": "texture",
+      "name": "The Plague Doctor - Dr Pestilence image_2",
+      "folder": "Characters/Textures/The Plague Doctor - Dr Pestilence",
+      "path": "textures/tex_33c0c044e6c6.png",
+      "originalName": "image_2.png",
+      "tags": [
+        "character",
+        "meshy",
+        "extracted",
+        "ai-generated",
+        "from:mesh_b18711df23cd"
+      ],
+      "meta": {
+        "format": "png",
+        "bytes": 3733819,
+        "sourceMeshId": "mesh_b18711df23cd",
+        "extractedFromGlb": true,
+        "imageIndex": 2
+      },
+      "createdAt": 1795808548957,
+      "updatedAt": 1795808548957
     }
   ]
 }

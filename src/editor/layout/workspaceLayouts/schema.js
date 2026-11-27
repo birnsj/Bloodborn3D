@@ -87,11 +87,14 @@ export function sanitizeDockLayout(data) {
     if (!panel || typeof panel !== 'object') continue;
     const component = panel.contentComponent || id;
     if (!known.has(id) && !known.has(component)) continue;
-    panels[id] = {
+    const nextPanel = {
       ...panel,
       id: panel.id || id,
       contentComponent: known.has(component) ? component : (DOCK_PANELS[id]?.component || component),
     };
+    // Drop always-renderer — its absolute overlay lets WebGL paint over side panels.
+    if (nextPanel.renderer === 'always') delete nextPanel.renderer;
+    panels[id] = nextPanel;
   }
 
   if (!panels[DOCK_PANELS.viewport.id]) {

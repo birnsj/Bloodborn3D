@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditor } from './EditorContext.jsx';
 import { useEditorSettings } from './EditorSettingsContext.jsx';
 import { useLayout } from './layout/LayoutContext.jsx';
-import { DEFAULT_COLOR_THEME } from '../ui/colorThemes.js';
 import { DEFAULT_VIEW_SCALE } from './layout/viewScale.js';
 import { useHoverHelp } from '../ui/hoverHelp/HoverHelpContext.jsx';
 import { DEFAULT_HOVER_HELP_PREFS } from '../ui/hoverHelp/hoverHelpPrefs.js';
@@ -13,6 +12,14 @@ import {
   ROTATION_SNAP_INCREMENTS,
   SCALE_SNAP_INCREMENTS,
 } from './editorSettingsPrefs.js';
+import {
+  CREATION_TOOLBAR_SCALE_MAX,
+  CREATION_TOOLBAR_SCALE_MIN,
+  CREATION_TOOLBAR_SCALE_STEP,
+  DEFAULT_CREATION_TOOLBAR_PREFS,
+  loadCreationToolbarPrefs,
+  patchCreationToolbarPrefs,
+} from './creation/creationToolbarPrefs.js';
 
 const DISPLAY_MODE_LABELS = {
   lit: 'Lit',
@@ -127,9 +134,7 @@ export function EditorSettingsDialog({ open, onClose }) {
   const {
     layout,
     patch,
-    setColorTheme,
     setUiScale,
-    colorThemes,
     viewScales,
   } = useLayout();
   const {
@@ -138,9 +143,11 @@ export function EditorSettingsDialog({ open, onClose }) {
     delayMs,
     setDelayMs,
   } = useHoverHelp();
+  const [toolboxPrefs, setToolboxPrefs] = useState(() => loadCreationToolbarPrefs());
 
   useEffect(() => {
     if (!open) return undefined;
+    setToolboxPrefs(loadCreationToolbarPrefs());
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -151,13 +158,22 @@ export function EditorSettingsDialog({ open, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  const patchToolbox = (partial) => {
+    const next = patchCreationToolbarPrefs(partial);
+    setToolboxPrefs(next);
+  };
+
   const onResetAll = () => {
     const next = resetSettings();
-    setColorTheme(DEFAULT_COLOR_THEME);
     setUiScale(DEFAULT_VIEW_SCALE);
     patch({ contentViewMode: 'grid' });
     setShowHoverHelp(DEFAULT_HOVER_HELP_PREFS.showHoverHelp);
     setDelayMs(DEFAULT_HOVER_HELP_PREFS.delayMs);
+    setToolboxPrefs(patchCreationToolbarPrefs({
+      dock: DEFAULT_CREATION_TOOLBAR_PREFS.dock,
+      scale: DEFAULT_CREATION_TOOLBAR_PREFS.scale,
+      offset: DEFAULT_CREATION_TOOLBAR_PREFS.offset,
+    }));
     if (next) {
       setGridSize(next.gridSize);
       setGridSnap(next.gridSnap);
@@ -195,16 +211,6 @@ export function EditorSettingsDialog({ open, onClose }) {
           <section className="bb-settings__section" {...helpProps('settings.appearance')}>
             <h3 className="bb-settings__heading">Appearance</h3>
             <SelectRow
-              label="Theme"
-              hint="Same as View → Theme. Applies to editor chrome."
-              value={layout.colorTheme}
-              options={colorThemes.map((theme) => ({
-                value: theme.id,
-                label: theme.label,
-              }))}
-              onChange={(v) => setColorTheme(v)}
-            />
-            <SelectRow
               label="UI scale"
               hint="Same as View → UI Scale. Scales editor chrome (not browser zoom)."
               value={String(layout.uiScale)}
@@ -223,6 +229,33 @@ export function EditorSettingsDialog({ open, onClose }) {
                 { value: 'list', label: 'List' },
               ]}
               onChange={(v) => patch({ contentViewMode: v })}
+            />
+          </section>
+
+          <section className="bb-settings__section" {...helpProps('settings.creationToolbar')}>
+            <h3 className="bb-settings__heading">Creation toolbox</h3>
+            <SelectRow
+              label="Dock"
+              hint="Flush edge strip (top / left / right / bottom) or Floating. Drag the handle into the viewport to undock, or to an edge to dock. Close Settings to see it."
+              value={toolboxPrefs.dock}
+              options={[
+                { value: 'left', label: 'Left side (default)' },
+                { value: 'right', label: 'Right side' },
+                { value: 'top', label: 'Top' },
+                { value: 'bottom', label: 'Bottom' },
+                { value: 'float', label: 'Floating' },
+              ]}
+              onChange={(v) => patchToolbox({ dock: v })}
+            />
+            <RangeRow
+              label="Toolbox scale"
+              hint="Scales category and tool button size (strip thickness follows)."
+              min={CREATION_TOOLBAR_SCALE_MIN}
+              max={CREATION_TOOLBAR_SCALE_MAX}
+              step={CREATION_TOOLBAR_SCALE_STEP}
+              value={toolboxPrefs.scale}
+              display={`${Math.round(toolboxPrefs.scale * 100)}%`}
+              onChange={(v) => patchToolbox({ scale: v })}
             />
           </section>
 

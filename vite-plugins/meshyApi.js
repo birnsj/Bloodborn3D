@@ -32,6 +32,7 @@ import {
   saveReferenceImageToStaging,
 } from '../src/dev/meshy/meshySession.js';
 import { listStagingMeshyMaps } from '../src/dev/meshy/meshyPbrMaps.js';
+import { listMeshyStagingDir } from '../src/dev/meshy/meshyStagingBrowse.js';
 import {
   DEFAULT_JSON_BODY_LIMIT,
   DEFAULT_UPLOAD_LIMIT,
@@ -77,7 +78,11 @@ export function meshyApiPlugin() {
             } catch {
               body = {};
             }
-            sendJson(res, 200, await beginMeshyLogin({ device: body.device === true }));
+            // Default to device login — Vite's Node process is headless, so plain
+            // browser OAuth never shows a window/code to the user.
+            sendJson(res, 200, await beginMeshyLogin({
+              device: body.device !== false,
+            }));
             return;
           }
 
@@ -223,6 +228,12 @@ export function meshyApiPlugin() {
             return;
           }
 
+          if (req.method === 'GET' && action === 'staging-list') {
+            const rel = url.searchParams.get('path') || '';
+            sendJson(res, 200, await listMeshyStagingDir(STAGING_ROOT, rel));
+            return;
+          }
+
           if (req.method === 'GET' && action === 'staging-file') {
             const rel = url.searchParams.get('path') || '';
             const buf = await readMeshyStagingFile(STAGING_ROOT, rel);
@@ -233,7 +244,13 @@ export function meshyApiPlugin() {
                 ? 'image/jpeg'
                 : ext === '.webp'
                   ? 'image/webp'
-                  : 'image/png';
+                  : ext === '.gif'
+                    ? 'image/gif'
+                    : ext === '.json'
+                      ? 'application/json'
+                      : ext === '.png'
+                        ? 'image/png'
+                        : 'application/octet-stream';
             res.statusCode = 200;
             res.setHeader('Content-Type', type);
             res.setHeader('Cache-Control', 'no-store');
@@ -290,6 +307,14 @@ export function meshyApiPlugin() {
             });
             job.importedAssetId = result?.asset?.id || null;
             job.importedAt = Date.now();
+
+            // Also pull PBR maps into Content Browser Textures so they are visible.
+            const mapImport = await importMeshyMapsToContentBrowser({
+              job,
+              assetBaseName: assetName,
+              importMaps: body.importMaps !== false,
+            });
+
             await fs.writeFile(
               path.join(STAGING_ROOT, 'jobs', `${job.jobId}.json`),
               JSON.stringify(job, null, 2),
@@ -298,6 +323,9 @@ export function meshyApiPlugin() {
             sendJson(res, 200, {
               ok: true,
               asset: result.asset || result,
+              textures: mapImport.textures,
+              textureFolder: mapImport.textureFolder,
+              mapsNote: mapImport.note,
               job: publicJob(job),
             });
             return;
@@ -348,6 +376,33 @@ export function meshyApiPlugin() {
             return;
           }
 
+          if (req.method === 'POST' && action === 'import-texture-maps') {
+            const body = JSON.parse(await readBody(req));
+            const job = body.jobId ? getMeshyJob(body.jobId) : null;
+            if (!job?.taskId && !body.taskId) {
+              sendJson(res, 400, {
+                ok: false,
+                code: 'TASK_REQUIRED',
+                error: 'jobId or taskId required',
+              });
+              return;
+            }
+            const targetJob = job || {
+              jobId: body.jobId || null,
+              taskId: body.taskId,
+            };
+            const mapImport = await importMeshyMapsToContentBrowser({
+              job: targetJob,
+              assetBaseName: body.assetBaseName || body.name || 'Meshy',
+              importMaps: true,
+            });
+            sendJson(res, 200, {
+              ok: true,
+              ...mapImport,
+            });
+            return;
+          }
+
           if (req.method === 'POST' && action === 'import-texture-map') {
             const body = JSON.parse(await readBody(req));
             const job = body.jobId ? getMeshyJob(body.jobId) : null;
@@ -371,6 +426,9 @@ export function meshyApiPlugin() {
             const assetName = String(
               body.name || `${body.assetBaseName || 'Meshy'} ${resolved.map.label}`,
             ).trim();
+            const textureFolder = sanitizeTextureFolder(
+              body.folder || `Textures/${sanitizeFolderSegment(body.assetBaseName || 'Meshy')}`,
+            );
             const { importTextureBuffer } = await import('./assetFileApi.js');
             const result = await importTextureBuffer(
               buf,
@@ -378,11 +436,13 @@ export function meshyApiPlugin() {
               {
                 name: assetName,
                 tags: ['meshy', 'pbr', mapId, 'ai-generated'],
+                folder: textureFolder,
               },
             );
             sendJson(res, 200, {
               ok: true,
               asset: result.asset || result,
+              textureFolder,
               map: {
                 ...resolved.map,
                 meshyTaskId: taskId,
@@ -405,6 +465,101 @@ export function meshyApiPlugin() {
         }
       });
     },
+  };
+}
+
+function sanitizeFolderSegment(name) {
+  const cleaned = String(name || 'Meshy')
+    .trim()
+    .replace(/[^\w .+-]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .slice(0, 48)
+    .trim();
+  return cleaned || 'Meshy';
+}
+
+function sanitizeTextureFolder(raw) {
+  const cleaned = String(raw || 'Textures')
+    .replace(/\\/g, '/')
+    .replace(/^\/+|\/+$/g, '');
+  if (!cleaned || cleaned.includes('..')) return 'Textures';
+  if (cleaned === 'Textures' || cleaned.startsWith('Textures/')) return cleaned;
+  return `Textures/${sanitizeFolderSegment(cleaned)}`;
+}
+
+/**
+ * Fetch (free) + import all available PBR maps into Content Browser Textures/<name>.
+ */
+async function importMeshyMapsToContentBrowser({
+  job,
+  assetBaseName = 'Meshy',
+  importMaps = true,
+} = {}) {
+  const textureFolder = sanitizeTextureFolder(
+    `Textures/${sanitizeFolderSegment(assetBaseName)}`,
+  );
+  if (!importMaps || !job?.taskId) {
+    return {
+      textures: [],
+      textureFolder,
+      note: !job?.taskId ? 'No Meshy task id — skipped map import.' : null,
+    };
+  }
+
+  try {
+    await fetchMeshyJobTextureMaps({
+      jobId: job.jobId || null,
+      taskId: job.taskId,
+      projectRoot: PROJECT_ROOT,
+      stagingRoot: STAGING_ROOT,
+    });
+  } catch (err) {
+    return {
+      textures: [],
+      textureFolder,
+      note: `Mesh imported; map fetch failed: ${err.message || err}`,
+    };
+  }
+
+  const listed = await listStagingMeshyMaps(STAGING_ROOT, job.taskId);
+  const maps = (listed.maps || []).filter((m) => m.localPath);
+  if (!maps.length) {
+    return {
+      textures: [],
+      textureFolder,
+      note: listed.embeddedInGlb
+        ? 'Maps are embedded in the GLB; Fetch returned no separate files yet.'
+        : 'No separate PBR map files found for this task.',
+    };
+  }
+
+  const { importTextureBuffer } = await import('./assetFileApi.js');
+  const textures = [];
+  const errors = [];
+  for (const map of maps) {
+    try {
+      const buf = await fs.readFile(map.localPath);
+      const result = await importTextureBuffer(
+        buf,
+        map.fileName || `${map.id}.png`,
+        {
+          name: `${sanitizeFolderSegment(assetBaseName)} ${map.label || map.id}`,
+          tags: ['meshy', 'pbr', map.id, 'ai-generated'],
+          folder: textureFolder,
+        },
+      );
+      textures.push(result.asset || result);
+    } catch (err) {
+      errors.push(`${map.id}: ${err.message || err}`);
+    }
+  }
+
+  return {
+    textures,
+    textureFolder,
+    note: errors.length
+      ? `Imported ${textures.length} map(s); some failed: ${errors.join('; ')}`
+      : `Imported ${textures.length} map(s) into ${textureFolder}`,
   };
 }
 

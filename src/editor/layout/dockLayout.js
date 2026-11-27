@@ -61,11 +61,12 @@ export function applyDefaultDockLayout(api) {
 
   api.clear();
 
+  // Do not use renderer:'always' — dockview parks that panel in .dv-render-overlay
+  // (absolute, z-index 1), and the WebGL canvas paints over Outliner/Details.
   api.addPanel({
     id: DOCK_PANELS.viewport.id,
     component: DOCK_PANELS.viewport.component,
     title: DOCK_PANELS.viewport.title,
-    renderer: 'always',
   });
 
   // Asset Viewer spans the bottom under the viewport.
@@ -158,7 +159,6 @@ export function ensureViewportPanel(api) {
     id: DOCK_PANELS.viewport.id,
     component: DOCK_PANELS.viewport.component,
     title: DOCK_PANELS.viewport.title,
-    renderer: 'always',
   });
 }
 

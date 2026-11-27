@@ -40,6 +40,7 @@ let state = {
   error: null,
   errorCode: null,
   localCreditEstimate: null,
+  loginDevice: null, // { userCode, verificationUrl, flowId } while device sign-in is pending
 };
 
 function emit() {
@@ -77,6 +78,7 @@ export function __testResetMeshyUi() {
     error: null,
     errorCode: null,
     localCreditEstimate: null,
+    loginDevice: null,
   };
   emit();
 }
@@ -120,6 +122,7 @@ export async function meshyConnect() {
       localCreditEstimate: refreshLocalEstimate(formValues),
       error: status.ok ? null : status.error,
       errorCode: status.ok ? null : status.code,
+      loginDevice: status.ok ? null : state.loginDevice,
     });
     return state;
   } catch (err) {
@@ -134,14 +137,23 @@ export async function meshyConnect() {
 }
 
 /** Opens Meshy CLI browser (or device) sign-in. */
-export async function meshyLogin({ device = false } = {}) {
-  setState({ busy: true, error: null, errorCode: null });
+export async function meshyLogin({ device = true } = {}) {
+  setState({ busy: true, error: null, errorCode: null, loginDevice: null });
   try {
     const result = await startMeshyCliLogin({ device });
     setState({
       busy: false,
-      error: result.message || 'Complete browser sign-in, then Refresh.',
+      error: null,
       errorCode: null,
+      loginDevice: result?.userCode
+        ? {
+          userCode: result.userCode,
+          verificationUrl: result.verificationUrl || null,
+          flowId: result.flowId || null,
+        }
+        : null,
+      // Keep a soft status line so the panel explains what to do next.
+      phase: state.phase === 'ready' ? state.phase : 'awaiting_login',
     });
     return result;
   } catch (err) {
@@ -149,6 +161,7 @@ export async function meshyLogin({ device = false } = {}) {
       busy: false,
       error: err.message,
       errorCode: err.code || 'LOGIN_FAILED',
+      loginDevice: null,
     });
     throw err;
   }

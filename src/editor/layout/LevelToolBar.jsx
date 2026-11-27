@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useEditorSettings } from '../EditorSettingsContext.jsx';
 import {
@@ -19,6 +19,21 @@ import {
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useSessionRecorder } from '../sessionRecorder/useSessionRecorder.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
+import {
+  fetchStickyNotesDoc,
+  getStickyNotesVisibleSync,
+  persistStickyNotesDoc,
+  requestAddStickyNote,
+  STICKY_NOTES_CHANGED_EVENT,
+} from '../stickyNotes/stickyNotesApi.js';
+import { setStickyNotesVisible } from '../stickyNotes/stickyNotesModel.js';
+import {
+  CHECKLISTS_CHANGED_EVENT,
+  fetchChecklistsDoc,
+  getChecklistsVisibleSync,
+  persistChecklistsDoc,
+} from '../checklists/checklistsApi.js';
+import { setChecklistsVisible } from '../checklists/checklistsModel.js';
 
 export function LevelToolBar() {
   const { alert } = useEditorDialogs();
@@ -54,12 +69,59 @@ export function LevelToolBar() {
 
   const recorder = useSessionRecorder();
   const lastRecorderError = useRef(null);
+  const [notesVisible, setNotesVisible] = useState(() => getStickyNotesVisibleSync());
+  const [checklistVisible, setChecklistVisible] = useState(() => getChecklistsVisibleSync());
 
   useEffect(() => {
     if (!recorder.error || recorder.error === lastRecorderError.current) return;
     lastRecorderError.current = recorder.error;
     void alert(recorder.error, { title: 'Recording' });
   }, [recorder.error, alert]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const doc = await fetchStickyNotesDoc();
+      if (!cancelled) setNotesVisible(doc.visible !== false);
+    })();
+    const onChanged = (e) => {
+      if (e?.detail) setNotesVisible(e.detail.visible !== false);
+    };
+    window.addEventListener(STICKY_NOTES_CHANGED_EVENT, onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(STICKY_NOTES_CHANGED_EVENT, onChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const doc = await fetchChecklistsDoc();
+      if (!cancelled) setChecklistVisible(doc.visible === true);
+    })();
+    const onChanged = (e) => {
+      if (e?.detail) setChecklistVisible(e.detail.visible === true);
+    };
+    window.addEventListener(CHECKLISTS_CHANGED_EVENT, onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CHECKLISTS_CHANGED_EVENT, onChanged);
+    };
+  }, []);
+
+  const onToggleNotesVisible = async (checked) => {
+    setNotesVisible(checked);
+    const doc = await fetchStickyNotesDoc();
+    await persistStickyNotesDoc(setStickyNotesVisible(doc, checked));
+  };
+
+  const onToggleChecklist = async () => {
+    const next = !checklistVisible;
+    setChecklistVisible(next);
+    const doc = await fetchChecklistsDoc();
+    await persistChecklistsDoc(setChecklistsVisible(doc, next));
+  };
 
   const isPlay = mode === 'play';
   const playReason = isPlay ? 'Unavailable during Play mode.' : null;
@@ -308,6 +370,65 @@ export function LevelToolBar() {
         />
         <span>Snap</span>
       </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps(
+          'toolbar.showLights',
+          playReason,
+          settings.showLightHelpers !== false
+            ? 'Light gizmos shown'
+            : 'Light gizmos hidden (lights still illuminate)',
+        )}
+      >
+        <input
+          type="checkbox"
+          checked={settings.showLightHelpers !== false}
+          disabled={isPlay}
+          onChange={(e) => patchSettings({ showLightHelpers: e.target.checked })}
+        />
+        <span>Lights</span>
+      </label>
+      <label
+        className="bb-toolbar-field"
+        {...helpProps(
+          'toolbar.showSubtract',
+          playReason,
+          settings.showSubtractVolumes ? 'Fill volumes shown' : 'Fill volumes hidden (edges stay)',
+        )}
+      >
+        <input
+          type="checkbox"
+          checked={settings.showSubtractVolumes !== false}
+          disabled={isPlay}
+          onChange={(e) => patchSettings({ showSubtractVolumes: e.target.checked })}
+        />
+        <span>Subtract</span>
+      </label>
+      <label
+        className="bb-toolbar-field bb-toolbar-field--slider"
+        {...helpProps(
+          'toolbar.subtractOpacity',
+          playReason || (settings.showSubtractVolumes === false
+            ? 'Turn Subtract on to adjust fill opacity.'
+            : null),
+          `Fill opacity ${Math.round((settings.subtractVolumeOpacity ?? 0.14) * 100)}% · edges stay solid`,
+        )}
+      >
+        <span>Opacity</span>
+        <input
+          type="range"
+          className="bb-toolbar-slider"
+          min={0}
+          max={100}
+          step={1}
+          value={Math.round((settings.subtractVolumeOpacity ?? 0.14) * 100)}
+          disabled={isPlay || settings.showSubtractVolumes === false}
+          onChange={(e) => patchSettings({
+            subtractVolumeOpacity: Number(e.target.value) / 100,
+          })}
+          aria-label="Subtract fill opacity"
+        />
+      </label>
       <button
         type="button"
         className="bb-btn"
@@ -319,6 +440,42 @@ export function LevelToolBar() {
         {...helpProps('toolbar.resetAllViews', playReason)}
       >
         Reset Views
+      </button>
+      <button
+        type="button"
+        className="bb-btn"
+        disabled={isPlay}
+        title="Add sticky note"
+        onClick={() => requestAddStickyNote()}
+        {...helpProps('stickyNotes.add', playReason)}
+      >
+        Note
+      </button>
+      <label
+        className="bb-toolbar-field"
+        title={notesVisible ? 'Hide sticky notes' : 'Show sticky notes'}
+        {...helpProps('stickyNotes.visible', playReason)}
+      >
+        <input
+          type="checkbox"
+          checked={notesVisible}
+          disabled={isPlay}
+          onChange={(e) => {
+            void onToggleNotesVisible(e.target.checked);
+          }}
+          aria-label="Show sticky notes"
+        />
+        <span>Show</span>
+      </label>
+      <button
+        type="button"
+        className={`bb-btn${checklistVisible ? ' is-active' : ''}`}
+        disabled={isPlay}
+        title={checklistVisible ? 'Hide checklist' : 'Show checklist'}
+        onClick={() => { void onToggleChecklist(); }}
+        {...helpProps('checklists.toggle', playReason)}
+      >
+        Checklist
       </button>
 
       <div className="bb-level-toolbar__end">

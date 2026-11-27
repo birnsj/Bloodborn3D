@@ -505,6 +505,41 @@ export class ReparentActorsCommand {
 }
 
 /**
+ * Replace world.actors order (Outliner sibling rearrange). IDs must match the current set.
+ */
+export class SetActorOrderCommand {
+  constructor({ world, beforeIds, afterIds, label = 'Reorder' }) {
+    this.world = world;
+    this.label = label;
+    this.beforeIds = [...(beforeIds || [])];
+    this.afterIds = [...(afterIds || [])];
+  }
+
+  do() {
+    this._apply(this.afterIds);
+  }
+
+  undo() {
+    this._apply(this.beforeIds);
+  }
+
+  _apply(ids) {
+    if (!this.world || !Array.isArray(ids) || !ids.length) return;
+    const byId = new Map(this.world.actors.map((a) => [a.id, a]));
+    if (byId.size !== ids.length) return;
+    const next = [];
+    for (const id of ids) {
+      const actor = byId.get(id);
+      if (!actor) return;
+      next.push(actor);
+      byId.delete(id);
+    }
+    if (byId.size) return;
+    this.world.actors = next;
+  }
+}
+
+/**
  * Set actor flags (visible / locked / name tags) with undo.
  */
 export class SetActorFlagsCommand {
@@ -530,6 +565,15 @@ export class SetActorFlagsCommand {
     if ('visible' in state) actor.visible = state.visible !== false;
     if ('locked' in state) actor.locked = Boolean(state.locked);
     if ('name' in state) actor.name = state.name;
+    if ('iconColor' in state) {
+      const raw = state.iconColor;
+      if (raw == null || raw === '') {
+        actor.iconColor = null;
+      } else {
+        const hex = String(raw).trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(hex)) actor.iconColor = hex.toLowerCase();
+      }
+    }
   }
 }
 
@@ -774,6 +818,53 @@ export class SetAuthoringLayersTreeCommand {
       }
     }
     this.onApply?.(this.world.authoringLayers);
+  }
+}
+
+/**
+ * Replace world.outliner layout (category headers + root display order).
+ * Optional afterActorIds also rewrites world.actors order (same contract as SetActorOrderCommand).
+ */
+export class SetOutlinerLayoutCommand {
+  constructor({
+    world,
+    before,
+    after,
+    beforeActorIds = null,
+    afterActorIds = null,
+    label = 'Edit outliner',
+  }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.beforeActorIds = beforeActorIds ? [...beforeActorIds] : null;
+    this.afterActorIds = afterActorIds ? [...afterActorIds] : null;
+    this.label = label;
+  }
+
+  do() {
+    this._apply(this.after, this.afterActorIds);
+  }
+
+  undo() {
+    this._apply(this.before, this.beforeActorIds);
+  }
+
+  _apply(layout, actorIds) {
+    if (!this.world) return;
+    this.world.outliner = structuredClone(layout);
+    if (!actorIds?.length) return;
+    const byId = new Map(this.world.actors.map((a) => [a.id, a]));
+    if (byId.size !== actorIds.length) return;
+    const next = [];
+    for (const id of actorIds) {
+      const actor = byId.get(id);
+      if (!actor) return;
+      next.push(actor);
+      byId.delete(id);
+    }
+    if (byId.size) return;
+    this.world.actors = next;
   }
 }
 

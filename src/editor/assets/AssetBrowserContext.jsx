@@ -17,8 +17,24 @@ import { normalizeRegistry, findAsset } from '../../assets/AssetRegistry.js';
 import {
   applyFolderOp,
   buildFolderTree,
+  ensureDefaultContentCategory,
   normalizeContentFolderList,
 } from '../../assets/contentFolders.js';
+
+function normalizeRegistryWithContentCategories(raw) {
+  const next = normalizeRegistry(raw);
+  const folders = normalizeContentFolderList(next.folders, next.assets || []);
+  const ensured = ensureDefaultContentCategory(folders, next.folderMeta || {});
+  return {
+    ...next,
+    folders: ensured.folders,
+    folderMeta: ensured.folderMeta,
+  };
+}
+import {
+  applyListMultiSelect,
+  listSelectModifiers,
+} from '../selection/listMultiSelect.js';
 import { normalizeMaterialDefinition } from '../../materials/MaterialDefinition.js';
 import { materialDraftForDuplicate } from '../materials/materialDraft.js';
 import {
@@ -67,22 +83,29 @@ const AssetBrowserContext = createContext(null);
  */
 export function AssetBrowserProvider({ children }) {
   const dialogs = useEditorDialogs();
-  const [registry, setRegistry] = useState(() => normalizeRegistry({ assets: [] }));
+  const [registry, setRegistry] = useState(() => normalizeRegistryWithContentCategories({ assets: [] }));
   const [materialDefs, setMaterialDefs] = useState({});
   const [prefabDefs, setPrefabDefs] = useState({});
-  const [selectedAssetId, setSelectedAssetId] = useState(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState([]);
+  const assetSelectionAnchorRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [status, setStatusState] = useState('');
   const [revision, setRevision] = useState(0);
   const materialCacheRef = useRef({});
   const prefabCacheRef = useRef({});
 
+  const setAssetAnchor = useCallback((id) => {
+    assetSelectionAnchorRef.current = id || null;
+  }, []);
+
   const setStatus = useCallback((message) => {
     setStatusState(String(message ?? ''));
   }, []);
 
   const notify = useCallback((message, options = {}) => {
-    reportEditorMessage(setStatusState, dialogs, message, { ...options, dialog: true });
+    // Default: status bar + dialog only when the message is not a quiet routine update.
+    // Pass `{ dialog: true }` to force, or `{ dialog: false }` for status-only.
+    reportEditorMessage(setStatusState, dialogs, message, options);
   }, [dialogs]);
 
   const refreshRegistry = useCallback(async () => {
@@ -96,7 +119,7 @@ export function AssetBrowserProvider({ children }) {
         if (!res.ok) throw new Error(`Failed to load static registry: ${res.status}`);
         data = await res.json();
       }
-      const next = normalizeRegistry(data);
+      const next = normalizeRegistryWithContentCategories(data);
 
       // Prefetch material definitions before bumping revision so SceneView
       // resync (driven by assetRevision) reads the updated cache. Re-fetch when
@@ -242,18 +265,52 @@ export function AssetBrowserProvider({ children }) {
     };
   }, [refreshRegistry]);
 
+  // Primary selection = last selected id (Details / Materials / New Material).
+  const selectedAssetId = selectedAssetIds.length
+    ? selectedAssetIds[selectedAssetIds.length - 1]
+    : null;
+
   const selectedAsset = useMemo(
     () => getCatalogAsset(registry, selectedAssetId, materialDefs),
     [registry, selectedAssetId, materialDefs, revision],
   );
 
+  /** Replace selection with a single asset (or clear). */
   const selectAsset = useCallback((id) => {
-    setSelectedAssetId(id || null);
-  }, []);
+    if (!id) {
+      setSelectedAssetIds([]);
+      setAssetAnchor(null);
+      return;
+    }
+    setSelectedAssetIds([id]);
+    setAssetAnchor(id);
+  }, [setAssetAnchor]);
+
+  /** Shift / Ctrl / Alt multi-select within an ordered visible list. */
+  const selectAssetInList = useCallback((id, orderedIds, event) => {
+    if (!id) {
+      setSelectedAssetIds([]);
+      setAssetAnchor(null);
+      return;
+    }
+    const mods = listSelectModifiers(event);
+    setSelectedAssetIds((prev) => {
+      const next = applyListMultiSelect({
+        orderedIds: orderedIds || [],
+        selectedIds: prev,
+        anchorId: assetSelectionAnchorRef.current,
+        targetId: id,
+        ...mods,
+      });
+      setAssetAnchor(next.anchorId);
+      return next.selectedIds;
+    });
+  }, [setAssetAnchor]);
 
   const clearSelection = useCallback(() => {
-    setSelectedAssetId(null);
-  }, []);
+    setSelectedAssetIds([]);
+    setAssetAnchor(null);
+  }, [setAssetAnchor]);
 
   const queryAssets = useCallback((folder) => {
     return listCatalogAssets(registry, {
@@ -647,17 +704,25 @@ export function AssetBrowserProvider({ children }) {
     return { asset: result.asset, definition: def };
   }, [registry, notify]);
 
-  const folders = useMemo(
-    () => normalizeContentFolderList(registry?.folders, registry?.assets || []),
-    [registry, revision],
-  );
+  const folders = useMemo(() => {
+    const list = normalizeContentFolderList(registry?.folders, registry?.assets || []);
+    return ensureDefaultContentCategory(list, registry?.folderMeta || {}).folders;
+  }, [registry, revision]);
 
-  const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
+  const folderMeta = useMemo(() => {
+    const list = normalizeContentFolderList(registry?.folders, registry?.assets || []);
+    return ensureDefaultContentCategory(list, registry?.folderMeta || {}).folderMeta;
+  }, [registry, revision]);
+
+  const folderTree = useMemo(
+    () => buildFolderTree(folders, folderMeta),
+    [folders, folderMeta],
+  );
 
   const applyFolderOpLocal = useCallback((op) => {
     const applied = applyFolderOp(registry, op);
     if (!applied.ok) throw new Error(applied.error || 'Folder operation failed');
-    setRegistry(normalizeRegistry(applied.registry));
+    setRegistry(normalizeRegistryWithContentCategories(applied.registry));
     setRevision((r) => r + 1);
     return applied;
   }, [registry]);
@@ -665,9 +730,10 @@ export function AssetBrowserProvider({ children }) {
   const mutateFolders = useCallback(async (op) => {
     try {
       const result = await runAssetFolderOp(op);
-      setRegistry(normalizeRegistry({
+      setRegistry(normalizeRegistryWithContentCategories({
         ...registry,
         folders: result.folders,
+        folderMeta: result.folderMeta ?? registry.folderMeta,
         assets: result.assets,
       }));
       setRevision((r) => r + 1);
@@ -703,16 +769,19 @@ export function AssetBrowserProvider({ children }) {
 
   const value = useMemo(() => ({
     folders,
+    folderMeta,
     folderTree,
     mutateFolders,
     registry,
     revision,
     materialDefs,
     selectedAssetId,
+    selectedAssetIds,
     selectedAsset,
     searchQuery,
     setSearchQuery,
     selectAsset,
+    selectAssetInList,
     clearSelection,
     queryAssets,
     beginAssetDrag,
@@ -739,15 +808,18 @@ export function AssetBrowserProvider({ children }) {
     notify,
   }), [
     folders,
+    folderMeta,
     folderTree,
     mutateFolders,
     registry,
     revision,
     materialDefs,
     selectedAssetId,
+    selectedAssetIds,
     selectedAsset,
     searchQuery,
     selectAsset,
+    selectAssetInList,
     clearSelection,
     queryAssets,
     beginAssetDrag,

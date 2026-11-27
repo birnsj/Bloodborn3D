@@ -130,11 +130,13 @@ export function assetFileApiPlugin() {
                 throw err;
               }
               registry.folders = applied.registry.folders;
+              registry.folderMeta = applied.registry.folderMeta || {};
               registry.assets = applied.registry.assets;
               return {
                 ok: true,
                 path: applied.path || null,
                 folders: registry.folders,
+                folderMeta: registry.folderMeta,
                 assets: registry.assets,
               };
             });
@@ -284,7 +286,7 @@ async function ensureAssetDirs() {
     await fs.access(REGISTRY_PATH);
   } catch {
     // Seed empty registry directly — do not call writeRegistry (would re-enter ensure).
-    await atomicWriteJson(REGISTRY_PATH, { schemaVersion: 1, folders: [], assets: [] });
+    await atomicWriteJson(REGISTRY_PATH, { schemaVersion: 1, folders: [], folderMeta: {}, assets: [] });
   }
 }
 
@@ -295,6 +297,9 @@ async function readRegistry() {
   return {
     schemaVersion: 1,
     folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+    folderMeta: parsed.folderMeta && typeof parsed.folderMeta === 'object' && !Array.isArray(parsed.folderMeta)
+      ? parsed.folderMeta
+      : {},
     assets: Array.isArray(parsed.assets) ? parsed.assets : [],
   };
 }
@@ -304,6 +309,9 @@ async function writeRegistry(registry) {
   const normalized = {
     schemaVersion: 1,
     folders: Array.isArray(registry?.folders) ? registry.folders : [],
+    folderMeta: registry?.folderMeta && typeof registry.folderMeta === 'object' && !Array.isArray(registry.folderMeta)
+      ? registry.folderMeta
+      : {},
     assets: Array.isArray(registry?.assets) ? registry.assets : [],
   };
   await atomicWriteJson(REGISTRY_PATH, normalized);
@@ -330,6 +338,7 @@ async function mutateRegistry(mutator) {
 export async function importTextureBuffer(buffer, originalName = 'import.png', {
   tags = [],
   name = null,
+  folder = null,
 } = {}) {
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) {
     throw new Error('Texture import requires a binary buffer');
@@ -391,11 +400,18 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
     if (isEnvMap && !entryTags.includes('environment')) entryTags.push('environment');
     if (isEnvMap && !entryTags.includes('hdri')) entryTags.push('hdri');
 
+    const requestedFolder = typeof folder === 'string' && folder.trim()
+      ? folder.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+      : '';
+    const entryFolder = isEnvMap
+      ? 'Environments'
+      : (requestedFolder || 'Textures');
+
     const entry = {
       id,
       kind: 'texture',
       name: name || stripExt(base),
-      folder: isEnvMap ? 'Environments' : 'Textures',
+      folder: entryFolder,
       path: relPath,
       originalName: base,
       tags: entryTags,
@@ -411,6 +427,9 @@ export async function importTextureBuffer(buffer, originalName = 'import.png', {
 
     const registry = await mutateRegistry(async (reg) => {
       reg.assets.push(entry);
+      if (entryFolder && Array.isArray(reg.folders) && !reg.folders.includes(entryFolder)) {
+        reg.folders = [...reg.folders, entryFolder];
+      }
       return { ok: true, asset: entry, registry: reg };
     });
     return registry;

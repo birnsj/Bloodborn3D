@@ -550,6 +550,7 @@ describe('Meshy wiring (source)', () => {
     expect(cli).toContain('auth');
     expect(controls).toContain('Log in');
     expect(controls).toContain('meshyLogin');
+    expect(controls).toContain('bb-meshy-controls__scroll');
     expect(controls).not.toContain('API key missing');
   });
 

@@ -17,7 +17,9 @@ function DockPanelShell({ children, className = '' }) {
 function ViewportDockPanel() {
   return (
     <DockPanelShell className="bb-dock-panel--viewport">
-      <Viewport />
+      <div className="bb-viewport-dock-stack">
+        <Viewport />
+      </div>
     </DockPanelShell>
   );
 }

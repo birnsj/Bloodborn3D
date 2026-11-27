@@ -36,9 +36,9 @@ export function fetchMeshyStatus() {
   return meshyFetch('status');
 }
 
-/** Starts `meshy auth login` (browser OAuth) via the local CLI. */
-export function startMeshyCliLogin({ device = false } = {}) {
-  return meshyFetch('login', { method: 'POST', body: { device: Boolean(device) } });
+/** Starts Meshy sign-in via the local CLI (device flow by default). */
+export function startMeshyCliLogin({ device = true } = {}) {
+  return meshyFetch('login', { method: 'POST', body: { device: device !== false } });
 }
 
 export function startMeshyCliLogout({ all = false } = {}) {
@@ -112,6 +112,13 @@ export function meshyStagingPreviewUrl(relativePath) {
   return `/api/meshy?action=staging-file&path=${encodeURIComponent(relativePath)}`;
 }
 
+/** List files/folders under `.meshy-staging` (localhost Meshy API). */
+export function listMeshyStaging(relativePath = '') {
+  return meshyFetch('staging-list', {
+    query: { path: relativePath || '' },
+  });
+}
+
 export function importMeshyMesh({ jobId, name } = {}) {
   return meshyFetch('import-mesh', { method: 'POST', body: { jobId, name } });
 }
@@ -143,9 +150,23 @@ export function importMeshyTextureMap({
   mapId,
   name = null,
   assetBaseName = null,
+  folder = null,
 } = {}) {
   return meshyFetch('import-texture-map', {
     method: 'POST',
-    body: { jobId, taskId, mapId, name, assetBaseName },
+    body: { jobId, taskId, mapId, name, assetBaseName, folder },
+  });
+}
+
+/** Fetch (free) + import all available PBR maps into Content Browser Textures. */
+export function importMeshyTextureMaps({
+  jobId = null,
+  taskId = null,
+  assetBaseName = null,
+  name = null,
+} = {}) {
+  return meshyFetch('import-texture-maps', {
+    method: 'POST',
+    body: { jobId, taskId, assetBaseName, name },
   });
 }

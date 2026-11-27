@@ -133,10 +133,8 @@ export function AppMenuBar() {
     resetLayout,
     setWorkspace,
     setUiScale,
-    setColorTheme,
     setViewportLayoutMode,
     viewScales,
-    colorThemes,
     namedLayouts,
     activeNamedLayout,
     layoutDirty,
@@ -418,29 +416,6 @@ export function AppMenuBar() {
                 );
               }}
             </SubMenu>
-            <SubMenu label="Theme">
-              {(subClose) => {
-                const done = () => {
-                  subClose();
-                  close();
-                };
-                return (
-                  <>
-                    {colorThemes.map((theme) => (
-                      <Item
-                        key={theme.id}
-                        label={theme.label}
-                        checked={layout.colorTheme === theme.id}
-                        close={done}
-                        onClick={() => setColorTheme(theme.id)}
-                        helpId="settings.appearance"
-                      />
-                    ))}
-                  </>
-                );
-              }}
-            </SubMenu>
-            <Sep />
             {viewScales.map((entry) => (
               <Item
                 key={entry.id}

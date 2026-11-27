@@ -8,6 +8,7 @@ import {
   DEFAULT_POST_PROCESSING,
 } from './postprocessing/postProcessingState.js';
 import { normalizeAuthoringLayersState } from './authoringLayers.js';
+import { emptyOutlinerLayout, normalizeOutlinerLayout } from './outlinerLayout.js';
 
 /** @typedef {'additive' | 'subtractive'} MapMode */
 
@@ -457,6 +458,7 @@ export class World {
     renderer = null,
     postProcessing = null,
     authoringLayers = null,
+    outliner = null,
   } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
@@ -472,6 +474,10 @@ export class World {
     this.postProcessing = normalizePostProcessing(postProcessing);
     /** Batch 9 — hierarchical authoring layers (independent of parenting / THREE.Layers). */
     this.authoringLayers = normalizeAuthoringLayersState(authoringLayers, { seedIfEmpty: true });
+    /** Outliner category section headers (list-order chrome; not hierarchy). */
+    this.outliner = outliner && typeof outliner === 'object'
+      ? outliner
+      : emptyOutlinerLayout();
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -525,6 +531,7 @@ export class World {
       renderer: normalizeWorldRenderer(this.renderer),
       postProcessing: normalizePostProcessing(this.postProcessing),
       authoringLayers: normalizeAuthoringLayersState(this.authoringLayers, { seedIfEmpty: true }),
+      outliner: normalizeOutlinerLayout(this.outliner, this),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

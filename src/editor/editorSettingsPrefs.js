@@ -54,6 +54,13 @@ export const DEFAULT_EDITOR_SETTINGS = {
   viewportGridMinor: '#2a3038',
   viewportSelection: '#ffcc33',
   viewportSubtract: '#c23b4a',
+
+  /** Edit-mode subtract fill volume (edges always stay solid). */
+  showSubtractVolumes: true,
+  /** Translucent fill opacity when subtract volumes are shown (0–1). */
+  subtractVolumeOpacity: 0.14,
+  /** Edit-mode light gizmos/helpers (actual lights still illuminate). */
+  showLightHelpers: true,
 };
 
 const SPEED_01_3 = { min: 0.25, max: 4 };
@@ -177,6 +184,13 @@ export function clampEditorSettings(partial = {}) {
     next.viewportSubtract,
     DEFAULT_EDITOR_SETTINGS.viewportSubtract,
   );
+
+  next.showSubtractVolumes = next.showSubtractVolumes !== false;
+  const subtractOpacity = Number(next.subtractVolumeOpacity);
+  next.subtractVolumeOpacity = Number.isFinite(subtractOpacity)
+    ? Math.min(1, Math.max(0, Math.round(subtractOpacity * 100) / 100))
+    : DEFAULT_EDITOR_SETTINGS.subtractVolumeOpacity;
+  next.showLightHelpers = next.showLightHelpers !== false;
 
   return next;
 }

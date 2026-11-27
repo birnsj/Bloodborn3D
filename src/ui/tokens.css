@@ -1,12 +1,11 @@
 /**
- * BloodBound Editor — design tokens
- * Layout metrics are shared; color themes swap via [data-bb-theme].
+ * BloodBound Editor — design tokens (Midnight only).
  */
 
 :root {
   color-scheme: dark;
 
-  /* Controls / type (shared) */
+  /* Controls / type */
   --bb-control-h: 22px;
   --bb-radius: 3px;
   --bb-font: "Segoe UI", "Helvetica Neue", sans-serif;
@@ -23,59 +22,7 @@
   --bb-toolbar-h: 30px;
   --bb-statusbar-h: 22px;
 
-  font-family: var(--bb-font);
-  font-size: var(--bb-font-size);
-  line-height: 1.25;
-}
-
-/* —— BloodBound (default): charcoal + crimson —— */
-:root,
-:root[data-bb-theme="bloodbound"] {
-  --bb-bg-app: #0e1014;
-  --bb-bg-menubar: #12151a;
-  --bb-bg-toolbar: #161a20;
-  --bb-bg-panel: #151920;
-  --bb-bg-panel-header: #1a1f27;
-  --bb-bg-panel-elevated: #1c222b;
-  --bb-bg-input: #0c0f14;
-  --bb-bg-hover: #222833;
-  --bb-bg-viewport: #0a0c10;
-  --bb-bg-statusbar: #10131a;
-
-  --bb-border: #2a303a;
-  --bb-border-subtle: #22272f;
-  --bb-border-strong: #3a4250;
-
-  --bb-text: #d8dde6;
-  --bb-text-muted: #8a93a3;
-  --bb-text-dim: #5c6575;
-  --bb-text-bright: #f0f3f8;
-
-  --bb-brand: #c23b4a;
-  --bb-brand-bright: #e05060;
-  --bb-brand-soft: rgba(194, 59, 74, 0.28);
-  --bb-crimson: var(--bb-brand);
-  --bb-crimson-bright: var(--bb-brand-bright);
-  --bb-crimson-soft: var(--bb-brand-soft);
-  --bb-play: #2f8f5b;
-  --bb-play-hover: #37a368;
-  --bb-play-active: #246b44;
-
-  --bb-select: #3d7ec4;
-  --bb-select-soft: rgba(61, 126, 196, 0.22);
-  --bb-select-text: #cfe3ff;
-  --bb-gizmo-orange: #e0953a;
-
-  --bb-axis-x: #e05a5a;
-  --bb-axis-y: #5ac96e;
-  --bb-axis-z: #5a9be0;
-
-  color: var(--bb-text);
-  background: var(--bb-bg-app);
-}
-
-/* —— Midnight: cool blue-gray —— */
-:root[data-bb-theme="midnight"] {
+  /* Midnight palette */
   --bb-bg-app: #0b0e14;
   --bb-bg-menubar: #10141c;
   --bb-bg-toolbar: #141924;
@@ -99,6 +46,8 @@
   --bb-brand: #4d7ea8;
   --bb-brand-bright: #6a97bc;
   --bb-brand-soft: rgba(77, 126, 168, 0.28);
+  /* Alias used by older controls; keep in sync with brand. */
+  --bb-accent: var(--bb-brand);
   --bb-crimson: var(--bb-brand);
   --bb-crimson-bright: var(--bb-brand-bright);
   --bb-crimson-soft: var(--bb-brand-soft);
@@ -114,88 +63,10 @@
   --bb-axis-x: #e05a5a;
   --bb-axis-y: #5ac96e;
   --bb-axis-z: #5a9be0;
-}
 
-/* —— Forge: warm amber / steel —— */
-:root[data-bb-theme="forge"] {
-  --bb-bg-app: #100e0c;
-  --bb-bg-menubar: #161310;
-  --bb-bg-toolbar: #1a1612;
-  --bb-bg-panel: #181410;
-  --bb-bg-panel-header: #1e1914;
-  --bb-bg-panel-elevated: #221c16;
-  --bb-bg-input: #0e0c0a;
-  --bb-bg-hover: #2a221a;
-  --bb-bg-viewport: #0c0a08;
-  --bb-bg-statusbar: #14110e;
-
-  --bb-border: #3a3228;
-  --bb-border-subtle: #2a241c;
-  --bb-border-strong: #4a4034;
-
-  --bb-text: #e6e0d6;
-  --bb-text-muted: #a09080;
-  --bb-text-dim: #6a5e50;
-  --bb-text-bright: #f5f0e8;
-
-  --bb-brand: #c4783a;
-  --bb-brand-bright: #e09050;
-  --bb-brand-soft: rgba(196, 120, 58, 0.28);
-  --bb-crimson: var(--bb-brand);
-  --bb-crimson-bright: var(--bb-brand-bright);
-  --bb-crimson-soft: var(--bb-brand-soft);
-  --bb-play: #3a9a5a;
-  --bb-play-hover: #48b06a;
-  --bb-play-active: #2a7848;
-
-  --bb-select: #c4783a;
-  --bb-select-soft: rgba(196, 120, 58, 0.22);
-  --bb-select-text: #ffe8d0;
-  --bb-gizmo-orange: #e0a040;
-
-  --bb-axis-x: #e05a5a;
-  --bb-axis-y: #5ac96e;
-  --bb-axis-z: #5a9be0;
-}
-
-/* —— Contrast: higher-contrast readability —— */
-:root[data-bb-theme="contrast"] {
-  --bb-bg-app: #000000;
-  --bb-bg-menubar: #0a0a0a;
-  --bb-bg-toolbar: #111111;
-  --bb-bg-panel: #0d0d0d;
-  --bb-bg-panel-header: #141414;
-  --bb-bg-panel-elevated: #1a1a1a;
-  --bb-bg-input: #000000;
-  --bb-bg-hover: #2a2a2a;
-  --bb-bg-viewport: #000000;
-  --bb-bg-statusbar: #0a0a0a;
-
-  --bb-border: #555555;
-  --bb-border-subtle: #333333;
-  --bb-border-strong: #888888;
-
-  --bb-text: #ffffff;
-  --bb-text-muted: #cccccc;
-  --bb-text-dim: #999999;
-  --bb-text-bright: #ffffff;
-
-  --bb-brand: #ff5577;
-  --bb-brand-bright: #ff7799;
-  --bb-brand-soft: rgba(255, 85, 119, 0.35);
-  --bb-crimson: var(--bb-brand);
-  --bb-crimson-bright: var(--bb-brand-bright);
-  --bb-crimson-soft: var(--bb-brand-soft);
-  --bb-play: #33cc66;
-  --bb-play-hover: #44dd77;
-  --bb-play-active: #22aa55;
-
-  --bb-select: #44aaff;
-  --bb-select-soft: rgba(68, 170, 255, 0.3);
-  --bb-select-text: #ffffff;
-  --bb-gizmo-orange: #ffaa33;
-
-  --bb-axis-x: #ff5555;
-  --bb-axis-y: #55ff77;
-  --bb-axis-z: #55aaff;
+  font-family: var(--bb-font);
+  font-size: var(--bb-font-size);
+  line-height: 1.25;
+  color: var(--bb-text);
+  background: var(--bb-bg-app);
 }

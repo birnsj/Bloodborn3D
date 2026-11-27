@@ -5,6 +5,7 @@ import {
 } from '../../core/units.js';
 import { DEFAULT_RAMP_RISE } from '../../components/RampComponent.js';
 import { defaultFootprintAt } from './surfacePlacement.js';
+import { rememberRecentCreationAsset } from './recentCreationAssets.js';
 
 /**
  * Commit a creation-toolbar / DnD placement using existing editor APIs.
@@ -87,10 +88,13 @@ export async function commitCreatePlacement(payload, pose, api) {
       name: payload.label || payload.assetId,
       kind: payload.assetKind,
     };
-    if (payload.assetKind === 'prefab') {
-      return placePrefabAsset(asset, pose.position, opts);
+    const created = payload.assetKind === 'prefab'
+      ? await Promise.resolve(placePrefabAsset(asset, pose.position, opts))
+      : await Promise.resolve(placeMeshAsset(asset, pose.position, opts));
+    if (created) {
+      rememberRecentCreationAsset(asset);
     }
-    return placeMeshAsset(asset, pose.position, opts);
+    return created || null;
   }
   return null;
 }

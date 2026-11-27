@@ -137,11 +137,14 @@ export class CreatePreviewMethods {
     }
     if (subtract) {
       const subtractColor = this.viewportColors.subtract;
+      const fillOpacity = Number.isFinite(this.subtractFillOpacity)
+        ? Math.max(this.subtractFillOpacity, 0.08)
+        : 0.28;
       return {
         mat: new THREE.MeshBasicMaterial({
           color: subtractColor,
           transparent: true,
-          opacity: 0.28,
+          opacity: fillOpacity,
           depthWrite: false,
           depthTest: true,
           side: THREE.DoubleSide,

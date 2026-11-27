@@ -7,6 +7,7 @@ import {
 } from '../core/World.js';
 import { Actor } from '../core/Actor.js';
 import { wouldCreateCycle } from '../core/hierarchy.js';
+import { normalizeOutlinerLayout } from '../core/outlinerLayout.js';
 import { createComponentFromJSON } from '../components/componentRegistry.js';
 import {
   LEVEL_SCHEMA_VERSION,
@@ -46,6 +47,7 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     postProcessing: data.postProcessing ?? null,
     // Missing authoringLayers → seed defaults (backward compatible; actors keep null → resolve on use).
     authoringLayers: data.authoringLayers ?? null,
+    outliner: data.outliner ?? null,
   });
 
   for (const actorData of data.actors) {
@@ -56,6 +58,9 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     }
     world.addActor(actor);
   }
+
+  // Normalize outliner after actors exist so rootOrder can resolve root ids.
+  world.outliner = normalizeOutlinerLayout(world.outliner, world);
 
   assertHierarchyIntegrity(world);
 

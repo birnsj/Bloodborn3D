@@ -3,6 +3,11 @@
  * Only exposes tools that map to implemented editor APIs.
  */
 
+import {
+  buildRecentCreationAssetTools,
+  loadRecentCreationAssets,
+} from './recentCreationAssets.js';
+
 export const CREATE_DRAG_MIME = 'application/x-bloodbound-create';
 
 /** @typedef {'mode'|'place'|'asset'} CreateActionKind */
@@ -168,7 +173,7 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
         id,
         label,
         helpId: 'toolbar.primitive',
-        icon: 'box',
+        icon: primitive,
         action: 'place',
         placeKind: 'primitive',
         primitive,
@@ -216,7 +221,7 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
         id: 'refractor',
         label: 'Refractor',
         helpId: 'toolbar.refractor',
-        icon: 'mirror',
+        icon: 'refractor',
         action: 'place',
         placeKind: 'environment',
         envType: 'refractor',
@@ -294,7 +299,7 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
         id: 'hemiLight',
         label: 'Hemisphere Light',
         helpId: 'toolbar.hemiLight',
-        icon: 'dirLight',
+        icon: 'hemiLight',
         action: 'place',
         placeKind: 'light',
         lightType: 'hemisphere',
@@ -304,7 +309,7 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
         id: 'rectAreaLight',
         label: 'Rect Area Light',
         helpId: 'toolbar.rectAreaLight',
-        icon: 'pointLight',
+        icon: 'rectAreaLight',
         action: 'place',
         placeKind: 'light',
         lightType: 'rectArea',
@@ -314,7 +319,7 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
         id: 'ambientLight',
         label: 'Ambient Light',
         helpId: 'toolbar.ambientLight',
-        icon: 'pointLight',
+        icon: 'ambientLight',
         action: 'place',
         placeKind: 'light',
         lightType: 'ambient',
@@ -353,28 +358,19 @@ export const CREATION_CATEGORIES = /** @type {CreationCategoryDef[]} */ ([
     label: 'Prefabs / Assets',
     icon: 'assets',
     helpId: 'creation.assets',
-    tools: [], // filled by buildCreationCategories()
+    tools: [], // filled by buildCreationCategories() — last 8 used
   },
 ]);
 
 /**
- * Merge live mesh/prefab assets into the catalog.
+ * Build the creation catalog. Prefabs / Assets shows the last 8 placed
+ * mesh/prefab assets (not the full registry).
  * @param {Array<{id:string,name:string,kind:string}>} assets
+ * @param {{ recent?: Array<{id:string,kind:string,name?:string}> }} [options]
  */
-export function buildCreationCategories(assets = []) {
-  const placeable = (assets || []).filter(
-    (a) => a && (a.kind === 'mesh' || a.kind === 'prefab'),
-  );
-  const assetTools = placeable.map((a) => ({
-    id: `asset.${a.id}`,
-    label: a.name || a.id,
-    helpId: a.kind === 'prefab' ? 'creation.prefab' : 'creation.mesh',
-    icon: a.kind === 'prefab' ? 'prefab' : 'mesh',
-    action: 'asset',
-    assetKind: a.kind,
-    assetId: a.id,
-    placement: 'upright',
-  }));
+export function buildCreationCategories(assets = [], options = {}) {
+  const recent = options.recent ?? loadRecentCreationAssets();
+  const assetTools = buildRecentCreationAssetTools(assets, recent);
 
   return CREATION_CATEGORIES.map((cat) => {
     if (cat.id !== 'assets') return { ...cat, tools: [...cat.tools] };

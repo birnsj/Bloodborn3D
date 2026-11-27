@@ -8,6 +8,8 @@ describe('editor dialog helpers', () => {
     expect(isQuietStatusMessage('Edited')).toBe(true);
     expect(isQuietStatusMessage('Undo: Edit size')).toBe(true);
     expect(isQuietStatusMessage('Loading test-room.json…')).toBe(true);
+    expect(isQuietStatusMessage('Moved Custom before Textures')).toBe(true);
+    expect(isQuietStatusMessage('Created folder Props')).toBe(true);
     expect(isQuietStatusMessage('Saved test-room.json')).toBe(false);
     expect(isQuietStatusMessage('Prefab create failed')).toBe(false);
   });

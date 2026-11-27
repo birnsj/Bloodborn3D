@@ -8,6 +8,8 @@ import { meshyApiPlugin } from './vite-plugins/meshyApi.js';
 import { conceptLibraryApiPlugin } from './vite-plugins/conceptLibraryApi.js';
 import { projectArtApiPlugin } from './vite-plugins/projectArtApi.js';
 import { googleDriveApiPlugin } from './vite-plugins/googleDriveApi.js';
+import { stickyNotesApiPlugin } from './vite-plugins/stickyNotesApi.js';
+import { checklistsApiPlugin } from './vite-plugins/checklistsApi.js';
 
 export default defineConfig({
   plugins: [
@@ -19,6 +21,8 @@ export default defineConfig({
     conceptLibraryApiPlugin(),
     projectArtApiPlugin(),
     googleDriveApiPlugin(),
+    stickyNotesApiPlugin(),
+    checklistsApiPlugin(),
   ],
   build: {
     // Two pages: the editor (index.html) and the standalone player (player.html).
@@ -34,6 +38,7 @@ export default defineConfig({
     include: ['src/**/*.test.js'],
   },
   server: {
+    host: '127.0.0.1',
     port: 5173,
   },
 });

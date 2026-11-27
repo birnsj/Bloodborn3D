@@ -77,10 +77,13 @@ export class GeometryVisualMethods {
       );
       const subtractColor = this.viewportColors.subtract;
       const shared = isCutterMaterialSharingEnabled() ? this._getSharedCutterMaterials() : null;
+      const fillOpacity = Number.isFinite(this.subtractFillOpacity)
+        ? this.subtractFillOpacity
+        : 0.14;
       const mat = shared?.fill || new THREE.MeshBasicMaterial({
         color: subtractColor,
         transparent: true,
-        opacity: 0.14,
+        opacity: fillOpacity,
         depthWrite: false,
         depthTest: true,
         side: THREE.DoubleSide,
@@ -90,10 +93,15 @@ export class GeometryVisualMethods {
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
       });
+      if (shared?.fill) {
+        shared.fill.opacity = fillOpacity;
+        shared.fill.transparent = true;
+      }
       const mesh = new THREE.Mesh(geom, mat);
       mesh.castShadow = false;
       mesh.receiveShadow = false;
       mesh.renderOrder = 2;
+      mesh.visible = this.subtractFillVisible !== false;
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.editorOnly = true;
@@ -104,8 +112,10 @@ export class GeometryVisualMethods {
         shared?.line || new THREE.LineBasicMaterial({ color: subtractColor }),
       );
       edges.renderOrder = 3;
+      edges.visible = true;
       edges.userData.actorId = actor.id;
       edges.userData.editorOnly = true;
+      edges.userData.brushOperation = 'subtract-edges';
       group.add(edges);
       return;
     }
@@ -299,7 +309,7 @@ export class GeometryVisualMethods {
         fill: markSharedGpuResource(new THREE.MeshBasicMaterial({
           color,
           transparent: true,
-          opacity: 0.14,
+          opacity: Number.isFinite(this.subtractFillOpacity) ? this.subtractFillOpacity : 0.14,
           depthWrite: false,
           depthTest: true,
           side: THREE.DoubleSide,
@@ -311,7 +321,12 @@ export class GeometryVisualMethods {
       };
     }
     this._sharedCutterMaterials.fill.color.setHex(color);
+    this._sharedCutterMaterials.fill.opacity = Number.isFinite(this.subtractFillOpacity)
+      ? this.subtractFillOpacity
+      : 0.14;
     this._sharedCutterMaterials.line.color.setHex(color);
+    this._sharedCutterMaterials.line.opacity = 1;
+    this._sharedCutterMaterials.line.transparent = false;
     return this._sharedCutterMaterials;
   }
 

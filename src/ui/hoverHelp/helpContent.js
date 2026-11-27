@@ -399,6 +399,18 @@ export const HELP_CONTENT = {
     body: 'When enabled, move / rotate / scale gizmo snaps use Grid, Rot, and Scale steps. When disabled, transforms are freeform (props still stick to support elevation).',
     shortcut: 'Shift+G',
   },
+  'toolbar.showLights': {
+    title: 'Show Light Helpers',
+    body: 'Shows or hides light gizmos in the viewports. Uncheck to declutter the scene — lights still illuminate; pick them from the Outliner.',
+  },
+  'toolbar.showSubtract': {
+    title: 'Show Subtract Fill',
+    body: 'Shows or hides the translucent subtract volume fill in the viewports. Border lines stay visible either way so you can still see cutter bounds.',
+  },
+  'toolbar.subtractOpacity': {
+    title: 'Subtract Fill Opacity',
+    body: 'Controls how strong the translucent subtract fill is when Subtract is on. Edge lines stay fully solid.',
+  },
   'toolbar.resetAllViews': {
     title: 'Reset All Views',
     body: 'Restores every viewport pane to its camera-mode home pose and default zoom (same as each pane’s Reset chip, applied to all panes).',
@@ -406,8 +418,12 @@ export const HELP_CONTENT = {
   },
   'creation.toolbar': {
     title: 'Creation Toolbox',
-    body: 'Floating tool rail. Click a category to roll out tools (stays open); click outside, click the same category again, or press Esc to close. Click or drag a tool into the viewport to place.',
-    tips: 'Drag the handle to reposition. Esc closes the rollout or cancels placement. See Help → Keyboard Shortcuts… for the full list.',
+    body: 'Dockable toolbox on the Viewport (top, left, right, or bottom). Click a category to roll out tools; click outside, click again, or Esc to close. Click or drag a tool into the viewport to place.',
+    tips: 'Drag the handle into the viewport to float, or to an edge to flush-dock. Edit → Settings… → Creation toolbox sets dock and scale.',
+  },
+  'settings.creationToolbar': {
+    title: 'Creation Toolbox',
+    body: 'Flush-dock to top / left / right / bottom of the Viewport, or Floating. Drag off an edge to undock. Top/bottom are horizontal strips; left/right are vertical. Scale changes category/tool button size.',
   },
   'creation.geometry': {
     title: 'Geometry',
@@ -443,7 +459,35 @@ export const HELP_CONTENT = {
   },
   'creation.assets': {
     title: 'Prefabs / Assets',
-    body: 'Imported meshes and prefabs from the project registry. Drag onto floors, tables, or shelves — ceilings are skipped for interior placement.',
+    body: 'Last 8 meshes/prefabs you placed (from Content Browser or this strip), with thumbnails. Drag onto floors, tables, or shelves — ceilings are skipped for interior placement. Empty until you place something.',
+  },
+  'stickyNotes.add': {
+    title: 'Sticky note',
+    body: 'Adds an editor-only 2D reminder over the Level workspace (Viewport and side panels). On the Level toolbar next to Reset Views. Stored in `.editor-local/sticky-notes.json`, not the level. Hidden in Play / player. Drag the note header to move — notes can sit over Outliner, Content Browser, Details, etc.',
+  },
+  'stickyNotes.visible': {
+    title: 'Show sticky notes',
+    body: 'When unchecked, sticky notes stay saved but are hidden. Adding a note turns this back on.',
+  },
+  'checklists.toggle': {
+    title: 'Checklist',
+    body: 'Opens or closes the editor checklist panel. Project tasks cover the whole workspace; Level tasks are per open level file. Stored in `.editor-local/checklists.json`, not the level. Hidden in Play / player.',
+  },
+  'checklists.panel': {
+    title: 'Checklist panel',
+    body: 'Editor-only to-do list. Drag the header to move. Switch Project / Level tabs; Level follows the open level. Check items off, edit text, or remove them.',
+  },
+  'checklists.project': {
+    title: 'Project checklist',
+    body: 'Tasks for the whole BloodBound project (this workspace). Stays the same when you switch levels.',
+  },
+  'checklists.level': {
+    title: 'Level checklist',
+    body: 'Tasks for the currently open level file only. Switching levels shows that level’s list.',
+  },
+  'checklists.add': {
+    title: 'Add checklist item',
+    body: 'Adds a new task to the active Project or Level list.',
   },
   'creation.mesh': {
     title: 'Static Mesh',
@@ -504,8 +548,8 @@ export const HELP_CONTENT = {
   },
   'outliner.row': {
     title: 'Scene Actor',
-    body: 'Click to select. Drag onto another row to parent (world transform preserved). Drag to the level root strip to unparent.',
-    tips: 'Prefabs show a P glyph. Cells show C. Expand/collapse with the disclosure control when children exist.',
+    body: 'Click to select. Drag onto the middle of a row to parent under it. Drag to the top/bottom insert line to place beside it (same parent). Drag to the level root strip to unparent.',
+    tips: 'Prefabs show a P glyph. Cells show C. Expand/collapse with the disclosure control when children exist. Right-click → Icon Color… tints the type icon.',
   },
 
   // —— Details: Hierarchy ——
@@ -746,12 +790,21 @@ export const HELP_CONTENT = {
   // —— Content Browser ——
   'content.folder': {
     title: 'Content Folder',
-    body: 'Chooses which folder the Asset Viewer lists. Right-click for New Subfolder, Rename, Delete, Move Up/Down, or Move To. Drag a custom folder onto another to reparent it. Built-in roots (Textures, Materials, …) stay fixed.',
-    tips: 'Folders are virtual registry paths — they do not create directories on disk. Empty folders can be deleted; move assets first if the folder still has content.',
+    body: 'Chooses which folder the Asset Viewer lists. Shift+click for a range, Ctrl/Cmd+click to toggle, Alt+click to remove from the selection. If it has nested folders, plain-click the name or chevron to collapse/expand them. Right-click for New Subfolder, Duplicate, Copy To, Rename, Icon Color, Delete, Move Up/Down/Top/Bottom, or Move To. Drag to a row middle to nest; drag to the top/bottom insert line to place beside it. Built-in roots (Textures, Materials, …) can be rearranged but not renamed, deleted, or nested.',
+    tips: 'Folders are virtual registry paths — they do not create directories on disk. Duplicate/Copy To clone the folder tree only (assets stay put). Empty folders can be deleted; move assets first if the folder still has content. Icon Color… opens a color picker (most-used colors are remembered).',
   },
   'content.folder.new': {
     title: 'New Folder',
-    body: 'Creates a top-level Content Browser folder. Right-click an existing folder for New Subfolder.',
+    body: 'Creates a folder under the selected Content Browser folder (including under a category). Right-click empty space in the folder list for a top-level folder.',
+  },
+  'content.folder.category': {
+    title: 'Category Header',
+    body: 'Section headers for grouping folders in the list — they are not part of the folder path. Folders that follow the header (until the next category) sit under it; click the header or chevron to collapse that section. New / Move To places a folder in the section without nesting its path under the category. Assets go in real folders, not on the header.',
+    tips: 'Default top section is Project Content. Right-click empty space → Add Category. Duplicate copies the header only; section folders stay where they are. Right-click → Icon Color… tints the section icon (#rrggbb).',
+  },
+  'content.folder.collapseAll': {
+    title: 'Collapse All Folders',
+    body: 'Collapses every category and folder that has nested folders so only top-level rows stay visible. Expand a row with its chevron (or plain-click the name) to drill back in.',
   },
   'content.asset.move': {
     title: 'Move Asset',
@@ -928,7 +981,15 @@ export const HELP_CONTENT = {
   },
   'meshy.pbrMaps': {
     title: 'PBR map inspector',
-    body: 'Lists albedo, normal, metallic, roughness, and emission (when returned) from a completed Meshy task. Fetch PBR maps re-downloads --all-assets — no generation credits. Import writes each map into the texture registry and keeps staging sources.',
+    body: 'Lists albedo, normal, metallic, roughness, and emission (when returned) from a completed Meshy task. Fetch PBR maps re-downloads --all-assets — no generation credits. Import Model (or Import maps to Content Browser) writes maps into Textures/<asset name> so they appear in the Content Browser.',
+  },
+  'meshy.stagingBrowser': {
+    title: 'Staging files (advanced)',
+    body: 'Optional peek at local `.meshy-staging`. Prefer Import Model (mesh + maps) or Import maps to Content Browser so files appear under Meshes / Textures.',
+  },
+  'meshy.importMaps': {
+    title: 'Import maps to Content Browser',
+    body: 'Fetches separate PBR maps for this Meshy task (no generation spend) and imports them into Textures/<asset name> so they show in the Content Browser / Asset Viewer.',
   },
   'openart.characterOptions': {
     title: 'Character pose / objects',
@@ -1108,8 +1169,8 @@ export const HELP_CONTENT = {
   },
   'content.asset': {
     title: 'Project Asset',
-    body: 'Click to select. Double-click to open a preview. Drag meshes or prefabs into the viewport to place them. Drag a material onto a face (poly) to paint that surface, or onto empty selection space to apply to the selected actor.',
-    tips: 'Material drops do not rearrange dock panels — only paint geometry.',
+    body: 'Click to select. Shift+click for a range, Ctrl/Cmd+click to toggle, Alt+click to remove from the selection. Double-click to open a preview. Drag meshes or prefabs into the viewport to place them. Drag a material onto a face (poly) to paint that surface, or onto empty selection space to apply to the selected actor.',
+    tips: 'Material drops do not rearrange dock panels — only paint geometry. Multi-select Move To Folder moves every selected asset.',
   },
 
   // —— Asset Viewer ——
@@ -1238,7 +1299,7 @@ export const HELP_CONTENT = {
   },
   'layers.row': {
     title: 'Authoring Layer',
-    body: 'Click to set Active (new actors join this layer). Double-click to select all actors on the layer. Drag the color swatch to reparent layers; drop Outliner actors onto a row to assign membership.',
+    body: 'Click to set Active (new actors join this layer). Double-click to select all actors on the layer. Drag the color swatch: middle of a row nests under it, top/bottom insert lines place beside it. Drop Outliner actors onto a row to assign membership.',
     tips: 'Right-click for rename, recolor, child layer, solo, and delete (actors reassign — never deleted).',
   },
   'layers.visibility': {
@@ -1261,9 +1322,18 @@ export const HELP_CONTENT = {
     title: 'Filter by Layer',
     body: 'Shows only actors on the chosen authoring layer (and their ancestors for hierarchy context). Does not replace parent-based Outliner tree.',
   },
+  'outliner.category': {
+    title: 'Outliner Category',
+    body: 'Section headers for grouping root actors in the Outliner list — they are not part of the actor hierarchy. Actors that follow a category (until the next one) sit under it; click to collapse. Category deletes the header only. Drag actors onto a category to place them in that section.',
+    tips: 'Use the Category button in the Outliner toolbar. Right-click a category to rename, recolor the icon, or delete.',
+  },
+  'outliner.collapseAll': {
+    title: 'Collapse All',
+    body: 'Collapses every Outliner category and parent actor that has children, so only top-level rows stay visible. Use a row’s chevron to expand again.',
+  },
   'panel.outliner': {
     title: 'Scene Outliner',
-    body: 'Hierarchical list of level actors. Select, hide/lock, reparent by drag, and filter by name or authoring layer.',
+    body: 'Hierarchical list of level actors. Select, hide/lock, reparent by drag, and filter by name or authoring layer. Optional Category headers group root actors in list order (same idea as Content Browser categories). Right-click → Icon Color… tints the row icon (#rrggbb).',
   },
   'panel.details': {
     title: 'Details',
@@ -1480,7 +1550,7 @@ export const HELP_CONTENT = {
   },
   'settings.appearance': {
     title: 'Appearance',
-    body: 'Color theme, UI scale (chrome only, not browser zoom), and Asset Viewer grid/list preference.',
+    body: 'UI scale (chrome only, not browser zoom), Asset Viewer grid/list preference, and Creation toolbox dock/scale. The editor uses the Midnight palette.',
   },
   'menu.play': {
     title: 'Play In Editor',

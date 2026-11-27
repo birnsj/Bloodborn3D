@@ -13,7 +13,19 @@ import {
   readPanePose,
   snapOffsetToIsometric,
 } from './viewportCameras.js';
+import { viewportColorsFromSettings } from '../editorSettingsPrefs.js';
 import * as THREE from 'three';
+
+/** Push editor color + subtract-fill + light-helper prefs into the live runtime. */
+export function applyEditorViewportLook(runtime, settings) {
+  if (!runtime) return;
+  runtime.setViewportColors?.(viewportColorsFromSettings(settings));
+  runtime.setSubtractDisplay?.({
+    visible: settings?.showSubtractVolumes !== false,
+    opacity: settings?.subtractVolumeOpacity ?? 0.14,
+  });
+  runtime.setLightHelpersVisible?.(settings?.showLightHelpers !== false);
+}
 
 /**
  * Bind OrbitControls to the active pane camera.

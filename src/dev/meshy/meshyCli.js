@@ -390,10 +390,16 @@ export async function getMeshyBalance(opts = {}) {
 }
 
 /**
- * Start browser OAuth (`meshy auth login`). Fire-and-forget — CLI opens a
- * browser and writes credentials locally. Does not consume the JSON runner.
+ * Start Meshy sign-in.
+ *
+ * The Vite plugin runs in a headless Node process, so plain `meshy auth login`
+ * quietly switches to device flow and prints the code to discarded stdout —
+ * which looks like "Log in does nothing." Always use device + --no-wait, return
+ * the URL/code to the UI, and resume polling in the background so credentials
+ * land when the user finishes on meshy.ai.
  */
-export async function startMeshyLogin({ executable = null, device = false } = {}) {
+export async function startMeshyLogin({ executable = null, device = true } = {}) {
+  void device; // Always device-flow from the editor; flag kept for API compatibility.
   const detected = executable
     ? { ok: true, executable }
     : await detectMeshyCli();
@@ -404,38 +410,55 @@ export async function startMeshyLogin({ executable = null, device = false } = {}
     );
   }
 
-  const loginArgs = device ? ['auth', 'login', '--device'] : ['auth', 'login'];
-  const { spawnExe, spawnArgs, shell } = resolveSpawn(detected.executable, loginArgs);
+  const envelope = await runMeshy(
+    ['auth', 'login', '--device', '--no-wait'],
+    {
+      executable: detected.executable,
+      timeoutMs: 20_000,
+      // Windows meshy-cli may assert after printing JSON; still accept the payload.
+      allowNonZero: true,
+    },
+  );
+  const result = envelope?.result || {};
+  const userCode = result.user_code || null;
+  const flowId = result.flow_id || null;
+  const verificationUrl = result.verification_url
+    || (userCode ? `https://www.meshy.ai/oauth/device?user_code=${encodeURIComponent(userCode)}` : null)
+    || 'https://www.meshy.ai/oauth/device';
+  if (!userCode || !flowId) {
+    throw new MeshyCliError(
+      'LOGIN_FAILED',
+      'Meshy CLI did not return a device login code. Try again, or run: meshy auth login',
+      { envelope },
+    );
+  }
 
-  return new Promise((resolve, reject) => {
-    let settled = false;
+  // Keep polling until the user finishes (or the flow expires).
+  const { spawnExe, spawnArgs, shell } = resolveSpawn(
+    detected.executable,
+    ['auth', 'login', '--device-flow', String(flowId)],
+  );
+  try {
     const child = spawn(spawnExe, spawnArgs, {
       detached: true,
       stdio: 'ignore',
-      windowsHide: false,
+      windowsHide: true,
       shell,
       env: process.env,
     });
-    child.on('error', (err) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(started);
-      const code = err.code === 'ENOENT' ? 'CLI_MISSING' : 'SPAWN_FAILED';
-      reject(new MeshyCliError(code, err.message));
-    });
-    const started = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      child.unref();
-      resolve({
-        ok: true,
-        message: device
-          ? 'Device sign-in started. Complete the code in a browser, then Refresh.'
-          : 'Browser sign-in started. Finish signing in, then Refresh.',
-        device,
-      });
-    }, 150);
-  });
+    child.unref();
+  } catch {
+    // UI can still complete via Refresh after manual `meshy auth login --device-flow …`
+  }
+
+  return {
+    ok: true,
+    device: true,
+    userCode,
+    flowId,
+    verificationUrl,
+    message: `Enter code ${userCode} at Meshy (browser should open), then click Refresh.`,
+  };
 }
 
 export async function logoutMeshy({ all = false } = {}, opts = {}) {

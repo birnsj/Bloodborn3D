@@ -14,10 +14,12 @@ import { MeshyModelPreview } from './MeshyModelPreview.jsx';
 import {
   fetchMeshyTextureMaps,
   importMeshyTextureMap,
+  importMeshyTextureMaps,
   meshyStagingPreviewUrl,
   requestMeshyTextureMapDownload,
 } from '../../io/meshyClient.js';
 import { MESHY_MAP_SLOTS } from '../../dev/meshy/meshyPbrMapTypes.js';
+import { MeshyStagingBrowser } from './MeshyStagingBrowser.jsx';
 
 /**
  * Meshy results / preview / import (right column).
@@ -65,19 +67,60 @@ export function MeshyResults() {
         initialValue: ui.reference?.title || 'Meshy Model',
       });
       if (!name) return;
-      setStatus('Importing Meshy GLB…');
+      setStatus('Importing Meshy GLB + texture maps into Content Browser…');
       const result = await meshyImportModel({ name });
       await refreshRegistry?.();
       if (result?.asset?.id) {
         selectAsset?.(result.asset.id);
         patch?.({ contentFolder: 'Meshes' });
       }
-      setStatus(`Imported mesh ${result?.asset?.id || ''}`);
-      notify(`Imported “${result?.asset?.name || name}”`);
+      const texCount = Array.isArray(result?.textures) ? result.textures.length : 0;
+      const texFolder = result?.textureFolder || null;
+      if (texCount > 0 && texFolder) {
+        patch?.({ contentFolder: texFolder });
+        setStatus(`Imported mesh + ${texCount} map(s) → ${texFolder}`);
+        notify?.(
+          `Imported “${result?.asset?.name || name}” and ${texCount} texture map(s) into ${texFolder}`,
+          { dialog: false },
+        );
+      } else {
+        setStatus(`Imported mesh ${result?.asset?.id || ''}${result?.mapsNote ? ` — ${result.mapsNote}` : ''}`);
+        notify?.(
+          `Imported “${result?.asset?.name || name}”${result?.mapsNote ? ` (${result.mapsNote})` : ''}`,
+          { dialog: false },
+        );
+      }
     } catch (err) {
-      notify(err.message || String(err));
+      notify(err.message || String(err), { dialog: true });
     }
   }, [ui.reference, prompt, setStatus, refreshRegistry, selectAsset, patch, notify]);
+
+  const onImportMapsOnly = useCallback(async () => {
+    if (!job?.jobId && !job?.taskId) return;
+    try {
+      setMapsBusy(true);
+      setStatus('Importing Meshy texture maps into Content Browser…');
+      const result = await importMeshyTextureMaps({
+        jobId: job.jobId,
+        taskId: job.taskId,
+        assetBaseName: ui.reference?.title || job?.importedAssetId || 'Meshy',
+      });
+      await refreshRegistry?.();
+      const texCount = Array.isArray(result?.textures) ? result.textures.length : 0;
+      if (texCount > 0 && result.textureFolder) {
+        patch?.({ contentFolder: result.textureFolder });
+        if (result.textures[0]?.id) selectAsset?.(result.textures[0].id);
+      }
+      setMapsNote(result?.note || `Imported ${texCount} map(s)`);
+      setStatus(result?.note || `Imported ${texCount} map(s)`);
+      notify?.(result?.note || `Imported ${texCount} map(s)`, { dialog: false });
+      await refreshMaps();
+    } catch (err) {
+      notify(err.message || String(err), { dialog: true });
+    } finally {
+      setMapsBusy(false);
+    }
+  }, [job, ui.reference, refreshRegistry, patch, selectAsset, setStatus, notify, refreshMaps]);
 
   const onDiscard = useCallback(async () => {
     await meshyDiscardResult();
@@ -246,6 +289,15 @@ export function MeshyResults() {
             >
               Refresh
             </button>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={mapsBusy || !job?.taskId}
+              onClick={() => { void onImportMapsOnly(); }}
+              {...helpProps('meshy.importMaps')}
+            >
+              {mapsBusy ? 'Importing…' : 'Import maps to Content Browser'}
+            </button>
           </div>
           {mapsNote && <p className="bb-muted">{mapsNote}</p>}
           <ul className="bb-meshy-results__map-list">
@@ -303,6 +355,8 @@ export function MeshyResults() {
           </ul>
         </details>
       )}
+
+      <MeshyStagingBrowser notify={notify} />
 
       {(job?.settings || job?.provenance) && (
         <details className="bb-meshy-results__meta">

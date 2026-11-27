@@ -78,4 +78,22 @@ describe('editorSettingsPrefs', () => {
     expect(colors.selection).toBe(0xffcc33);
     expect(colors.gridMajor).toBe(hexToColorInt(DEFAULT_EDITOR_SETTINGS.viewportGridMajor));
   });
+
+  it('defaults and clamps subtract fill display prefs', () => {
+    expect(DEFAULT_EDITOR_SETTINGS.showSubtractVolumes).toBe(true);
+    expect(DEFAULT_EDITOR_SETTINGS.subtractVolumeOpacity).toBe(0.14);
+    const next = clampEditorSettings({
+      showSubtractVolumes: false,
+      subtractVolumeOpacity: 2.5,
+    });
+    expect(next.showSubtractVolumes).toBe(false);
+    expect(next.subtractVolumeOpacity).toBe(1);
+    const low = clampEditorSettings({ subtractVolumeOpacity: -1 });
+    expect(low.subtractVolumeOpacity).toBe(0);
+  });
+
+  it('defaults show light helpers on', () => {
+    expect(DEFAULT_EDITOR_SETTINGS.showLightHelpers).toBe(true);
+    expect(clampEditorSettings({ showLightHelpers: false }).showLightHelpers).toBe(false);
+  });
 });

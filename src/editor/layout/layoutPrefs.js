@@ -12,7 +12,7 @@ const STORAGE_KEY = 'bloodbound.editor.layout.v2';
  * Bump when the factory dock arrangement changes so existing sessions
  * pick up the new default once (named layouts keep their own snapshots).
  */
-export const DOCK_FACTORY_REVISION = 4;
+export const DOCK_FACTORY_REVISION = 5;
 
 export const WORKSPACES = [
   { id: 'level', label: 'Level Editor' },
@@ -45,7 +45,7 @@ export const DEFAULT_LAYOUT = {
   contentThumbSize: 56,
   /** UI view scale percent (STA-style). Not browser zoom. */
   uiScale: DEFAULT_VIEW_SCALE,
-  /** Editor color theme id (View → Theme). */
+  /** Kept for saved layout compat; always Midnight. */
   colorTheme: DEFAULT_COLOR_THEME,
   /**
    * Serialized dockview layout (`api.toJSON()`).

@@ -175,6 +175,7 @@ export function MeshyControls() {
 
   return (
     <div className="bb-meshy-controls" {...helpProps('meshy.controls')}>
+      <div className="bb-meshy-controls__scroll">
       <div className="bb-openart__status-row">
         <span className={`bb-openart__pill${connected ? ' is-ok' : ' is-bad'}`}>
           <span className="bb-openart__pill-dot" aria-hidden />
@@ -185,16 +186,31 @@ export function MeshyControls() {
             ? `${Number(balance).toLocaleString()} credits`
             : '— credits'}
         </span>
-        {(ui.errorCode === 'AUTH_FAILED'
-          || ui.status?.code === 'AUTH_FAILED'
-          || (!connected && !cliMissing)) && (
+        {!connected && (
           <button
             type="button"
             className="bb-btn"
-            disabled={ui.busy || cliMissing}
+            disabled={ui.busy}
+            title={cliMissing
+              ? 'Install the Meshy CLI first, then use Log in for browser sign-in.'
+              : 'Sign in with your Meshy account in the browser.'}
             onClick={() => {
+              // Disabled buttons swallow clicks — keep this enabled so a missing
+              // CLI still gets a clear message instead of looking broken.
+              if (cliMissing) {
+                notify(
+                  'Meshy CLI is not installed. Run: npm install -g meshy-cli '
+                  + '(Node.js 22.12+), then click Log in again.',
+                );
+                return;
+              }
               meshyLogin()
-                .then((res) => notify(res.message || 'Finish browser login, then Refresh.'))
+                .then((res) => {
+                  if (res?.verificationUrl && typeof window !== 'undefined') {
+                    window.open(res.verificationUrl, '_blank', 'noopener,noreferrer');
+                  }
+                  notify(res.message || 'Finish Meshy sign-in, then Refresh.');
+                })
                 .catch((err) => notify(err.message));
             }}
             {...helpProps('meshy.connect')}
@@ -212,6 +228,28 @@ export function MeshyControls() {
           Refresh
         </button>
       </div>
+
+      {ui.loginDevice?.userCode && !connected && (
+        <div className="bb-meshy-controls__login-hint" role="status">
+          <div>
+            Meshy sign-in code:
+            {' '}
+            <strong>{ui.loginDevice.userCode}</strong>
+          </div>
+          <div className="bb-muted">
+            Enter it at
+            {' '}
+            <a
+              href={ui.loginDevice.verificationUrl || 'https://www.meshy.ai/oauth/device'}
+              target="_blank"
+              rel="noreferrer"
+            >
+              meshy.ai/oauth/device
+            </a>
+            , then click Refresh.
+          </div>
+        </div>
+      )}
 
       {ui.error && (
         <div className="bb-openart__error" role="alert">
@@ -686,6 +724,7 @@ export function MeshyControls() {
             : ''}
           .
         </p>
+      </div>
       </div>
 
       <div className="bb-meshy-controls__footer">

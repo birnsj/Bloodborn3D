@@ -87,7 +87,9 @@ export class LightEnvironmentVisualMethods {
     holder.userData.actorId = actor.id;
     group.add(holder);
     if (this.editMode) {
-      group.add(this._createLightGizmo(comp, actor.id));
+      const gizmo = this._createLightGizmo(comp, actor.id);
+      gizmo.visible = this.lightHelpersVisible !== false;
+      group.add(gizmo);
     }
     void this._finishLightVisual(holder, actor, comp, syncToken, world);
   }
@@ -347,6 +349,7 @@ export class LightEnvironmentVisualMethods {
     const color = new THREE.Color(comp.color || '#ffffff');
     const gizmo = new THREE.Group();
     gizmo.userData.editorOnly = true;
+    gizmo.userData.bbLightGizmo = true;
     gizmo.userData.actorId = actorId;
 
     const marker = new THREE.Mesh(

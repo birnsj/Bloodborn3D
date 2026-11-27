@@ -10,7 +10,7 @@ export function StatusBar() {
     world,
     mode,
   } = useEditor();
-  const { layout, colorThemes } = useLayout();
+  const { layout } = useLayout();
 
   const selectionLabel = selectedActorIds.length === 0
     ? 'Nothing selected'
@@ -19,16 +19,14 @@ export function StatusBar() {
       : `${selectedActorIds.length} items selected`;
 
   const brushLabel = tool === 'select' ? 'Select' : `Brush: ${tool}`;
-  const themeLabel = colorThemes.find((t) => t.id === layout.colorTheme)?.label
-    || layout.colorTheme;
   const mapModeLabel = world?.mapMode === 'subtractive' ? 'Subtractive' : 'Additive';
 
   return (
     <footer className="bb-statusbar">
       <div className="bb-statusbar__left">{selectionLabel}</div>
       <div className="bb-statusbar__right">
-        <span title="View → Theme / scale">
-          {themeLabel} · {layout.uiScale}%
+        <span title="View → UI Scale">
+          UI {layout.uiScale}%
         </span>
         <span>Grid: {gridSize}</span>
         <span>{brushLabel}</span>
