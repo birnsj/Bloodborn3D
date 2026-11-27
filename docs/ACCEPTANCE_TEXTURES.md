@@ -2,7 +2,7 @@
 
 **Baseline ship:** `86a8b05` (1,094 tests)  
 **Closure commit:** `1780af3`  
-**UV regression closure:** _(this commit)_  
+**UV regression closure:** `dc5f925`  
 **Level:** `public/levels/acceptance-textures.json`  
 **Harness:** `src/dev/textureAcceptanceClosure.js` (phased CDP)  
 **Academy:** lesson 29 (`textures`)  
