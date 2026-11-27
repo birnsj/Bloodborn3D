@@ -47,6 +47,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Consolidation C3 | EditorContext gestures + Set*Properties consolidation (F1 partial, F21) — see `ACCEPTANCE_CONSOLIDATION_C3.md` |
 | Consolidation C4 | Geometry/collision/scalability (F4 measured, F11 clear, F14 sync helper, F18 stair share, F16/F17/F19/F24 confirmed) — see `ACCEPTANCE_CONSOLIDATION_C4.md` |
 | Consolidation C5 | GPU lifecycle + FPS measurement integrity (F3/F8) — **done** — see `ACCEPTANCE_CONSOLIDATION_C5.md` |
+| Standalone player | `player.html` + `src/player/`: runs a level with the shared `GameRuntime` and static assets, no editor/React. Built as a second Vite page. Verified in browser on the Gothic mansion; `standalonePlayer.test.js` + boundary test. See `TEST_MAP.md`. Tests now **1252 / 132 files**. |
 | Consolidation C6 | Final foundation acceptance (persistence/API safety, C5 gaps, 2G readiness) — **done** — see `ACCEPTANCE_CONSOLIDATION_C6.md` |
 
 ## 2. Implemented systems

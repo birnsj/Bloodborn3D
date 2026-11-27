@@ -4,7 +4,7 @@ Tests are named by build phase. This maps them to features. Manual sections refe
 [`MANUAL_LEVEL_EDITOR_ACCEPTANCE_CHECKLIST.md`](./MANUAL_LEVEL_EDITOR_ACCEPTANCE_CHECKLIST.md) (A–G).
 Automated tests run in Node (no GPU, no React rendering). Anything visual relies on the manual checks.
 
-Last verified: 1219 tests / 131 files passing; build passes.
+Last verified: 1252 tests / 132 files passing; build passes (editor + player pages).
 
 | Feature | Automated tests (`src/tests/`) | Manual |
 |---|---|---|
@@ -25,6 +25,7 @@ Last verified: 1219 tests / 131 files passing; build passes.
 | Editor shell (layouts, dialogs, menus, settings, help) | dockLayout, workspaceLayouts, editorLifecycle, editorDialogs, editorContextMenu, editorSettingsPrefs, hoverHelp, colorThemes, collapsibleGroup, viewScale, sessionRecorder | — |
 | Tutorials | tutorials, coachMark | — |
 | AI assets (OpenArt, Meshy, Drive, Project Art) | phase2h1aOpenArt, phase2h1bOpenArtEditor, phase2h1cAiAssetsWorkspace, phase2h1dConceptLibrary, projectArtSchema, projectArtLibraryUi, promptComposition, generationFrame, regionHandoff, cropRegionImage, sendToGenerationOptionalPrompt, meshyCapabilities, meshyImageTo3d, googleDriveExternalLibrary, pipelineHardening | — |
+| Standalone player (runs a level without the editor) | standalonePlayer, architectureBoundaries (player closure) | Open `/player.html?level=<name>` |
 | Whole-editor integration | integratedEditorAcceptance, phase2b, phase2bManualChecks, phase2cVerification, phase2f7hAuditCorrections | G |
 
 ## Known gaps
@@ -32,5 +33,6 @@ Last verified: 1219 tests / 131 files passing; build passes.
 - No React component tests: panels (Details, Outliner, Content Browser, AI Assets UI) are not covered beyond store/logic tests.
 - No rendering tests: how things look, GPU memory and frame rate are checked only by manual checks and browser harnesses (`src/dev/*Acceptance.js`).
 - No automated end-to-end test of Save As, drag-and-drop, or Prefab apply/revert UI (manual only).
-- No test that a finished level runs without the editor (no standalone player entry exists yet).
+- The standalone player's actual rendering and movement are verified by hand in a browser (Gothic mansion verified); Node tests cover its asset loading and its isolation from editor code.
+- Three geometry-editing fixture levels (`acceptance-convex-brushes`, `-extrusion-clipping`, `-vertex-editing`) reference placeholder material names that are not in the registry. Exempted by name in `standalonePlayer.test.js`.
 - Placeholder workspaces (World Map, Characters, Animation, Visual Scripting, Dialogue, UI Editor) have no code to test.

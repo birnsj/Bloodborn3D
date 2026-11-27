@@ -137,6 +137,20 @@ describe('architecture boundaries (C2)', () => {
     expect(world).not.toMatch(/from ['"].*runtime\/postprocessing/);
   });
 
+  it('standalone player closure avoids editor, ui, tutorials and React', () => {
+    const playerFiles = listJsFiles(path.join(SRC, 'player'));
+    expect(playerFiles.length).toBeGreaterThan(0);
+    const { seen } = walkTransitive(playerFiles);
+    const violations = [];
+    for (const file of seen) {
+      const r = rel(file);
+      if (/^(editor|ui|tutorials)\//.test(r)) violations.push(`player reaches ${r}`);
+      const text = fs.readFileSync(file, 'utf8');
+      if (/from ['"]react(-dom)?(\/[^'"]*)?['"]/.test(text)) violations.push(`${r} imports React`);
+    }
+    expect(violations).toEqual([]);
+  });
+
   it('SceneView does not import editor modules', () => {
     const sceneView = fs.readFileSync(path.join(SRC, 'runtime/SceneView.js'), 'utf8');
     expect(sceneView).not.toMatch(/from ['"][^'"]*editor\//);

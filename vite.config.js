@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { levelFileApiPlugin } from './vite-plugins/levelFileApi.js';
@@ -19,6 +20,15 @@ export default defineConfig({
     projectArtApiPlugin(),
     googleDriveApiPlugin(),
   ],
+  build: {
+    // Two pages: the editor (index.html) and the standalone player (player.html).
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        player: fileURLToPath(new URL('./player.html', import.meta.url)),
+      },
+    },
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.js'],

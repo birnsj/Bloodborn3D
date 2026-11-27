@@ -26,6 +26,14 @@ not import editor. The rest below holds in the code today but is **not** test-en
   Water/Reflector/Refractor, post-processing) are known exceptions: do not add more without approval.
 - Units: 100 editor units = 1 meter. Convert only at the engine boundary (`src/core/units.js`).
 
+## Standalone player
+
+`player.html` + `src/player/` run a finished level with the shared runtime and no editor (`/player.html?level=<name>`).
+It is the proof that the game can ship without the editor. Anything the game needs at play time must work there.
+`src/player` must not import `src/editor`, `src/ui`, `src/tutorials` or React (test-enforced). New runtime features
+(Characters, Animation, Visual Scripting, Dialogue, UI) must be playable in the player, not only in editor Play.
+Check a changed level or runtime feature in the player as well as in the editor.
+
 ## Adding a feature (follow the existing pattern, do not invent a new one)
 
 1. Component class + registration in `componentRegistry.js` (schema fields, `fromJSON`/`toJSON`).
