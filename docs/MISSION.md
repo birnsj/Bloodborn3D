@@ -83,6 +83,16 @@ A new workspace must not create a parallel save format, asset store or undo syst
    same harness on that machine and record the GPU renderer string with the result. Also re-measure on a modest
    machine before treating the target as met.
 
+## Development machines (for interpreting measurements)
+
+- **Desktop (hostname Jeff-5080):** RTX 5080-class GPU. Measured 2026-11-27: integrated level 59.9 FPS single,
+  37.2 FPS four-pane in the editor.
+- **Laptop:** RTX 5070 Ti (laptop GPU). Earlier docs recorded 29.8 / 9.0 FPS here. Laptops often run the browser
+  on the integrated GPU or throttle under power limits, so check Windows Graphics settings (High performance for
+  Cursor and the browser), AC power, and `chrome://gpu` before comparing.
+
+Always record which machine produced a measurement.
+
 ## Related documents
 
 - [`ROADMAP.md`](./ROADMAP.md) — phase history and approved decisions
