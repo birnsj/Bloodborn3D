@@ -23,14 +23,14 @@ export const texturesLesson = {
     {
       id: 'wrap-transform',
       title: 'Wrap and transform',
-      body: 'Try clamp / repeat / mirrored on Wrap S/T. Repeat U/V, offset, and rotation are asset defaults. They compose under Material UV (Layer 2) and never replace surface face UVs or world-aligned mapping.',
+      body: 'Try clamp / repeat / mirrored on Wrap S/T. Repeat U/V, offset, rotation, and center are asset defaults (center defaults to 0,0). They compose under Material UV (Layer 2) and never replace surface face UVs or world-aligned mapping.',
       highlight: 'texture.transform',
       verify: { type: 'manualConfirm' },
     },
     {
       id: 'uv-channels',
       title: 'UV channels in Materials',
-      body: 'Materials Workspace → UV Channels. Each assigned map can sample UV0–UV3 (Three.js Texture.channel). AO and light maps default to UV1. Missing channels warn — baking is not included in Batch 8.',
+      body: 'Materials Workspace → UV Channels. Each assigned map can sample UV0–UV3 (Three.js Texture.channel). Defaults are UV0 so single-UV brushes stay correct — set AO/lightMap to UV1/UV2 when geometry has those sets. Missing channels warn — baking is not included in Batch 8.',
       highlight: 'materials.uvChannels',
       verify: { type: 'manualConfirm' },
     },

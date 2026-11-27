@@ -357,7 +357,7 @@ export function MaterialDefinitionForm({
         <Collapsible title="UV Channels" storageKey="materials.form.mapChannels">
           <p className="bb-muted" {...helpProps('materials.uvChannels')}>
             Select which geometry UV set each assigned map samples (Three.js Texture.channel).
-            AO and light maps default to UV1. Missing channels warn at bind time — baking is not included.
+            Defaults are UV0. Set AO/lightMap to UV1/UV2 when geometry has those sets. Missing channels warn at bind time — baking is not included.
           </p>
           <div className="bb-map-channels">
             {Object.entries(MAP_ID_TO_CHANNEL_KEY)

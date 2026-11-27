@@ -62,8 +62,10 @@ export const DEFAULT_TEXTURE_TRANSFORM = Object.freeze({
   offsetU: 0,
   offsetV: 0,
   rotation: 0,
-  centerU: 0.5,
-  centerV: 0.5,
+  // Match THREE.Texture defaults (0,0). Center 0.5 shifts repeat/rotation away from
+  // UV origin and breaks brush density + material Layer-2 composition.
+  centerU: 0,
+  centerV: 0,
   flipY: true,
 });
 
@@ -197,7 +199,7 @@ export function applyTextureSampling(tex, opts = {}) {
     tex.offset = new THREE.Vector2(0, 0);
   }
   if (!tex.center || typeof tex.center.set !== 'function') {
-    tex.center = new THREE.Vector2(0.5, 0.5);
+    tex.center = new THREE.Vector2(0, 0);
   }
   tex.repeat.set(transform.repeatU, transform.repeatV);
   tex.offset.set(transform.offsetU, transform.offsetV);

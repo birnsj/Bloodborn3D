@@ -1071,11 +1071,11 @@ export const HELP_CONTENT = {
   },
   'texture.transform': {
     title: 'Texture Transform',
-    body: 'Asset-default UV matrix on the texture (repeat/offset/rotation/center). Distinct from surface face UV (Layer 1) and material UV (Layer 2). Material UV multiplies on top of the asset transform once.',
+    body: 'Asset-default UV matrix on the texture (repeat/offset/rotation/center). Center defaults to (0,0) like Three.js so repeat/rotation stay origin-anchored with brush density UVs. Distinct from surface face UV (Layer 1) and material UV (Layer 2). Material UV multiplies on top of the asset transform once.',
   },
   'materials.uvChannels': {
     title: 'UV Channels',
-    body: 'Per-map geometry UV set (Three.js Texture.channel, UV0–UV3). AO and light maps default to UV1. Missing channels warn at bind time. Does not bake lighting.',
+    body: 'Per-map geometry UV set (Three.js Texture.channel, UV0–UV3). Defaults are UV0; set AO/lightMap to UV1/UV2 when geometry has those sets. Missing channels warn at bind time. Does not bake lighting.',
   },
   'materials.uvLayers': {
     title: 'Material UV Layers',

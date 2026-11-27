@@ -250,7 +250,7 @@ export async function phaseLifecycle() {
   }
   await ab?.updateTextureMeta?.('tex_batch8_wood_nearest', {
     transform: {
-      repeatU: 1, repeatV: 1, offsetU: 0, offsetV: 0, rotation: 0, centerU: 0.5, centerV: 0.5, flipY: true,
+      repeatU: 1, repeatV: 1, offsetU: 0, offsetV: 0, rotation: 0, centerU: 0, centerV: 0, flipY: true,
     },
   });
   await sleep(250);

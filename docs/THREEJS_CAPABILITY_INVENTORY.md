@@ -15,7 +15,7 @@
 **Batch 7 verification:** final acceptance closure measured DRACO/KTX2 sample decode, FBX/Collada/GLTF/USDZ import, GLTF/USDZ export/reimport, Asset Viewer/editor/Play renders; USDZ `parseAsync` + `USDLoader` defects fixed. See `docs/ACCEPTANCE_ASSET_TOOLS.md`.  
 **Batch 7.1 status:** **Complete** — actor + asset pivot editing (`contentOffset`), Asset Viewer interactive pivot gizmo, presets, local/world, undo, acceptance level. See `docs/ACCEPTANCE_PIVOT_EDITING.md`.  
 **Pre-Batch 8 performance:** **Stabilized** — multi-viewport shadow reuse, lit display short-circuit, ortho RT skip, profiling median/p95 + `info.reset`. Quad ≥30 FPS target not met (architectural). See `docs/ACCEPTANCE_PERFORMANCE_STABILIZATION.md`.  
-**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. Final acceptance closure: multi-UV GLB + channel warnings, selective GPU cache invalidate, KTX2 Content Browser import, prefab/lifecycle/perf (no Batch 8 regression). VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`.
+**Batch 8 status:** **Complete** — texture sampling/transform Asset Viewer, UV channels, KTX2 decode path, material/surface layering. Final acceptance + UV regression closure: transform center defaults `(0,0)`; map channels default UV0; multi-UV / selective cache / KTX2 / prefab / lifecycle / perf verified. VideoTexture Deferred. See `docs/ACCEPTANCE_TEXTURES.md`. Do **not** start Batch 9.
 
 ### Principles
 

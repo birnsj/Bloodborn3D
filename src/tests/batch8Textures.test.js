@@ -40,6 +40,22 @@ describe('Batch 8 texture sampling', () => {
     const t = normalizeTextureTransform({ repeatU: 2, rotation: 90 });
     expect(t.repeatU).toBe(2);
     expect(t.rotation).toBe(90);
+    expect(normalizeTextureTransform({}).centerU).toBe(0);
+    expect(normalizeTextureTransform({}).centerV).toBe(0);
+  });
+
+  it('scales UV from origin (center 0) so brush density mapping stays aligned', () => {
+    const tex = new THREE.Texture();
+    applyTextureSampling(tex, { transform: { repeatU: 2, repeatV: 2 } });
+    expect(tex.center.x).toBe(0);
+    expect(tex.center.y).toBe(0);
+    tex.updateMatrix();
+    // UV (1,1) → (2,2) when scaling from origin; center 0.5 would map to (1.5,1.5).
+    const m = tex.matrix.elements;
+    const x = m[0] * 1 + m[3] * 1 + m[6];
+    const y = m[1] * 1 + m[4] * 1 + m[7];
+    expect(x).toBeCloseTo(2);
+    expect(y).toBeCloseTo(2);
   });
 
   it('forces generateMipmaps off for compressed textures', () => {
@@ -96,9 +112,9 @@ describe('Batch 8 texture sampling', () => {
 });
 
 describe('Batch 8 UV channels', () => {
-  it('defaults AO/lightMap to UV1 and preserves material mapChannels', () => {
-    expect(DEFAULT_MAP_CHANNELS.ao).toBe(1);
-    expect(DEFAULT_MAP_CHANNELS.lightMap).toBe(1);
+  it('defaults all map channels to UV0 and preserves material mapChannels', () => {
+    expect(DEFAULT_MAP_CHANNELS.ao).toBe(0);
+    expect(DEFAULT_MAP_CHANNELS.lightMap).toBe(0);
     expect(channelForMapId({ ao: 2 }, 'aoMapId')).toBe(2);
     const def = normalizeMaterialDefinition({
       mapChannels: { baseColor: 1, ao: 2 },

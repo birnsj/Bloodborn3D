@@ -3,7 +3,10 @@
  * Channel 0 = uv, 1 = uv1/uv2 attribute naming varies; Three uses geometry.attributes[`uv${n||''}`].
  */
 
-/** Slots that commonly use non-zero UV sets (AO / lightmap). */
+/**
+ * Default every slot to UV0 so brushes / single-UV meshes keep authored mapping.
+ * Author mapChannels.ao / lightMap explicitly when geometry has uv1/uv2.
+ */
 export const DEFAULT_MAP_CHANNELS = Object.freeze({
   baseColor: 0,
   normal: 0,
@@ -13,8 +16,8 @@ export const DEFAULT_MAP_CHANNELS = Object.freeze({
   alpha: 0,
   bump: 0,
   displacement: 0,
-  ao: 1,
-  lightMap: 1,
+  ao: 0,
+  lightMap: 0,
   clearcoat: 0,
   clearcoatNormal: 0,
   clearcoatRoughness: 0,
@@ -87,9 +90,7 @@ export function inspectGeometryUvChannels(root) {
   const visit = (geo) => {
     if (!geo?.attributes) return;
     if (geo.attributes.uv) found.add(0);
-    if (geo.attributes.uv1) found.add(1);
-    if (geo.attributes.uv2) found.add(1); // common alias in some loaders
-    if (geo.attributes.uv3) found.add(2);
+    // Three.js Texture.channel N → attribute `uv` (0) or `uvN` (1–3).
     for (let i = 1; i <= 3; i += 1) {
       if (geo.attributes[`uv${i}`]) found.add(i);
     }
