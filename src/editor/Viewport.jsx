@@ -2593,19 +2593,60 @@ export function Viewport() {
       getRuntime: () => runtimeRef.current,
       getShellSize: () => ({ ...shellSizeRef.current }),
       focusSelected: () => focusSelected(),
-      measureFrameTimes: async (seconds = 0.4, { warmupFrames = 12 } = {}) => {
+      measureFrameTimes: async (seconds = 0.4, {
+        warmupFrames = 12,
+        // Automation / background tabs often inject ~500–1000ms rAF gaps.
+        // Discard those so median FPS reflects render cost, not focus stalls.
+        stallMs = 120,
+        settleStableFrames = 6,
+        minSamples = 20,
+      } = {}) => {
+        const waitFrame = () => new Promise((r) => requestAnimationFrame(r));
+
         // Warm-up: discard early frames (shader compile, layout settle).
         for (let i = 0; i < warmupFrames; i += 1) {
-          await new Promise((r) => requestAnimationFrame(r));
+          await waitFrame();
         }
-        const times = [];
+
+        // Wait until rAF is healthy before the timed sample window.
+        // Cap settle attempts tightly — background tabs throttle to ~1 FPS and
+        // must not block the acceptance harness for minutes.
+        let stable = 0;
         let last = performance.now();
-        const end = last + seconds * 1000;
-        while (performance.now() < end) {
-          await new Promise((r) => requestAnimationFrame(r));
+        let settleGuard = 0;
+        const settleCap = Math.max(settleStableFrames * 4, 24);
+        while (stable < settleStableFrames && settleGuard < settleCap) {
+          await waitFrame();
           const now = performance.now();
-          times.push(now - last);
+          const dt = now - last;
           last = now;
+          settleGuard += 1;
+          if (dt <= stallMs) stable += 1;
+          else stable = 0;
+        }
+
+        const times = [];
+        let discardedStalls = 0;
+        last = performance.now();
+        const end = last + seconds * 1000;
+        const hardDeadline = performance.now() + Math.max(seconds * 1000, 1500) + 4000;
+        // Keep sampling until the window ends *and* we have enough non-stall frames.
+        while (performance.now() < end || times.length < minSamples) {
+          if (performance.now() > hardDeadline) break;
+          await waitFrame();
+          const now = performance.now();
+          const dt = now - last;
+          last = now;
+          if (dt > stallMs) {
+            discardedStalls += 1;
+            // Cap runaway waits if the tab stays throttled.
+            if (discardedStalls > 12 && times.length === 0) break;
+            continue;
+          }
+          times.push(dt);
+          if (times.length >= minSamples && performance.now() >= end) break;
+          // Hard cap so a throttled tab cannot spin forever.
+          if (times.length + discardedStalls > 120) break;
         }
         const sorted = [...times].sort((a, b) => a - b);
         const avgMs = times.length
@@ -2623,6 +2664,7 @@ export function Viewport() {
           : 0;
         return {
           samples: times.length,
+          discardedStalls,
           avgFrameMs: +avgMs.toFixed(2),
           medianFrameMs: +medianMs.toFixed(2),
           p95FrameMs: +pct(95).toFixed(2),

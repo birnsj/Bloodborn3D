@@ -59,15 +59,40 @@
     if (!cond) throw new Error(msg);
   }
 
-  function gpuSnapshot(runtime) {
+  /**
+   * Prefer Viewport measureGpuSnapshot (info.reset + one render). Fall back to
+   * raw memory counts when the bridge is unavailable — never treat unreset
+   * drawCalls/triangles as a single-pass cost.
+   */
+  async function gpuSnapshot(runtime, { layoutMode = null } = {}) {
+    const vp = window.__bloodboundViewport;
+    if (vp?.measureGpuSnapshot) {
+      const snap = await vp.measureGpuSnapshot(
+        layoutMode ? { layoutMode } : {},
+      );
+      if (snap) {
+        return {
+          geometries: snap.geometries,
+          textures: snap.textures,
+          programs: runtime?.sceneView?.renderer?.info?.programs?.length ?? null,
+          drawCalls: snap.drawCalls,
+          triangles: snap.triangles,
+          cpuSubmitMs: snap.cpuSubmitMs,
+          paneCount: snap.paneCount,
+          resetProtocol: true,
+        };
+      }
+    }
     const info = runtime?.sceneView?.renderer?.info;
     if (!info) return null;
     return {
       geometries: info.memory?.geometries ?? null,
       textures: info.memory?.textures ?? null,
       programs: info.programs?.length ?? null,
-      drawCalls: info.render?.calls ?? null,
-      triangles: info.render?.triangles ?? null,
+      drawCalls: null,
+      triangles: null,
+      resetProtocol: false,
+      note: 'raw memory only — drawCalls omitted without info.reset()',
     };
   }
 
@@ -99,12 +124,12 @@
     vp.setPrefs({ layoutMode: 'single', maximizedPaneId: null });
     await settle(120);
     const single = await vp.measureFrameTimes(0.4);
-    const gpuSingle = gpuSnapshot(runtime);
+    const gpuSingle = await gpuSnapshot(runtime);
 
     vp.setPrefs({ layoutMode: 'quad' });
     await settle(120);
     const quad = await vp.measureFrameTimes(0.4);
-    const gpuQuad = gpuSnapshot(runtime);
+    const gpuQuad = await gpuSnapshot(runtime);
 
     // Incremental transform cost (one brush / convex / any actor).
     runtime.sceneView.resetSyncStats?.();
@@ -164,7 +189,7 @@
     // --- Play/Stop ---
     await loadLevelForced(ed(), 'test-room.json');
     await settle(200);
-    const gpuBeforePlay = gpuSnapshot(rt());
+    const gpuBeforePlay = await gpuSnapshot(rt());
     for (let i = 0; i < playStopCycles; i += 1) {
       await ed().play?.();
       await settle(40);
@@ -173,7 +198,7 @@
       await settle(40);
       assert(rt().mode === 'edit', `stop cycle ${i} failed`);
     }
-    const gpuAfterPlay = gpuSnapshot(rt());
+    const gpuAfterPlay = await gpuSnapshot(rt());
     report.playStop = {
       cycles: playStopCycles,
       ok: true,
@@ -193,7 +218,7 @@
     ];
     await loadLevelForced(ed(), 'test-room.json');
     await settle(150);
-    const gpuBeforeSwitch = gpuSnapshot(rt());
+    const gpuBeforeSwitch = await gpuSnapshot(rt());
     for (let i = 0; i < levelSwitches; i += 1) {
       const name = switchLevels[i % switchLevels.length];
       await loadLevelForced(ed(), name);
@@ -202,7 +227,7 @@
     }
     await loadLevelForced(ed(), 'test-room.json');
     await settle(150);
-    const gpuAfterSwitch = gpuSnapshot(rt());
+    const gpuAfterSwitch = await gpuSnapshot(rt());
     report.levelSwitch = {
       cycles: levelSwitches,
       ok: true,
@@ -216,7 +241,7 @@
     await loadLevelForced(ed(), 'test-room.json');
     await settle(150);
     const baselineActors = actorCount();
-    const gpuBeforeCd = gpuSnapshot(rt());
+    const gpuBeforeCd = await gpuSnapshot(rt());
     for (let i = 0; i < createDeleteCycles; i += 1) {
       const cur = ed();
       assert(typeof cur.createBrushAtBounds === 'function', 'createBrushAtBounds missing');
@@ -231,7 +256,7 @@
       cur.undo?.();
     }
     await settle(100);
-    const gpuAfterCd = gpuSnapshot(rt());
+    const gpuAfterCd = await gpuSnapshot(rt());
     const finalActors = actorCount();
     report.createDelete = {
       cycles: createDeleteCycles,
@@ -288,7 +313,7 @@
       report.assetPreview = { ok: true, skipped: 'no Meshes button' };
     }
 
-    report.gpu.final = gpuSnapshot(rt());
+    report.gpu.final = await gpuSnapshot(rt());
     return report;
   }
 
@@ -326,7 +351,7 @@
         actors,
         playOk,
         mode: runtime?.mode,
-        gpu: gpuSnapshot(runtime),
+        gpu: await gpuSnapshot(runtime),
       });
       assert(actors > 0, `${name} empty`);
       assert(runtime?.mode === 'edit', `${name} did not restore edit`);

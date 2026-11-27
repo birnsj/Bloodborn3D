@@ -9,7 +9,7 @@ import {
   countTrianglesInRoot,
   resolveStaticCollisionDims,
 } from './staticMeshGeometry.js';
-import { disposeObjectTree } from './gpuResources.js';
+import { disposeObjectTree, markOwnedGpuResource } from './gpuResources.js';
 
 /**
  * Apply BloodBound material overrides onto a cloned glTF root.
@@ -38,20 +38,17 @@ export async function applyStaticMaterialOverrides(root, overrides, createMateri
 
   for (const task of tasks) {
     // Per-mesh create so UV-channel warnings reflect that geometry's attributes.
+    // createThreeMaterial already returns a fresh owned instance — do not clone
+    // (clone would orphan the source material + its map clones; C5 / F8).
     const mat = await createMaterial(task.materialId, task.obj);
     if (!mat) continue;
-    // Each mesh gets its own clone so disposing one actor cannot free another's override.
-    const owned = mat.clone();
-    if (owned.userData) {
-      owned.userData.bbUvWarnings = mat.userData?.bbUvWarnings || [];
-      owned.userData.bbMapChannels = mat.userData?.bbMapChannels;
-    }
+    markOwnedGpuResource(mat);
     task.obj.userData = task.obj.userData || {};
-    task.obj.userData.bbUvWarnings = owned.userData?.bbUvWarnings || [];
+    task.obj.userData.bbUvWarnings = mat.userData?.bbUvWarnings || [];
     if (task.isArray) {
-      task.obj.material[task.matIndex] = owned;
+      task.obj.material[task.matIndex] = mat;
     } else {
-      task.obj.material = owned;
+      task.obj.material = mat;
     }
   }
   return slots;
@@ -158,6 +155,7 @@ export async function buildStaticMeshVisual(comp, {
   }));
 
   disposeFns.push(() => {
+    // GLB geometries stay shared (bbShared); skip them so cache roots survive.
     disposeObjectTree(root, { geometries: false });
   });
 

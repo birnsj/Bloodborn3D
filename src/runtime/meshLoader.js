@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { validateMeshScale, metersToEditorSize } from '../assets/assetCatalog.js';
 import { createRetryableCache } from './retryableCache.js';
 import {
+  disposeSharedSubtree,
   markOwnedGpuResource,
   markSharedGpuResource,
   markSharedMaterialTextures,
@@ -115,10 +116,24 @@ export async function cloneLoadedMesh(url) {
   return { root: clone, meta: loaded.meta, validation: loaded.validation };
 }
 
-export function clearMeshCache() {
+/**
+ * Drop cached GLTF roots. When `dispose` is true (default), frees shared GPU
+ * resources on those roots. Only safe when no live actor / preview still
+ * references the cached geometries (tests, C5 soak reset after unload).
+ */
+export function clearMeshCache({ dispose = true } = {}) {
+  if (dispose) {
+    for (const root of meshSceneByUrl.values()) {
+      disposeSharedSubtree(root);
+    }
+  }
   meshCache.clear();
   meshMetaByUrl.clear();
   meshSceneByUrl.clear();
+}
+
+export function getMeshCacheSize() {
+  return meshSceneByUrl.size;
 }
 
 /**

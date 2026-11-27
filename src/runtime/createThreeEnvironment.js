@@ -276,6 +276,28 @@ async function createWaterSimple(def, rt, resolveUrl, maxAniso) {
     fog: true,
     clipBias: def.clipBias,
   });
+
+  // Three Water.js keeps its WebGLRenderTarget in a constructor closure and has no
+  // .dispose(). Capture the RT on first draw so teardown can free it (C5 / F8).
+  let mirrorRt = null;
+  const rawObr = water.onBeforeRender?.bind(water);
+  if (rawObr) {
+    water.onBeforeRender = function captureMirrorRt(renderer, scene, camera) {
+      if (!mirrorRt && renderer?.setRenderTarget) {
+        const setRT = renderer.setRenderTarget.bind(renderer);
+        renderer.setRenderTarget = (target, ...args) => {
+          if (target?.isWebGLRenderTarget && target.texture) mirrorRt = target;
+          return setRT(target, ...args);
+        };
+        try {
+          return rawObr(renderer, scene, camera);
+        } finally {
+          renderer.setRenderTarget = setRT;
+        }
+      }
+      return rawObr(renderer, scene, camera);
+    };
+  }
   wrapEnvPass(water);
   const ortho = makeOrthoProxy(def.width, def.height, def.color, 0.7);
   ortho.visible = false;
@@ -295,10 +317,17 @@ async function createWaterSimple(def, rt, resolveUrl, maxAniso) {
     u.time.value = (performance.now() - t0) * 0.001 * Math.max(0.1, def.flowSpeed * 30);
   };
 
+  let disposed = false;
   return {
     root,
     kind: 'water',
     dispose: () => {
+      // Exactly-once — holder bbEnvDispose may be invoked once; abandon paths
+      // also call dispose explicitly (C5 acceptance).
+      if (disposed) return;
+      disposed = true;
+      try { mirrorRt?.dispose?.(); } catch { /* ignore */ }
+      mirrorRt = null;
       water.geometry?.dispose?.();
       water.material?.dispose?.();
       if (normals) disposeOwnedTexture(normals);

@@ -46,6 +46,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Consolidation C2 | Architectural boundaries M8/F2 + F20 — see `ACCEPTANCE_CONSOLIDATION_C2.md` |
 | Consolidation C3 | EditorContext gestures + Set*Properties consolidation (F1 partial, F21) — see `ACCEPTANCE_CONSOLIDATION_C3.md` |
 | Consolidation C4 | Geometry/collision/scalability (F4 measured, F11 clear, F14 sync helper, F18 stair share, F16/F17/F19/F24 confirmed) — see `ACCEPTANCE_CONSOLIDATION_C4.md` |
+| Consolidation C5 | GPU lifecycle + FPS measurement integrity (F3/F8) — **done** — see `ACCEPTANCE_CONSOLIDATION_C5.md` |
 
 ## 2. Implemented systems
 
@@ -120,10 +121,10 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 | M6 | Medium | **Closed in 2F.7C** — ordinary edits use `syncIncremental`; full sync retained for load / Play restore / recovery. |
 | M8 / F2 | High/Med | **Closed in consolidation C2** — SceneView imports runtime-local gizmo/factories/viewport helpers; editor paths are compatibility re-exports; `architectureBoundaries.test.js` guards. |
 | M10 | Medium | **Closed in 2F.7F** — StaticMesh box uses `boundingBoxMeters` + `boundingBoxCenterMeters` (fallback 1 m cube at origin). |
-| M / F8 | Medium | Level-switch can leave extra `renderer.info.textures` vs return-to-same-level baseline (shared material cache). Geometries stable (2F.7G). |
+| M / F8 | Medium | **C5 closed for F8 shared-cache semantics.** JS caches flat across 50 level switches; geometry Δ = 0. Residual saturating `renderer.info.memory.textures` climb with flat ownership inventory documented open in `ACCEPTANCE_CONSOLIDATION_C5.md`. Ordinary switches still retain shared caches by design. |
 | F1 | High | EditorContext hub — **partial in C3** (shared propertyEditing + command factories); further domain extraction deferred. |
 | F21 | Medium | **Closed in C3** — Set*Properties / SetWorld* scaffolding shared via `componentPropertyCommands.js`. |
-| F3 | High | Quad multi-viewport below ≥30 FPS target (~17.5–19.6 median historically; Batch 9 mansion re-measure **Unverified**). Architectural N-camera cost. |
+| F3 | High | **Measurement integrity closed in C5** (unequal workloads + stall-hardened sampler). Integrated quad still under ≥30 FPS target (Batch 8 **18.7** @ ~671×507; C5 closure **24.3** @ ~458×317). Architectural N-camera cost remains. |
 | F4 / F16 / F17 | High | **C4:** ceilings reconfirmed (AABB carve, 512, render≠collision). Broadphase **deferred** (no measured win). See `ACCEPTANCE_CONSOLIDATION_C4.md`. |
 | F5 | Medium | **Closed in consolidation C1** — status/roadmap/prereq docs reconciled. |
 | F7 | Medium | **Closed in consolidation C1** — `public/vendor` ignored; first-party unused cleaned; hooks warnings retained. |
@@ -158,10 +159,11 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 - Carve broadphase + World Solid spatial chunking — measured in C4; **deferred** until larger maps justify.
 - Stair material instance sharing (F18) — **done** in C4; full stair mesh batching still optional later.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
-- Level-switch texture `renderer.info` retention (shared caches) — monitor; geometries already stable.
+- Consolidation C5 (GPU lifecycle / FPS integrity) — **done** (`ACCEPTANCE_CONSOLIDATION_C5.md`).
+- Level-switch texture retention — shared-cache by design (F8); residual `info.memory.textures` climb documented open in C5.
 - Splitting the single production chunk (~8 MB).
 - Remaining React hooks / refs-during-render lint warnings (dedicated pass; avoid drive-by dep array changes).
-- Re-measure mansion single/quad FPS post-Batch 9 (**Unverified** vs Batch 8).
+- Integrated quad ≥30 FPS (architectural; C5 recorded 24.3 @ small automation canvas / 18.7 @ Batch 8 size).
 
 ### Development sequence (current)
 

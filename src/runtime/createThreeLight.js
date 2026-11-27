@@ -130,6 +130,13 @@ export async function createThreeLightFromComponent(comp, options = {}) {
       disposeOwnedTexture(light.map);
       light.map = null;
     }
+    // Point/spot/dir shadow maps allocate WebGL(Cube)RenderTarget + depthTexture
+    // (+2 textures per point light). Must free on teardown or Play/Stop leaks.
+    if (light?.shadow) {
+      try { light.shadow.dispose?.(); } catch { /* ignore */ }
+      light.shadow.map = null;
+      light.shadow.mapPass = null;
+    }
     if (lensflare) {
       disposeLensflare(lensflare);
     }

@@ -110,6 +110,7 @@ import {
   disposeOwnedMaterial,
   markOwnedGpuResource,
   markSharedGpuResource,
+  markSharedMaterialTextures,
 } from './gpuResources.js';
 import {
   actorContentFingerprint,
@@ -282,6 +283,8 @@ export class SceneView {
     this._postProcessing = normalizePostProcessing({ enabled: false });
     this._textureLoader = new THREE.TextureLoader();
     this._ppTextureCache = new Map();
+    /** Bumped on clear so in-flight PP texture loads are discarded. */
+    this._ppTextureCacheGeneration = 0;
     this.postProcessingController = new PostProcessingController({
       renderer: this.renderer,
       scene: this.scene,
@@ -595,23 +598,47 @@ export class SceneView {
     }
     const url = this.assetResolver?.getTextureUrl?.(assetId);
     if (!url) return null;
+    const generation = this._ppTextureCacheGeneration || 0;
     const pending = new Promise((resolve) => {
       this._textureLoader.load(
         url,
         (tex) => {
+          // Drop late loads after a level-switch cache clear (C5).
+          if (generation !== (this._ppTextureCacheGeneration || 0)) {
+            try { tex.dispose?.(); } catch { /* ignore */ }
+            resolve(null);
+            return;
+          }
           tex.colorSpace = THREE.NoColorSpace;
           this._ppTextureCache.set(assetId, tex);
           resolve(tex);
         },
         undefined,
         () => {
-          this._ppTextureCache.delete(assetId);
+          if (this._ppTextureCache.get(assetId) === pending) {
+            this._ppTextureCache.delete(assetId);
+          }
           resolve(null);
         },
       );
     });
     this._ppTextureCache.set(assetId, pending);
     return pending;
+  }
+
+  /** Free post-FX textures that are SceneView-owned (not materialFactory cache). */
+  _clearPpTextureCache() {
+    this._ppTextureCacheGeneration = (this._ppTextureCacheGeneration || 0) + 1;
+    if (!this._ppTextureCache) {
+      this._ppTextureCache = new Map();
+      return;
+    }
+    for (const tex of this._ppTextureCache.values()) {
+      if (tex && typeof tex.dispose === 'function') {
+        try { tex.dispose(); } catch { /* ignore */ }
+      }
+    }
+    this._ppTextureCache.clear();
   }
 
   /**
@@ -1205,15 +1232,16 @@ export class SceneView {
       bottom,
     };
     if (helper.animating) helper.update(dt || 1 / 60);
-    // Scissor MUST be the helper corner only. ViewHelper.render() clearDepth/autoClear
-    // honor the active scissor — a full-pane scissor wiped the just-drawn scene (black viewport).
+    // Scissor MUST be the helper corner only so clearDepth stays local.
+    // autoClear must stay false: ViewHelper already clearDepth()s, and enabling
+    // autoClear would wipe the corner color buffer to black (opaque black box).
     const renderer = this.renderer;
     const prevScissorTest = renderer.getScissorTest();
     const prevAutoClear = renderer.autoClear;
     renderer.setScissorTest(true);
     renderer.setScissor(left, bottom, dim, dim);
     renderer.setViewport(left, bottom, dim, dim);
-    renderer.autoClear = true;
+    renderer.autoClear = false;
     helper.render(renderer);
     renderer.autoClear = prevAutoClear;
     renderer.setScissorTest(prevScissorTest);
@@ -1253,6 +1281,8 @@ export class SceneView {
     }
     this._actorMeshes.clear();
     this._clearSelectionHelpers();
+    // Post-FX textures are SceneView-owned and must not survive level switches (C5).
+    this._clearPpTextureCache();
   }
 
   syncFromWorld(world) {
@@ -2691,8 +2721,13 @@ export class SceneView {
       ? sourceMesh.material[0]
       : sourceMesh.material;
     // Own a material clone so disposing the temporary GLB clone cannot free the instance mat.
+    // Maps stay shared (same Texture refs from cloneLoadedMesh); markSharedMaterialTextures
+    // keeps disposeOwnedMaterial from freeing the GLB cache maps.
     const mat = srcMat?.clone ? srcMat.clone() : srcMat;
-    if (mat) markOwnedGpuResource(mat);
+    if (mat) {
+      markOwnedGpuResource(mat);
+      markSharedMaterialTextures(mat);
+    }
     const instanced = new THREE.InstancedMesh(geo, mat, actors.length);
     instanced.castShadow = sample.castShadow !== false;
     instanced.receiveShadow = sample.receiveShadow !== false;
@@ -2838,6 +2873,11 @@ export class SceneView {
       if (built.root) disposeObject(built.root);
       return;
     }
+    // Free prior light GPU (shadow maps / spot maps) before replacing children.
+    if (typeof holder.userData.bbLightDispose === 'function') {
+      try { holder.userData.bbLightDispose(); } catch { /* ignore */ }
+      holder.userData.bbLightDispose = null;
+    }
     while (holder.children.length) {
       const child = holder.children[0];
       holder.remove(child);
@@ -2904,9 +2944,10 @@ export class SceneView {
       disposeObject(child);
     }
     holder.add(built.root);
+    // Register dispose once on the holder only — tagging both holder and root
+    // caused double RT/geo teardown when disposeObject traversed both (C5).
     holder.userData.bbEnvDispose = built.dispose;
     holder.userData.bbEnvKind = built.kind;
-    built.root.userData.bbEnvDispose = built.dispose;
     if (built.kind === 'decal') {
       this._projectDecal(built.root, actor, comp, world);
     }
@@ -4235,10 +4276,7 @@ export class SceneView {
     }
     this.postProcessingController?.dispose();
     this.postProcessingController = null;
-    for (const tex of this._ppTextureCache.values()) {
-      if (tex && typeof tex.dispose === 'function') tex.dispose();
-    }
-    this._ppTextureCache.clear();
+    this._clearPpTextureCache();
     this.worldEnvironment?.dispose?.();
     this.worldEnvironment = null;
     this._studioEnv = null;
@@ -4279,6 +4317,11 @@ function disposeObject(obj) {
     if (typeof child.userData?.bbPrimitiveDispose === 'function') {
       try { child.userData.bbPrimitiveDispose(); } catch { /* ignore */ }
       child.userData.bbPrimitiveDispose = null;
+    }
+    // Light holders own shadow-map RTs via createThreeLight dispose (C5).
+    if (typeof child.userData?.bbLightDispose === 'function') {
+      try { child.userData.bbLightDispose(); } catch { /* ignore */ }
+      child.userData.bbLightDispose = null;
     }
     // Decal mesh may be parented under a brush/static mesh host.
     if (child.userData?.bbDecalDetached && child.parent) {

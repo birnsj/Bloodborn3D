@@ -62,7 +62,8 @@ export function buildPmremFromEquirect(renderer, equirect) {
   } finally {
     pmrem.dispose();
   }
-  if (target?.texture) markSharedGpuResource(target.texture);
+  // PMREM RT is caller-owned (WorldEnvironmentController.disposePmremTarget).
+  // Do not mark the cube texture shared — that contradicted owner dispose (C5).
   return target;
 }
 
@@ -75,7 +76,24 @@ export function disposePmremTarget(target) {
   }
 }
 
-/** Test / teardown helper — does not dispose live GPU textures still referenced. */
-export function clearEnvironmentMapCache() {
+/**
+ * Drop cached equirect HDR/EXR textures.
+ * When `dispose` is true (default), frees the shared GPU textures. Only safe
+ * when no WorldEnvironmentController still references them (tests / soak reset).
+ */
+export async function clearEnvironmentMapCache({ dispose = true } = {}) {
+  if (dispose) {
+    await equirectCache.invalidateWhere((_key, tex) => {
+      if (tex?.isTexture) {
+        try { tex.dispose?.(); } catch { /* ignore */ }
+      }
+      return true;
+    });
+    return;
+  }
   equirectCache.clear();
+}
+
+export function getEnvironmentMapCacheSize() {
+  return equirectCache.size;
 }
