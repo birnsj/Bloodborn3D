@@ -3,7 +3,6 @@ import { DetailsPanel } from './DetailsPanel.jsx';
 import { ContentBrowser } from './ContentBrowser.jsx';
 import { AssetViewer } from './AssetViewer.jsx';
 import { Viewport } from '../Viewport.jsx';
-import { TutorialsPanel } from '../../tutorials/TutorialsPanel.jsx';
 import { LayersPanel } from './LayersPanel.jsx';
 
 function DockPanelShell({ children, className = '' }) {
@@ -64,14 +63,6 @@ function AssetViewerDockPanel() {
   );
 }
 
-function TutorialsDockPanel() {
-  return (
-    <DockPanelShell className="bb-dock-panel--tutorials">
-      <TutorialsPanel docked />
-    </DockPanelShell>
-  );
-}
-
 function LayersDockPanel() {
   return (
     <DockPanelShell className="bb-dock-panel--layers">
@@ -89,6 +80,5 @@ export const dockviewComponents = {
   details: DetailsDockPanel,
   content: ContentDockPanel,
   assetViewer: AssetViewerDockPanel,
-  tutorials: TutorialsDockPanel,
   layers: LayersDockPanel,
 };

@@ -178,7 +178,12 @@ export function LayoutProvider({ children }) {
     const api = dockApiRef.current;
     if (!api || applyingRef.current) return;
     const visibility = getPanelVisibility(api);
-    setLayout((prev) => clampLayout({ ...prev, ...visibility }));
+    // Academy is a floating overlay — keep tutorialsVisible out of dock sync.
+    setLayout((prev) => clampLayout({
+      ...prev,
+      ...visibility,
+      tutorialsVisible: prev.tutorialsVisible,
+    }));
   }, []);
 
   const persistDockLayout = useCallback(() => {
@@ -195,6 +200,7 @@ export function LayoutProvider({ children }) {
       ...prev,
       dockLayout,
       ...visibility,
+      tutorialsVisible: prev.tutorialsVisible,
     }));
   }, []);
 
@@ -222,7 +228,11 @@ export function LayoutProvider({ children }) {
         } catch {
           /* keep */
         }
-        visibility = { ...getPanelVisibility(api), viewportMaximized: false };
+        visibility = {
+          ...getPanelVisibility(api),
+          tutorialsVisible: Boolean(snapshot.tutorialsVisible),
+          viewportMaximized: false,
+        };
       }
       const viewportView = normalizeViewportView(snapshot.viewportView);
       const working = { dockLayout, ...visibility, viewportView };
@@ -258,6 +268,17 @@ export function LayoutProvider({ children }) {
   }, [patch, layout.workspace]);
 
   const togglePanel = useCallback((key) => {
+    // Academy is a floating overlay (like Checklist), not a dock tab.
+    if (key === 'tutorialsVisible') {
+      setLayout((prev) => {
+        const next = clampLayout({ ...prev, tutorialsVisible: !prev.tutorialsVisible });
+        layoutRef.current = next;
+        flushSessionPrefs(next);
+        return next;
+      });
+      return;
+    }
+
     const api = dockApiRef.current;
     const panelKey = key === 'outlinerVisible'
       ? 'outliner'
@@ -267,26 +288,33 @@ export function LayoutProvider({ children }) {
           ? 'content'
           : key === 'assetViewerVisible'
             ? 'assetViewer'
-            : key === 'tutorialsVisible'
-              ? 'tutorials'
-              : key === 'layersVisible'
-                ? 'layers'
-                : null;
+            : key === 'layersVisible'
+              ? 'layers'
+              : null;
     if (!panelKey || !api) return;
 
     const panel = api.getPanel(panelKey);
     if (panel) closePanelByKey(api, panelKey);
     else reopenPanel(api, panelKey);
     persistDockLayout();
-  }, [persistDockLayout]);
+  }, [persistDockLayout, flushSessionPrefs]);
 
   /** Open a panel if closed; activate if already open. */
   const ensurePanel = useCallback((panelKey) => {
+    if (panelKey === 'tutorials') {
+      setLayout((prev) => {
+        const next = clampLayout({ ...prev, tutorialsVisible: true });
+        layoutRef.current = next;
+        flushSessionPrefs(next);
+        return next;
+      });
+      return;
+    }
     const api = dockApiRef.current;
     if (!api || !panelKey) return;
     reopenPanel(api, panelKey);
     persistDockLayout();
-  }, [persistDockLayout]);
+  }, [persistDockLayout, flushSessionPrefs]);
 
   /**
    * Toggle in-viewport pane maximize (multi-view only).

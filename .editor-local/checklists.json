@@ -1,12 +1,39 @@
 {
   "schemaVersion": 1,
-  "visible": true,
+  "visible": false,
+  "w": 322,
+  "h": 384,
   "project": [],
   "byLevel": {
     "test-room.json": [
       {
         "id": "item-mwzikpup-fvh50",
         "text": "Finish Game",
+        "done": false
+      },
+      {
+        "id": "item-mwzj24a0-xx25l",
+        "text": "",
+        "done": false
+      },
+      {
+        "id": "item-mwzj24n7-lpe9o",
+        "text": "",
+        "done": false
+      },
+      {
+        "id": "item-mwzj24tl-b2ngw",
+        "text": "",
+        "done": false
+      },
+      {
+        "id": "item-mwzj262d-q8w14",
+        "text": "",
+        "done": false
+      },
+      {
+        "id": "item-mwzj26v4-ovqr4",
+        "text": "",
         "done": false
       }
     ]

@@ -22,7 +22,7 @@ const BUDGETS = {
   'editor/projectArt/ProjectArtLibraryPanel.jsx': 2429,
   'editor/layout/DetailsPanel.jsx': 1864,
   // Help text table: content, not logic, so it gets more room.
-  'ui/hoverHelp/helpContent.js': 1600,
+  'ui/hoverHelp/helpContent.js': 1650,
 };
 
 function sourceFiles(dir, out = []) {

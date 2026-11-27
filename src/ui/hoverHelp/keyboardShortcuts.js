@@ -81,6 +81,8 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
       { keys: ['MMB'], action: 'Pan', note: 'speed in Edit → Settings' },
       { keys: ['Wheel'], action: 'Zoom', note: 'ortho zooms frustum' },
       { keys: ['Space'], action: 'Maximize active pane', note: 'toggle · multi-view only · Play uses Space to jump' },
+      { keys: ['Ctrl', '1–9'], action: 'Store camera bookmark', note: 'active pane · saved with the level · undoable' },
+      { keys: ['1–9'], action: 'Go to camera bookmark', note: 'restores stored pose + camera mode' },
     ],
   },
   {
@@ -98,24 +100,61 @@ export const KEYBOARD_SHORTCUT_SECTIONS = [
     title: 'Content Browser',
     rows: [
       {
+        keys: ['Shift', 'LMB'],
+        action: 'Range-select folders',
+        note: 'from last anchor · Ctrl/Cmd toggles · Alt removes',
+      },
+      {
         keys: ['RMB'],
-        action: 'Folder menu',
-        note: 'New Subfolder · Rename · Delete · Move Up/Down · Move To',
+        action: 'Folder / category menu',
+        note: 'New Subfolder · Category · Icon Color · Duplicate · Rename · Delete · Move',
       },
       {
         keys: ['RMB'],
         action: 'Empty-space menu',
-        note: 'New Folder (top level)',
+        note: 'New Folder · Add Category',
       },
       {
         keys: ['Drag'],
-        action: 'Reparent folder',
-        note: 'custom folders only · drop onto another folder',
+        action: 'Nest or reorder',
+        note: 'middle = nest into · top/bottom insert line = place beside',
       },
       {
         keys: ['RMB'],
         action: 'Asset → Move To Folder',
         note: 'in Asset Viewer · registry path only, files stay put',
+      },
+    ],
+  },
+  {
+    id: 'outliner',
+    title: 'Scene Outliner',
+    rows: [
+      {
+        keys: ['Drag'],
+        action: 'Reparent / reorder',
+        note: 'middle = parent under · top/bottom = beside · drop on Category to section',
+      },
+      {
+        keys: ['RMB'],
+        action: 'Actor / category menu',
+        note: 'Icon Color · rename category · delete category header only',
+      },
+    ],
+  },
+  {
+    id: 'editorHelpers',
+    title: 'Editor helpers',
+    rows: [
+      {
+        keys: ['Note'],
+        action: 'Add sticky note',
+        note: 'Level toolbar · drag header · Show toggles visibility · .editor-local',
+      },
+      {
+        keys: ['Checklist'],
+        action: 'Project / level to-dos',
+        note: 'Level toolbar · Project + Level tabs · notepad panel · .editor-local',
       },
     ],
   },

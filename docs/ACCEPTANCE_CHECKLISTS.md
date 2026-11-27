@@ -6,7 +6,7 @@ Editor-only to-do lists (not level JSON, not player).
 
 - Level toolbar **Checklist** toggles a floating panel (next to Note / Show).
 - Tabs: **Project** (whole workspace) and **Level** (keyed by open level filename).
-- Add / check / edit / delete items. Drag the panel header to move.
+- Add / check / edit / delete items. Drag the panel header to move. Drag the bottom-right corner to resize width/height (larger reveals more content; text size stays fixed; persisted).
 - Persisted in `.editor-local/checklists.json` via localhost `/api/checklists` (localStorage fallback). The file is **tracked in git** with the project.
 - Hidden in Play. Not present in the standalone player.
 - Today there is one project (this workspace); File lists levels inside it. Multi-project can namespace later.

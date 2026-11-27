@@ -28,6 +28,10 @@ import {
   loadTutorialPrefs,
   saveTutorialPrefs,
 } from './tutorialPrefs.js';
+import {
+  dockIdForTutorialHighlight,
+  findDockTabElement,
+} from './positionCoachMark.js';
 
 const TutorialContext = createContext(null);
 
@@ -92,7 +96,7 @@ export function TutorialProvider({ children }) {
   ]);
 
   const showTutorialsPanel = useCallback(() => {
-    layout.ensurePanel?.('tutorials');
+    layout.ensurePanel?.('tutorials'); // flips layout.tutorialsVisible (floating Academy)
     setPanelFocusToken((n) => n + 1);
   }, [layout]);
 
@@ -198,10 +202,24 @@ export function TutorialProvider({ children }) {
     document.querySelectorAll('[data-bb-tutorial-lit="1"]').forEach((el) => {
       el.removeAttribute('data-bb-tutorial-lit');
     });
-    for (const id of highlightIds) {
-      document.querySelectorAll(`[data-bb-tutorial="${id}"]`).forEach((el) => {
-        el.setAttribute('data-bb-tutorial-lit', '1');
-      });
+    const ids = Array.isArray(highlightIds)
+      ? highlightIds
+      : (highlightIds ? [highlightIds] : []);
+    for (const id of ids) {
+      const dockId = dockIdForTutorialHighlight(id);
+      const tab = dockId ? findDockTabElement(dockId) : null;
+      // Always pulse the dock tab for in-panel targets (tip points here).
+      if (tab) tab.setAttribute('data-bb-tutorial-lit', '1');
+      // Pulse the specific control inside (not the panel-fill wrapper).
+      if (!String(id).startsWith('panel.')) {
+        document.querySelectorAll(`[data-bb-tutorial="${id}"]`).forEach((el) => {
+          el.setAttribute('data-bb-tutorial-lit', '1');
+        });
+      } else if (!tab) {
+        document.querySelectorAll(`[data-bb-tutorial="${id}"]`).forEach((el) => {
+          el.setAttribute('data-bb-tutorial-lit', '1');
+        });
+      }
     }
     return () => {
       document.body.classList.remove('bb-tutorial-active');

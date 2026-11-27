@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { positionCoachMark } from '../tutorials/positionCoachMark.js';
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  dockIdForTutorialHighlight,
+  getTutorialAnchorRect,
+  positionCoachMark,
+} from '../tutorials/positionCoachMark.js';
 
 describe('positionCoachMark', () => {
   it('places the card near the anchor without leaving the layer', () => {
@@ -29,3 +34,65 @@ describe('positionCoachMark', () => {
     expect(pos.top).toBeGreaterThanOrEqual(10);
   });
 });
+
+describe('dock tab coach anchors', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('maps in-panel highlight ids to dock panel ids', () => {
+    expect(dockIdForTutorialHighlight('details.staticMesh')).toBe('details');
+    expect(dockIdForTutorialHighlight('outliner.category')).toBe('outliner');
+    expect(dockIdForTutorialHighlight('content.folder')).toBe('content');
+    expect(dockIdForTutorialHighlight('assetViewer.meshTools')).toBe('assetViewer');
+    expect(dockIdForTutorialHighlight('panel.layers')).toBe('layers');
+    expect(dockIdForTutorialHighlight('toolbar.select')).toBe(null);
+  });
+
+  it('anchors in-panel controls to the dock tab even when the control is visible', () => {
+    document.body.innerHTML = `
+      <div class="dv-tab" aria-label="Details"></div>
+      <div data-bb-tutorial="panel.details">
+        <button data-bb-tutorial="details.staticMesh">Mesh</button>
+      </div>
+    `;
+    const btn = document.querySelector('[data-bb-tutorial="details.staticMesh"]');
+    const tab = document.querySelector('.dv-tab');
+    btn.getBoundingClientRect = () => ({
+      left: 20, top: 80, width: 120, height: 20, right: 140, bottom: 100, x: 20, y: 80, toJSON() {},
+    });
+    tab.getBoundingClientRect = () => ({
+      left: 10, top: 10, width: 80, height: 24, right: 90, bottom: 34, x: 10, y: 10, toJSON() {},
+    });
+    const hit = getTutorialAnchorRect(['details.staticMesh']);
+    expect(hit.viaTab).toBe(true);
+    expect(hit.el).toBe(tab);
+  });
+
+  it('anchors to the dock tab when the control is missing', () => {
+    document.body.innerHTML = `
+      <div class="dv-tab" aria-label="Details"></div>
+    `;
+    const tab = document.querySelector('.dv-tab');
+    tab.getBoundingClientRect = () => ({
+      left: 10, top: 10, width: 80, height: 24, right: 90, bottom: 34, x: 10, y: 10, toJSON() {},
+    });
+    const hit = getTutorialAnchorRect(['details.staticMesh']);
+    expect(hit.viaTab).toBe(true);
+    expect(hit.el).toBe(tab);
+  });
+
+  it('still anchors toolbar controls to themselves', () => {
+    document.body.innerHTML = `
+      <button data-bb-tutorial="toolbar.select" style="width:40px;height:28px">Select</button>
+    `;
+    const btn = document.querySelector('[data-bb-tutorial="toolbar.select"]');
+    btn.getBoundingClientRect = () => ({
+      left: 4, top: 4, width: 40, height: 28, right: 44, bottom: 32, x: 4, y: 4, toJSON() {},
+    });
+    const hit = getTutorialAnchorRect('toolbar.select');
+    expect(hit.viaTab).toBe(false);
+    expect(hit.el).toBe(btn);
+  });
+});
+

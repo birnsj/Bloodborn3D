@@ -20,6 +20,8 @@ const CHECKLISTS_FILE = path.join(LOCAL_DIR, 'checklists.json');
 const EMPTY_DOC = {
   schemaVersion: 1,
   visible: false,
+  w: 280,
+  h: 360,
   project: [],
   byLevel: {},
 };
@@ -95,9 +97,27 @@ function normalizeDoc(raw) {
     if (!Array.isArray(list)) continue;
     byLevel[key] = list;
   }
+  const clamp = (n, min, max, fallback) => {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(v)));
+  };
+  const hasW = Number.isFinite(Number(src.w));
+  const hasH = Number.isFinite(Number(src.h));
+  let w = hasW ? clamp(src.w, 200, 640, 280) : 280;
+  let h = hasH ? clamp(src.h, 180, 720, 360) : 360;
+  if (!hasW || !hasH) {
+    const scaleN = Number(src.scale);
+    if (Number.isFinite(scaleN) && scaleN > 0) {
+      if (!hasW) w = clamp(268 * scaleN, 200, 640, 280);
+      if (!hasH) h = clamp(320 * scaleN, 180, 720, 360);
+    }
+  }
   return {
     schemaVersion: 1,
     visible: src.visible === true,
+    w,
+    h,
     project: Array.isArray(src.project) ? src.project : [],
     byLevel,
   };

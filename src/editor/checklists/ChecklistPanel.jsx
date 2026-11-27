@@ -6,17 +6,27 @@ import {
   persistChecklistsDoc,
 } from './checklistsApi.js';
 import {
+  checklistsSize,
   checklistsVisible,
   createChecklistItem,
   itemsForLevel,
   patchChecklistItem,
   projectItems,
   removeChecklistItem,
+  setChecklistsSize,
   setChecklistsVisible,
   setItemsForLevel,
   setProjectItems,
 } from './checklistsModel.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
+
+function readUiScale(el) {
+  const app = el?.closest?.('.bb-app');
+  const scaleRaw = app
+    ? Number(getComputedStyle(app).getPropertyValue('--bb-ui-scale'))
+    : 1;
+  return Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 1;
+}
 
 /**
  * Editor-only floating checklist (project + per-level).
@@ -29,6 +39,7 @@ export function ChecklistPanel() {
   const [tab, setTab] = useState('level');
   const saveTimer = useRef(null);
   const dragRef = useRef(null);
+  const resizeRef = useRef(null);
   const [pos, setPos] = useState({ x: null, y: 56 });
 
   const levelNameRef = useRef(levelName);
@@ -103,18 +114,13 @@ export function ChecklistPanel() {
     const host = e.currentTarget.closest('.bb-dock-host');
     if (!panel || !host) return;
     // .bb-app uses transform: scale(); client coords are scaled, CSS left/top are not.
-    const app = host.closest('.bb-app');
-    const scaleRaw = app
-      ? Number(getComputedStyle(app).getPropertyValue('--bb-ui-scale'))
-      : 1;
-    const scale = Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 1;
+    const scale = readUiScale(host);
     const hostRect = host.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const grabX = e.clientX - panelRect.left;
     const grabY = e.clientY - panelRect.top;
-    const panelW = panel.offsetWidth;
-    const maxX = Math.max(8, host.clientWidth - panelW - 8);
-    const maxY = Math.max(8, host.clientHeight - 48);
+    const maxX = Math.max(8, host.clientWidth - panel.offsetWidth - 8);
+    const maxY = Math.max(8, host.clientHeight - panel.offsetHeight - 8);
     dragRef.current = { grabX, grabY, hostRect, scale, maxX, maxY };
 
     const localPos = (clientX, clientY) => {
@@ -144,11 +150,49 @@ export function ChecklistPanel() {
     window.addEventListener('pointerup', onUp);
   };
 
+  const onResizeCornerDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const size = checklistsSize(doc);
+    const uiScale = readUiScale(e.currentTarget);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: size.w,
+      startH: size.h,
+      uiScale,
+    };
+
+    const onMove = (ev) => {
+      const r = resizeRef.current;
+      if (!r) return;
+      const dx = (ev.clientX - r.startX) / r.uiScale;
+      const dy = (ev.clientY - r.startY) / r.uiScale;
+      commitDoc((prev) => setChecklistsSize(prev, {
+        w: Math.round(r.startW + dx),
+        h: Math.round(r.startH + dy),
+      }));
+    };
+    const onUp = () => {
+      resizeRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   if (mode === 'play' || !ready || !visible) return null;
 
-  const style = pos.x == null
-    ? { top: `${pos.y}px`, right: '16px' }
-    : { top: `${pos.y}px`, left: `${pos.x}px` };
+  const size = checklistsSize(doc);
+  const style = {
+    ...(pos.x == null
+      ? { top: `${pos.y}px`, right: '16px' }
+      : { top: `${pos.y}px`, left: `${pos.x}px` }),
+    width: `${size.w}px`,
+    height: `${size.h}px`,
+  };
 
   const levelLabel = levelName || 'untitled.json';
   const doneCount = items.filter((i) => i.done).length;
@@ -263,6 +307,16 @@ export function ChecklistPanel() {
             + Add
           </button>
         </div>
+
+        <div
+          className="bb-checklist-panel__resize"
+          role="separator"
+          aria-orientation="both"
+          aria-label="Resize checklist"
+          title="Drag to resize"
+          onPointerDown={onResizeCornerDown}
+          {...helpProps('checklists.scale')}
+        />
       </aside>
     </div>
   );

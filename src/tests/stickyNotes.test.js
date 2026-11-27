@@ -22,6 +22,8 @@ describe('sticky notes model', () => {
     expect(note.x).toBe(92);
     expect(note.y).toBe(0);
     expect(note.text).toBe('fix');
+    expect(createStickyNote({ w: 40 }).w).toBe(120);
+    expect(createStickyNote({ w: 900 }).w).toBe(420);
     expect(STICKY_NOTE_COLORS).toContain('yellow');
     expect(normalizeStickyNotes([{ id: 'a', text: '1' }, { id: 'a', text: 'dup' }, null]))
       .toHaveLength(1);

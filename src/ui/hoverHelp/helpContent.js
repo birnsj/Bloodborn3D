@@ -119,12 +119,12 @@ export const HELP_CONTENT = {
   // —— Help menu ——
   'help.shortcuts': {
     title: 'Keyboard Shortcuts',
-    body: 'Open Help → Keyboard Shortcuts… for edit (including Ctrl+Shift+S Save All), transform, geometry/clip (Enter/Esc), grid, placement (Tab), camera, play, Content Browser folder RMB actions, and Project Art Library gallery bindings.',
-    tips: 'Hover Help shows matching shortcuts on toolbar, viewport, Content Browser, and AI Assets controls.',
+    body: 'Open Help → Keyboard Shortcuts… for edit (Ctrl+Shift+S Save All), transform, geometry/clip, grid, placement, camera (Ctrl+1–9 store / 1–9 recall bookmarks), play, Content Browser multi-select and folder/category menus, Outliner drag/reparent, sticky notes & Checklist, and Project Art gallery bindings.',
+    tips: 'Hover Help shows matching shortcuts on toolbar, viewport, Content Browser, Outliner, and AI Assets controls.',
   },
   'help.hoverHelp': {
     title: 'Show Hover Help',
-    body: 'When enabled, pausing the cursor over toolbar, panel, and Content Browser controls shows a tip with description and shortcut when available.',
+    body: 'When enabled, pausing the cursor over toolbar, panel, Content Browser, Outliner, sticky notes, and Checklist controls shows a tip with description and shortcut when available.',
   },
 
   // —— Toolbar ——
@@ -418,12 +418,12 @@ export const HELP_CONTENT = {
   },
   'creation.toolbar': {
     title: 'Creation Toolbox',
-    body: 'Dockable toolbox on the Viewport (top, left, right, or bottom). Click a category to roll out tools; click outside, click again, or Esc to close. Click or drag a tool into the viewport to place.',
-    tips: 'Drag the handle into the viewport to float, or to an edge to flush-dock. Edit → Settings… → Creation toolbox sets dock and scale.',
+    body: 'Dockable toolbox on the Viewport (top, left, right, or bottom; defaults left). Click a category to roll out tools; click outside, click again, or Esc to close. Click or drag a tool into the viewport to place. Prefabs / Assets shows the last 8 placed meshes/prefabs with thumbnails.',
+    tips: 'Drag the grip to float or snap flush to an edge. Edit → Settings… → Creation toolbox sets dock and scale. Flush docks inset Cam/View/Fog chrome.',
   },
   'settings.creationToolbar': {
     title: 'Creation Toolbox',
-    body: 'Flush-dock to top / left / right / bottom of the Viewport, or Floating. Drag off an edge to undock. Top/bottom are horizontal strips; left/right are vertical. Scale changes category/tool button size.',
+    body: 'Flush-dock to top / left / right / bottom of the Viewport, or Floating. Drag the grip off an edge to undock, or near an edge to re-dock. Top/bottom are horizontal strips; left/right are vertical. Scale changes category/tool button size.',
   },
   'creation.geometry': {
     title: 'Geometry',
@@ -463,7 +463,7 @@ export const HELP_CONTENT = {
   },
   'stickyNotes.add': {
     title: 'Sticky note',
-    body: 'Adds an editor-only 2D reminder over the Level workspace (Viewport and side panels). On the Level toolbar next to Reset Views. Stored in `.editor-local/sticky-notes.json`, not the level. Hidden in Play / player. Drag the note header to move — notes can sit over Outliner, Content Browser, Details, etc.',
+    body: 'Adds an editor-only 2D reminder over the Level workspace (Viewport and side panels). Level toolbar next to Reset Views. Stored in `.editor-local/sticky-notes.json` (git-tracked with the project, not level JSON). Hidden in Play / player. Drag the note header to move; drag the bottom-right corner to resize — notes sit above dock sashes and panels.',
   },
   'stickyNotes.visible': {
     title: 'Show sticky notes',
@@ -471,11 +471,15 @@ export const HELP_CONTENT = {
   },
   'checklists.toggle': {
     title: 'Checklist',
-    body: 'Opens or closes the editor checklist panel. Project tasks cover the whole workspace; Level tasks are per open level file. Stored in `.editor-local/checklists.json`, not the level. Hidden in Play / player.',
+    body: 'Opens or closes the notepad checklist. Project tasks cover this workspace; Level tasks follow the open level file. Stored in `.editor-local/checklists.json` (git-tracked, not level JSON). Hidden in Play / player.',
   },
   'checklists.panel': {
     title: 'Checklist panel',
-    body: 'Editor-only to-do list. Drag the header to move. Switch Project / Level tabs; Level follows the open level. Check items off, edit text, or remove them.',
+    body: 'White notepad for editor to-dos. Drag the header to move (respects UI scale). Drag the bottom-right corner to resize — larger shows more tasks and longer text. Tabs: Project | Level. Add, check off, edit, or delete items.',
+  },
+  'checklists.scale': {
+    title: 'Resize checklist',
+    body: 'Drag the bottom-right corner to change width and height. Text size stays the same so a bigger notepad reveals more. Saved with the checklist file.',
   },
   'checklists.project': {
     title: 'Project checklist',
@@ -1233,8 +1237,14 @@ export const HELP_CONTENT = {
   // —— Viewport chrome ——
   'viewport.camera': {
     title: 'Camera Mode',
-    body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane.',
-    tips: 'Perspective: hold Ctrl + move to orbit · Alt+Move/Rotate/Scale duplicates · RMB drag looks · WASD free-fly. Ortho: RMB orbits.',
+    body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane. Use Ctrl+1–9 / 1–9 for camera bookmarks (see Camera Bookmarks help).',
+    tips: 'Ctrl+1–9 stores this pane’s view on the level (Save to keep); 1–9 recalls it. Perspective: hold Ctrl + move to orbit · Alt+Move/Rotate/Scale duplicates · RMB drag looks · WASD free-fly. Ortho: RMB orbits.',
+  },
+  'viewport.cameraBookmarks': {
+    title: 'Camera Bookmarks',
+    body: 'Ctrl+1–9 (Cmd on macOS) stores the active viewport pane’s camera mode, position, and framing on the level. Press 1–9 alone to jump back. Undo clears a store. Save the level to keep bookmarks in the map JSON.',
+    shortcut: 'Ctrl+1–9 / 1–9',
+    tips: 'Numpad works too. Empty slot status tells you to Ctrl+# first. Not used in Play or the standalone player. Help → Keyboard Shortcuts… lists them under Camera.',
   },
   'viewport.display': {
     title: 'Display Mode',
@@ -1263,7 +1273,7 @@ export const HELP_CONTENT = {
   'viewport.reset': {
     title: 'Reset Camera',
     body: 'Restores this pane’s resting orientation and default zoom for its camera mode (home pose + frustum / distance).',
-    tips: 'Different from Focus (F), which frames the current selection.',
+    tips: 'Different from Focus (F), which frames the current selection. Camera bookmarks (Ctrl+1–9) store custom views on the level instead of the fixed home pose.',
   },
   'viewport.maximize': {
     title: 'Maximize Pane',
@@ -1280,9 +1290,9 @@ export const HELP_CONTENT = {
 
   // —— Panels / settings ——
   'panel.tutorials': {
-    title: 'Tutorials',
-    body: 'Guided lessons (Academy) with floating tips that point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
-    tips: 'Help → Tutorials… or Window → Tutorials. Covers building, workspace Fog/PP chips, Content Browser folders, World Fog & Atmosphere, Post Processing, Project Art Library, and Asset Generation.',
+    title: 'BloodBound Academy',
+    body: 'Paper lesson catalog (educational — not level data or editor chrome). Floating paper tips point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
+    tips: 'Help → Academy… or Window → Academy — floating notepad (not a dock tab). Covers building, workspace (toolbox, sticky notes, Checklist, camera bookmarks), organizing (categories, Collapse All), layers, meshes/tools, fog/PP, Project Art, and Asset Generation.',
   },
   'panel.layers': {
     title: 'Layers',
@@ -1341,7 +1351,8 @@ export const HELP_CONTENT = {
   },
   'panel.content': {
     title: 'Content Browser',
-    body: 'Folder tree of project content. Pair with Asset Viewer for the selected folder’s assets.',
+    body: 'Folder tree of project content with Category section headers, Collapse All, multi-select, and Icon Color. Pair with Asset Viewer for the selected folder’s assets.',
+    tips: 'New / Category / Collapse All sit in the Folders header. Shift/Ctrl/Alt multi-select; drag uses insert lines to nest or place beside.',
   },
   'panel.assetViewer': {
     title: 'Asset Viewer',
@@ -1476,7 +1487,7 @@ export const HELP_CONTENT = {
   },
   'creation.dragHandle': {
     title: 'Move Creation Toolbar',
-    body: 'Drag to reposition the floating creation strip. Snaps to left or right viewport edges when close.',
+    body: 'Drag to float the toolbox or snap it flush to the Viewport top, left, right, or bottom edge. Near an edge docks; away from edges floats at the pointer.',
   },
   'concept.area.new': {
     title: 'New Concept Area',

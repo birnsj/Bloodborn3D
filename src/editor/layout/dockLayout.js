@@ -25,17 +25,15 @@ export const DOCK_PANELS = {
     component: 'assetViewer',
     title: 'Asset Viewer',
   },
-  tutorials: {
-    id: 'tutorials',
-    component: 'tutorials',
-    title: 'Tutorials',
-  },
   layers: {
     id: 'layers',
     component: 'layers',
     title: 'Layers',
   },
 };
+
+/** Legacy dock id — Academy is a floating overlay now, not a dock tab. */
+export const LEGACY_TUTORIALS_DOCK_ID = 'tutorials';
 
 export const DOCK_PANEL_IDS = Object.values(DOCK_PANELS).map((p) => p.id);
 
@@ -45,7 +43,6 @@ export const PANEL_VISIBILITY_KEYS = {
   details: 'detailsVisible',
   content: 'contentVisible',
   assetViewer: 'assetViewerVisible',
-  tutorials: 'tutorialsVisible',
   layers: 'layersVisible',
 };
 
@@ -134,6 +131,7 @@ export function applyDockSnapshot(api, snapshot = {}) {
       api.clear();
       api.fromJSON(dockLayout);
       ensureViewportPanel(api);
+      stripLegacyTutorialsDockPanel(api);
       // Never restore dockview maximize — it hides Outliner/Details/Content.
       setViewportMaximized(api, false);
       return true;
@@ -147,10 +145,17 @@ export function applyDockSnapshot(api, snapshot = {}) {
   if (snapshot.detailsVisible === false) closePanelByKey(api, 'details');
   if (snapshot.contentVisible === false) closePanelByKey(api, 'content');
   if (snapshot.assetViewerVisible === false) closePanelByKey(api, 'assetViewer');
-  if (snapshot.tutorialsVisible === true) reopenPanel(api, 'tutorials');
   if (snapshot.layersVisible === true) reopenPanel(api, 'layers');
+  stripLegacyTutorialsDockPanel(api);
   setViewportMaximized(api, false);
   return true;
+}
+
+/** Remove old dock-tab Academy if a saved layout still has it. */
+export function stripLegacyTutorialsDockPanel(api) {
+  if (!api) return;
+  const panel = api.getPanel?.(LEGACY_TUTORIALS_DOCK_ID);
+  if (panel) api.removePanel(panel);
 }
 
 export function ensureViewportPanel(api) {
@@ -168,7 +173,6 @@ export function getPanelVisibility(api) {
     detailsVisible: Boolean(api?.getPanel(DOCK_PANELS.details.id)),
     contentVisible: Boolean(api?.getPanel(DOCK_PANELS.content.id)),
     assetViewerVisible: Boolean(api?.getPanel(DOCK_PANELS.assetViewer.id)),
-    tutorialsVisible: Boolean(api?.getPanel(DOCK_PANELS.tutorials.id)),
     layersVisible: Boolean(api?.getPanel(DOCK_PANELS.layers.id)),
     viewportMaximized: Boolean(api?.getPanel(DOCK_PANELS.viewport.id)?.api.isMaximized()),
   };
@@ -176,6 +180,7 @@ export function getPanelVisibility(api) {
 
 export function reopenPanel(api, panelKey) {
   if (!api) return;
+  if (panelKey === 'tutorials') return; // Academy is a floating overlay, not a dock panel
   const def = DOCK_PANELS[panelKey];
   if (!def) return;
   if (api.getPanel(def.id)) {
@@ -210,16 +215,6 @@ export function reopenPanel(api, panelKey) {
     assetViewer: {
       position: { referencePanel: DOCK_PANELS.viewport.id, direction: 'below' },
       initialHeight: 220,
-    },
-    tutorials: {
-      position: {
-        referencePanel: api.getPanel(DOCK_PANELS.details.id)
-          ? DOCK_PANELS.details.id
-          : DOCK_PANELS.viewport.id,
-        direction: api.getPanel(DOCK_PANELS.details.id) ? 'below' : 'right',
-      },
-      initialWidth: 320,
-      initialHeight: 280,
     },
     layers: {
       position: {

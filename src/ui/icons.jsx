@@ -740,6 +740,53 @@ export function IconParametric(props) {
   );
 }
 
+/**
+ * Achievement seal — Academy mark (laurel + star medallion).
+ * Drawn in a larger viewBox so it reads as a formal crest, not a tool icon.
+ */
+export function IconAcademy(props) {
+  const { width = 16, height = 16, title, ...rest } = props;
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden={title ? undefined : true}
+      role={title ? 'img' : undefined}
+      {...rest}
+    >
+      {title ? <title>{title}</title> : null}
+      {/* Outer seal ring */}
+      <circle cx="16" cy="15" r="11.2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="16" cy="15" r="8.6" stroke="currentColor" strokeWidth="0.9" opacity="0.85" />
+      {/* Star / achievement */}
+      <path
+        fill="currentColor"
+        d="M16 8.2l1.55 3.55 3.85.35-2.95 2.55.9 3.75L16 16.55l-3.35 1.85.9-3.75-2.95-2.55 3.85-.35L16 8.2Z"
+      />
+      {/* Laurel left */}
+      <path
+        fill="currentColor"
+        d="M7.2 18.2c1.1 1.6 2.5 2.8 4.2 3.5-.2.55-.3 1.1-.35 1.65-2.2-.9-4-2.6-5.2-4.7.45-.2.9-.35 1.35-.45Zm1.4-3.1c.85 1.35 1.95 2.4 3.25 3.1-.15.5-.25 1-.3 1.5-1.7-.9-3.1-2.3-4-4.05.35-.15.7-.3 1.05-.55Z"
+        opacity="0.9"
+      />
+      {/* Laurel right */}
+      <path
+        fill="currentColor"
+        d="M24.8 18.2c-.45.1-.9.25-1.35.45 1.2 2.1 3 3.8 5.2 4.7.05-.55.15-1.1.35-1.65-1.7-.7-3.1-1.9-4.2-3.5Zm-1.4-3.1c-.35.25-.7.4-1.05.55.9 1.75 2.3 3.15 4 4.05.05-.5.15-1 .3-1.5-1.3-.7-2.4-1.75-3.25-3.1Z"
+        opacity="0.9"
+      />
+      {/* Ribbon tails */}
+      <path
+        fill="currentColor"
+        d="M12.2 26.2 16 23.4l3.8 2.8-1.2-4.1H13.4l-1.2 4.1Z"
+        opacity="0.95"
+      />
+    </svg>
+  );
+}
+
 export const WORKSPACE_ICONS = {
   level: IconBrush,
   world: IconGrid,

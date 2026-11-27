@@ -1,14 +1,14 @@
 export const workspaceLesson = {
   id: 'workspace',
   title: 'Workspace & Viewports',
-  summary: 'Dock panels, Content Browser folders, Asset Viewer, named layouts, multi-pane Fog/PP chips, AI Assets tab, Editor Settings, and hover help.',
+  summary: 'Dock panels, creation toolbox, Content Browser folders/categories, Asset Viewer, sticky notes, Checklist, camera bookmarks, named layouts, Fog/PP chips, Settings, and hover help.',
   order: 10,
   starterPath: 'tutorials/getting-started.json',
   steps: [
     {
       id: 'intro',
       title: 'Your workspace',
-      body: 'Content Browser navigates folders (including subfolders); Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together. Workspace tabs (Level Editor, Materials, AI Assets, …) switch major editor modes.',
+      body: 'Content Browser navigates folders (including categories and subfolders); Asset Viewer lists and previews assets. Named layouts remember dock panels and viewport pane setup together. Workspace tabs (Level Editor, Materials, AI Assets, …) switch major editor modes.',
       verify: { type: 'manualConfirm', label: 'Continue' },
     },
     {
@@ -20,17 +20,32 @@ export const workspaceLesson = {
       explain: 'Dedicated Tutorials lessons cover Project Art Library and Asset Generation under Art & generation.',
     },
     {
+      id: 'creation-toolbox',
+      title: 'Creation toolbox',
+      body: 'The left (or docked) creation strip places brushes, lights, and actors. Drag its grip to float or snap flush to a Viewport edge. Prefabs / Assets shows the last meshes you placed. Edit → Settings → Creation toolbox sets dock and scale.',
+      highlight: ['creation.toolbar', 'creation.dragHandle', 'settings.creationToolbar'],
+      verify: { type: 'manualConfirm', label: 'I found the toolbox' },
+    },
+    {
       id: 'content-folders',
       title: 'Content Browser folders',
-      body: 'In Content Browser, right-click a folder for New Subfolder, Rename, Delete, Move Up/Down, or Move To. Use + Folder for a top-level folder. Drag a custom folder onto another to reparent it. Built-in roots (Textures, Materials, Meshes, …) cannot be renamed or deleted.',
+      body: 'In Content Browser, use New, Category, and Collapse All in the Folders header. Right-click a folder for New Subfolder, Icon Color, Rename, Delete, or Move. Shift/Ctrl/Alt multi-select folders. Drag uses a middle highlight to nest or top/bottom insert lines to place beside. Built-in roots cannot be renamed or deleted.',
       terms: [
         { term: 'Virtual folders', def: 'Registry organization paths — they do not create directories on disk.' },
+        { term: 'Category', def: 'A section header for grouping folders in list order — not part of the folder path.' },
         { term: 'Built-in roots', def: 'Factory folders like Textures and Materials that stay fixed.' },
       ],
-      highlight: ['content.folder', 'content.folder.new'],
+      highlight: ['content.folder', 'content.folder.new', 'content.folder.category', 'content.folder.collapseAll'],
       verify: { type: 'manualConfirm', label: 'I tried a folder menu' },
-      failHint: 'Right-click Textures (or empty space) in Content Browser and look for New Subfolder / New Folder.',
+      failHint: 'Right-click Textures (or empty space) in Content Browser and look for New Subfolder / New Folder / Category.',
       explain: 'Delete only works on empty custom folders. Move assets first via Asset Viewer → right-click → Move To Folder.',
+    },
+    {
+      id: 'sticky-checklist',
+      title: 'Sticky notes & Checklist',
+      body: 'Level toolbar: Note adds a sticky reminder; Show hides notes; Checklist opens the notepad (Project + Level tabs). Both are editor-only under `.editor-local/` (git-tracked). A full lesson is Sticky Notes & Checklists under Editor & play.',
+      highlight: ['stickyNotes.add', 'checklists.toggle'],
+      verify: { type: 'manualConfirm', label: 'I found Note / Checklist' },
     },
     {
       id: 'asset-viewer',
@@ -62,6 +77,14 @@ export const workspaceLesson = {
       failHint: 'Activate a viewport pane and set Cam to Isometric.',
     },
     {
+      id: 'camera-bookmarks',
+      title: 'Camera bookmarks on the level',
+      body: 'With a pane active, Ctrl+1–9 stores that pane’s Cam mode and framing on the level (marks dirty — Save to keep). Plain 1–9 recalls the slot. Getting Started covers the same shortcuts; here they apply per active pane in a multi-view layout.',
+      highlight: ['viewport.cameraBookmarks', 'viewport.camera', 'help.shortcuts'],
+      verify: { type: 'manualConfirm', label: 'I stored and recalled a bookmark' },
+      explain: 'Undo reverses a store. Bookmarks are level JSON, not `.editor-local` or browser storage.',
+    },
+    {
       id: 'fog-pp-chips',
       title: 'Fog, Mist, and PP chips',
       body: 'Each pane has Fog, Mist, and PP chips. Fog toggles distance fog; Mist toggles particle mist (off by default). PP toggles post-processing preview (perspective Lit; needs map PP enabled). Multi-pane layouts keep ortho clear while Perspective keeps look.',
@@ -79,7 +102,7 @@ export const workspaceLesson = {
     {
       id: 'panels',
       title: 'Show and hide panels',
-      body: 'Window menu toggles Scene Outliner, Details, Content Browser, Asset Viewer, and Tutorials without losing your level.',
+      body: 'Window menu toggles Scene Outliner, Details, Content Browser, Asset Viewer, and Academy (floating) without losing your level.',
       verify: { type: 'manualConfirm', label: 'I toggled a panel' },
     },
     {
@@ -93,8 +116,8 @@ export const workspaceLesson = {
     {
       id: 'hover-help',
       title: 'Hover Help',
-      body: 'Help → Show Hover Help. Pause on a toolbar, Content Browser folder, or viewport control (including Fog / PP) for a tip. Help → Keyboard Shortcuts… lists hotkeys and mouse bindings (Ctrl+Shift+S Save All, Enter for clip, Esc cascades, Tab for placement, Space maximize, Content Browser folder RMB).',
-      highlight: ['toolbar.select', 'help.hoverHelp', 'content.folder'],
+      body: 'Help → Show Hover Help. Pause on a toolbar, Content Browser, Outliner, sticky note, Checklist, or viewport control for a tip. Help → Keyboard Shortcuts… lists hotkeys (including camera bookmarks Ctrl+1–9 / 1–9) plus Content/Outliner drag and Note/Checklist helpers.',
+      highlight: ['toolbar.select', 'help.hoverHelp', 'help.shortcuts', 'content.folder'],
       verify: { type: 'manualConfirm', label: 'I saw a tip' },
     },
     {

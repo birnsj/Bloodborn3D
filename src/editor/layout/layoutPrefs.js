@@ -32,7 +32,7 @@ export const DEFAULT_LAYOUT = {
   detailsVisible: true,
   contentVisible: true,
   assetViewerVisible: true,
-  /** Tutorials panel starts closed; open via Help → Tutorials. */
+  /** Academy (tutorials) starts closed; open via Help → Academy (floats). */
   tutorialsVisible: false,
   /** Layers panel starts closed; open via Window → Layers. */
   layersVisible: false,

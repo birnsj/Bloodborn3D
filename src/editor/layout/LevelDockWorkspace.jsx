@@ -7,6 +7,7 @@ import {
 import { CREATE_DRAG_MIME } from '../creation/creationTools.js';
 import { ChecklistPanel } from '../checklists/ChecklistPanel.jsx';
 import { StickyNotesLayer } from '../stickyNotes/StickyNotesLayer.jsx';
+import { TutorialsPanel } from '../../tutorials/TutorialsPanel.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { dockviewComponents } from './dockPanels.jsx';
 import { bloodboundDockTheme } from './dockTheme.js';
@@ -169,6 +170,7 @@ export function LevelDockWorkspace() {
       {/* Above all dock panels so notes can park over Outliner / Content / Details. */}
       <StickyNotesLayer />
       <ChecklistPanel />
+      <TutorialsPanel />
     </div>
   );
 }

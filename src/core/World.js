@@ -9,6 +9,7 @@ import {
 } from './postprocessing/postProcessingState.js';
 import { normalizeAuthoringLayersState } from './authoringLayers.js';
 import { emptyOutlinerLayout, normalizeOutlinerLayout } from './outlinerLayout.js';
+import { emptyCameraBookmarks, normalizeCameraBookmarksDoc } from './cameraBookmarks.js';
 
 /** @typedef {'additive' | 'subtractive'} MapMode */
 
@@ -459,6 +460,7 @@ export class World {
     postProcessing = null,
     authoringLayers = null,
     outliner = null,
+    cameraBookmarks = null,
   } = {}) {
     this.name = name;
     this.schemaVersion = schemaVersion;
@@ -478,6 +480,10 @@ export class World {
     this.outliner = outliner && typeof outliner === 'object'
       ? outliner
       : emptyOutlinerLayout();
+    /** Editor camera bookmarks (Ctrl+1–9); omitted from JSON when empty. */
+    this.cameraBookmarks = cameraBookmarks != null
+      ? normalizeCameraBookmarksDoc(cameraBookmarks)
+      : emptyCameraBookmarks();
     this.actors = [];
     this.mode = 'edit'; // 'edit' | 'play'
     this._byId = new Map();
@@ -532,6 +538,7 @@ export class World {
       postProcessing: normalizePostProcessing(this.postProcessing),
       authoringLayers: normalizeAuthoringLayersState(this.authoringLayers, { seedIfEmpty: true }),
       outliner: normalizeOutlinerLayout(this.outliner, this),
+      cameraBookmarks: normalizeCameraBookmarksDoc(this.cameraBookmarks),
       actors: this.actors.map((a) => a.toJSON()),
     };
   }

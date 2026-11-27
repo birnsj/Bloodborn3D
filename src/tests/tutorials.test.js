@@ -80,7 +80,7 @@ describe('tutorial prefs', () => {
 
 describe('lesson registry', () => {
   it('registers beginner lessons including geometry and parametric shapes', () => {
-    expect(LESSONS).toHaveLength(30);
+    expect(LESSONS).toHaveLength(31);
     expect(listLessons().map((l) => l.id)).toContain('textures');
     expect(listLessons().map((l) => l.id)).toContain('editor-layers');
     expect(listLessons().map((l) => l.id)).toContain('pivot-editing');
@@ -108,6 +108,7 @@ describe('lesson registry', () => {
   it('teaches latest camera and material-on-face features', () => {
     const start = getLessonById('getting-started');
     expect(start.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
+    expect(start.steps.some((s) => s.id === 'camera-bookmarks' && /Ctrl\+3/i.test(s.body))).toBe(true);
     expect(start.steps.some((s) => s.id === 'viewport-chrome' && /Fog|PP/i.test(s.body))).toBe(true);
     const materials = getLessonById('materials');
     expect(materials.summary.toLowerCase()).toContain('face');
@@ -118,6 +119,7 @@ describe('lesson registry', () => {
     expect(workspace.steps.some((s) => s.id === 'asset-viewer')).toBe(true);
     expect(workspace.steps.some((s) => s.id === 'ai-assets-tab')).toBe(true);
     expect(workspace.steps.some((s) => s.id === 'fog-pp-chips')).toBe(true);
+    expect(workspace.steps.some((s) => s.id === 'camera-bookmarks')).toBe(true);
     expect(workspace.steps.some((s) => s.verify?.type === 'viewportCameraIs')).toBe(true);
     const fog = getLessonById('world-fog-atmosphere');
     expect(fog.steps.some((s) => s.id === 'mist')).toBe(true);
@@ -369,26 +371,19 @@ describe('lesson runner', () => {
   });
 });
 
-describe('dock tutorials panel registration', () => {
-  it('includes tutorials panel id', () => {
-    expect(DOCK_PANEL_IDS).toContain('tutorials');
-    expect(DOCK_PANELS.tutorials.title).toBe('Tutorials');
+describe('academy is not a dock panel', () => {
+  it('is not registered in DOCK_PANELS', () => {
+    expect(DOCK_PANEL_IDS).not.toContain('tutorials');
+    expect(DOCK_PANELS.tutorials).toBeUndefined();
   });
 
-  it('can reopen tutorials panel', () => {
-    const panels = new Map();
+  it('reopenPanel ignores tutorials (overlay-only)', () => {
     const api = {
-      getPanel: (id) => panels.get(id),
-      addPanel: vi.fn((opts) => {
-        const panel = { id: opts.id, api: { setActive: vi.fn() } };
-        panels.set(opts.id, panel);
-        return panel;
-      }),
+      getPanel: vi.fn(),
+      addPanel: vi.fn(),
     };
-    panels.set('viewport', { id: 'viewport', api: { setActive: vi.fn() } });
     reopenPanel(api, 'tutorials');
-    expect(api.addPanel).toHaveBeenCalled();
-    expect(panels.has('tutorials')).toBe(true);
+    expect(api.addPanel).not.toHaveBeenCalled();
   });
 });
 

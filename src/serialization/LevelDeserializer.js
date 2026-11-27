@@ -48,6 +48,7 @@ export function deserializeLevel(data, { validateGeometry = true } = {}) {
     // Missing authoringLayers → seed defaults (backward compatible; actors keep null → resolve on use).
     authoringLayers: data.authoringLayers ?? null,
     outliner: data.outliner ?? null,
+    cameraBookmarks: data.cameraBookmarks ?? null,
   });
 
   for (const actorData of data.actors) {

@@ -73,6 +73,7 @@ export function TutorialCoachMark() {
         panelHeight: cardHeight,
         layerWidth: layerRect.width,
         layerHeight: layerRect.height,
+        preferBeside: Boolean(hit.viaTab),
       });
 
       setLayout({

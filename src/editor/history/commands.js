@@ -868,6 +868,26 @@ export class SetOutlinerLayoutCommand {
   }
 }
 
+/** Replace level-authored camera bookmarks (Ctrl+1–9 slots). */
+export class SetCameraBookmarksCommand {
+  constructor({ world, before, after, label = 'Set camera bookmark' }) {
+    this.world = world;
+    this.before = structuredClone(before);
+    this.after = structuredClone(after);
+    this.label = label;
+  }
+
+  do() {
+    if (!this.world) return;
+    this.world.cameraBookmarks = structuredClone(this.after);
+  }
+
+  undo() {
+    if (!this.world) return;
+    this.world.cameraBookmarks = structuredClone(this.before);
+  }
+}
+
 /** Batch 9 — assign one or more actors to an authoring layer. */
 export class SetActorsAuthoringLayerCommand {
   constructor({ world, assignments, label = 'Assign authoring layer' }) {

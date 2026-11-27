@@ -56,7 +56,16 @@ import {
   resolvePointerInPanes,
   syncActivePaneCamera,
 } from './viewport/viewportRuntimeBridge.js';
-import { applyPanePose, resetPaneCameraView } from './viewport/viewportCameras.js';
+import { cameraBookmarkSlotFromEvent } from './viewport/cameraBookmarks.js';
+import {
+  goToActivePaneCameraBookmark,
+  storeActivePaneCameraBookmark,
+  syncLookFromCamera,
+} from './viewport/cameraBookmarkActions.js';
+import {
+  resetAllViewportCameraViews,
+  resetViewportCameraView,
+} from './viewport/cameraViewReset.js';
 import {
   normalizeMarqueeNdc,
   marqueeSelectActors,
@@ -150,6 +159,7 @@ export function Viewport() {
     setSelectedActorFlags,
     undo,
     redo,
+    executeCommand,
     stop,
     saveLevel,
     saveAll,
@@ -913,85 +923,50 @@ export function Viewport() {
       settings: editorSettingsRef.current,
     });
 
-    const cam = sceneView.camera;
-    lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls?.target || new THREE.Vector3()));
-    const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
-    lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
-    lookRef.current.yaw = lookEuler.y;
-    lookRef.current.pitch = lookEuler.x;
+    syncLookFromCamera(lookRef, sceneView.camera, controls);
   }, [runtimeRef, selectedActorIds, setViewportPrefs]);
+
+  /** Ctrl+1–9 stores the active pane camera on the level; plain 1–9 restores it. */
+  const storeCameraBookmark = useCallback((slot) => {
+    storeActivePaneCameraBookmark({
+      sceneView: runtimeRef.current?.sceneView, controls: orbitRef.current,
+      prefs: viewportPrefsRef.current, slot, world, executeCommand,
+    });
+  }, [runtimeRef, world, executeCommand]);
+
+  const goToCameraBookmark = useCallback((slot) => {
+    goToActivePaneCameraBookmark({
+      sceneView: runtimeRef.current?.sceneView, controls: orbitRef.current,
+      prefs: viewportPrefsRef.current, slot, world, lookRef, flyModeRef,
+      editorSettings: editorSettingsRef.current, setViewportPrefs, setStatus,
+    });
+  }, [runtimeRef, world, setStatus, setViewportPrefs]);
 
   /** Snap pane camera back to its mode’s resting orientation + default zoom. */
   const resetCameraView = useCallback((paneId = null) => {
-    const sceneView = runtimeRef.current?.sceneView;
-    const controls = orbitRef.current;
-    const prefs = viewportPrefsRef.current;
-    const targetPaneId = paneId || prefs.activePaneId;
-    const panes = prefs.panes.map((pane) => (
-      pane.id === targetPaneId ? resetPaneCameraView(pane) : pane
-    ));
-    const next = { ...prefs, panes, activePaneId: targetPaneId };
-
-    flyModeRef.current = false;
-    lookRef.current.active = false;
-    lookRef.current.pointerId = null;
-
-    setViewportPrefs(next);
-    if (sceneView) {
-      const pane = panes.find((p) => p.id === targetPaneId);
-      if (pane) {
-        const cam = sceneView.ensurePaneCamera(targetPaneId, pane.cameraMode, pane);
-        // applyPanePose resets ortho frustum + camera.zoom; perspective uses home distance.
-        applyPanePose(cam, pane);
-      }
-      syncActivePaneCamera(sceneView, next, controls, {
-        settings: editorSettingsRef.current,
-      });
-      controls?.update?.();
-    }
-
-    const cam = sceneView?.camera;
-    if (cam && controls) {
-      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
-      const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
-      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
-      lookRef.current.yaw = lookEuler.y;
-      lookRef.current.pitch = lookEuler.x;
-    }
+    resetViewportCameraView({
+      sceneView: runtimeRef.current?.sceneView,
+      controls: orbitRef.current,
+      prefs: viewportPrefsRef.current,
+      paneId,
+      lookRef,
+      flyModeRef,
+      editorSettings: editorSettingsRef.current,
+      setViewportPrefs,
+    });
   }, [runtimeRef, setViewportPrefs]);
 
   /** Reset every viewport pane to its camera-mode home pose + default zoom. */
   const resetAllCameraViews = useCallback(() => {
-    const sceneView = runtimeRef.current?.sceneView;
-    const controls = orbitRef.current;
-    const prefs = viewportPrefsRef.current;
-    const panes = prefs.panes.map((pane) => resetPaneCameraView(pane));
-    const next = { ...prefs, panes };
-
-    flyModeRef.current = false;
-    lookRef.current.active = false;
-    lookRef.current.pointerId = null;
-
-    setViewportPrefs(next);
-    if (sceneView) {
-      for (const pane of panes) {
-        const cam = sceneView.ensurePaneCamera(pane.id, pane.cameraMode, pane);
-        applyPanePose(cam, pane);
-      }
-      syncActivePaneCamera(sceneView, next, controls, {
-        settings: editorSettingsRef.current,
-      });
-      controls?.update?.();
-    }
-
-    const cam = sceneView?.camera;
-    if (cam && controls) {
-      lookRef.current.distance = Math.max(0.5, cam.position.distanceTo(controls.target));
-      const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
-      lookEuler.setFromQuaternion(cam.quaternion, 'YXZ');
-      lookRef.current.yaw = lookEuler.y;
-      lookRef.current.pitch = lookEuler.x;
-    }
+    resetAllViewportCameraViews({
+      sceneView: runtimeRef.current?.sceneView,
+      controls: orbitRef.current,
+      prefs: viewportPrefsRef.current,
+      lookRef,
+      flyModeRef,
+      editorSettings: editorSettingsRef.current,
+      setViewportPrefs,
+    });
   }, [runtimeRef, setViewportPrefs]);
 
   useEffect(() => {
@@ -1018,6 +993,14 @@ export function Viewport() {
       }
 
       if (mode !== 'edit') return;
+
+      // Ctrl+1–9 store / 1–9 recall (level-persisted). Blocks browser tab switches.
+      const bookmarkSlot = cameraBookmarkSlotFromEvent(e);
+      if (bookmarkSlot && !e.altKey && !e.shiftKey && !e.target?.isContentEditable) {
+        e.preventDefault();
+        if (!e.repeat) (e.ctrlKey || e.metaKey ? storeCameraBookmark : goToCameraBookmark)(bookmarkSlot);
+        return;
+      }
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -1197,6 +1180,8 @@ export function Viewport() {
     setPivotEditMode,
     world,
     selectedActorIds,
+    storeCameraBookmark,
+    goToCameraBookmark,
   ]);
 
   const pointerNorm = (e, { activate = true } = {}) => {

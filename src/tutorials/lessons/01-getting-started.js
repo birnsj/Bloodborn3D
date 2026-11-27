@@ -1,7 +1,7 @@
 export const gettingStartedLesson = {
   id: 'getting-started',
   title: 'Getting Started',
-  summary: 'Camera (orbit, fly, iso), selection, main panels, and how tutorial saving works.',
+  summary: 'Camera (orbit, fly, iso, bookmarks), selection, main panels, and how tutorial saving works.',
   order: 1,
   starterPath: 'tutorials/getting-started.json',
   steps: [
@@ -54,6 +54,18 @@ export const gettingStartedLesson = {
       highlight: ['viewport.camera'],
       verify: { type: 'viewportCameraIs', cameraMode: 'isometric' },
       failHint: 'Open Cam on the Viewport chrome and pick Isometric.',
+    },
+    {
+      id: 'camera-bookmarks',
+      title: 'Camera bookmarks',
+      body: 'Fly or orbit to a view you like, then press Ctrl+3 (Cmd+3 on Mac) to store it on this level. Move away, then press 3 to jump back. Slots 1–9 work the same. Save the level to keep bookmarks in the map.',
+      terms: [
+        { term: 'Ctrl+1–9', def: 'Store the active pane’s camera (mode + framing) on the level — undoable.' },
+        { term: '1–9', def: 'Go to that bookmark. Empty slots show a status tip until you store one.' },
+      ],
+      highlight: ['viewport.cameraBookmarks', 'viewport.camera', 'help.shortcuts'],
+      verify: { type: 'manualConfirm', label: 'I tried Ctrl+# / #' },
+      explain: 'Bookmarks save with the level JSON (not browser-only). Help → Keyboard Shortcuts… lists them under Camera.',
     },
     {
       id: 'select-wall',

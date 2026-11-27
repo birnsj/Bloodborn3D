@@ -20,7 +20,7 @@ Last verified: 1259 tests / 134 files passing; build passes (editor + player pag
 | Static meshes / assets / pivot | batch6StaticMeshes, batch6AcceptanceCorrections, batch7AssetTools, batch71PivotEditing, batch7AcceptanceVerification, glbPivot, meshThumbnail, contentFolders, listMultiSelect, folderForKind, sampleAssets, retryableAssetLoads, meshyStagingBrowse | C |
 | Lighting / environment / atmosphere / post-processing | batch3Lighting, batch4Environment, worldEnvironment, worldSceneRenderer, atmosphereController, postProcessing | D |
 | Prefabs / cells / authoring layers | prefab, prefabHardening, batch9AuthoringLayers, batch9AcceptanceClosure | E |
-| Multi-viewport / cameras / selection | phase2f6MultiViewport, viewportCameras, viewportIsolation, viewportRenderIsolation, viewportPrefs, paneScissor, marqueeSelection, brushGizmo, listDropEdge, outlinerLayout, iconColor, colorHistory | F |
+| Multi-viewport / cameras / selection | phase2f6MultiViewport, viewportCameras, cameraBookmarks, viewportIsolation, viewportRenderIsolation, viewportPrefs, paneScissor, marqueeSelection, brushGizmo, listDropEdge, outlinerLayout, iconColor, colorHistory | F |
 | GPU lifecycle / performance / sync | gpuResources, c5GpuLifecycle, sceneViewStaleMaterials, phase2f7bAssetLifecycle, phase2f7cIncrementalSync, performanceStabilization, phase2f7gStabilization, consolidationC4Geometry | F, G |
 | Editor shell (layouts, dialogs, menus, settings, help) | dockLayout, workspaceLayouts, editorLifecycle, editorDialogs, editorContextMenu, editorSettingsPrefs, hoverHelp, colorThemes, collapsibleGroup, viewScale, sessionRecorder, stickyNotes, checklists | — |
 | Tutorials | tutorials, coachMark | — |

@@ -26,6 +26,7 @@ export function StickyNotesLayer() {
   const [ready, setReady] = useState(false);
   const saveTimer = useRef(null);
   const dragRef = useRef(null);
+  const resizeRef = useRef(null);
 
   const notes = notesForLevel(doc, levelName);
   const levelNameRef = useRef(levelName);
@@ -141,6 +142,43 @@ export function StickyNotesLayer() {
     window.addEventListener('pointerup', onUp);
   };
 
+  const onResizeCornerDown = (e, note) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const app = e.currentTarget.closest('.bb-app');
+    const scaleRaw = app
+      ? Number(getComputedStyle(app).getPropertyValue('--bb-ui-scale'))
+      : 1;
+    const uiScale = Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 1;
+    resizeRef.current = {
+      id: note.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: note.w,
+      startH: note.h,
+      uiScale,
+    };
+
+    const onMove = (ev) => {
+      const r = resizeRef.current;
+      if (!r) return;
+      const dx = (ev.clientX - r.startX) / r.uiScale;
+      const dy = (ev.clientY - r.startY) / r.uiScale;
+      patchNote(r.id, {
+        w: Math.round(r.startW + dx),
+        h: Math.round(r.startH + dy),
+      });
+    };
+    const onUp = () => {
+      resizeRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   if (mode === 'play' || !ready || !stickyNotesVisible(doc)) return null;
 
   return (
@@ -153,7 +191,7 @@ export function StickyNotesLayer() {
             left: `${note.x}%`,
             top: `${note.y}%`,
             width: `${note.w}px`,
-            minHeight: `${note.h}px`,
+            height: `${note.h}px`,
           }}
         >
           <header
@@ -198,6 +236,14 @@ export function StickyNotesLayer() {
             rows={4}
             onChange={(e) => patchNote(note.id, { text: e.target.value })}
             onPointerDown={(e) => e.stopPropagation()}
+          />
+          <div
+            className="bb-sticky-note__resize"
+            role="separator"
+            aria-orientation="both"
+            aria-label="Resize note"
+            title="Drag to resize"
+            onPointerDown={(e) => onResizeCornerDown(e, note)}
           />
         </article>
       ))}

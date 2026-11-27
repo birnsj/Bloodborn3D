@@ -28,6 +28,7 @@ import { assetToolsLesson } from './27-asset-tools.js';
 import { pivotEditingLesson } from './28-pivot-editing.js';
 import { texturesLesson } from './29-textures.js';
 import { editorLayersLesson } from './30-editor-layers.js';
+import { editorHelpersLesson } from './31-editor-helpers.js';
 
 export const LESSONS = [
   gettingStartedLesson,
@@ -60,6 +61,7 @@ export const LESSONS = [
   pivotEditingLesson,
   texturesLesson,
   editorLayersLesson,
+  editorHelpersLesson,
 ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export function getLessonById(id) {

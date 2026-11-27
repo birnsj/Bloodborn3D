@@ -1,6 +1,37 @@
 /** Editor-only project + per-level checklists. Not level data. */
 
 export const CHECKLISTS_SCHEMA_VERSION = 1;
+export const CHECKLIST_WIDTH_DEFAULT = 280;
+export const CHECKLIST_HEIGHT_DEFAULT = 360;
+export const CHECKLIST_WIDTH_MIN = 200;
+export const CHECKLIST_WIDTH_MAX = 640;
+export const CHECKLIST_HEIGHT_MIN = 180;
+export const CHECKLIST_HEIGHT_MAX = 720;
+
+/** Legacy uniform scale → pixel size (old default width/height). */
+const LEGACY_BASE_W = 268;
+const LEGACY_BASE_H = 320;
+
+export function clampChecklistWidth(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return CHECKLIST_WIDTH_DEFAULT;
+  return Math.min(CHECKLIST_WIDTH_MAX, Math.max(CHECKLIST_WIDTH_MIN, Math.round(n)));
+}
+
+export function clampChecklistHeight(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return CHECKLIST_HEIGHT_DEFAULT;
+  return Math.min(CHECKLIST_HEIGHT_MAX, Math.max(CHECKLIST_HEIGHT_MIN, Math.round(n)));
+}
+
+function sizeFromLegacyScale(scale) {
+  const n = Number(scale);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return {
+    w: clampChecklistWidth(LEGACY_BASE_W * n),
+    h: clampChecklistHeight(LEGACY_BASE_H * n),
+  };
+}
 
 export function createChecklistItem(partial = {}) {
   return {
@@ -37,10 +68,18 @@ export function normalizeChecklistsDoc(raw) {
     if (typeof level !== 'string' || !level) continue;
     byLevel[level] = normalizeChecklistItems(items);
   }
+
+  const hasW = Number.isFinite(Number(src.w));
+  const hasH = Number.isFinite(Number(src.h));
+  const legacy = (!hasW || !hasH) ? sizeFromLegacyScale(src.scale) : null;
+
   return {
     schemaVersion: CHECKLISTS_SCHEMA_VERSION,
     /** When false, the floating checklist panel stays closed. */
     visible: src.visible === true,
+    /** Panel size in CSS px; corner resize. Larger = more content visible. */
+    w: clampChecklistWidth(hasW ? src.w : (legacy?.w ?? CHECKLIST_WIDTH_DEFAULT)),
+    h: clampChecklistHeight(hasH ? src.h : (legacy?.h ?? CHECKLIST_HEIGHT_DEFAULT)),
     project: normalizeChecklistItems(src.project),
     byLevel,
   };
@@ -53,6 +92,18 @@ export function checklistsVisible(doc) {
 export function setChecklistsVisible(doc, visible) {
   const next = normalizeChecklistsDoc(doc);
   next.visible = Boolean(visible);
+  return next;
+}
+
+export function checklistsSize(doc) {
+  const n = normalizeChecklistsDoc(doc);
+  return { w: n.w, h: n.h };
+}
+
+export function setChecklistsSize(doc, size = {}) {
+  const next = normalizeChecklistsDoc(doc);
+  if (size.w != null) next.w = clampChecklistWidth(size.w);
+  if (size.h != null) next.h = clampChecklistHeight(size.h);
   return next;
 }
 

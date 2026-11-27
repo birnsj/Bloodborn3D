@@ -6,6 +6,8 @@
  * present; older levels without it load with World defaults. No schema bump required.
  * Optional `scene` / `renderer` (Three.js look) and `postProcessing` are written the
  * same way (defaults when absent). v1 levels remain loadable.
+ * Optional `cameraBookmarks` (editor Ctrl+1–9 poses) is written only when at least one
+ * slot is set. No schema bump required.
  */
 
 import {
@@ -15,6 +17,7 @@ import {
   normalizeAuthoringLayersState,
 } from '../core/World.js';
 import { normalizeOutlinerLayout } from '../core/outlinerLayout.js';
+import { cameraBookmarksForSerialize } from '../core/cameraBookmarks.js';
 import { normalizePostProcessing } from '../core/postprocessing/postProcessingState.js';
 
 export const LEVEL_SCHEMA_VERSION = 3;
@@ -39,7 +42,7 @@ export function serializeLevel(world) {
     throw new Error('Cannot serialize null world');
   }
   const mapMode = world.mapMode === 'subtractive' ? 'subtractive' : 'additive';
-  return {
+  const data = {
     schemaVersion: schemaVersionForWorld(world),
     name: world.name ?? 'Untitled Level',
     mapMode,
@@ -51,6 +54,9 @@ export function serializeLevel(world) {
     outliner: normalizeOutlinerLayout(world.outliner, world),
     actors: world.actors.map((actor) => actor.toJSON()),
   };
+  const cameraBookmarks = cameraBookmarksForSerialize(world.cameraBookmarks);
+  if (cameraBookmarks) data.cameraBookmarks = cameraBookmarks;
+  return data;
 }
 
 export function serializeLevelString(world, pretty = true) {

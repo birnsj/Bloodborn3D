@@ -458,7 +458,7 @@ export function AppMenuBar() {
               helpId="panel.assetViewer"
             />
             <Item
-              label={`${layout.tutorialsVisible ? 'Hide' : 'Show'} Tutorials`}
+              label={`${layout.tutorialsVisible ? 'Hide' : 'Show'} Academy`}
               close={close}
               onClick={() => togglePanel('tutorialsVisible')}
               helpId="panel.tutorials"
@@ -547,7 +547,7 @@ export function AppMenuBar() {
             />
             <Sep />
             <Item
-              label="Tutorials…"
+              label="Academy…"
               close={close}
               onClick={() => openTutorialsPanel()}
               helpId="panel.tutorials"

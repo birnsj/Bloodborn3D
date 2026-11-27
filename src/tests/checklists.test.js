@@ -1,11 +1,15 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import {
+  checklistsSize,
   checklistsVisible,
+  clampChecklistHeight,
+  clampChecklistWidth,
   createChecklistItem,
   itemsForLevel,
   normalizeChecklistItems,
   normalizeChecklistsDoc,
   projectItems,
+  setChecklistsSize,
   setChecklistsVisible,
   setItemsForLevel,
   setProjectItems,
@@ -48,6 +52,20 @@ describe('checklists model', () => {
     doc = setChecklistsVisible(doc, true);
     expect(checklistsVisible(doc)).toBe(true);
     expect(projectItems(doc)).toHaveLength(1);
+    expect(checklistsSize(doc)).toEqual({ w: 280, h: 360 });
+    doc = setChecklistsSize(doc, { w: 400, h: 500 });
+    expect(checklistsSize(doc)).toEqual({ w: 400, h: 500 });
+    expect(clampChecklistWidth(40)).toBe(200);
+    expect(clampChecklistWidth(900)).toBe(640);
+    expect(clampChecklistHeight(40)).toBe(180);
+    expect(clampChecklistHeight(900)).toBe(720);
+  });
+
+  it('migrates legacy scale into width/height', () => {
+    const doc = normalizeChecklistsDoc({ scale: 1.25, visible: true });
+    expect(doc.w).toBe(Math.round(268 * 1.25));
+    expect(doc.h).toBe(Math.round(320 * 1.25));
+    expect(doc.scale).toBeUndefined();
   });
 });
 
@@ -74,10 +92,12 @@ describe('checklists local cache', () => {
       createChecklistItem({ id: 'l1', text: 'Level task', done: true }),
     ]);
     doc = setChecklistsVisible(doc, true);
+    doc = setChecklistsSize(doc, { w: 320, h: 420 });
     saveChecklistsDocToStorage(doc);
     expect(mem.has(CHECKLISTS_STORAGE_KEY)).toBe(true);
     const loaded = loadChecklistsDocFromStorage();
     expect(checklistsVisible(loaded)).toBe(true);
+    expect(checklistsSize(loaded)).toEqual({ w: 320, h: 420 });
     expect(projectItems(loaded)[0]).toMatchObject({ id: 'p1', text: 'Project task', done: false });
     expect(itemsForLevel(loaded, 'test-room.json')[0]).toMatchObject({
       id: 'l1',

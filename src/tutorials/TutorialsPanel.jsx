@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEditor } from '../editor/EditorContext.jsx';
+import { useLayout } from '../editor/layout/LayoutContext.jsx';
 import { useTutorials } from './TutorialProvider.jsx';
 import { helpProps } from '../ui/hoverHelp/helpProps.js';
+import { IconAcademy } from '../ui/icons.jsx';
 
 const SECTIONS = [
   {
@@ -15,23 +18,27 @@ const SECTIONS = [
       'subtractive-geometry',
       'materials',
       'lighting',
+      'lighting-advanced',
       'furnishing',
       'organizing',
       'prefabs',
       'ceilings-multilevel',
       'ramps-stairs',
       'columns-arches-curves',
+      'environmental-objects',
+      'native-geometry',
+      'static-meshes',
     ],
   },
   {
     id: 'sculpt',
     title: 'Edit geometry',
-    ids: ['geometry-editing', 'surface-align'],
+    ids: ['geometry-editing', 'surface-align', 'pivot-editing'],
   },
   {
     id: 'editor',
     title: 'Editor & play',
-    ids: ['testing', 'workspace', 'editor-layers'],
+    ids: ['testing', 'workspace', 'editor-layers', 'editor-helpers', 'asset-tools'],
   },
   {
     id: 'art',
@@ -42,15 +49,41 @@ const SECTIONS = [
       'post-processing',
       'world-fog-atmosphere',
       'world-environment',
+      'materials-shading',
       'textures',
     ],
   },
 ];
 
+const ACADEMY_W_MIN = 280;
+const ACADEMY_W_MAX = 560;
+const ACADEMY_H_MIN = 320;
+const ACADEMY_H_MAX = 720;
+const ACADEMY_W_DEFAULT = 360;
+const ACADEMY_H_DEFAULT = 480;
+
+function readUiScale(el) {
+  const app = el?.closest?.('.bb-app');
+  const scaleRaw = app
+    ? Number(getComputedStyle(app).getPropertyValue('--bb-ui-scale'))
+    : 1;
+  return Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 1;
+}
+
+function clampSize(w, h) {
+  return {
+    w: Math.min(ACADEMY_W_MAX, Math.max(ACADEMY_W_MIN, Math.round(w))),
+    h: Math.min(ACADEMY_H_MAX, Math.max(ACADEMY_H_MIN, Math.round(h))),
+  };
+}
+
 /**
- * Lesson catalog only. Active steps render as floating coach marks near controls.
+ * Floating Academy catalog (not a dock tab). Like Checklist — drag + resize chrome.
+ * Visibility: layout.tutorialsVisible. Hidden in Play.
  */
-export function TutorialsPanel({ docked = false }) {
+export function TutorialsPanel() {
+  const { mode } = useEditor();
+  const { layout, patch } = useLayout();
   const {
     lessons,
     prefs,
@@ -62,7 +95,14 @@ export function TutorialsPanel({ docked = false }) {
     exitLesson,
     panelFocusToken,
   } = useTutorials();
+
   const rootRef = useRef(null);
+  const dragRef = useRef(null);
+  const resizeRef = useRef(null);
+  const [pos, setPos] = useState({ x: null, y: 56 });
+  const [size, setSize] = useState({ w: ACADEMY_W_DEFAULT, h: ACADEMY_H_DEFAULT });
+
+  const visible = Boolean(layout.tutorialsVisible);
 
   const byId = useMemo(() => {
     const map = new Map();
@@ -78,71 +118,193 @@ export function TutorialsPanel({ docked = false }) {
   ), [byId]);
 
   useEffect(() => {
-    if (panelFocusToken > 0) {
+    if (panelFocusToken > 0 && visible) {
       rootRef.current?.querySelector?.('.bb-tutorials-catalog')?.focus?.();
     }
-  }, [panelFocusToken]);
+  }, [panelFocusToken, visible]);
+
+  const closePanel = useCallback(() => {
+    patch({ tutorialsVisible: false });
+  }, [patch]);
+
+  const onDragHandleDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const panel = e.currentTarget.closest('.bb-academy-panel');
+    const host = e.currentTarget.closest('.bb-dock-host');
+    if (!panel || !host) return;
+    const scale = readUiScale(host);
+    const hostRect = host.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const grabX = e.clientX - panelRect.left;
+    const grabY = e.clientY - panelRect.top;
+    const maxX = Math.max(8, host.clientWidth - panel.offsetWidth - 8);
+    const maxY = Math.max(8, host.clientHeight - panel.offsetHeight - 8);
+    dragRef.current = { grabX, grabY, hostRect, scale, maxX, maxY };
+
+    const localPos = (clientX, clientY) => {
+      const d = dragRef.current;
+      if (!d) return { x: 8, y: 8 };
+      const x = (clientX - d.hostRect.left - d.grabX) / d.scale;
+      const y = (clientY - d.hostRect.top - d.grabY) / d.scale;
+      return {
+        x: Math.max(8, Math.min(d.maxX, x)),
+        y: Math.max(8, Math.min(d.maxY, y)),
+      };
+    };
+
+    setPos(localPos(e.clientX, e.clientY));
+
+    const onMove = (ev) => setPos(localPos(ev.clientX, ev.clientY));
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const onResizeCornerDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const uiScale = readUiScale(e.currentTarget);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: size.w,
+      startH: size.h,
+      uiScale,
+    };
+    const onMove = (ev) => {
+      const r = resizeRef.current;
+      if (!r) return;
+      const dx = (ev.clientX - r.startX) / r.uiScale;
+      const dy = (ev.clientY - r.startY) / r.uiScale;
+      setSize(clampSize(r.startW + dx, r.startH + dy));
+    };
+    const onUp = () => {
+      resizeRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  if (mode === 'play' || !visible) return null;
+
+  const style = {
+    ...(pos.x == null
+      ? { top: `${pos.y}px`, right: '28px' }
+      : { top: `${pos.y}px`, left: `${pos.x}px` }),
+    width: `${size.w}px`,
+    height: `${size.h}px`,
+  };
 
   return (
-    <div
-      className={`bb-tutorials ${docked ? 'bb-tutorials--docked' : ''}`}
-      ref={rootRef}
-      data-bb-tutorial="panel.tutorials"
-      {...helpProps('panel.tutorials')}
-    >
-      <header className="bb-tutorials__header">
-        <h2 className="bb-tutorials__title">Tutorials</h2>
-        <p className="bb-tutorials__lead">
-          BloodBound Academy — choose a lesson. A tip appears next to each control; finish the task to advance.
-          Art &amp; generation covers Project Art, Asset Generation, Post Processing, Fog, and World Environment.
-        </p>
-      </header>
-
-      {activeLessonId ? (
-        <div className="bb-tutorials-running">
-          <div className="bb-tutorials-running__copy">
-            <p className="bb-tutorials-running__label">In progress</p>
-            <p className="bb-tutorials-running__title">{lesson?.title}</p>
-            <p className="bb-tutorials-running__meta">
-              Step {stepIndex + 1} of {stepCount} — follow the floating tip.
-            </p>
-          </div>
-          <button type="button" className="bb-btn" onClick={() => { void exitLesson(); }}>
-            Exit lesson
+    <div className="bb-academy-layer" aria-label="BloodBound Academy">
+      <aside
+        className="bb-academy-panel"
+        style={style}
+        ref={rootRef}
+        data-bb-tutorial="panel.tutorials"
+        {...helpProps('panel.tutorials')}
+      >
+        <header
+          className="bb-academy-panel__bar"
+          onPointerDown={onDragHandleDown}
+        >
+          <span className="bb-academy-panel__grip" aria-hidden>⋮⋮</span>
+          <span className="bb-academy-panel__mark" aria-hidden>
+            <IconAcademy width={18} height={18} />
+          </span>
+          <span className="bb-academy-panel__title">Academy</span>
+          <button
+            type="button"
+            className="bb-academy-panel__close"
+            title="Close Academy"
+            aria-label="Close Academy"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={closePanel}
+          >
+            ×
           </button>
+        </header>
+
+        <div className="bb-tutorials bb-tutorials--floating">
+          <header className="bb-tutorials__header">
+            <p className="bb-tutorials__eyebrow">Educational · not part of your level</p>
+            <h2 className="bb-tutorials__title">
+              <span className="bb-tutorials__mark" aria-hidden>
+                <IconAcademy width={28} height={28} />
+              </span>
+              BloodBound Academy
+            </h2>
+            <p className="bb-tutorials__lead">
+              Choose a lesson. A tip appears next to each control; finish the task to advance.
+              Editor &amp; play covers workspace layout, sticky notes, Checklist, and layers. Art &amp; generation
+              covers Project Art, Asset Generation, materials shading, textures, fog, and post-processing.
+            </p>
+          </header>
+
+          {activeLessonId ? (
+            <div className="bb-tutorials-running">
+              <div className="bb-tutorials-running__copy">
+                <p className="bb-tutorials-running__label">In progress</p>
+                <p className="bb-tutorials-running__title">{lesson?.title}</p>
+                <p className="bb-tutorials-running__meta">
+                  Step {stepIndex + 1} of {stepCount} — follow the floating tip.
+                </p>
+              </div>
+              <button type="button" className="bb-btn" onClick={() => { void exitLesson(); }}>
+                Exit lesson
+              </button>
+            </div>
+          ) : (
+            <div className="bb-tutorials-catalog" tabIndex={-1}>
+              {sections.map((section) => (
+                <section key={section.id} className="bb-tutorials-section">
+                  <h3 className="bb-tutorials-section__title">{section.title}</h3>
+                  <ul className="bb-tutorials-list">
+                    {section.items.map((item) => {
+                      const done = prefs.completedLessonIds?.includes(item.id);
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="bb-tutorials-list__item"
+                            onClick={() => { void startLesson(item.id); }}
+                          >
+                            <span className="bb-tutorials-list__order">{item.order}</span>
+                            <span className="bb-tutorials-list__body">
+                              <span className="bb-tutorials-list__name">
+                                {item.title}
+                                {done ? <span className="bb-tutorials-badge">Done</span> : null}
+                              </span>
+                              <span className="bb-tutorials-list__summary">{item.summary}</span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="bb-tutorials-catalog" tabIndex={-1}>
-          {sections.map((section) => (
-            <section key={section.id} className="bb-tutorials-section">
-              <h3 className="bb-tutorials-section__title">{section.title}</h3>
-              <ul className="bb-tutorials-list">
-                {section.items.map((item) => {
-                  const done = prefs.completedLessonIds?.includes(item.id);
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className="bb-tutorials-list__item"
-                        onClick={() => { void startLesson(item.id); }}
-                      >
-                        <span className="bb-tutorials-list__order">{item.order}</span>
-                        <span className="bb-tutorials-list__body">
-                          <span className="bb-tutorials-list__name">
-                            {item.title}
-                            {done ? <span className="bb-tutorials-badge">Done</span> : null}
-                          </span>
-                          <span className="bb-tutorials-list__summary">{item.summary}</span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+
+        <div
+          className="bb-academy-panel__resize"
+          role="separator"
+          aria-orientation="both"
+          aria-label="Resize Academy"
+          title="Drag to resize"
+          onPointerDown={onResizeCornerDown}
+        />
+      </aside>
     </div>
   );
 }

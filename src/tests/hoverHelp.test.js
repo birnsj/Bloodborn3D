@@ -68,6 +68,8 @@ describe('hover help content', () => {
     expect(getHelpEntry('toolbar.surface')?.title).toBe('Surface Selection');
     expect(getHelpEntry('toolbar.geometryFace')?.title).toBe('Geometry Face');
     expect(getHelpEntry('viewport.camera')?.title).toBe('Camera Mode');
+    expect(getHelpEntry('viewport.cameraBookmarks')?.title).toBe('Camera Bookmarks');
+    expect(getHelpEntry('viewport.cameraBookmarks')?.body?.toLowerCase()).toContain('level');
     expect(getHelpEntry('details.prefab.apply')?.title).toBe('Apply Source');
     expect(getHelpEntry('content.asset')?.body?.toLowerCase()).toContain('face');
     expect(getHelpEntry('openart.generatePrompt')?.title).toBe('Compose Prompt');
@@ -84,6 +86,7 @@ describe('hover help content', () => {
       'toolbar.geometryEdge',
       'toolbar.geometryVertex',
       'viewport.camera',
+      'viewport.cameraBookmarks',
       'viewport.display',
       'viewport.showFog',
       'viewport.showMist',
@@ -221,12 +224,18 @@ describe('keyboard shortcuts catalog', () => {
     expect(flat.some((r) => r.keys.includes('F'))).toBe(true);
     expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'projectArt')).toBe(true);
     expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'contentBrowser')).toBe(true);
+    expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'outliner')).toBe(true);
+    expect(KEYBOARD_SHORTCUT_SECTIONS.some((s) => s.id === 'editorHelpers')).toBe(true);
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Shift+G');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Commit clip');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Project Art Library');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Content Browser');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('New Subfolder');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Scene Outliner');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Checklist');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Save All');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Store camera bookmark');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Go to camera bookmark');
     expect(flat.some((r) => r.keys.includes('Ctrl') && r.keys.includes('Shift') && r.keys.includes('S'))).toBe(true);
   });
 });

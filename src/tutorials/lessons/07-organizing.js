@@ -1,19 +1,28 @@
 export const organizingLesson = {
   id: 'organizing',
   title: 'Organizing Levels',
-  summary: 'Use Cells, parenting, visibility, and locking to keep rooms tidy.',
+  summary: 'Use Cells, parenting, Outliner categories, Collapse All, visibility, and locking to keep rooms tidy.',
   order: 7,
   starterPath: 'tutorials/openings.json',
   steps: [
     {
       id: 'intro',
       title: 'Hierarchy',
-      body: 'Objects can be nested under parents. A Cell is a folder-like actor used to group a room’s contents.',
+      body: 'Objects can be nested under parents. A Cell is a folder-like actor used to group a room’s contents. Outliner Category headers are list sections only — they do not change parentId.',
       terms: [
         { term: 'Cell', def: 'A grouping actor for organizing part of a level (like a room folder).' },
         { term: 'Parenting', def: 'Attaching one object under another so they move together.' },
+        { term: 'Category', def: 'A section header in the Outliner (or Content Browser) for list order — not a hierarchy parent.' },
       ],
       verify: { type: 'manualConfirm', label: 'Continue' },
+    },
+    {
+      id: 'outliner-category',
+      title: 'Outliner Category',
+      body: 'In the Scene Outliner toolbar, click Category and name a section. Drag root actors under it (or onto the header). Use Collapse All to fold every category and parent; expand again with a row’s chevron.',
+      highlight: ['outliner.category', 'outliner.collapseAll'],
+      verify: { type: 'manualConfirm', label: 'I tried Category / Collapse All' },
+      explain: 'Right-click a category or actor for Icon Color… Content Browser has the same Category + Collapse All idea for folders.',
     },
     {
       id: 'create-cell',
