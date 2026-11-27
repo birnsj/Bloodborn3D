@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-25T04:27:47.834Z",
-  "permanentLimit": 64,
+  "generatedAt": "2026-11-27T03:02:17.723Z",
+  "permanentLimit": 512,
   "caps": [
     64,
     128,
@@ -15,7 +15,7 @@
     200
   ],
   "notes": [
-    "Carve / mesh / physics measured with temporary maxSolids; MAX_SUBTRACT_SOLIDS remains 64.",
+    "Carve / mesh / physics measured with temporary maxSolids; product MAX_SUBTRACT_SOLIDS remains 512.",
     "Representative worlds include corridors, upper floors, window punches, shafts, additive stairs.",
     "Flush worlds are the maze-only baseline (lower fragmentation)."
   ],
@@ -35,9 +35,9 @@
       },
       "unconstrainedSolids": 98,
       "unconstrainedCarveMs": {
-        "min": 1.09,
-        "median": 5.84,
-        "max": 6.95
+        "min": 0.38,
+        "median": 0.92,
+        "max": 2.85
       },
       "fullMesh": {
         "solidCount": 98,
@@ -46,37 +46,37 @@
         "geometryBytes": 45360,
         "geometryKB": 44.3,
         "meshGenMs": {
-          "min": 1.83,
-          "median": 2.84,
-          "max": 5.22
+          "min": 1.05,
+          "median": 1.16,
+          "max": 1.18
         }
       },
       "fullPhys": {
         "bodyCount": 1,
         "colliderCount": 98,
         "worldSolidColliders": 98,
-        "physicsInitMs": 2.66
+        "physicsInitMs": 0.75
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 0.57,
-          "median": 0.97,
-          "max": 1.46
+          "min": 0.35,
+          "median": 0.38,
+          "max": 0.48
         }
       },
       "io": {
         "actors": 61,
-        "jsonBytes": 36631,
-        "jsonKB": 35.8,
+        "jsonBytes": 44923,
+        "jsonKB": 43.9,
         "serializeMs": {
-          "min": 0.16,
-          "median": 0.17,
-          "max": 0.29
+          "min": 0.28,
+          "median": 0.29,
+          "max": 0.31
         },
         "deserializeMs": {
-          "min": 0.25,
-          "median": 0.33,
-          "max": 1.04
+          "min": 0.38,
+          "median": 0.44,
+          "max": 0.96
         }
       },
       "byCap": {
@@ -85,11 +85,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 65,
-          "offendingCutterId": "actor_1b201eed-d8bc-44a8-9ae6-07c13806ac8f",
+          "offendingCutterId": "actor_ffdabcd1-4cd7-43a3-afef-cd77288dd5c8",
           "carveMs": {
-            "min": 0.43,
-            "median": 0.6,
-            "max": 2.49
+            "min": 0.17,
+            "median": 0.25,
+            "max": 0.27
           },
           "mesh": null,
           "edit": null,
@@ -106,9 +106,9 @@
           "wouldNeed": 98,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.52,
-            "median": 1.01,
-            "max": 2.62
+            "min": 0.25,
+            "median": 0.27,
+            "max": 0.8
           },
           "mesh": {
             "solidCount": 98,
@@ -117,23 +117,23 @@
             "geometryBytes": 45360,
             "geometryKB": 44.3,
             "meshGenMs": {
-              "min": 4.94,
-              "median": 8.56,
-              "max": 11.11
+              "min": 3,
+              "median": 3.02,
+              "max": 9.58
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 0.86,
-              "median": 1.66,
-              "max": 5.42
+              "min": 0.47,
+              "median": 0.62,
+              "max": 1.83
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 98,
             "worldSolidColliders": 98,
-            "physicsInitMs": 57.14
+            "physicsInitMs": 30.39
           },
           "correctness": {
             "ok": true,
@@ -151,9 +151,9 @@
           "wouldNeed": 98,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.44,
-            "median": 0.46,
-            "max": 2.25
+            "min": 0.22,
+            "median": 0.4,
+            "max": 0.85
           },
           "mesh": {
             "solidCount": 98,
@@ -162,23 +162,23 @@
             "geometryBytes": 45360,
             "geometryKB": 44.3,
             "meshGenMs": {
-              "min": 4.82,
-              "median": 4.91,
-              "max": 14
+              "min": 2.41,
+              "median": 2.68,
+              "max": 3.53
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 0.85,
-              "median": 0.94,
-              "max": 4.51
+              "min": 0.44,
+              "median": 0.48,
+              "max": 0.57
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 98,
             "worldSolidColliders": 98,
-            "physicsInitMs": 1.68
+            "physicsInitMs": 0.99
           },
           "correctness": {
             "ok": true,
@@ -196,9 +196,9 @@
           "wouldNeed": 98,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.37,
-            "median": 0.38,
-            "max": 0.76
+            "min": 0.21,
+            "median": 0.21,
+            "max": 0.31
           },
           "mesh": {
             "solidCount": 98,
@@ -207,23 +207,23 @@
             "geometryBytes": 45360,
             "geometryKB": 44.3,
             "meshGenMs": {
-              "min": 2.47,
-              "median": 2.62,
-              "max": 2.77
+              "min": 1.14,
+              "median": 1.24,
+              "max": 1.28
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 0.86,
-              "median": 1.53,
-              "max": 1.93
+              "min": 0.46,
+              "median": 0.48,
+              "max": 0.79
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 98,
             "worldSolidColliders": 98,
-            "physicsInitMs": 1.67
+            "physicsInitMs": 1.01
           },
           "correctness": {
             "ok": true,
@@ -241,9 +241,9 @@
           "wouldNeed": 98,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.35,
-            "median": 0.4,
-            "max": 1.21
+            "min": 0.21,
+            "median": 0.25,
+            "max": 0.55
           },
           "mesh": {
             "solidCount": 98,
@@ -252,23 +252,23 @@
             "geometryBytes": 45360,
             "geometryKB": 44.3,
             "meshGenMs": {
-              "min": 2.36,
-              "median": 2.41,
-              "max": 2.94
+              "min": 1.33,
+              "median": 1.38,
+              "max": 1.78
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 0.81,
-              "median": 0.97,
-              "max": 1.41
+              "min": 0.35,
+              "median": 0.37,
+              "max": 0.49
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 98,
             "worldSolidColliders": 98,
-            "physicsInitMs": 2.68
+            "physicsInitMs": 1.13
           },
           "correctness": {
             "ok": true,
@@ -296,9 +296,9 @@
       },
       "unconstrainedSolids": 172,
       "unconstrainedCarveMs": {
-        "min": 0.88,
-        "median": 1.01,
-        "max": 4.31
+        "min": 0.45,
+        "median": 0.85,
+        "max": 1.26
       },
       "fullMesh": {
         "solidCount": 172,
@@ -307,37 +307,37 @@
         "geometryBytes": 103600,
         "geometryKB": 101.2,
         "meshGenMs": {
-          "min": 4.37,
-          "median": 4.61,
-          "max": 7.56
+          "min": 2.46,
+          "median": 2.64,
+          "max": 2.83
         }
       },
       "fullPhys": {
         "bodyCount": 1,
         "colliderCount": 172,
         "worldSolidColliders": 172,
-        "physicsInitMs": 1.67
+        "physicsInitMs": 1.01
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 1.46,
-          "median": 1.56,
-          "max": 3.57
+          "min": 0.91,
+          "median": 0.94,
+          "max": 1.24
         }
       },
       "io": {
         "actors": 130,
-        "jsonBytes": 78859,
-        "jsonKB": 77,
+        "jsonBytes": 89615,
+        "jsonKB": 87.5,
         "serializeMs": {
-          "min": 0.27,
-          "median": 0.37,
-          "max": 0.56
+          "min": 0.35,
+          "median": 0.43,
+          "max": 0.49
         },
         "deserializeMs": {
-          "min": 0.37,
-          "median": 0.44,
-          "max": 0.53
+          "min": 0.36,
+          "median": 0.5,
+          "max": 0.57
         }
       },
       "byCap": {
@@ -346,11 +346,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 71,
-          "offendingCutterId": "actor_70f75df1-10ac-42ff-abf0-96a32f07100d",
+          "offendingCutterId": "actor_98f18259-d497-4f3e-aa92-a0a7b00119cd",
           "carveMs": {
-            "min": 0.21,
-            "median": 0.23,
-            "max": 1.02
+            "min": 0.08,
+            "median": 0.08,
+            "max": 0.08
           },
           "mesh": null,
           "edit": null,
@@ -365,11 +365,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_aac10922-09b5-4103-b1d5-2c67d3205a06",
+          "offendingCutterId": "actor_da4a93b2-f690-4c3d-bbed-306e01e8da9f",
           "carveMs": {
-            "min": 0.4,
-            "median": 0.41,
-            "max": 0.44
+            "min": 0.23,
+            "median": 0.23,
+            "max": 0.25
           },
           "mesh": null,
           "edit": null,
@@ -386,9 +386,9 @@
           "wouldNeed": 172,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.71,
-            "median": 0.83,
-            "max": 1.23
+            "min": 0.45,
+            "median": 0.46,
+            "max": 1.02
           },
           "mesh": {
             "solidCount": 172,
@@ -397,23 +397,23 @@
             "geometryBytes": 103600,
             "geometryKB": 101.2,
             "meshGenMs": {
-              "min": 5.36,
-              "median": 5.86,
-              "max": 6.89
+              "min": 2.72,
+              "median": 2.75,
+              "max": 3.27
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 1.87,
-              "median": 3.27,
-              "max": 4.86
+              "min": 0.9,
+              "median": 1.12,
+              "max": 1.23
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 172,
             "worldSolidColliders": 172,
-            "physicsInitMs": 1.9
+            "physicsInitMs": 1.03
           },
           "correctness": {
             "ok": true,
@@ -431,9 +431,9 @@
           "wouldNeed": 172,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.84,
-            "median": 0.99,
-            "max": 1.1
+            "min": 0.43,
+            "median": 0.44,
+            "max": 0.61
           },
           "mesh": {
             "solidCount": 172,
@@ -442,23 +442,23 @@
             "geometryBytes": 103600,
             "geometryKB": 101.2,
             "meshGenMs": {
-              "min": 4.4,
-              "median": 4.63,
-              "max": 4.8
+              "min": 2.43,
+              "median": 2.69,
+              "max": 3.03
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 1.59,
-              "median": 1.75,
-              "max": 2.31
+              "min": 0.91,
+              "median": 0.94,
+              "max": 1.11
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 172,
             "worldSolidColliders": 172,
-            "physicsInitMs": 1.83
+            "physicsInitMs": 1.12
           },
           "correctness": {
             "ok": true,
@@ -476,9 +476,9 @@
           "wouldNeed": 172,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.69,
-            "median": 0.73,
-            "max": 0.89
+            "min": 0.42,
+            "median": 0.43,
+            "max": 0.6
           },
           "mesh": {
             "solidCount": 172,
@@ -487,23 +487,23 @@
             "geometryBytes": 103600,
             "geometryKB": 101.2,
             "meshGenMs": {
-              "min": 4.31,
-              "median": 5.16,
-              "max": 5.34
+              "min": 2.47,
+              "median": 2.65,
+              "max": 2.68
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 1.95,
-              "median": 3.4,
-              "max": 10.11
+              "min": 0.89,
+              "median": 0.99,
+              "max": 1.35
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 172,
             "worldSolidColliders": 172,
-            "physicsInitMs": 3.54
+            "physicsInitMs": 1
           },
           "correctness": {
             "ok": true,
@@ -531,9 +531,9 @@
       },
       "unconstrainedSolids": 278,
       "unconstrainedCarveMs": {
-        "min": 1.72,
-        "median": 2.84,
-        "max": 3.01
+        "min": 0.99,
+        "median": 1.07,
+        "max": 1.95
       },
       "fullMesh": {
         "solidCount": 278,
@@ -542,37 +542,37 @@
         "geometryBytes": 192080,
         "geometryKB": 187.6,
         "meshGenMs": {
-          "min": 10.25,
-          "median": 10.4,
-          "max": 11.84
+          "min": 5.65,
+          "median": 6.09,
+          "max": 6.94
         }
       },
       "fullPhys": {
         "bodyCount": 1,
         "colliderCount": 278,
         "worldSolidColliders": 278,
-        "physicsInitMs": 7.65
+        "physicsInitMs": 2.04
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 3.96,
-          "median": 5.1,
-          "max": 6.96
+          "min": 2.13,
+          "median": 2.16,
+          "max": 2.32
         }
       },
       "io": {
         "actors": 227,
-        "jsonBytes": 138348,
-        "jsonKB": 135.1,
+        "jsonBytes": 152272,
+        "jsonKB": 148.7,
         "serializeMs": {
-          "min": 0.45,
-          "median": 0.49,
-          "max": 0.49
+          "min": 0.41,
+          "median": 0.46,
+          "max": 0.5
         },
         "deserializeMs": {
-          "min": 0.28,
-          "median": 0.37,
-          "max": 0.42
+          "min": 0.3,
+          "median": 0.31,
+          "max": 0.4
         }
       },
       "byCap": {
@@ -581,11 +581,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 65,
-          "offendingCutterId": "actor_bc781bc2-242b-4fad-abcb-90b47b0acec9",
+          "offendingCutterId": "actor_29cf4da5-c3d7-417c-bad2-b47f758eb8fd",
           "carveMs": {
-            "min": 0.12,
-            "median": 0.13,
-            "max": 0.15
+            "min": 0.07,
+            "median": 0.08,
+            "max": 0.53
           },
           "mesh": null,
           "edit": null,
@@ -600,11 +600,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_3b4a9681-06aa-4b4f-b016-59cef4284f74",
+          "offendingCutterId": "actor_45f01e14-8ba8-445e-8df1-e077715f2f7d",
           "carveMs": {
-            "min": 0.39,
-            "median": 0.4,
-            "max": 0.42
+            "min": 0.22,
+            "median": 0.23,
+            "max": 0.34
           },
           "mesh": null,
           "edit": null,
@@ -619,11 +619,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 257,
-          "offendingCutterId": "actor_b132fd12-cb55-44ea-8fb5-e79a341c7cfa",
+          "offendingCutterId": "actor_8a0ef152-aa6c-492e-bbdf-3f82255854b6",
           "carveMs": {
-            "min": 1.52,
-            "median": 1.55,
-            "max": 2.08
+            "min": 0.84,
+            "median": 0.85,
+            "max": 1.03
           },
           "mesh": null,
           "edit": null,
@@ -640,9 +640,9 @@
           "wouldNeed": 278,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 1.77,
-            "median": 1.79,
-            "max": 2.3
+            "min": 0.98,
+            "median": 1.01,
+            "max": 1.11
           },
           "mesh": {
             "solidCount": 278,
@@ -651,23 +651,23 @@
             "geometryBytes": 192080,
             "geometryKB": 187.6,
             "meshGenMs": {
-              "min": 11.12,
-              "median": 15.69,
-              "max": 17.54
+              "min": 5.51,
+              "median": 6.19,
+              "max": 7.07
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 3.87,
-              "median": 4.29,
-              "max": 8.84
+              "min": 2.11,
+              "median": 2.24,
+              "max": 2.3
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 278,
             "worldSolidColliders": 278,
-            "physicsInitMs": 3.08
+            "physicsInitMs": 2
           },
           "correctness": {
             "ok": true,
@@ -685,9 +685,9 @@
           "wouldNeed": 278,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 1.71,
-            "median": 1.84,
-            "max": 4.26
+            "min": 0.99,
+            "median": 1.15,
+            "max": 1.17
           },
           "mesh": {
             "solidCount": 278,
@@ -696,23 +696,23 @@
             "geometryBytes": 192080,
             "geometryKB": 187.6,
             "meshGenMs": {
-              "min": 10.05,
-              "median": 10.51,
-              "max": 17.65
+              "min": 5.52,
+              "median": 5.55,
+              "max": 5.61
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 3.76,
-              "median": 4,
-              "max": 4.17
+              "min": 2,
+              "median": 2.1,
+              "max": 2.17
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 278,
             "worldSolidColliders": 278,
-            "physicsInitMs": 3.13
+            "physicsInitMs": 1.8
           },
           "correctness": {
             "ok": true,
@@ -740,9 +740,9 @@
       },
       "unconstrainedSolids": 522,
       "unconstrainedCarveMs": {
-        "min": 3.56,
-        "median": 4.31,
-        "max": 4.48
+        "min": 3.01,
+        "median": 3.32,
+        "max": 4.32
       },
       "fullMesh": {
         "solidCount": 522,
@@ -751,37 +751,37 @@
         "geometryBytes": 399840,
         "geometryKB": 390.5,
         "meshGenMs": {
-          "min": 18.59,
-          "median": 18.93,
-          "max": 19.67
+          "min": 16.51,
+          "median": 17.09,
+          "max": 17.35
         }
       },
       "fullPhys": {
         "bodyCount": 1,
         "colliderCount": 522,
         "worldSolidColliders": 522,
-        "physicsInitMs": 4.66
+        "physicsInitMs": 5.05
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 7.18,
-          "median": 7.47,
-          "max": 7.6
+          "min": 6.2,
+          "median": 6.28,
+          "max": 6.46
         }
       },
       "io": {
         "actors": 478,
-        "jsonBytes": 291531,
-        "jsonKB": 284.7,
+        "jsonBytes": 316367,
+        "jsonKB": 309,
         "serializeMs": {
-          "min": 0.53,
-          "median": 0.7,
-          "max": 0.75
+          "min": 0.71,
+          "median": 0.9,
+          "max": 0.99
         },
         "deserializeMs": {
-          "min": 0.34,
-          "median": 0.35,
-          "max": 0.42
+          "min": 0.5,
+          "median": 0.54,
+          "max": 0.64
         }
       },
       "byCap": {
@@ -790,11 +790,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 70,
-          "offendingCutterId": "actor_50f3140f-8613-4a70-82cf-877913d810ba",
+          "offendingCutterId": "actor_1d9b841a-6a82-427c-8fe4-3133af35ff83",
           "carveMs": {
-            "min": 0.1,
-            "median": 0.11,
-            "max": 0.14
+            "min": 0.09,
+            "median": 0.09,
+            "max": 0.1
           },
           "mesh": null,
           "edit": null,
@@ -809,11 +809,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_ca021e9f-d42b-4787-a98f-bd86231ea955",
+          "offendingCutterId": "actor_1df7c2f3-896c-461a-abd4-36b7075e3847",
           "carveMs": {
-            "min": 0.4,
-            "median": 0.42,
-            "max": 0.48
+            "min": 0.25,
+            "median": 0.26,
+            "max": 0.26
           },
           "mesh": null,
           "edit": null,
@@ -828,11 +828,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 257,
-          "offendingCutterId": "actor_4d4455d2-650a-409c-bf59-30937a7b4476",
+          "offendingCutterId": "actor_5df6e587-0a44-4381-92b1-2a6708e9890f",
           "carveMs": {
-            "min": 0.8,
-            "median": 0.94,
-            "max": 2.26
+            "min": 0.74,
+            "median": 0.75,
+            "max": 1.03
           },
           "mesh": null,
           "edit": null,
@@ -847,11 +847,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 513,
-          "offendingCutterId": "actor_b93eccbf-dbe6-4bcb-8e08-669ca9b04a2f",
+          "offendingCutterId": "actor_84864dac-39ed-4451-aada-c1a72423f35e",
           "carveMs": {
-            "min": 3.35,
-            "median": 3.4,
-            "max": 3.52
+            "min": 2.94,
+            "median": 3.63,
+            "max": 4.88
           },
           "mesh": null,
           "edit": null,
@@ -868,9 +868,9 @@
           "wouldNeed": 522,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 3.27,
+            "min": 3,
             "median": 3.64,
-            "max": 3.95
+            "max": 3.9
           },
           "mesh": {
             "solidCount": 522,
@@ -879,23 +879,23 @@
             "geometryBytes": 399840,
             "geometryKB": 390.5,
             "meshGenMs": {
-              "min": 19.12,
-              "median": 19.39,
-              "max": 20.16
+              "min": 16.4,
+              "median": 16.76,
+              "max": 16.86
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 6.96,
-              "median": 7.28,
-              "max": 7.4
+              "min": 6.2,
+              "median": 6.31,
+              "max": 7.61
             }
           },
           "physics": {
             "bodyCount": 1,
             "colliderCount": 522,
             "worldSolidColliders": 522,
-            "physicsInitMs": 4.55
+            "physicsInitMs": 4.36
           },
           "correctness": {
             "ok": true,
@@ -924,9 +924,9 @@
       },
       "unconstrainedSolids": 277,
       "unconstrainedCarveMs": {
-        "min": 0.9,
-        "median": 1.62,
-        "max": 4.42
+        "min": 0.56,
+        "median": 0.74,
+        "max": 3
       },
       "fullMesh": {
         "solidCount": 277,
@@ -935,37 +935,37 @@
         "geometryBytes": 71680,
         "geometryKB": 70,
         "meshGenMs": {
-          "min": 7.22,
-          "median": 7.88,
-          "max": 9.68
+          "min": 3.82,
+          "median": 4.77,
+          "max": 4.93
         }
       },
       "fullPhys": {
         "bodyCount": 6,
         "colliderCount": 352,
         "worldSolidColliders": 277,
-        "physicsInitMs": 2.57
+        "physicsInitMs": 1.44
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 1.2,
-          "median": 1.55,
-          "max": 1.77
+          "min": 0.75,
+          "median": 1.08,
+          "max": 1.36
         }
       },
       "io": {
         "actors": 99,
-        "jsonBytes": 59282,
-        "jsonKB": 57.9,
+        "jsonBytes": 67921,
+        "jsonKB": 66.3,
         "serializeMs": {
-          "min": 0.25,
-          "median": 0.34,
-          "max": 0.43
+          "min": 0.37,
+          "median": 0.67,
+          "max": 0.7
         },
         "deserializeMs": {
-          "min": 0.35,
-          "median": 0.39,
-          "max": 0.66
+          "min": 0.4,
+          "median": 0.48,
+          "max": 0.48
         }
       },
       "byCap": {
@@ -974,11 +974,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 65,
-          "offendingCutterId": "actor_511c197c-e3f2-4dce-bcda-34c45bc86c64",
+          "offendingCutterId": "actor_9a203096-c3de-4746-b51a-0e4624ae5c7d",
           "carveMs": {
-            "min": 0.16,
-            "median": 0.17,
-            "max": 0.18
+            "min": 0.09,
+            "median": 0.09,
+            "max": 0.09
           },
           "mesh": null,
           "edit": null,
@@ -993,11 +993,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 134,
-          "offendingCutterId": "actor_61064e40-bc2d-43d7-84cb-92e771e9c6f8",
+          "offendingCutterId": "actor_d329fe5b-6978-469e-882e-59b70a0e38df",
           "carveMs": {
-            "min": 0.5,
-            "median": 0.91,
-            "max": 1.22
+            "min": 0.27,
+            "median": 0.41,
+            "max": 0.46
           },
           "mesh": null,
           "edit": null,
@@ -1012,11 +1012,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 257,
-          "offendingCutterId": "actor_4b746240-d662-4700-947d-40e9dabd2190",
+          "offendingCutterId": "actor_b63fe0f8-a005-4fd6-9606-f08ed01ddcd8",
           "carveMs": {
-            "min": 0.81,
-            "median": 0.85,
-            "max": 2.51
+            "min": 0.46,
+            "median": 0.47,
+            "max": 0.63
           },
           "mesh": null,
           "edit": null,
@@ -1033,9 +1033,9 @@
           "wouldNeed": 277,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.77,
-            "median": 0.95,
-            "max": 1.32
+            "min": 0.53,
+            "median": 0.55,
+            "max": 0.62
           },
           "mesh": {
             "solidCount": 277,
@@ -1044,23 +1044,23 @@
             "geometryBytes": 71680,
             "geometryKB": 70,
             "meshGenMs": {
-              "min": 7.16,
-              "median": 8.62,
-              "max": 30.11
+              "min": 3.94,
+              "median": 4.25,
+              "max": 12.03
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 2.18,
-              "median": 2.79,
-              "max": 3.45
+              "min": 0.98,
+              "median": 1.14,
+              "max": 1.32
             }
           },
           "physics": {
             "bodyCount": 6,
             "colliderCount": 352,
             "worldSolidColliders": 277,
-            "physicsInitMs": 7.56
+            "physicsInitMs": 5.39
           },
           "correctness": {
             "ok": true,
@@ -1078,9 +1078,9 @@
           "wouldNeed": 277,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 0.82,
-            "median": 1.55,
-            "max": 2.56
+            "min": 0.5,
+            "median": 0.68,
+            "max": 0.83
           },
           "mesh": {
             "solidCount": 277,
@@ -1089,23 +1089,23 @@
             "geometryBytes": 71680,
             "geometryKB": 70,
             "meshGenMs": {
-              "min": 7.67,
-              "median": 7.7,
-              "max": 28.78
+              "min": 3.95,
+              "median": 4.12,
+              "max": 5.76
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 2.58,
-              "median": 3.12,
-              "max": 7.05
+              "min": 0.71,
+              "median": 0.79,
+              "max": 0.94
             }
           },
           "physics": {
             "bodyCount": 6,
             "colliderCount": 352,
             "worldSolidColliders": 277,
-            "physicsInitMs": 5.25
+            "physicsInitMs": 2.21
           },
           "correctness": {
             "ok": true,
@@ -1132,9 +1132,9 @@
       },
       "unconstrainedSolids": 391,
       "unconstrainedCarveMs": {
-        "min": 1.57,
-        "median": 1.64,
-        "max": 2.65
+        "min": 0.92,
+        "median": 0.95,
+        "max": 1.84
       },
       "fullMesh": {
         "solidCount": 391,
@@ -1143,37 +1143,37 @@
         "geometryBytes": 144620,
         "geometryKB": 141.2,
         "meshGenMs": {
-          "min": 12.48,
-          "median": 13.68,
-          "max": 13.86
+          "min": 7.03,
+          "median": 7.06,
+          "max": 7.69
         }
       },
       "fullPhys": {
         "bodyCount": 11,
         "colliderCount": 541,
         "worldSolidColliders": 391,
-        "physicsInitMs": 5.41
+        "physicsInitMs": 2.33
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 3.35,
-          "median": 3.74,
-          "max": 5.23
+          "min": 1.88,
+          "median": 2.05,
+          "max": 2.26
         }
       },
       "io": {
         "actors": 208,
-        "jsonBytes": 125476,
-        "jsonKB": 122.5,
+        "jsonBytes": 136579,
+        "jsonKB": 133.4,
         "serializeMs": {
-          "min": 0.38,
+          "min": 0.37,
           "median": 0.39,
-          "max": 0.39
+          "max": 0.43
         },
         "deserializeMs": {
-          "min": 0.33,
-          "median": 0.35,
-          "max": 0.43
+          "min": 0.31,
+          "median": 0.46,
+          "max": 0.73
         }
       },
       "byCap": {
@@ -1182,11 +1182,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 71,
-          "offendingCutterId": "actor_53316041-fa67-4443-9026-e9ccdc540984",
+          "offendingCutterId": "actor_a5388c4c-d987-4c2b-8374-12cbc3f9fb11",
           "carveMs": {
-            "min": 0.13,
-            "median": 0.13,
-            "max": 0.16
+            "min": 0.08,
+            "median": 0.08,
+            "max": 0.08
           },
           "mesh": null,
           "edit": null,
@@ -1201,11 +1201,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_e2a9c6c8-2a92-4691-92ad-b4c256aab61b",
+          "offendingCutterId": "actor_bbe78771-5b25-4232-91fd-7d9abe2752e4",
           "carveMs": {
-            "min": 0.37,
-            "median": 0.38,
-            "max": 0.42
+            "min": 0.23,
+            "median": 0.23,
+            "max": 0.26
           },
           "mesh": null,
           "edit": null,
@@ -1220,11 +1220,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 262,
-          "offendingCutterId": "actor_1bd52785-f79e-46ac-8758-201ba4d170c0",
+          "offendingCutterId": "actor_14a8688a-c959-475d-a271-3bd1a012f48f",
           "carveMs": {
-            "min": 0.98,
-            "median": 1.1,
-            "max": 1.68
+            "min": 0.63,
+            "median": 0.64,
+            "max": 0.84
           },
           "mesh": null,
           "edit": null,
@@ -1241,9 +1241,9 @@
           "wouldNeed": 391,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 1.59,
-            "median": 1.62,
-            "max": 3
+            "min": 0.89,
+            "median": 0.91,
+            "max": 1.09
           },
           "mesh": {
             "solidCount": 391,
@@ -1252,23 +1252,23 @@
             "geometryBytes": 144620,
             "geometryKB": 141.2,
             "meshGenMs": {
-              "min": 13.07,
-              "median": 13.13,
-              "max": 13.25
+              "min": 6.95,
+              "median": 7.12,
+              "max": 7.15
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 3.36,
-              "median": 3.91,
-              "max": 4.7
+              "min": 1.88,
+              "median": 1.98,
+              "max": 2.86
             }
           },
           "physics": {
             "bodyCount": 11,
             "colliderCount": 541,
             "worldSolidColliders": 391,
-            "physicsInitMs": 6.26
+            "physicsInitMs": 2.31
           },
           "correctness": {
             "ok": true,
@@ -1286,9 +1286,9 @@
           "wouldNeed": 391,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 1.55,
-            "median": 1.61,
-            "max": 2.16
+            "min": 0.89,
+            "median": 0.93,
+            "max": 1.56
           },
           "mesh": {
             "solidCount": 391,
@@ -1297,23 +1297,23 @@
             "geometryBytes": 144620,
             "geometryKB": 141.2,
             "meshGenMs": {
-              "min": 12.75,
-              "median": 13.56,
-              "max": 17.97
+              "min": 7.19,
+              "median": 7.43,
+              "max": 8.28
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 3.45,
-              "median": 3.7,
-              "max": 5.21
+              "min": 1.93,
+              "median": 2.49,
+              "max": 2.7
             }
           },
           "physics": {
             "bodyCount": 11,
             "colliderCount": 541,
             "worldSolidColliders": 391,
-            "physicsInitMs": 4.02
+            "physicsInitMs": 2.68
           },
           "correctness": {
             "ok": true,
@@ -1340,9 +1340,9 @@
       },
       "unconstrainedSolids": 646,
       "unconstrainedCarveMs": {
-        "min": 5,
-        "median": 7.39,
-        "max": 7.78
+        "min": 2.26,
+        "median": 2.44,
+        "max": 2.87
       },
       "fullMesh": {
         "solidCount": 646,
@@ -1351,37 +1351,37 @@
         "geometryBytes": 269640,
         "geometryKB": 263.3,
         "meshGenMs": {
-          "min": 19.1,
-          "median": 22,
-          "max": 22.02
+          "min": 16.49,
+          "median": 16.77,
+          "max": 17.66
         }
       },
       "fullPhys": {
         "bodyCount": 18,
         "colliderCount": 901,
         "worldSolidColliders": 646,
-        "physicsInitMs": 6.48
+        "physicsInitMs": 4.19
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 5.13,
-          "median": 5.42,
-          "max": 5.44
+          "min": 4.54,
+          "median": 4.83,
+          "max": 4.9
         }
       },
       "io": {
         "actors": 364,
-        "jsonBytes": 220309,
-        "jsonKB": 215.1,
+        "jsonBytes": 234580,
+        "jsonKB": 229.1,
         "serializeMs": {
-          "min": 0.4,
-          "median": 0.4,
-          "max": 0.42
+          "min": 0.55,
+          "median": 0.6,
+          "max": 0.98
         },
         "deserializeMs": {
-          "min": 0.26,
-          "median": 0.31,
-          "max": 0.97
+          "min": 0.41,
+          "median": 0.42,
+          "max": 0.56
         }
       },
       "byCap": {
@@ -1390,11 +1390,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 65,
-          "offendingCutterId": "actor_8c45fa50-0e8c-401a-9e42-25102bf637c6",
+          "offendingCutterId": "actor_ed8e8e2f-a2c1-4adf-af9a-a14c0df3d70b",
           "carveMs": {
-            "min": 0.14,
-            "median": 0.16,
-            "max": 0.2
+            "min": 0.08,
+            "median": 0.08,
+            "max": 0.09
           },
           "mesh": null,
           "edit": null,
@@ -1409,11 +1409,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_aea3c487-0a67-4f12-86ad-8e0cbc0ada06",
+          "offendingCutterId": "actor_19f47eec-2757-4f2d-bc44-8a870cec144b",
           "carveMs": {
-            "min": 0.37,
-            "median": 0.42,
-            "max": 0.6
+            "min": 0.22,
+            "median": 0.22,
+            "max": 0.43
           },
           "mesh": null,
           "edit": null,
@@ -1428,11 +1428,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 257,
-          "offendingCutterId": "actor_abcd3d45-90c3-42d4-93a1-4b31bf7a1c51",
+          "offendingCutterId": "actor_5b73e75c-75db-4f90-8cda-fc3634ea8ce9",
           "carveMs": {
-            "min": 1.46,
-            "median": 1.57,
-            "max": 1.99
+            "min": 0.82,
+            "median": 0.85,
+            "max": 0.95
           },
           "mesh": null,
           "edit": null,
@@ -1447,11 +1447,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 520,
-          "offendingCutterId": "actor_5c862b6d-86a8-4aa8-a220-2541b8478faf",
+          "offendingCutterId": "actor_5c42caea-0c6d-4887-b67f-7b81a35e8516",
           "carveMs": {
-            "min": 2.9,
-            "median": 3.41,
-            "max": 3.49
+            "min": 1.59,
+            "median": 1.72,
+            "max": 2.86
           },
           "mesh": null,
           "edit": null,
@@ -1468,9 +1468,9 @@
           "wouldNeed": 646,
           "offendingCutterId": null,
           "carveMs": {
-            "min": 3.67,
-            "median": 4.22,
-            "max": 4.94
+            "min": 2.23,
+            "median": 2.42,
+            "max": 3.18
           },
           "mesh": {
             "solidCount": 646,
@@ -1479,23 +1479,23 @@
             "geometryBytes": 269640,
             "geometryKB": 263.3,
             "meshGenMs": {
-              "min": 21.36,
-              "median": 21.83,
-              "max": 32.82
+              "min": 16.19,
+              "median": 18.27,
+              "max": 19.99
             }
           },
           "edit": {
             "moveCutterRecarveMs": {
-              "min": 5.53,
-              "median": 5.82,
-              "max": 5.99
+              "min": 4.62,
+              "median": 4.65,
+              "max": 4.77
             }
           },
           "physics": {
             "bodyCount": 18,
             "colliderCount": 901,
             "worldSolidColliders": 646,
-            "physicsInitMs": 5.14
+            "physicsInitMs": 4.23
           },
           "correctness": {
             "ok": true,
@@ -1522,9 +1522,9 @@
       },
       "unconstrainedSolids": 1387,
       "unconstrainedCarveMs": {
-        "min": 8.82,
-        "median": 9.83,
-        "max": 17
+        "min": 8.14,
+        "median": 9.27,
+        "max": 16.02
       },
       "fullMesh": {
         "solidCount": 1387,
@@ -1533,37 +1533,37 @@
         "geometryBytes": 609000,
         "geometryKB": 594.7,
         "meshGenMs": {
-          "min": 69.11,
-          "median": 70.36,
-          "max": 72.8
+          "min": 62.3,
+          "median": 62.96,
+          "max": 65.37
         }
       },
       "fullPhys": {
         "bodyCount": 36,
         "colliderCount": 1912,
         "worldSolidColliders": 1387,
-        "physicsInitMs": 12.98
+        "physicsInitMs": 12.25
       },
       "fullEdit": {
         "moveCutterRecarveMs": {
-          "min": 17.2,
-          "median": 17.98,
-          "max": 18.04
+          "min": 16.07,
+          "median": 17.48,
+          "max": 18.71
         }
       },
       "io": {
         "actors": 760,
-        "jsonBytes": 460596,
-        "jsonKB": 449.8,
+        "jsonBytes": 485779,
+        "jsonKB": 474.4,
         "serializeMs": {
-          "min": 0.8,
-          "median": 0.8,
-          "max": 0.83
+          "min": 0.96,
+          "median": 1,
+          "max": 1.06
         },
         "deserializeMs": {
-          "min": 0.49,
-          "median": 0.59,
-          "max": 0.8
+          "min": 0.66,
+          "median": 0.74,
+          "max": 0.87
         }
       },
       "byCap": {
@@ -1572,10 +1572,10 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 70,
-          "offendingCutterId": "actor_b548d29c-547f-445f-b084-e3b6ce3dabcd",
+          "offendingCutterId": "actor_a6f26eb2-c8f4-4445-aa4d-bdec5e171656",
           "carveMs": {
             "min": 0.1,
-            "median": 0.11,
+            "median": 0.1,
             "max": 0.14
           },
           "mesh": null,
@@ -1591,11 +1591,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 129,
-          "offendingCutterId": "actor_265b32b8-7161-4ae4-b3d6-4ee993088a70",
+          "offendingCutterId": "actor_cc762a7e-0d06-4d23-b530-6d9350242f6b",
           "carveMs": {
-            "min": 0.28,
-            "median": 0.29,
-            "max": 0.32
+            "min": 0.26,
+            "median": 0.27,
+            "max": 0.27
           },
           "mesh": null,
           "edit": null,
@@ -1610,11 +1610,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 257,
-          "offendingCutterId": "actor_2873f667-5ef5-4e3a-92dd-8be13d5b5dab",
+          "offendingCutterId": "actor_a8663524-d80e-4b5d-90b3-17ba0bfe9639",
           "carveMs": {
-            "min": 0.81,
-            "median": 0.81,
-            "max": 0.84
+            "min": 0.76,
+            "median": 0.79,
+            "max": 1.14
           },
           "mesh": null,
           "edit": null,
@@ -1629,11 +1629,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 513,
-          "offendingCutterId": "actor_86de5f1b-9e75-4242-abba-c68a14b1441f",
+          "offendingCutterId": "actor_dd53845d-d0e8-4d4f-b568-d9313ae073d7",
           "carveMs": {
-            "min": 3.31,
-            "median": 3.65,
-            "max": 3.94
+            "min": 2.97,
+            "median": 3.02,
+            "max": 3.39
           },
           "mesh": null,
           "edit": null,
@@ -1648,11 +1648,11 @@
           "ok": false,
           "solidCount": null,
           "wouldNeed": 1034,
-          "offendingCutterId": "actor_18950205-a043-4375-9532-0d8ad48490ae",
+          "offendingCutterId": "actor_0398b96e-476f-40f8-aad7-32c72fbfb694",
           "carveMs": {
-            "min": 6,
-            "median": 7.25,
-            "max": 8.23
+            "min": 5.67,
+            "median": 6.26,
+            "max": 6.6
           },
           "mesh": null,
           "edit": null,

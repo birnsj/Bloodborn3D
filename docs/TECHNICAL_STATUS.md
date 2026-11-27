@@ -9,8 +9,8 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **1166 / 1166 pass** (127 files; was 1151 at audit baseline `33ba9b9`) |
-| `npm run lint` | exit 0 · **176** first-party warnings · **0** vendor (`public/vendor/**` ignored as of C1); see C1/C3 acceptance |
+| `npm test` | **1171 / 1171 pass** (128 files; was 1166 at C3 `489f91f`, 1151 at audit `33ba9b9`) |
+| `npm run lint` | exit 0 · **176** first-party warnings · **0** vendor (`public/vendor/**` ignored as of C1); see C1–C4 acceptance |
 | `npm run build` | succeeds; single ~**8.0 MB** JS chunk (gzip ~2.7 MB) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
 | Dependencies (prod) | `three@0.187.0`, `react@19.3.1`, `@dimforge/rapier3d-compat@0.21.0`, `postprocessing@6.39.6`, `dockview-react@8.9.1`, `uuid@14.0.3` |
@@ -45,6 +45,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Consolidation C1 | Docs + lint hygiene + `folderForKind` + dead Component hooks — see `ACCEPTANCE_CONSOLIDATION_C1.md` |
 | Consolidation C2 | Architectural boundaries M8/F2 + F20 — see `ACCEPTANCE_CONSOLIDATION_C2.md` |
 | Consolidation C3 | EditorContext gestures + Set*Properties consolidation (F1 partial, F21) — see `ACCEPTANCE_CONSOLIDATION_C3.md` |
+| Consolidation C4 | Geometry/collision/scalability (F4 measured, F11 clear, F14 sync helper, F18 stair share, F16/F17/F19/F24 confirmed) — see `ACCEPTANCE_CONSOLIDATION_C4.md` |
 
 ## 2. Implemented systems
 
@@ -123,11 +124,11 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 | F1 | High | EditorContext hub — **partial in C3** (shared propertyEditing + command factories); further domain extraction deferred. |
 | F21 | Medium | **Closed in C3** — Set*Properties / SetWorld* scaffolding shared via `componentPropertyCommands.js`. |
 | F3 | High | Quad multi-viewport below ≥30 FPS target (~17.5–19.6 median historically; Batch 9 mansion re-measure **Unverified**). Architectural N-camera cost. |
-| F4 / F16 / F17 | High | AABB-only carve; 512-solid fragmentation; World Solid render ≠ collision volumes — Phase 2G design ceilings. |
+| F4 / F16 / F17 | High | **C4:** ceilings reconfirmed (AABB carve, 512, render≠collision). Broadphase **deferred** (no measured win). See `ACCEPTANCE_CONSOLIDATION_C4.md`. |
 | F5 | Medium | **Closed in consolidation C1** — status/roadmap/prereq docs reconciled. |
 | F7 | Medium | **Closed in consolidation C1** — `public/vendor` ignored; first-party unused cleaned; hooks warnings retained. |
 | F10 | Low | **Closed in consolidation C1** — single `folderForKind` in `AssetRegistry`. |
-| F11 (hooks) | Low | **Closed in consolidation C1** — removed unused `onStart`/`onUpdate`/`onStop`. `World.clear` O(n²) **deferred** (measured pass). |
+| F11 | Low | **Closed** — hooks removed in C1; `World.clear` O(n) in C4. |
 | L | Low | Stair-assist is now grounded + ledge-probed (2F.7F); remaining assist feel tweaks are design, not defects. |
 | L / F1 / F13 | Low | `EditorContext.jsx` and `SceneView.js` are large. SceneView largely coherent; EditorContext partitioning deferred. |
 | L / F7 | Low | First-party lint warnings remain (mostly React hooks / refs / export-components / set-state-in-effect). Vendor noise eliminated from reporting. |
@@ -152,9 +153,10 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 - Consolidation C1 (docs / lint / F10 / dead Component hooks) — **done** (`ACCEPTANCE_CONSOLIDATION_C1.md`).
 - Consolidation C2 (M8/F2 + F20 boundaries) — **done** (`ACCEPTANCE_CONSOLIDATION_C2.md`).
 - Consolidation C3 (F21 + F1 gesture/command extract) — **done** (`ACCEPTANCE_CONSOLIDATION_C3.md`).
-- Further EditorContext domain extraction (prefab/layer/geometry sessions) — **requires approval** (C4).
-- `World.clear` O(n²) (F11 remainder) — deferred measured pass.
-- Carve broadphase + World Solid spatial chunking; stair material batching (F4/F18/F19).
+- Consolidation C4 (geometry/collision/scalability) — **done** (`ACCEPTANCE_CONSOLIDATION_C4.md`).
+- Further EditorContext domain extraction (prefab/layer/geometry sessions) — **requires approval**.
+- Carve broadphase + World Solid spatial chunking — measured in C4; **deferred** until larger maps justify.
+- Stair material instance sharing (F18) — **done** in C4; full stair mesh batching still optional later.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Level-switch texture `renderer.info` retention (shared caches) — monitor; geometries already stable.
 - Splitting the single production chunk (~8 MB).

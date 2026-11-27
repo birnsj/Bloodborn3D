@@ -60,7 +60,7 @@ function makeView(definitions = {}) {
     '_populateActorComponents', '_syncContentRoot', '_syncActorHierarchy', 'resetSyncStats', 'getSyncStats',
     'syncIncremental', 'syncFromWorld', '_addActorVisual', '_addBrushVisual',
     '_addBatchedWorldSolidMesh', '_getSharedCutterMaterials', '_applySurfaceMaterials',
-    '_applyBrushMaterials', '_applyHiddenHullFaces', '_addStairVisual',
+    '_applyBrushMaterials', '_applyHiddenHullFaces', '_addStairVisual', '_applySharedStairMaterials',
     '_addConvexBrushVisual', '_addRampVisual', '_addColumnVisual', '_addArchVisual',
     '_addCurvedWallVisual',
   ]) {

@@ -507,9 +507,12 @@ export class World {
   }
 
   clear() {
-    for (const actor of [...this.actors]) {
-      this.removeActor(actor);
+    // O(n): detach in one pass. removeActor() would re-filter actors[] each time (O(n²)).
+    for (const actor of this.actors) {
+      actor.world = null;
     }
+    this.actors = [];
+    this._byId.clear();
   }
 
   toJSON() {

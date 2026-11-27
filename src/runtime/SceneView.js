@@ -2136,10 +2136,13 @@ export class SceneView {
     const fallback = createFallbackBrushMaterial(comp.color || '#8a9099', {
       editMode: this.editMode,
     });
+    /** @type {import('three').Mesh[]} */
+    const stepMeshes = [];
     steps.traverse((child) => {
       if (!child.isMesh) return;
       const surfaceIds = child.geometry.userData.surfaceIds || [...BOX_SURFACE_IDS];
       const isBox = !child.geometry.userData.surfaceIds;
+      // Per-mesh fallback clones until shared materials are applied (F18).
       child.material = surfaceIds.map(() => fallback.clone());
       child.castShadow = true;
       child.receiveShadow = true;
@@ -2157,9 +2160,47 @@ export class SceneView {
         edges.userData.editorOnly = true;
         child.add(edges);
       }
-      void this._applySurfaceMaterials(child, comp, syncToken);
+      stepMeshes.push(child);
     });
     group.add(steps);
+    // Resolve materials once, then share instances across steps (draw/state win; editing intact).
+    void this._applySharedStairMaterials(stepMeshes, comp, syncToken);
+  }
+
+  /**
+   * Stair steps share one material instance per surface slot (F18). Per-surface
+   * materialId / faceMaterials / UVs / picking / collision stay on the Stair component
+   * and step geometry; only GPU material objects are deduped within the actor.
+   */
+  async _applySharedStairMaterials(stepMeshes, comp, syncToken) {
+    if (!stepMeshes?.length) return;
+    const primary = stepMeshes[0];
+    await this._applySurfaceMaterials(primary, comp, syncToken);
+    const actorId = primary.userData?.actorId;
+    const visualEpoch = primary.userData?.visualEpoch;
+    if (!this._isActorVisualCurrent(actorId, syncToken, visualEpoch)) return;
+
+    const shared = primary.material;
+    if (!shared) return;
+    const sharedList = Array.isArray(shared) ? shared : [shared];
+    const keep = new Set(sharedList);
+
+    for (let i = 1; i < stepMeshes.length; i += 1) {
+      const mesh = stepMeshes[i];
+      if (!this._isActorVisualCurrent(mesh.userData?.actorId, syncToken, mesh.userData?.visualEpoch)) {
+        return;
+      }
+      const prev = mesh.material;
+      mesh.material = Array.isArray(shared) ? shared.slice() : shared;
+      if (Array.isArray(prev)) {
+        for (const m of prev) {
+          if (m && !keep.has(m)) disposeMaterial(m);
+        }
+      } else if (prev && !keep.has(prev)) {
+        disposeMaterial(prev);
+      }
+      if (mesh.material) mesh.material.needsUpdate = true;
+    }
   }
 
   _addRampVisual(group, actor, comp, syncToken) {

@@ -364,9 +364,10 @@ Authoritative audit: [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_F
 | **C1** | Documentation reconciliation; oxlint ignore `public/vendor`; safe unused cleanup; consolidate `folderForKind`; remove dead Component `onStart`/`onUpdate`/`onStop` | **Done** — `ACCEPTANCE_CONSOLIDATION_C1.md` |
 | **C2** | Architectural boundaries: M8/F2 (runtime↛editor) + F20 (core↛runtime PP) | **Done** — `ACCEPTANCE_CONSOLIDATION_C2.md` |
 | **C3** | EditorContext property gestures + Set*Properties consolidation (F1 partial, F21) | **Done** — `ACCEPTANCE_CONSOLIDATION_C3.md` |
-| C4+ | Further EditorContext domain extraction; DetailsPanel/Viewport; carve broadphase; etc. | **Not started** — requires explicit approval |
+| **C4** | Geometry / collision / spatial scalability (F4, F11 clear, F14, F16–F19, F24) | **Done** — `ACCEPTANCE_CONSOLIDATION_C4.md` |
+| C5+ | Further EditorContext domain extraction; DetailsPanel/Viewport; etc. | **Not started** — requires explicit approval |
 
-Do **not** begin C4 or Phase 2G without approval.
+Do **not** begin further consolidation passes or Phase 2G without approval.
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 

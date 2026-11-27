@@ -2,7 +2,7 @@
  * Phase 2G — subtractive geometry scalability evaluation (Node).
  * Run: node scripts/phase2g-subtractive-scale/runNodeBench.mjs
  *
- * Does not permanently change MAX_SUBTRACT_SOLIDS (stays 64). Uses explicit
+ * Does not permanently change MAX_SUBTRACT_SOLIDS (product default). Uses explicit
  * maxSolids / temporary globalThis override only inside this process.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -16,7 +16,12 @@ import {
   worldToLevelData,
 } from '../../src/dev/phase2gSubtractiveScaleWorlds.js';
 import { getBrushBaseSolids, createExposedWorldSolidGeometry, getBrushRenderSolids } from '../../src/runtime/brushGeometry.js';
-import { applyWorldSubtraction, pointInsideAnySolid, solidToAabb } from '../../src/runtime/brushBoolean.js';
+import {
+  applyWorldSubtraction,
+  pointInsideAnySolid,
+  solidToAabb,
+  MAX_SUBTRACT_SOLIDS,
+} from '../../src/runtime/brushBoolean.js';
 import { serializeLevel } from '../../src/serialization/LevelSerializer.js';
 import { deserializeLevel } from '../../src/serialization/LevelDeserializer.js';
 import { PhysicsWorld } from '../../src/runtime/PhysicsWorld.js';
@@ -273,11 +278,11 @@ async function benchVariant(label, world) {
 async function main() {
   const results = {
     generatedAt: new Date().toISOString(),
-    permanentLimit: 64,
+    permanentLimit: MAX_SUBTRACT_SOLIDS,
     caps: SOLID_CAPS,
     roomCounts: ROOM_COUNTS,
     notes: [
-      'Carve / mesh / physics measured with temporary maxSolids; MAX_SUBTRACT_SOLIDS remains 64.',
+      `Carve / mesh / physics measured with temporary maxSolids; product MAX_SUBTRACT_SOLIDS remains ${MAX_SUBTRACT_SOLIDS}.`,
       'Representative worlds include corridors, upper floors, window punches, shafts, additive stairs.',
       'Flush worlds are the maze-only baseline (lower fragmentation).',
     ],
