@@ -3,8 +3,10 @@
 **Status:** Complete (2026-11-26)  
 **Authority:** [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_FOUNDATION.md) (F3 measurement integrity, F8)  
 **Baseline:** C4 `480c398` · 1171 tests · 176 first-party lint warnings  
-**Closure:** Full browser soak `ok: true` · ≥50 cycles all families · stall-hardened `measureFrameTimes` · 1193 tests · lint warnings-only · production build OK  
+**Closure:** Full browser soak `ok: true` · ≥50 cycles all families · stall-hardened `measureFrameTimes` · **1195** tests · **176** lint warnings · production build OK  
 **Constraints:** No Phase 2G map generator. Do not claim FPS wins across unequal workloads. Preserve shared-cache semantics for interactive editing.
+
+Raw soak capture: [`c5-soak-stress-capture.json`](./c5-soak-stress-capture.json)
 
 ## 1. Performance measurement integrity
 
@@ -15,6 +17,7 @@
 | Batch 8 textures | `acceptance-integrated-editor.json` | **101** | **84.0 / 18.7** | Chromium automation · DPR 1.5 · ~671×507 · correct `measureFrameTimes(s,{warmupFrames})` |
 | Pre-Batch 8 stabilization | same integrated | **101** | **~77.5–78.1 / ~17.5–19.6** | Same protocol after shadow/env/ortho fixes |
 | C4 quick acceptance | `acceptance-gothic-mansion.json` | **35** | **~175 / ~170** | `phase2f7gAcceptance({ quick: true })` Gothic profile |
+| **C5 full soak (post shadow-map fix)** | gothic / integrated | **35 / 101** | see measured table | Cursor Chromium · DPR 1.5 · canvas CSS ~458×382 · stall-hardened sampler |
 
 **Verdict:** The ~84 / 18.7 and ~175 / 170 figures are **different levels**, not competing measurements of one scene.
 
@@ -76,14 +79,18 @@ C5 gates reject profiles with `<16` samples or median FPS `<5`.
 | Shared cutter materials | SceneView-owned shared | `SceneView.dispose` |
 | Env equirect cache | **Shared** | `clearEnvironmentMapCache({ dispose: true })` |
 | Authored PMREM RT | Controller-owned | `disposePmremTarget` |
-| Water / mirror / refraction RTs | Env `bbEnvDispose` | `disposeObject` → `bbEnvDispose` |
+| Water / mirror / refraction RTs | Env `bbEnvDispose` | `disposeObject` → `bbEnvDispose` (exactly-once) |
 | Post-processing buffers | Controller-owned | `postProcessingController.dispose` |
+| PP texture cache (`_ppTextureCache`) | SceneView-owned | `_clearPpTextureCache` + generation bump on level switch |
+| Light shadow maps / spot maps | Light holder `bbLightDispose` | `disposeObject` → `bbLightDispose` → `light.shadow.dispose()` |
 | ViewHelper / overlays | SceneView / gizmo | `SceneView.dispose` / gizmo dispose |
 | Asset Viewer / MeshPreview | Preview-local | `disposeObjectTree` on close |
 
 ### F8 disposition
 
-Level-switch **texture retention** after return-to-same-level remains **shared cache retention**, not a confirmed owned leak. Interactive editing keeps process-lifetime caches on purpose.
+Shared material/mesh/env **JS caches** remain process-lifetime by design for interactive editing. C5 soak confirms those caches stay flat across 50 level switches.
+
+A progressive `renderer.info.memory.textures` climb during Play/Stop and level-switch was **root-caused and fixed** (not F8 shared-cache retention): point-light cube shadow maps (color + depth = 2 textures each) were reallocated on every `syncFromWorld` without calling `bbLightDispose` / `light.shadow.dispose()`. After the fix, Play/Stop ×50 and level-switch ×50 report **Δtextures = 0**.
 
 C5 adds:
 
@@ -93,17 +100,18 @@ C5 adds:
 - `clearEnvironmentMapCache({ dispose })` — dispose equirects on clear
 - `releaseSharedAssetCaches()` — soak / test reset only (never ordinary level switch)
 
-### Owned-leak fixes (seven — unit-verified)
+### Owned-leak fixes (seven original + shadow-map)
 
-| # | Bug | Fix | Unit proof |
+| # | Bug | Fix | Proof |
 | --- | --- | --- | --- |
-| 1 | Water.js reflection `WebGLRenderTarget` never freed | Capture RT on first draw; dispose in env teardown | `c5GpuLifecycle.test.js` Water dispose exactly once |
-| 2 | StaticMesh material override orphaned `createThreeMaterial` + clone | Use createMaterial result directly; mark owned | static mesh override ownership |
-| 3 | `_ppTextureCache` survived level switches | Clear + generation bump in `clearWorldMeshes` | PP generation race tests |
-| 4 | Dual `bbEnvDispose` on holder + root | Register once on holder | holder-only source contract |
-| 5 | `disposeObjectTree(root, { geometries: false })` ignored options | Options honored | disposeObjectTree options |
-| 6 | PMREM cube texture wrongly `bbShared` | Removed; RT remains caller-owned | PMREM not marked shared |
-| 7 | InstancedMesh material clone maps | `markSharedMaterialTextures` after clone | shared textures survive consumers |
+| 1 | Water.js reflection `WebGLRenderTarget` never freed | Capture RT on first draw; dispose in env teardown | Unit: Water dispose ×3 idempotent |
+| 2 | StaticMesh material override orphaned `createThreeMaterial` + clone | Use createMaterial result directly; mark owned | Unit: override ownership |
+| 3 | `_ppTextureCache` survived level switches / late async loads | Clear + generation bump; late loads disposed | Unit: PP generation race |
+| 4 | Dual `bbEnvDispose` on holder + root | Register once on holder | Unit + source contract |
+| 5 | `disposeObjectTree(root, { geometries: false })` ignored options | Options honored | Unit |
+| 6 | PMREM cube texture wrongly `bbShared` | Removed; RT remains caller-owned | Unit + source contract |
+| 7 | InstancedMesh material clone maps | `markSharedMaterialTextures` after clone | Unit: shared maps survive consumer dispose |
+| 8 | Point-light shadow maps leaked on Play/Stop / sync (+6 tex/sync = 3 lights × cube color + cube depth) | `createThreeLight` dispose frees `shadow.map`/`mapPass`; `disposeObject` invokes `bbLightDispose` | Unit + browser: Play/Stop ×50 Δtex **0**; level-switch ×50 Δtex **0** |
 
 ### Shared textures / PP race / Water once (acceptance checks)
 
@@ -115,7 +123,7 @@ C5 adds:
 
 ## 3. Extended lifecycle stress
 
-`runC5GpuLifecycleAcceptance()` (full mode) runs **≥50 iterations** each of:
+`runC5GpuLifecycleAcceptance()` (full mode) ran **50 iterations** each of:
 
 - Play / Stop
 - Level switching (gothic ↔ integrated ↔ subtractive ↔ convex ↔ test-room; end on start level)
@@ -125,8 +133,6 @@ C5 adds:
 - Asset Viewer / Meshes tab open-close
 
 Interval snapshots every ~10 level switches classify **bounded cache growth** vs **progressive leaks**.
-
-Gates: Play/Stop and create/delete geometry deltas bounded; stress `ok`; both levels measured with reset protocol; FPS sample integrity.
 
 Quick mode (`{ quick: true }`) uses reduced cycle counts for smoke.
 
@@ -143,80 +149,76 @@ Quick mode (`{ quick: true }`) uses reduced cycle counts for smoke.
 
 ## 5. Verification — measured results
 
-### Conditions (closure soak)
+### Conditions (closure soak, post shadow-map fix)
 
-- Cursor/Electron Chromium · DPR **1.5** · canvas CSS **~458×317** (buf ~687×475) · shell 458×317
+- Cursor/Electron Chromium · DPR **1.5** · canvas CSS **~458×382** (buf ~687×573) · shell 458×382
 - `hardwareConcurrency` 20 · `deviceMemoryGB` 32
 - `measureFrameTimes(0.7s, { warmupFrames: 18, stallMs: 120, minSamples: 24 })`
 - Post-processing preview **on** · shadow map enabled
-- Note: canvas smaller than Batch 8 (~671×507); integrated quad FPS is therefore not directly comparable as a regression/improvement claim
+- Note: canvas smaller than Batch 8 (~671×507); absolute FPS not claimed as wins/losses vs Batch 8
 
 ### Median FPS (stall-hardened)
 
 | Level | Actors | Single median FPS | Quad median FPS | Samples (s/q) | Discarded stalls |
 | --- | ---: | ---: | ---: | --- | ---: |
-| Gothic mansion | 35 | **95.2** | **128.2** | 66 / 82 | 0 / 0 |
-| Integrated editor | 101 | **87.7** | **24.3** | 60 / 24 | 0 / 0 |
+| Gothic mansion | 35 | **181.8** | **129.9** | 121 / 85 | 0 / 0 |
+| Integrated editor | 101 | **95.2** | **23.9** | 66 / 24 | 0 / 0 |
 
 **Interpretation**
 
-- Integrated single **87.7** aligns with Batch 8 **84.0** under the same level (smaller canvas → slightly higher FPS expected).
-- Integrated quad **24.3** vs Batch 8 **18.7**: same heavier workload pattern; absolute gap dominated by smaller automation viewport, not a claimed win.
-- Gothic near-parity / quad-faster-than-single at this tiny canvas matches a fill-rate-light scene (C4 also saw ~175/170). **Do not** compare gothic FPS to integrated FPS.
+- Integrated single **95.2** ≪ gothic single **181.8** under the same protocol → unequal workloads confirmed.
+- Integrated quad **23.9** remains below the aspirational **≥30 FPS** target (architectural debt; unchanged).
+- Gothic near-parity / high quad FPS at this canvas matches a fill-rate-light scene. **Do not** compare gothic FPS to integrated FPS.
 
 ### GPU snapshot (`info.reset()` + one render)
 
 | Level | Layout | Draw calls | Triangles | Geometries | Textures (renderer.info) |
 | --- | --- | ---: | ---: | ---: | ---: |
-| Gothic | single | 9 | 72 | 180 | 48 |
-| Gothic | quad | 578 | 3148 | 185 | 48 |
-| Integrated | single | 9 | 72 | 262 | 61 |
-| Integrated | quad | 1735 | 38406 | 262 | 61 |
+| Gothic | single | 9 | 72 | 167 | 36 |
+| Gothic | quad | 542 | 3088 | 179 | 36 |
+| Integrated | single | 9 | 72 | 256 | 43 |
+| Integrated | quad | 1664 | 38286 | 256 | 43 |
 
 **Unverified / caveat:** single-pane draw/tri counts (9 / 72) look like an incomplete lit pass (helpers / empty frustum) under this automation camera; quad counts are the trustworthy relative cost signal. FPS timings remain rAF-based and sample-valid.
 
-### Stress (≥50 each) — closure soak
+### Stress (≥50 each) — post shadow-map fix
 
 | Stress | Cycles | Geometry Δ | Texture Δ (renderer.info) | JS cache |
 | --- | ---: | ---: | ---: | --- |
-| Play/Stop | 50 | **0** | +300 (pre-settle harness) | — |
-| Level switch | 50 | **0** | +164 | flat 18 tex / 8 mesh |
-| Create/delete | 50 | **0** | 0 | — |
-| Materials + undo/redo | 50+50 | **0** | 0 | — |
+| Play/Stop | 50 | **0** | **0** | — |
+| Level switch | 50 | **0** | **0** | flat 18 tex / 8 mesh |
+| Create/delete | 50 | **0** | — | — |
+| Materials + undo/redo | 50+50 | **0** | **0** | — |
 | Layout switch | 50 | **0** | — | — |
 | Asset preview | 50 | — | — | — |
 
-#### Level-switch intervals (geometry bounded; JS caches flat)
+#### Level-switch intervals (geometry bounded; JS caches flat; no progressive tex climb)
 
 | i | geometries | renderer textures | caches (tex/mesh/env) |
 | ---: | ---: | ---: | --- |
-| 0 | 35 | 370 | 18 / 8 / 0 |
-| 10 | 36 | 398 | 18 / 8 / 0 |
-| 20 | 36 | 438 | 18 / 8 / 0 |
-| 30 | 36 | 478 | 18 / 8 / 0 |
-| 40 | 36 | 516 | 18 / 8 / 0 |
-| 50 | 36 | 516 | 18 / 8 / 0 |
-| return | 35 | 534 | 18 / 8 / 0 |
+| 0 | 35 | 40 | 18 / 8 / 0 |
+| 10…50 | 36 | 22 | 18 / 8 / 0 |
+| return | 35 | 40 | 18 / 8 / 0 |
 
-`geometryClimbBounded: true`. Ownership inventory before/after return-to-test-room **unchanged** (shared/owned/untagged counts identical).
+`geometryClimbBounded: true`. Ownership inventory before/after return-to-test-room **unchanged**. Texture count tracks which level is resident (lighter mid-cycle levels), not a leak.
 
-#### Follow-up disposition on texture climb
+#### Defect disposition (texture climb)
 
 | Observation | Disposition |
 | --- | --- |
-| JS texture/mesh/env caches flat across 50 level switches | **F8 shared retention — not a leak** |
-| Geometry Δ = 0 on Play/Stop, level switch, create/delete | **Pass — no geometry leak** |
-| Play/Stop `renderer.info.textures` +300 in harness | **Not reproduced** as steady-state: 20× Play/Stop @ 30 ms + 1 s settle on `test-room` → **Δtex = 0**. Harness now sleeps 400 ms before after-snap so in-flight async material abort/dispose can finish. |
-| Level-switch renderer textures 370→516 then plateau | **Residual risk (open):** progressive `info.memory.textures` with flat JS caches and flat scene ownership inventory. Saturates (40→50 flat). Not classified as unbounded owned scene-graph leak; not fully root-caused. Documented — do not block C5 on F8 shared-cache semantics. |
+| Pre-fix Play/Stop climbed +6 textures/cycle (3 point lights × cube color + cube depth) | **Fixed** — `bbLightDispose` + `light.shadow.dispose()` |
+| Pre-fix level-switch climbed ~+4 textures/switch with flat JS caches | **Fixed** by the same shadow-map dispose path |
+| Post-fix Play/Stop ×50 and level-switch ×50 | **Δgeo = 0, Δtex = 0** |
+| JS texture/mesh/env caches flat across 50 level switches | **F8 shared retention by design — not a leak** |
 
 ### Automated
 
 | Check | Result |
 | --- | --- |
-| `src/tests/c5GpuLifecycle.test.js` | **Pass** — 7 fixes + shared/PP/Water + reconciliation |
-| `npm test` | **1193 / 1193** pass |
-| `npm run lint` | Exit 0 (existing EditorContext exhaustive-deps warnings only) |
-| `npm run build` | **Pass** (~1 s) |
+| `src/tests/c5GpuLifecycle.test.js` | **Pass** — 7 original fixes + shadow dispose + shared/PP/Water + reconciliation |
+| `npm test` | **1195 / 1195** pass |
+| `npm run lint` | Exit 0 · **176** warnings (C4 baseline parity) |
+| `npm run build` | **Pass** |
 
 ### Browser gates (closure)
 
@@ -228,21 +230,20 @@ Quick mode (`{ quick: true }`) uses reduced cycle counts for smoke.
 | `stressMinCycles` (≥50) | true |
 | `fpsSamplesOk` | true |
 | `fpsNotStallOnly` | true |
-| `integratedHeavierThanGothic` (single) | true (87.7 ≤ 95.2 + 5) |
+| `integratedHeavierThanGothic` (single) | true (95.2 ≤ 181.8 + 5) |
 | Overall `ok` | **true** |
 
 ## 6. Audit dispositions
 
 | ID | Disposition |
 | --- | --- |
-| **F3** | Measurement integrity closed for unequal-workload confusion; stall-hardened sampler landed; **quad ≥30 FPS on integrated** remains architectural debt (24.3 @ 458×317 — still under target at Batch 8 canvas size historically) |
-| **F8** | Owned vs shared instrumented; seven owned-leak fixes verified; shared retention documented; explicit soak release added; no ordinary-path cache purge; residual `info.memory.textures` climb under rapid level-switch **documented open**, not F8 shared-cache failure |
+| **F3** | Measurement integrity closed for unequal-workload confusion; stall-hardened sampler landed; **quad ≥30 FPS on integrated** remains architectural debt (23.9 @ ~458×382; Batch 8 historically 18.7 @ ~671×507) |
+| **F8** | Owned vs shared instrumented; seven owned-leak fixes + shadow-map leak verified; shared retention documented; explicit soak release added; no ordinary-path cache purge; progressive `info.memory.textures` climb **closed** |
 
 ## 7. Remaining unverified conditions
 
 1. Single-pane `measureGpuSnapshot` draw/tri (9/72) under automation camera — needs a focused lit-pass sanity check with a known framing.
-2. Root cause of saturating `renderer.info.memory.textures` climb during multi-level switch soak while JS caches + ownership inventory stay flat.
-3. Equivalent FPS at Batch 8 canvas (~671×507) — not re-run at that size in this closure (automation shell was ~458×317).
-4. `releaseSharedAssetCaches()` soak path not exercised in the closure run (`releaseCaches: false` default — still unsafe if a live level references shared assets).
+2. Equivalent FPS at Batch 8 canvas (~671×507) — not re-run at that size in this closure (automation shell was ~458×382).
+3. `releaseSharedAssetCaches()` soak path not exercised in the closure run (`releaseCaches: false` default — still unsafe if a live level references shared assets).
 
 **C5 acceptance complete. Do not begin C6 or Phase 2G without explicit approval.**

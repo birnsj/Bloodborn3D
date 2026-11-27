@@ -1,0 +1,121 @@
+{
+  "capturedFrom": "browser CDP full C5 soak after point-light shadow dispose fix",
+  "ok": true,
+  "quick": false,
+  "baseline": "480c398 (C4)",
+  "conditions": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/3.32.4 Chrome/150.0.7871.250 Electron/43.8.9 Safari/537.36",
+    "hardwareConcurrency": 20,
+    "deviceMemoryGB": 32,
+    "dpr": 1.5,
+    "rendererDpr": 1.5,
+    "canvasCss": { "w": 458, "h": 382 },
+    "canvasBuf": { "w": 687, "h": 573 },
+    "shell": { "width": 458, "height": 382 }
+  },
+  "gates": {
+    "bothLevelsMeasured": true,
+    "resetProtocolUsed": true,
+    "stressOk": true,
+    "stressMinCycles": true,
+    "fpsSamplesOk": true,
+    "fpsNotStallOnly": true,
+    "integratedHeavierThanGothic": true,
+    "unequalWorkloadsDocumented": true,
+    "fps": {
+      "gothic": { "single": 181.8, "quad": 129.9 },
+      "integrated": { "single": 95.2, "quad": 23.9 }
+    }
+  },
+  "gothic": {
+    "level": "acceptance-gothic-mansion.json",
+    "actors": 35,
+    "single": {
+      "medianFps": 181.8,
+      "medianFrameMs": 5.5,
+      "samples": 121,
+      "discardedStalls": 0,
+      "drawCalls": 9,
+      "triangles": 72,
+      "geometries": 167,
+      "textures": 36
+    },
+    "quad": {
+      "medianFps": 129.9,
+      "medianFrameMs": 7.7,
+      "samples": 85,
+      "discardedStalls": 0,
+      "drawCalls": 542,
+      "triangles": 3088,
+      "geometries": 179,
+      "textures": 36
+    }
+  },
+  "integrated": {
+    "level": "acceptance-integrated-editor.json",
+    "actors": 101,
+    "single": {
+      "medianFps": 95.2,
+      "medianFrameMs": 10.5,
+      "samples": 66,
+      "discardedStalls": 0,
+      "drawCalls": 9,
+      "triangles": 72,
+      "geometries": 256,
+      "textures": 43
+    },
+    "quad": {
+      "medianFps": 23.9,
+      "medianFrameMs": 41.85,
+      "samples": 24,
+      "discardedStalls": 0,
+      "drawCalls": 1664,
+      "triangles": 38286,
+      "geometries": 256,
+      "textures": 43
+    }
+  },
+  "stress": {
+    "ok": true,
+    "cycles": {
+      "playStop": 50,
+      "levelSwitch": 50,
+      "createDelete": 50,
+      "materialAssign": 50,
+      "undoRedo": 50,
+      "layoutSwitch": 50,
+      "assetPreview": 50
+    },
+    "sections": {
+      "playStop": { "ok": true, "cycles": 50, "geometryDelta": 0, "textureDelta": 0 },
+      "levelSwitch": {
+        "ok": true,
+        "cycles": 50,
+        "geometryDelta": 0,
+        "textureDelta": 0,
+        "cacheBefore": { "textures": 18, "meshes": 8, "environments": 0 },
+        "cacheAfter": { "textures": 18, "meshes": 8, "environments": 0 },
+        "geometryClimbBounded": true,
+        "intervals": [
+          { "i": 0, "geometries": 35, "textures": 40, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": 10, "geometries": 36, "textures": 22, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": 20, "geometries": 36, "textures": 22, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": 30, "geometries": 36, "textures": 22, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": 40, "geometries": 36, "textures": 22, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": 50, "geometries": 36, "textures": 22, "caches": { "textures": 18, "meshes": 8, "environments": 0 } },
+          { "i": "return", "geometries": 35, "textures": 40, "caches": { "textures": 18, "meshes": 8, "environments": 0 } }
+        ]
+      },
+      "createDelete": { "ok": true, "cycles": 50, "geometryDelta": 0 },
+      "materials": { "ok": true, "materialCycles": 50, "undoRedoCycles": 50, "geometryDelta": 0, "textureDelta": 0 },
+      "layoutSwitch": { "ok": true, "cycles": 50, "geometryDelta": 0 },
+      "assetPreview": { "ok": true, "cycles": 50 },
+      "cacheSnapshot": { "textures": 19, "meshes": 8, "environments": 0 }
+    }
+  },
+  "defectFixedDuringSoak": {
+    "id": "point-light-shadow-map-leak",
+    "symptom": "Play/Stop and level-switch climbed renderer.info.textures by ~6 per sync (3 point lights × cube color + cube depth) while shared caches stayed flat",
+    "fix": "createThreeLight dispose now frees light.shadow.map/mapPass; SceneView disposeObject invokes bbLightDispose"
+  }
+}
