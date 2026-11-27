@@ -6,7 +6,7 @@
 import {
   normalizePostProcessing,
   DEFAULT_POST_PROCESSING,
-} from '../runtime/postprocessing/postProcessingState.js';
+} from './postprocessing/postProcessingState.js';
 import { normalizeAuthoringLayersState } from './authoringLayers.js';
 
 /** @typedef {'additive' | 'subtractive'} MapMode */

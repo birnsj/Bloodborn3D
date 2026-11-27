@@ -26,7 +26,7 @@ import {
 const EDIT_FILL_BASE_INTENSITY = 0.06;
 const EDIT_FILL2_BASE_INTENSITY = 0.03;
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
-import { BrushGizmo } from '../editor/BrushGizmo.js';
+import { BrushGizmo } from './BrushGizmo.js';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import {
   getChildren,
@@ -121,32 +121,32 @@ import {
 } from './actorVisualFingerprint.js';
 import { ensureWorldSolidContainsSubtracts } from './worldSolidFit.js';
 import { WorldEnvironmentController } from './WorldEnvironmentController.js';
-import { createBrushFromBounds } from '../editor/brushFactory.js';
-import { createRampFromBounds } from '../editor/rampFactory.js';
-import { createStairFromBounds } from '../editor/stairFactory.js';
-import { createColumnFromBounds } from '../editor/columnFactory.js';
-import { createArchFromBounds } from '../editor/archFactory.js';
-import { createCurvedWallFromBounds } from '../editor/curvedWallFactory.js';
+import { createBrushFromBounds } from './brushFactory.js';
+import { createRampFromBounds } from './rampFactory.js';
+import { createStairFromBounds } from './stairFactory.js';
+import { createColumnFromBounds } from './columnFactory.js';
+import { createArchFromBounds } from './archFactory.js';
+import { createCurvedWallFromBounds } from './curvedWallFactory.js';
 import { DEFAULT_RAMP_RISE } from '../components/RampComponent.js';
 import {
   applyDisplayMode,
   restoreDisplayMode,
   ensureEdgesOverlay,
-} from '../editor/viewport/viewportDisplay.js';
+} from './viewport/viewportDisplay.js';
 import {
   createPaneCamera,
   applyPanePose,
   updateOrthoFrustum,
   updatePerspectiveAspect,
   gridPlaneForCameraMode,
-} from '../editor/viewport/viewportCameras.js';
+} from './viewport/viewportCameras.js';
 import {
   isOrthographicMode,
   normalizeCameraMode,
   resolvePaneShowFog,
   resolvePaneShowPostProcessing,
-} from '../editor/viewport/viewportPrefs.js';
-import { paneScissorFromDomRect } from '../editor/viewport/paneScissor.js';
+} from './viewport/viewportPrefs.js';
+import { paneScissorFromDomRect } from './viewport/paneScissor.js';
 
 const DEFAULT_VIEWPORT_COLORS = {
   background: 0x0e1218,

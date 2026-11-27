@@ -14,7 +14,7 @@ import {
   normalizeWorldRenderer,
   normalizeAuthoringLayersState,
 } from '../core/World.js';
-import { normalizePostProcessing } from '../runtime/postprocessing/postProcessingState.js';
+import { normalizePostProcessing } from '../core/postprocessing/postProcessingState.js';
 
 export const LEVEL_SCHEMA_VERSION = 3;
 /** Oldest level schema the deserializer still accepts. */

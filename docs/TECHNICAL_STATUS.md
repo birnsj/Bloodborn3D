@@ -9,7 +9,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 
 | Check | Result |
 | --- | --- |
-| `npm test` | **1154 / 1154 pass** (125 files; was 1151 at audit baseline `33ba9b9`) |
+| `npm test` | **1160 / 1160 pass** (126 files; was 1151 at audit baseline `33ba9b9`) |
 | `npm run lint` | exit 0 · **186** first-party warnings · **0** vendor (`public/vendor/**` ignored as of C1); see `ACCEPTANCE_CONSOLIDATION_C1.md` |
 | `npm run build` | succeeds; single ~**8.0 MB** JS chunk (gzip ~2.7 MB) |
 | CI | `.github/workflows/ci.yml` — test + lint + build on `main` / PRs |
@@ -43,6 +43,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Pipeline hardening (post-`08e15fd`) | OpenArt spend reservation / ambiguous failure / job recovery; atomic asset registry + mutex; concept-library request serialization; upload limits + magic bytes; localhost-only OpenArt API; transform coerceFiniteNumber. See `ACCEPTANCE_PIPELINE_HARDENING.md`. |
 | Foundation audit | `docs/AUDIT_LEVEL_EDITOR_FOUNDATION.md` (baseline `33ba9b9`) |
 | Consolidation C1 | Docs + lint hygiene + `folderForKind` + dead Component hooks — see `ACCEPTANCE_CONSOLIDATION_C1.md` |
+| Consolidation C2 | Architectural boundaries M8/F2 + F20 — see `ACCEPTANCE_CONSOLIDATION_C2.md` |
 
 ## 2. Implemented systems
 
@@ -50,7 +51,7 @@ Status is what the code does today, not an intent.
 
 | System | State | Notes |
 | --- | --- | --- |
-| Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | Engine-neutral intent; `World` still imports runtime postprocessing normalize (foundation **F20**). Transforms are local to `parentId`. |
+| Core model (`World`, `Actor`, `Component`, `Transform`, hierarchy helpers) | Implemented | Engine-neutral core; PP normalize lives in `core/postprocessing` (**F20 closed** in C2). Transforms are local to `parentId`. |
 | Component types | Implemented | Brush, **ConvexBrush**, Ramp, Stair, Column, Arch, CurvedWall, Light, StaticMesh, PlayerSpawn, Cell, via `componentRegistry`. |
 | Serialization | Implemented | Writes `schemaVersion` **2** when no ConvexBrush is present, **3** when one exists; reads **1–3**; rejects other versions (see M9). |
 | Rendering (`SceneView`) | Implemented | Incremental sync for ordinary edits (2F.7C); full sync for load / Play restore / recovery. ConvexBrush grouped per-face mesh. |
@@ -115,7 +116,7 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 | ID | Severity | Finding |
 | --- | --- | --- |
 | M6 | Medium | **Closed in 2F.7C** — ordinary edits use `syncIncremental`; full sync retained for load / Play restore / recovery. |
-| M8 / F2 | High/Med | `SceneView` (runtime) still imports editor factories / gizmo / viewport prefs. Partial mitigation in 2F.7D (`worldSolidFit` moved); **deferred — do not start without approval**. |
+| M8 / F2 | High/Med | **Closed in consolidation C2** — SceneView imports runtime-local gizmo/factories/viewport helpers; editor paths are compatibility re-exports; `architectureBoundaries.test.js` guards. |
 | M10 | Medium | **Closed in 2F.7F** — StaticMesh box uses `boundingBoxMeters` + `boundingBoxCenterMeters` (fallback 1 m cube at origin). |
 | M / F8 | Medium | Level-switch can leave extra `renderer.info.textures` vs return-to-same-level baseline (shared material cache). Geometries stable (2F.7G). |
 | F1 | High | EditorContext multi-responsibility hub (~170 public keys) — **deferred** (no partitioning in C1). |
@@ -147,7 +148,7 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 - Physics / collision hardening — **done** in Phase **2F.7F** (`ACCEPTANCE_PHYSICS.md`).
 - Final regression / profiling / CI — **done** in Phase **2F.7G** (`ACCEPTANCE_STABILIZATION.md`).
 - Consolidation C1 (docs / lint / F10 / dead Component hooks) — **done** (`ACCEPTANCE_CONSOLIDATION_C1.md`).
-- Runtime/editor dependency separation (M8 / F2) — partial: World Solid fit moved; SceneView still imports editor factories / viewport helpers for placement preview. **Requires approval.**
+- Consolidation C2 (M8/F2 + F20 boundaries) — **done** (`ACCEPTANCE_CONSOLIDATION_C2.md`).
 - EditorContext partitioning (F1) — **requires approval**; not started.
 - `World.clear` O(n²) (F11 remainder) — deferred measured pass.
 - Carve broadphase + World Solid spatial chunking; stair material batching (F4/F18/F19).
