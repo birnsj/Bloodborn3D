@@ -77,8 +77,11 @@ A new workspace must not create a parallel save format, asset store or undo syst
    per frame, so it does not show weak-GPU behavior.
    Measured the same day in the real editor with the C6 harness (`runC6FoundationAcceptance`, 671×507, DPR 1.5):
    integrated level **59.9 FPS single (vsync-limited), 37.2 FPS four-pane**; Gothic 59.9 / 60.2. Four-pane is
-   CPU-bound (~26.7 ms submit, 1,692 draw calls). These differ greatly from the earlier 29.8 / 9.0, so the earlier
-   numbers came from slower hardware or load; re-measure on a modest machine before treating the target as met.
+   CPU-bound (~26.7 ms submit, 1,692 draw calls). These differ greatly from the earlier 29.8 / 9.0, which the designer
+   says were measured on a different, fast machine. **The discrepancy is unexplained.** Possible causes to check:
+   which GPU the browser used (integrated vs discrete), driver/power settings, other load, or editor state. Run the
+   same harness on that machine and record the GPU renderer string with the result. Also re-measure on a modest
+   machine before treating the target as met.
 
 ## Related documents
 
