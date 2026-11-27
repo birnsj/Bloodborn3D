@@ -518,6 +518,7 @@ describe('Phase 2G D2 — subtractive complexity validation', () => {
     const req = new EventEmitter();
     req.method = 'PUT';
     req.url = `/?name=${name}`;
+    req.headers = { host: 'localhost:5173' };
     const response = { headers: {}, statusCode: 0, body: '' };
     const res = {
       get statusCode() { return response.statusCode; },
@@ -743,6 +744,7 @@ describe('Phase 2G D3 — geometry payload validation', () => {
     const req = new EventEmitter();
     req.method = 'PUT';
     req.url = `/?name=${name}`;
+    req.headers = { host: 'localhost:5173' };
     const response = { statusCode: 0, body: '' };
     const res = {
       get statusCode() { return response.statusCode; },

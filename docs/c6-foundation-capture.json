@@ -1,0 +1,32 @@
+{
+  "capturedFrom": "browser CDP C6 foundation harness",
+  "ok": true,
+  "baseline": "8ef9cf2 (C5)",
+  "batch8Canvas": { "w": 671, "h": 507 },
+  "dpr": 1.5,
+  "note": "gpu.size forced to 671x507; shell CSS sometimes lagged at ~458x507. Actor counts from fiber editor world may lag (reported 15); geometry counts 188 vs 270 confirm distinct levels. Lit GPU authority is gothic quad after framing.",
+  "fps": {
+    "gothicBatch8": { "single": 76.3, "quad": 35.5 },
+    "integratedBatch8": { "single": 29.8, "quad": 9.0 }
+  },
+  "gpu": {
+    "gothicLitQuad": { "drawCalls": 556, "triangles": 3112, "geometries": 188, "textures": 32 },
+    "gothicSingleCaveat": { "drawCalls": 6, "triangles": 66 },
+    "integratedQuad": { "drawCalls": 1692, "triangles": 38334, "geometries": 270, "textures": 39 }
+  },
+  "lifecycleConfirm": { "cycles": 10, "geometryDelta": 1, "textureDelta": 3 },
+  "cacheRelease": {
+    "before": { "textures": 18, "meshes": 8, "environments": 0 },
+    "after": { "textures": 0, "meshes": 0, "environments": 0 }
+  },
+  "gates": {
+    "gothicLitFramed": true,
+    "gothicLitSource": "quad",
+    "singlePaneGpuCaveat": true,
+    "integratedBatch8Measured": true,
+    "integratedFpsNotStall": true,
+    "playStopTexStable": true,
+    "playStopGeoStable": true,
+    "cacheReleaseCleared": true
+  }
+}

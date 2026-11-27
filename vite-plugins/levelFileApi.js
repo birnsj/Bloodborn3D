@@ -2,15 +2,26 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertLevelGeometry, validateLevelData } from '../src/serialization/LevelDeserializer.js';
+import {
+  atomicWriteFile,
+  DEFAULT_JSON_BODY_LIMIT,
+  isLocalDevHost,
+  readBodyLimited,
+  resolveContainedPath,
+} from './fsSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const LEVELS_DIR = path.join(PROJECT_ROOT, 'public', 'levels');
 
+/** Levels can be larger than typical editor JSON; keep well under memory DoS. */
+export const LEVEL_JSON_BODY_LIMIT = Math.max(DEFAULT_JSON_BODY_LIMIT, 8 * 1024 * 1024);
+
 /**
  * Development-only Vite middleware for reading/writing level JSON under public/levels.
  * Rejects path traversal and non-.json writes. Not available in production builds.
- * Writes are validated + atomic (temp file then rename) — Phase 2F.7E.
+ * Writes are validated + atomic (temp file then rename) — Phase 2F.7E / C6.
+ * Localhost-only + body size limit — C6 foundation API safety.
  */
 export function levelFileApiPlugin() {
   return {
@@ -19,6 +30,14 @@ export function levelFileApiPlugin() {
     configureServer(server) {
       server.middlewares.use('/api/levels', async (req, res, _next) => {
         try {
+          if (!isLocalDevHost(req)) {
+            sendJson(res, 403, {
+              ok: false,
+              error: 'Level API is restricted to localhost during development',
+              code: 'LOCALHOST_ONLY',
+            });
+            return;
+          }
           if (req.method === 'GET') {
             await handleListOrRead(req, res);
             return;
@@ -27,24 +46,43 @@ export function levelFileApiPlugin() {
             await handleWrite(req, res);
             return;
           }
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          sendJson(res, 405, { error: 'Method not allowed' });
         } catch (err) {
-          const invalid = err?.name === 'LevelGeometryValidationError';
-          res.statusCode = invalid ? 422 : 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({
+          if (err?.code === 'BODY_TOO_LARGE') {
+            sendJson(res, 413, {
+              ok: false,
+              error: String(err.message || err),
+              code: 'BODY_TOO_LARGE',
+            });
+            return;
+          }
+          if (err instanceof SyntaxError) {
+            sendJson(res, 400, {
+              ok: false,
+              error: 'Invalid JSON body',
+              code: 'INVALID_JSON',
+            });
+            return;
+          }
+          const invalid = err?.name === 'LevelGeometryValidationError'
+            || err?.name === 'LevelValidationError';
+          sendJson(res, invalid ? 422 : 500, {
             error: String(err.message || err),
-            ...(invalid ? { diagnostics: err.diagnostics } : {}),
-          }));
+            ...(invalid && err.diagnostics ? { diagnostics: err.diagnostics } : {}),
+          });
         }
       });
     },
   };
 }
 
-function resolveSafeLevelPath(filename) {
+function sendJson(res, status, payload) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(payload));
+}
+
+export function resolveSafeLevelPath(filename) {
   if (!filename || typeof filename !== 'string') {
     throw new Error('Missing filename');
   }
@@ -52,11 +90,8 @@ function resolveSafeLevelPath(filename) {
   if (base !== filename || !base.endsWith('.json') || base.includes('..')) {
     throw new Error('Invalid level filename');
   }
-  const full = path.resolve(LEVELS_DIR, base);
-  if (!full.startsWith(LEVELS_DIR)) {
-    throw new Error('Path traversal rejected');
-  }
-  return full;
+  // Separator-aware containment (same contract as fsSafety.resolveContainedPath).
+  return resolveContainedPath(LEVELS_DIR, base);
 }
 
 async function handleListOrRead(req, res) {
@@ -68,9 +103,7 @@ async function handleListOrRead(req, res) {
   if (!name) {
     const entries = await fs.readdir(LEVELS_DIR);
     const levels = entries.filter((f) => f.endsWith('.json'));
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ levels }));
+    sendJson(res, 200, { levels });
     return;
   }
 
@@ -87,7 +120,7 @@ async function handleWrite(req, res) {
   const name = url.searchParams.get('name');
   const filePath = resolveSafeLevelPath(name);
 
-  const body = await readBody(req);
+  const body = await readBodyLimited(req, LEVEL_JSON_BODY_LIMIT);
   const parsed = JSON.parse(body);
   // Reject malformed levels before touching disk (same rules as editor load).
   validateLevelData(parsed);
@@ -97,29 +130,7 @@ async function handleWrite(req, res) {
 
   await fs.mkdir(LEVELS_DIR, { recursive: true });
   const payload = `${JSON.stringify(parsed, null, 2)}\n`;
-  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  try {
-    await fs.writeFile(tmpPath, payload, 'utf8');
-    await fs.rename(tmpPath, filePath);
-  } catch (err) {
-    try {
-      await fs.unlink(tmpPath);
-    } catch {
-      // ignore cleanup failures
-    }
-    throw err;
-  }
+  await atomicWriteFile(filePath, payload, 'utf8');
 
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({ ok: true, name: path.basename(filePath) }));
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
+  sendJson(res, 200, { ok: true, name: path.basename(filePath) });
 }

@@ -22,10 +22,9 @@ Recorded from `WORKSPACES` in `src/editor/layout/layoutPrefs.js`:
 
 ## Current development sequence
 
-1. **Foundation consolidation** (docs/lint/hygiene first — consolidation C1; then approved follow-ups such as M8 / EditorContext only with designer approval)  
-2. **Phase 2G** rule-based map generator *(reserved — not started)*  
-3. **Level Editor** integrated acceptance  
-4. **World Map**
+1. **Foundation consolidation** — **C1–C6 complete** (`ACCEPTANCE_CONSOLIDATION_C6.md`)  
+2. **Phase 2G** rule-based map generator *(reserved — not started; requires approval)*  
+3. **World Map** *(reserved — requires approval)*
 
 Materials and AI Assets already received substantial implementation and are not gated behind World Map.
 
@@ -366,9 +365,10 @@ Authoritative audit: [`AUDIT_LEVEL_EDITOR_FOUNDATION.md`](./AUDIT_LEVEL_EDITOR_F
 | **C3** | EditorContext property gestures + Set*Properties consolidation (F1 partial, F21) | **Done** — `ACCEPTANCE_CONSOLIDATION_C3.md` |
 | **C4** | Geometry / collision / spatial scalability (F4, F11 clear, F14, F16–F19, F24) | **Done** — `ACCEPTANCE_CONSOLIDATION_C4.md` |
 | **C5** | GPU lifecycle + performance measurement integrity (F3 measure, F8) | **Done** — `ACCEPTANCE_CONSOLIDATION_C5.md` |
-| C6+ | Further EditorContext domain extraction; DetailsPanel/Viewport; etc. | **Not started** — requires explicit approval |
+| **C6** | Final Level Editor foundation acceptance (persistence, API safety, C5 gaps, 2G readiness) | **Done** — `ACCEPTANCE_CONSOLIDATION_C6.md` |
+| Post-C6 | Further EditorContext domain extraction; DetailsPanel/Viewport; etc. | **Not started** — requires explicit approval |
 
-Do **not** begin further consolidation passes or Phase 2G without approval.
+Do **not** begin Phase 2G or World Map without approval. Foundation consolidation C1–C6 is complete.
 
 ## Phase 2G — Rule-Based Map Generation (reserved)
 

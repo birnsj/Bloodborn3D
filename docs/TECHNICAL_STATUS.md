@@ -47,6 +47,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Consolidation C3 | EditorContext gestures + Set*Properties consolidation (F1 partial, F21) — see `ACCEPTANCE_CONSOLIDATION_C3.md` |
 | Consolidation C4 | Geometry/collision/scalability (F4 measured, F11 clear, F14 sync helper, F18 stair share, F16/F17/F19/F24 confirmed) — see `ACCEPTANCE_CONSOLIDATION_C4.md` |
 | Consolidation C5 | GPU lifecycle + FPS measurement integrity (F3/F8) — **done** — see `ACCEPTANCE_CONSOLIDATION_C5.md` |
+| Consolidation C6 | Final foundation acceptance (persistence/API safety, C5 gaps, 2G readiness) — **done** — see `ACCEPTANCE_CONSOLIDATION_C6.md` |
 
 ## 2. Implemented systems
 
@@ -160,17 +161,17 @@ Early-audit IDs plus foundation audit **F#** from [`AUDIT_LEVEL_EDITOR_FOUNDATIO
 - Stair material instance sharing (F18) — **done** in C4; full stair mesh batching still optional later.
 - Remaining incremental sync costs: O(n) fingerprint walk; optional explicit `fullSync` for huge prefab replaces.
 - Consolidation C5 (GPU lifecycle / FPS integrity) — **done** (`ACCEPTANCE_CONSOLIDATION_C5.md`).
-- Level-switch shared material/mesh cache retention — by design (F8); owned shadow-map leak closed in C5.
+- Consolidation C6 (final foundation acceptance) — **done** (`ACCEPTANCE_CONSOLIDATION_C6.md`); Phase 2G still reserved.
+- Level-switch shared material/mesh cache retention — by design (F8); owned shadow-map leak closed in C5; soak cache release verified in C6.
 - Splitting the single production chunk (~8 MB).
 - Remaining React hooks / refs-during-render lint warnings (dedicated pass; avoid drive-by dep array changes).
-- Integrated quad ≥30 FPS (architectural; C5 recorded 23.9 @ small automation canvas / 18.7 @ Batch 8 size).
+- Integrated quad ≥30 FPS (architectural; C5 ~23.9 @ small canvas; C6 Batch 8 ~9.0 @ 671×507).
 
 ### Development sequence (current)
 
-1. **Foundation consolidation** (C1 in progress / subsequent approved passes)
-2. **Phase 2G** rule-based map generator (reserved — not started)
-3. **Level Editor** integrated acceptance
-4. **World Map**
+1. **Foundation consolidation** — **C1–C6 complete**
+2. **Phase 2G** rule-based map generator (reserved — not started; requires approval)
+3. **World Map** (reserved — requires approval)
 
 Materials and AI Assets already have substantial implementation outside this sequence.
 
