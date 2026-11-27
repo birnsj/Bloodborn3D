@@ -7,5 +7,13 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/editor/provider/**/*.js"],
+      "rules": {
+        "react/exhaustive-deps": "off"
+      }
+    }
+  ]
 }

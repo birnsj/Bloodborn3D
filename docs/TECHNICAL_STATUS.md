@@ -48,6 +48,7 @@ Records what is implemented, which audit findings were fixed, and what remains. 
 | Consolidation C4 | Geometry/collision/scalability (F4 measured, F11 clear, F14 sync helper, F18 stair share, F16/F17/F19/F24 confirmed) — see `ACCEPTANCE_CONSOLIDATION_C4.md` |
 | Consolidation C5 | GPU lifecycle + FPS measurement integrity (F3/F8) — **done** — see `ACCEPTANCE_CONSOLIDATION_C5.md` |
 | Standalone player | `player.html` + `src/player/`: runs a level with the shared `GameRuntime` and static assets, no editor/React. Built as a second Vite page. Verified in browser on the Gothic mansion; `standalonePlayer.test.js` + boundary test. See `TEST_MAP.md`. Tests now **1256 / 133 files**. |
+| Large-file split | `DetailsPanel` (4,454 → 1,864 lines, sections in `src/editor/details/`), `SceneView` (4,429 → ~220, methods in `src/runtime/sceneView/`), `EditorContext` (4,609 → ~1,000, hooks in `src/editor/provider/`). Behaviour unchanged; verified by tests plus real-editor checks. `fileSizeBudget.test.js` blocks regrowth (no new file over 1,500 lines). `react/exhaustive-deps` is switched off for `src/editor/provider/**` in `.oxlintrc.json` because the linter cannot see that refs and setters passed in are stable. Still over limit: `Viewport.jsx`, `ProjectArtLibraryPanel.jsx`, `DetailsPanel.jsx`, `helpContent.js`. |
 | Consolidation C6 | Final foundation acceptance (persistence/API safety, C5 gaps, 2G readiness) — **done** — see `ACCEPTANCE_CONSOLIDATION_C6.md` |
 
 ## 2. Implemented systems
