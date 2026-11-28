@@ -28,6 +28,10 @@ Recorded from `WORKSPACES` in `src/editor/layout/layoutPrefs.js`:
 
 Materials and AI Assets already received substantial implementation and are not gated behind World Map.
 
+### Academy content (pending designer approval)
+
+Tour/lesson rewrite as continuous **Practice Homestead** expert demo (core path + electives; build into main + steps + annex). Script: [`ACADEMY_PRACTICE_COTTAGE.md`](./ACADEMY_PRACTICE_COTTAGE.md). Do not implement until the open checks in that doc are answered.
+
 ### Three.js capability expansion
 
 Batches **1–9** and pivot editing (**Batch 7.1**) are **complete**. See [`THREEJS_CAPABILITY_INVENTORY.md`](./THREEJS_CAPABILITY_INVENTORY.md). Outstanding deferred items (encode authoring, VideoTexture, TextureHelper, brush displacement tessellation, mansion FPS re-measure) remain inventoried there — do not treat Unverified/Deferred rows as freshly re-proven.

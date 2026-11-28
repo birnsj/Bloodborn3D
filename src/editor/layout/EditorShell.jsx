@@ -11,6 +11,8 @@ import { MaterialsWorkspace } from '../materials/MaterialsWorkspace.jsx';
 import { AiAssetsWorkspace } from '../aiAssets/AiAssetsWorkspace.jsx';
 import { HoverHelpLayer } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { TutorialCoachMark } from '../../tutorials/TutorialCoachMark.jsx';
+import { AcademyTourBanner } from '../../tutorials/AcademyTourBanner.jsx';
+import { AcademyTourCursor } from '../../tutorials/AcademyTourCursor.jsx';
 
 export function EditorShell() {
   const { layout, setDockApi } = useLayout();
@@ -77,6 +79,8 @@ export function EditorShell() {
 
         <StatusBar />
         <HoverHelpLayer />
+        <AcademyTourBanner />
+        <AcademyTourCursor />
         <TutorialCoachMark />
       </div>
     </div>

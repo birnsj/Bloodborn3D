@@ -361,11 +361,12 @@ export function EditorProvider({ children }) {
     }
   }, [assetResolver, assetRevision]);
 
-    const {
+  const {
     applyLevelData,
     beginTutorialSession,
     confirmDiscardChanges,
     createNewMap,
+    endAllTutorialSessions,
     endTutorialSession,
     loadLevel,
     loadLevelUnchecked,
@@ -894,6 +895,7 @@ export function EditorProvider({ children }) {
     levelSession,
     beginTutorialSession,
     endTutorialSession,
+    endAllTutorialSessions,
     restartTutorialSession,
     saveTutorialWorkAs,
     refreshLevels,

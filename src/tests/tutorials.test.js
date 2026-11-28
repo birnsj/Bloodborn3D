@@ -29,6 +29,33 @@ import {
   TUTORIAL_PREFS_KEY,
 } from '../tutorials/tutorialPrefs.js';
 import { getLessonById, LESSONS, listLessons } from '../tutorials/lessons/index.js';
+import {
+  academyTourProgress,
+  buildAcademyTourQueue,
+  nextTourLessonId,
+  normalizeTourSpeed,
+  tourDelay,
+} from '../tutorials/academyTour.js';
+import {
+  executeTourStep,
+  isTourClickHighlightAllowed,
+  workspaceForTourStep,
+} from '../tutorials/academyTourExecute.js';
+import { stepWantsOrbit } from '../tutorials/academyTourViewport.js';
+import {
+  ensureTourViewportConfig,
+  stepNeedsRoomyViewport,
+} from '../tutorials/academyTourViewportConfig.js';
+import {
+  getTourCursorState,
+  hideTourCursor,
+  showTourCursor,
+} from '../tutorials/tourCursor.js';
+import {
+  getTourSpeedFactor,
+  setTourSpeedFactor,
+  tourMs,
+} from '../tutorials/tourSpeed.js';
 import { DOCK_PANEL_IDS, DOCK_PANELS, reopenPanel } from '../editor/layout/dockLayout.js';
 
 function makeWall(id = 'wall1') {
@@ -76,6 +103,24 @@ describe('tutorial prefs', () => {
   it('clampTutorialPrefs rejects garbage', () => {
     expect(clampTutorialPrefs({ completedLessonIds: null }).completedLessonIds).toEqual([]);
   });
+
+  it('persists and normalizes Academy tour speed', () => {
+    expect(normalizeTourSpeed(2)).toBe(2);
+    expect(normalizeTourSpeed(1.5)).toBe(1.5);
+    expect(normalizeTourSpeed(99)).toBe(1);
+    expect(normalizeTourSpeed('nope')).toBe(1);
+    expect(tourDelay(1400, 2)).toBe(700);
+    expect(tourDelay(1400, 0.5)).toBe(2800);
+    expect(tourDelay(10, 3)).toBe(40); // floor
+    const next = saveTutorialPrefs({ tourSpeed: 2 }, store);
+    expect(next.tourSpeed).toBe(2);
+    expect(loadTutorialPrefs(store).tourSpeed).toBe(2);
+    expect(clampTutorialPrefs({ tourSpeed: 7 }).tourSpeed).toBe(1);
+    setTourSpeedFactor(2);
+    expect(getTourSpeedFactor()).toBe(2);
+    expect(tourMs(1400)).toBe(700);
+    setTourSpeedFactor(1);
+  });
 });
 
 describe('lesson registry', () => {
@@ -103,6 +148,220 @@ describe('lesson registry', () => {
     expect(listLessons().map((l) => l.id)).toContain('static-meshes');
     expect(listLessons().map((l) => l.id)).toContain('asset-tools');
     expect(getLessonById('missing')).toBeNull();
+  });
+
+  it('builds a full Academy tour queue across every lesson', () => {
+    const queue = buildAcademyTourQueue(LESSONS);
+    expect(queue.length).toBe(LESSONS.length);
+    expect(queue[0]).toBe('getting-started');
+    expect(nextTourLessonId(queue, queue[0])).toBe(queue[1]);
+    expect(nextTourLessonId(queue, queue[queue.length - 1])).toBe(null);
+    // Single-lesson tour queue is just that id.
+    expect(buildAcademyTourQueue([getLessonById('first-room')])).toEqual(['first-room']);
+    expect(nextTourLessonId(['first-room'], 'first-room')).toBe(null);
+    // Catalog rows from listLessons omit steps — still form a queue.
+    expect(buildAcademyTourQueue(listLessons()).length).toBe(LESSONS.length);
+    const first = getLessonById(queue[0]);
+    const progress = academyTourProgress({
+      queue,
+      lessonId: first.id,
+      stepIndex: 0,
+      stepCount: first.steps.length,
+      lessons: LESSONS,
+    });
+    expect(progress.lessonIndex).toBe(0);
+    expect(progress.stepOrdinal).toBe(1);
+    expect(progress.totalSteps).toBeGreaterThan(first.steps.length);
+  });
+
+  it('tour execute performs common tip actions via editor APIs', () => {
+    const created = [];
+    const selected = [];
+    const wall = {
+      id: 'wall-1',
+      name: 'Practice Wall',
+      getComponent: (type) => (type === 'Brush' ? { size: { x: 100, y: 200, z: 25 } } : null),
+    };
+    const editor = {
+      world: {
+        actors: [wall],
+        getActor: (id) => (id === 'wall-1' ? wall : null),
+      },
+      selectedActorIds: [],
+      mode: 'edit',
+      selectActors: (ids) => { selected.push(...ids); },
+      createBrushAtBounds: (kind, min, max) => {
+        const actor = { id: `brush-${created.length}`, kind, min, max };
+        created.push(actor);
+        return actor;
+      },
+      setGridSize: (value) => { editor.gridSize = value; },
+      setTransformMode: (mode) => { editor.transformMode = mode; },
+      placeLight: (type) => ({ id: 'light-1', lightType: type }),
+      createCell: () => ({ id: 'cell-1' }),
+      play: () => { editor.mode = 'play'; },
+      stop: () => { editor.mode = 'edit'; },
+    };
+
+    expect(executeTourStep({
+      step: { verify: { type: 'manualConfirm' } },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    })).toEqual({ handled: true, confirmManual: true });
+
+    expect(executeTourStep({
+      step: { verify: { type: 'actorSelected', nameIncludes: 'Wall', hasBrush: true } },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    }).handled).toBe(true);
+    expect(selected).toContain('wall-1');
+
+    expect(executeTourStep({
+      step: { verify: { type: 'brushCreated', kind: 'floor' } },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    }).handled).toBe(true);
+    expect(created.some((a) => a.kind === 'floor')).toBe(true);
+
+    expect(executeTourStep({
+      step: { verify: { type: 'gridSizeIs', value: 50 } },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    }).handled).toBe(true);
+    expect(editor.gridSize).toBe(50);
+
+    expect(executeTourStep({
+      step: { verify: { type: 'modeIs', mode: 'play' } },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    }).handled).toBe(true);
+    expect(editor.mode).toBe('play');
+
+    // Manual Save tip must not click toolbar.save (would open a save prompt).
+    expect(executeTourStep({
+      step: {
+        highlight: ['toolbar.save'],
+        verify: { type: 'manualConfirm', label: 'Got it' },
+      },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    })).toEqual({ handled: true, confirmManual: true });
+
+    // Record opens the browser tab/window picker — never click it on tour.
+    expect(isTourClickHighlightAllowed('toolbar.record')).toBe(false);
+    expect(isTourClickHighlightAllowed('toolbar.recordStop')).toBe(false);
+    expect(isTourClickHighlightAllowed('toolbar.select')).toBe(true);
+    expect(executeTourStep({
+      step: {
+        highlight: ['toolbar.record'],
+        verify: { type: 'manualConfirm', label: 'I understand' },
+      },
+      runtime: { tracked: {} },
+      editor,
+      layout: {},
+    })).toEqual({ handled: true, confirmManual: true });
+  });
+
+  it('tour maps tips to Level / Materials / AI Assets workspaces only', () => {
+    expect(workspaceForTourStep({ highlight: ['workspace.materials', 'materials.pbrGenerator'] }))
+      .toBe('materials');
+    expect(workspaceForTourStep({ highlight: ['workspace.ai', 'ai.section.library'] }))
+      .toBe('ai');
+    expect(workspaceForTourStep({ highlight: ['openart.promptTemplate'] })).toBe('ai');
+    expect(workspaceForTourStep({ highlight: ['projectArt.gallery'] })).toBe('ai');
+    expect(workspaceForTourStep({ highlight: ['toolbar.floor'] })).toBe('level');
+    expect(workspaceForTourStep({ highlight: ['workspace.world'] })).toBe('level');
+    expect(workspaceForTourStep({ verify: { type: 'manualConfirm' } })).toBe('level');
+  });
+
+  it('detects orbit / camera tips for viewport tour animation', () => {
+    expect(stepWantsOrbit({ id: 'orbit', title: 'Orbit the camera', body: 'hold right mouse' })).toBe(true);
+    expect(stepWantsOrbit({ id: 'fly', title: 'Free-fly with WASD', body: 'Hold W A S D' })).toBe(true);
+    expect(stepWantsOrbit({ id: 'create-floor', title: 'Create a floor', body: 'Click Floor' })).toBe(false);
+  });
+
+  it('tour switches to a roomy single viewport for action tips', () => {
+    expect(stepNeedsRoomyViewport({
+      verify: { type: 'brushCreated', kind: 'box' },
+      highlight: ['toolbar.box'],
+    })).toBe(true);
+    expect(stepNeedsRoomyViewport({
+      verify: { type: 'actorSelected', hasBrush: true },
+      highlight: ['panel.outliner'],
+    })).toBe(true);
+    expect(stepNeedsRoomyViewport({
+      verify: { type: 'viewportLayoutIs', layoutMode: 'quad' },
+      highlight: ['viewport.layout'],
+    })).toBe(false);
+
+    const prefs = {
+      layoutMode: 'quad',
+      activePaneId: 'a',
+      panes: [{
+        id: 'a',
+        cameraMode: 'isometric',
+        displayMode: 'lit',
+        showFog: true,
+        showMist: false,
+        showPostProcessing: false,
+      }],
+    };
+    const calls = [];
+    const prev = globalThis.window;
+    globalThis.window = {
+      __bloodboundViewport: {
+        getPrefs: () => prefs,
+        setPrefs: (partial) => {
+          calls.push(partial);
+          Object.assign(prefs, partial);
+          if (partial.panes) prefs.panes = partial.panes;
+        },
+      },
+    };
+    const layout = { setViewportLayoutMode: (mode) => { prefs.layoutMode = mode; } };
+    ensureTourViewportConfig({
+      verify: { type: 'brushCreated', kind: 'box' },
+      highlight: ['toolbar.box'],
+    }, layout);
+    expect(prefs.layoutMode).toBe('single');
+    expect(prefs.panes[0].displayMode).toBe('unlit');
+    ensureTourViewportConfig({
+      verify: { type: 'viewportLayoutIs', layoutMode: 'quad' },
+      highlight: ['viewport.layout'],
+    }, layout);
+    expect(prefs.layoutMode).toBe('quad');
+    ensureTourViewportConfig({
+      verify: { type: 'manualConfirm' },
+      highlight: ['viewport.showFog', 'viewport.showMist', 'viewport.showPostProcessing'],
+    }, layout);
+    expect(prefs.panes[0].showFog).toBe(true);
+    expect(prefs.panes[0].showMist).toBe(true);
+    expect(prefs.panes[0].showPostProcessing).toBe(true);
+    expect(prefs.panes[0].displayMode).toBe('lit');
+    if (prev === undefined) delete globalThis.window;
+    else globalThis.window = prev;
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
+  it('tour fake cursor state can show and hide', () => {
+    hideTourCursor();
+    expect(getTourCursorState().visible).toBe(false);
+    showTourCursor(120, 80, { button: 'right' });
+    expect(getTourCursorState()).toMatchObject({
+      visible: true,
+      x: 120,
+      y: 80,
+      button: 'right',
+      pressing: false,
+    });
+    hideTourCursor();
+    expect(getTourCursorState().visible).toBe(false);
   });
 
   it('teaches latest camera and material-on-face features', () => {

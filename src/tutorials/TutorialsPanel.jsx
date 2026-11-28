@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../editor/EditorContext.jsx';
 import { useLayout } from '../editor/layout/LayoutContext.jsx';
+import { ACADEMY_TOUR_SPEEDS } from './academyTour.js';
 import { useTutorials } from './TutorialProvider.jsx';
+import { LESSONS } from './lessons/index.js';
 import { helpProps } from '../ui/hoverHelp/helpProps.js';
 import { IconAcademy } from '../ui/icons.jsx';
 
@@ -91,8 +93,14 @@ export function TutorialsPanel() {
     lesson,
     stepIndex,
     stepCount,
+    completed,
     startLesson,
+    startAcademyTour,
+    stopAcademyTour,
+    setTourSpeed,
     exitLesson,
+    tourActive,
+    tourProgress,
     panelFocusToken,
   } = useTutorials();
 
@@ -116,6 +124,16 @@ export function TutorialsPanel() {
       items: section.ids.map((id) => byId.get(id)).filter(Boolean),
     })).filter((section) => section.items.length > 0)
   ), [byId]);
+
+  const tourStepTotal = useMemo(
+    () => LESSONS.reduce((n, item) => n + (item.steps?.length || 0), 0),
+    [],
+  );
+  const tourSpeed = prefs.tourSpeed ?? 1;
+  const tourMinutesHint = Math.max(
+    1,
+    Math.round((tourStepTotal * 1.1 / tourSpeed) / 60),
+  );
 
   useEffect(() => {
     if (panelFocusToken > 0 && visible) {
@@ -244,56 +262,117 @@ export function TutorialsPanel() {
             </h2>
             <p className="bb-tutorials__lead">
               Choose a lesson. A tip appears next to each control; finish the task to advance.
-              Editor &amp; play covers workspace layout, sticky notes, Checklist, and layers. Art &amp; generation
-              covers Project Art, Asset Generation, materials shading, textures, fog, and post-processing.
+              Academy hides while a tip is up, then returns when the lesson is Done.
+              Use <strong>Tour</strong> on a lesson to auto-walk it, or <strong>Tour all lessons</strong>
+              (~{tourMinutesHint} min, {tourStepTotal} tips).
             </p>
+            {!activeLessonId && (
+              <div className="bb-tutorials-tour">
+                <div className="bb-tutorials-tour__row">
+                  <button
+                    type="button"
+                    className="bb-btn bb-btn--primary"
+                    onClick={() => { void startAcademyTour(); }}
+                    {...helpProps('panel.tutorials.tour')}
+                  >
+                    Tour all lessons
+                  </button>
+                  <label className="bb-tutorials-tour__speed" {...helpProps('panel.tutorials.tourSpeed')}>
+                    <span>Speed</span>
+                    <select
+                      value={String(tourSpeed)}
+                      aria-label="Academy tour speed"
+                      onChange={(e) => { setTourSpeed(Number(e.target.value)); }}
+                    >
+                      {ACADEMY_TOUR_SPEEDS.map((row) => (
+                        <option key={row.id} value={row.factor}>{row.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <p className="bb-tutorials-tour__hint">
+                  Per-lesson Tour marks that lesson Done when finished.
+                  Tour all walks every tip and does not mark Done. Esc or Stop cancels.
+                </p>
+              </div>
+            )}
           </header>
 
           {activeLessonId ? (
-            <div className="bb-tutorials-running">
+            <div className={`bb-tutorials-running${completed && !tourActive ? ' bb-tutorials-running--complete' : ''}`}>
               <div className="bb-tutorials-running__copy">
-                <p className="bb-tutorials-running__label">In progress</p>
-                <p className="bb-tutorials-running__title">{lesson?.title}</p>
+                <p className="bb-tutorials-running__label">
+                  {tourActive ? 'Academy tour' : (completed ? 'Lesson complete' : 'In progress')}
+                </p>
+                <p className="bb-tutorials-running__title">
+                  {lesson?.title}
+                  {completed && !tourActive ? (
+                    <span className="bb-tutorials-badge">Done</span>
+                  ) : null}
+                </p>
                 <p className="bb-tutorials-running__meta">
-                  Step {stepIndex + 1} of {stepCount} — follow the floating tip.
+                  {tourActive && tourProgress
+                    ? `Lesson ${tourProgress.lessonIndex + 1}/${tourProgress.lessonCount} · tip ${tourProgress.stepOrdinal}/${tourProgress.totalSteps}`
+                    : completed
+                      ? 'Marked Done in the catalog below. Exit restores your project, or pick another lesson.'
+                      : `Step ${stepIndex + 1} of ${stepCount} — follow the floating tip.`}
                 </p>
               </div>
-              <button type="button" className="bb-btn" onClick={() => { void exitLesson(); }}>
-                Exit lesson
-              </button>
+              {tourActive ? (
+                <button type="button" className="bb-btn" onClick={() => { stopAcademyTour(); }}>
+                  Stop tour
+                </button>
+              ) : (
+                <button type="button" className="bb-btn bb-btn--primary" onClick={() => { void exitLesson(); }}>
+                  {completed ? 'Exit to project' : 'Exit lesson'}
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="bb-tutorials-catalog" tabIndex={-1}>
-              {sections.map((section) => (
-                <section key={section.id} className="bb-tutorials-section">
-                  <h3 className="bb-tutorials-section__title">{section.title}</h3>
-                  <ul className="bb-tutorials-list">
-                    {section.items.map((item) => {
-                      const done = prefs.completedLessonIds?.includes(item.id);
-                      return (
-                        <li key={item.id}>
+          ) : null}
+
+          <div className="bb-tutorials-catalog" tabIndex={-1}>
+            {sections.map((section) => (
+              <section key={section.id} className="bb-tutorials-section">
+                <h3 className="bb-tutorials-section__title">{section.title}</h3>
+                <ul className="bb-tutorials-list">
+                  {section.items.map((item) => {
+                    const done = prefs.completedLessonIds?.includes(item.id);
+                    return (
+                      <li key={item.id} className="bb-tutorials-list__row">
+                        <button
+                          type="button"
+                          className="bb-tutorials-list__item"
+                          onClick={() => { void startLesson(item.id); }}
+                          title="Practice this lesson yourself"
+                        >
+                          <span className="bb-tutorials-list__order">{item.order}</span>
+                          <span className="bb-tutorials-list__body">
+                            <span className="bb-tutorials-list__name">
+                              {item.title}
+                              {done ? <span className="bb-tutorials-badge">Done</span> : null}
+                            </span>
+                            <span className="bb-tutorials-list__summary">{item.summary}</span>
+                          </span>
+                        </button>
+                        {!activeLessonId ? (
                           <button
                             type="button"
-                            className="bb-tutorials-list__item"
-                            onClick={() => { void startLesson(item.id); }}
+                            className="bb-btn bb-tutorials-list__tour"
+                            title={`Tour “${item.title}” automatically`}
+                            aria-label={`Tour ${item.title}`}
+                            onClick={() => { void startAcademyTour(item.id); }}
+                            {...helpProps('panel.tutorials.tourLesson')}
                           >
-                            <span className="bb-tutorials-list__order">{item.order}</span>
-                            <span className="bb-tutorials-list__body">
-                              <span className="bb-tutorials-list__name">
-                                {item.title}
-                                {done ? <span className="bb-tutorials-badge">Done</span> : null}
-                              </span>
-                              <span className="bb-tutorials-list__summary">{item.summary}</span>
-                            </span>
+                            Tour
                           </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
 
         <div

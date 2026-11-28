@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  coachCardCoversButton,
   dockIdForTutorialHighlight,
   getTutorialAnchorRect,
   positionCoachMark,
@@ -32,6 +33,77 @@ describe('positionCoachMark', () => {
     });
     expect(pos.left).toBeGreaterThanOrEqual(10);
     expect(pos.top).toBeGreaterThanOrEqual(10);
+  });
+
+  it('clears the tip off the action zone during tour', () => {
+    const anchor = { left: 400, top: 40, width: 120, height: 28, right: 520, bottom: 68 };
+    const viewport = {
+      left: 200, top: 80, width: 600, height: 400, right: 800, bottom: 480,
+    };
+    const pos = positionCoachMark({
+      anchor,
+      panelWidth: 300,
+      panelHeight: 160,
+      layerWidth: 1000,
+      layerHeight: 700,
+      clearOfAction: true,
+      avoidRects: [anchor, viewport],
+    });
+    const card = {
+      left: pos.left,
+      top: pos.top,
+      width: pos.width,
+      height: 160,
+      right: pos.left + pos.width,
+      bottom: pos.top + 160,
+    };
+    const overlap = !(
+      card.right <= viewport.left
+      || card.left >= viewport.right
+      || card.bottom <= viewport.top
+      || card.top >= viewport.bottom
+    );
+    expect(overlap).toBe(false);
+  });
+
+  it('never covers a top-edge toolbar button after clamping', () => {
+    const anchor = { left: 8, top: 6, width: 44, height: 28, right: 52, bottom: 34 };
+    const pos = positionCoachMark({
+      anchor,
+      panelWidth: 360,
+      panelHeight: 260,
+      layerWidth: 900,
+      layerHeight: 640,
+    });
+    const card = {
+      left: pos.left,
+      top: pos.top,
+      width: pos.width,
+      height: 260,
+      right: pos.left + pos.width,
+      bottom: pos.top + 260,
+    };
+    expect(coachCardCoversButton(card, anchor)).toBe(false);
+  });
+
+  it('never covers a button when the tip would otherwise clamp onto it', () => {
+    const anchor = { left: 10, top: 10, width: 80, height: 28, right: 90, bottom: 38 };
+    const pos = positionCoachMark({
+      anchor,
+      panelWidth: 320,
+      panelHeight: 220,
+      layerWidth: 800,
+      layerHeight: 600,
+    });
+    const card = {
+      left: pos.left,
+      top: pos.top,
+      width: pos.width,
+      height: 220,
+      right: pos.left + pos.width,
+      bottom: pos.top + 220,
+    };
+    expect(coachCardCoversButton(card, anchor)).toBe(false);
   });
 });
 

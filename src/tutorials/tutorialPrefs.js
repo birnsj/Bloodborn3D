@@ -1,9 +1,13 @@
 const STORAGE_KEY = 'bloodbound.tutorial.progress.v1';
 
+import { normalizeTourSpeed } from './academyTour.js';
+
 export const DEFAULT_TUTORIAL_PREFS = {
   completedLessonIds: [],
   lastLessonId: null,
   lastStepId: null,
+  /** Academy Tour playback speed (0.5 … 3). */
+  tourSpeed: 1,
 };
 
 export function clampTutorialPrefs(partial = {}) {
@@ -16,6 +20,7 @@ export function clampTutorialPrefs(partial = {}) {
     : [];
   next.lastLessonId = typeof next.lastLessonId === 'string' ? next.lastLessonId : null;
   next.lastStepId = typeof next.lastStepId === 'string' ? next.lastStepId : null;
+  next.tourSpeed = normalizeTourSpeed(next.tourSpeed);
   return next;
 }
 

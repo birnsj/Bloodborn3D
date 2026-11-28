@@ -1291,8 +1291,23 @@ export const HELP_CONTENT = {
   // —— Panels / settings ——
   'panel.tutorials': {
     title: 'BloodBound Academy',
-    body: 'Paper lesson catalog (educational — not level data or editor chrome). Floating paper tips point at the next control. Finish each task to advance; Exit lesson returns to the catalog.',
-    tips: 'Help → Academy… or Window → Academy — floating notepad (not a dock tab). Covers building, workspace (toolbox, sticky notes, Checklist, camera bookmarks), organizing (categories, Collapse All), layers, meshes/tools, fog/PP, Project Art, and Asset Generation.',
+    body: 'Paper lesson catalog (educational — not level data or editor chrome). Opens from Help → Academy…. While a lesson or tour tip is showing, Academy hides so it does not cover the viewport. When you finish a lesson it reopens, marks that lesson Done, and lets you Exit or pick another.',
+    tips: 'Also Window → Show Academy. Floating notepad (not a dock tab). Covers building, workspace, organizing, layers, meshes/tools, fog/PP, Project Art, and Asset Generation.',
+  },
+  'panel.tutorials.tour': {
+    title: 'Tour all Academy',
+    body: 'Academy → Tour all lessons (or Help → Tour all Academy…) walks every lesson and tip. Each tip is shown, then the instruction is performed on the practice level so you can see the change. A top banner shows progress while Academy stays hidden. The full catalog tour does not mark lessons Done. Esc, the banner Stop, or Help → Stop Academy Tour cancels and restores your project.',
+    tips: 'Use Tour on a single lesson row to auto-walk only that lesson (marks Done when finished), or click the lesson to practice yourself. Set Speed (0.5×–3×) beside Tour all or on the tour banner; it persists.',
+  },
+  'panel.tutorials.tourSpeed': {
+    title: 'Academy tour speed',
+    body: 'Playback speed for Academy Tour (0.5×–3×). Faster shortens tip waits and cursor/orbit motion. Saved with tutorial progress and adjustable on the tour banner while a tour runs.',
+    tips: '1× is the default. Change before or during a tour.',
+  },
+  'panel.tutorials.tourLesson': {
+    title: 'Tour this lesson',
+    body: 'Auto-walks every tip in this lesson: orbits/picks in the viewport and performs the steps. When it finishes, Academy reopens and the lesson is marked Done. Esc or Stop cancels.',
+    tips: 'Click the lesson title/summary to practice the tasks yourself instead.',
   },
   'panel.layers': {
     title: 'Layers',

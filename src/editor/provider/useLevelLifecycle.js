@@ -219,6 +219,18 @@ const persistGridPrefs = useCallback((partial) => {
     });
   }, [applyLevelData]);
 
+  /**
+   * Restore the original project after nested tutorial begins.
+   * Discards intermediate tutorial stack frames without applying them.
+   */
+  const endAllTutorialSessions = useCallback(() => {
+    if (sessionStackRef.current.length === 0) return null;
+    while (sessionStackRef.current.length > 1) {
+      sessionStackRef.current.pop();
+    }
+    return endTutorialSession();
+  }, [endTutorialSession]);
+
   const restartTutorialSession = useCallback(async ({ lessonId, levelData, starterPath }) => {
     // Replace current tutorial world without popping the project stack entry.
     if (levelSession.kind !== 'tutorial') {
@@ -440,6 +452,7 @@ const persistGridPrefs = useCallback((partial) => {
     beginTutorialSession,
     confirmDiscardChanges,
     createNewMap,
+    endAllTutorialSessions,
     endTutorialSession,
     loadLevel,
     loadLevelUnchecked,

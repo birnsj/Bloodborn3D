@@ -13,5 +13,5 @@ Numbered camera bookmarks for the active viewport pane, stored on the level.
 
 ## Verify
 
-- Automated: `cameraBookmarks.test.js` (normalize, serialize omit-when-empty, round-trip, undo command, legacy fallback); Help content `viewport.cameraBookmarks`; Keyboard Shortcuts Camera rows; Academy steps in Getting Started + Workspace & Viewports.
+- Automated: `cameraBookmarks.test.js` (normalize, serialize omit-when-empty, round-trip, undo command, legacy fallback); Help content `viewport.cameraBookmarks`; Keyboard Shortcuts Camera rows; Academy steps in Getting Started + Workspace & Viewports (also covered by Academy **Tour all**).
 - Manual: fly somewhere → Ctrl+3 → Save → reload level → 3 returns to the stored view; Undo after Ctrl+3 removes the slot; Academy catalog shows the bookmark steps.

@@ -23,7 +23,7 @@ Last verified: 1259 tests / 134 files passing; build passes (editor + player pag
 | Multi-viewport / cameras / selection | phase2f6MultiViewport, viewportCameras, cameraBookmarks, viewportIsolation, viewportRenderIsolation, viewportPrefs, paneScissor, marqueeSelection, brushGizmo, listDropEdge, outlinerLayout, iconColor, colorHistory | F |
 | GPU lifecycle / performance / sync | gpuResources, c5GpuLifecycle, sceneViewStaleMaterials, phase2f7bAssetLifecycle, phase2f7cIncrementalSync, performanceStabilization, phase2f7gStabilization, consolidationC4Geometry | F, G |
 | Editor shell (layouts, dialogs, menus, settings, help) | dockLayout, workspaceLayouts, editorLifecycle, editorDialogs, editorContextMenu, editorSettingsPrefs, hoverHelp, colorThemes, collapsibleGroup, viewScale, sessionRecorder, stickyNotes, checklists | — |
-| Tutorials | tutorials, coachMark | — |
+| Tutorials | tutorials (incl. Academy tour queue / speed prefs), coachMark | — |
 | AI assets (OpenArt, Meshy, Drive, Project Art) | phase2h1aOpenArt, phase2h1bOpenArtEditor, phase2h1cAiAssetsWorkspace, phase2h1dConceptLibrary, projectArtSchema, projectArtLibraryUi, promptComposition, generationFrame, regionHandoff, cropRegionImage, sendToGenerationOptionalPrompt, meshyCapabilities, meshyImageTo3d, googleDriveExternalLibrary, pipelineHardening | — |
 | Standalone player (runs a level without the editor) | standalonePlayer, architectureBoundaries (player closure) | Open `/player.html?level=<name>` |
 | Subtract fill hide / opacity; light helper hide | subtractDisplayPrefs, editorSettingsPrefs | Toolbar: Lights / Subtract checkboxes + Opacity slider |

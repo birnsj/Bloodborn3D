@@ -146,7 +146,12 @@ export function AppMenuBar() {
     factoryLayoutId,
   } = useLayout();
   const { showHoverHelp, setShowHoverHelp } = useHoverHelp();
-  const { openTutorialsPanel } = useTutorials();
+  const {
+    openTutorialsPanel,
+    startAcademyTour,
+    stopAcademyTour,
+    tourActive,
+  } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -552,6 +557,21 @@ export function AppMenuBar() {
               onClick={() => openTutorialsPanel()}
               helpId="panel.tutorials"
             />
+            {tourActive ? (
+              <Item
+                label="Stop Academy Tour"
+                close={close}
+                onClick={() => { stopAcademyTour(); }}
+                helpId="panel.tutorials.tour"
+              />
+            ) : (
+              <Item
+                label="Tour all Academy…"
+                close={close}
+                onClick={() => { void startAcademyTour(); }}
+                helpId="panel.tutorials.tour"
+              />
+            )}
           </>
         )}
       </Menu>

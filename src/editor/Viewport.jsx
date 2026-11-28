@@ -2577,6 +2577,19 @@ export function Viewport() {
       getRuntime: () => runtimeRef.current,
       getShellSize: () => ({ ...shellSizeRef.current }),
       focusSelected: () => focusSelected(),
+      /** Academy Tour / harness: rotate like RMB orbit (radians). */
+      orbitCamera: ({ azimuth = 0, polar = 0 } = {}) => {
+        const controls = orbitRef.current;
+        if (!controls) return false;
+        if (azimuth && typeof controls._rotateLeft === 'function') {
+          controls._rotateLeft(azimuth);
+        }
+        if (polar && typeof controls._rotateUp === 'function') {
+          controls._rotateUp(polar);
+        }
+        controls.update();
+        return true;
+      },
       measureFrameTimes: async (seconds = 0.4, {
         warmupFrames = 12,
         // Automation / background tabs often inject ~500–1000ms rAF gaps.

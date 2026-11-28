@@ -4300,6 +4300,47 @@ select {
   max-width: 38em;
 }
 
+.bb-tutorials-tour {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.bb-tutorials-tour__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.bb-tutorials-tour__speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--bb-academy-muted);
+}
+
+.bb-tutorials-tour__speed select {
+  min-width: 4.5em;
+  padding: 3px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--bb-academy-ink, #2a2a28);
+  font: inherit;
+}
+
+.bb-tutorials-tour__hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--bb-academy-muted);
+  max-width: 36em;
+}
+
 .bb-tutorials-section {
   margin: 0 0 18px;
 }
@@ -4326,10 +4367,17 @@ select {
   gap: 8px;
 }
 
+.bb-tutorials-list__row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
 .bb-tutorials-list__item {
   display: flex;
   gap: 12px;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: left;
   padding: 11px 12px;
   border: 1px solid rgba(0, 0, 0, 0.12);
@@ -4338,6 +4386,15 @@ select {
   color: var(--bb-academy-ink);
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.04);
   cursor: pointer;
+}
+
+.bb-tutorials-list__tour {
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-width: 3.5em;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .bb-tutorials-list__item:hover {
@@ -4568,6 +4625,11 @@ select {
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.04);
 }
 
+.bb-tutorials-running--complete {
+  border-color: rgba(46, 125, 70, 0.4);
+  background: rgba(46, 125, 70, 0.1);
+}
+
 .bb-tutorials-running__label {
   margin: 0 0 4px;
   font-size: 10px;
@@ -4583,6 +4645,10 @@ select {
   font-size: 15px;
   font-weight: 700;
   color: var(--bb-academy-ink, #2a2a28);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .bb-tutorials-running__meta {
@@ -4602,6 +4668,145 @@ select {
 
 /* Floating coach marks (independent of dock panels) */
 
+/* Always-visible tour signal (Academy panel is hidden while touring). */
+/* Fake tour pointer (above coach tips / banner chrome). */
+.bb-tour-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 260;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  color: #f4f1ea;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  transition: none;
+  will-change: transform;
+}
+
+.bb-tour-cursor__arrow {
+  display: block;
+}
+
+.bb-tour-cursor--press {
+  color: #ffe08a;
+}
+
+.bb-tour-cursor--right {
+  color: #c9e4ff;
+}
+
+.bb-tour-cursor__ripple {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0.85;
+  animation: bb-tour-cursor-ripple 0.28s ease-out;
+  pointer-events: none;
+}
+
+.bb-tour-cursor__ripple::after {
+  content: attr(data-button);
+  position: absolute;
+  left: 16px;
+  top: -2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1a1a18;
+  background: currentColor;
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+@keyframes bb-tour-cursor-ripple {
+  from {
+    transform: scale(0.4);
+    opacity: 0.95;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.bb-academy-tour-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 240;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(720px, calc(100% - 32px));
+  padding: 8px 10px 8px 14px;
+  border: 1px solid rgba(106, 162, 255, 0.55);
+  border-radius: 4px;
+  background: rgba(18, 24, 34, 0.94);
+  color: #e8eef8;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.bb-academy-tour-banner__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-academy-tour-banner__label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8eb6ff;
+}
+
+.bb-academy-tour-banner__meta {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #d7e0ef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bb-academy-tour-banner__speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: #b8c6dc;
+}
+
+.bb-academy-tour-banner__speed-label {
+  white-space: nowrap;
+}
+
+.bb-academy-tour-banner__speed-select {
+  min-width: 4.5em;
+  padding: 3px 6px;
+  border: 1px solid rgba(142, 182, 255, 0.45);
+  border-radius: 3px;
+  background: rgba(10, 14, 22, 0.9);
+  color: #e8eef8;
+  font: inherit;
+}
+
+.bb-academy-tour-banner__stop {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
 .bb-coach-layer {
   position: absolute;
   inset: 0;
@@ -4618,6 +4823,11 @@ select {
     0 0 0 2px rgba(106, 162, 255, 0.14),
     0 0 0 9999px rgba(8, 12, 18, 0.12);
   pointer-events: none;
+}
+
+/* Tour: ring only — no full-screen dim over the action. */
+.bb-coach-spotlight--tour {
+  box-shadow: 0 0 0 2px rgba(106, 162, 255, 0.35);
 }
 
 .bb-coach-card {
@@ -4637,6 +4847,28 @@ select {
     4px 10px 28px rgba(0, 0, 0, 0.35);
   font-size: 12.5px;
   line-height: 1.5;
+}
+
+/* Compact tour tip — never steals clicks from the demo. */
+.bb-coach-card--tour {
+  pointer-events: none;
+  padding: 10px 12px 8px;
+  font-size: 12px;
+  max-height: min(42vh, 280px);
+  overflow: hidden;
+  opacity: 0.96;
+}
+
+.bb-coach-card--tour .bb-coach-card__body {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bb-coach-card--tour .bb-coach-card__waiting {
+  margin-top: 6px;
+  font-size: 11px;
 }
 
 .bb-coach-card__chrome {

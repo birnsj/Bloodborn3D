@@ -23,6 +23,8 @@ export function TutorialCoachMark() {
     skip,
     restartLesson,
     exitLesson,
+    tourActive,
+    tourProgress,
     isTutorialSession,
   } = useTutorials();
   const { saveLevel } = useEditor();
@@ -44,13 +46,14 @@ export function TutorialCoachMark() {
       const hit = getTutorialAnchorRect(highlightIds);
       const layer = document.querySelector('.bb-stage-viewport') || document.body;
       const layerRect = layer.getBoundingClientRect();
-      const cardHeight = cardRef.current?.offsetHeight || 280;
+      const cardHeight = cardRef.current?.offsetHeight || (tourActive ? 160 : 280);
+      const panelWidth = tourActive ? 300 : 360;
 
       if (!hit) {
         setLayout({
-          left: Math.round(layerRect.width / 2 - 180),
-          top: 88,
-          width: 360,
+          left: tourActive ? 16 : Math.round(layerRect.width / 2 - panelWidth / 2),
+          top: tourActive ? Math.max(56, layerRect.height - cardHeight - 16) : 88,
+          width: panelWidth,
           placement: 'below',
           arrow: null,
           anchor: null,
@@ -67,13 +70,61 @@ export function TutorialCoachMark() {
         bottom: hit.rect.bottom - layerRect.top,
       };
 
+      // Never cover the highlighted button (or the lit in-panel control).
+      const avoidRects = [{
+        ...anchor,
+        right: anchor.right,
+        bottom: anchor.bottom,
+      }];
+      const litRect = hit.litEl && hit.litEl !== hit.el
+        ? hit.litEl.getBoundingClientRect?.()
+        : null;
+      if (litRect && litRect.width >= 2 && litRect.height >= 2) {
+        avoidRects.push({
+          left: litRect.left - layerRect.left,
+          top: litRect.top - layerRect.top,
+          width: litRect.width,
+          height: litRect.height,
+          right: litRect.right - layerRect.left,
+          bottom: litRect.bottom - layerRect.top,
+        });
+      }
+      if (tourActive) {
+        const canvas = document.querySelector('.bb-viewport canvas, .bb-viewport-shell canvas');
+        if (canvas) {
+          const cr = canvas.getBoundingClientRect();
+          // Avoid the center of the viewport (where orbit / pick happens).
+          const insetX = cr.width * 0.12;
+          const insetY = cr.height * 0.12;
+          avoidRects.push({
+            left: cr.left - layerRect.left + insetX,
+            top: cr.top - layerRect.top + insetY,
+            width: cr.width - insetX * 2,
+            height: cr.height - insetY * 2,
+            right: cr.right - layerRect.left - insetX,
+            bottom: cr.bottom - layerRect.top - insetY,
+          });
+        }
+        // Tour banner strip.
+        avoidRects.push({
+          left: layerRect.width * 0.2,
+          top: 0,
+          width: layerRect.width * 0.6,
+          height: 56,
+          right: layerRect.width * 0.8,
+          bottom: 56,
+        });
+      }
+
       const pos = positionCoachMark({
         anchor,
-        panelWidth: 360,
+        panelWidth,
         panelHeight: cardHeight,
         layerWidth: layerRect.width,
         layerHeight: layerRect.height,
         preferBeside: Boolean(hit.viaTab),
+        avoidRects,
+        clearOfAction: tourActive,
       });
 
       setLayout({
@@ -87,13 +138,13 @@ export function TutorialCoachMark() {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     if (ro && cardRef.current) ro.observe(cardRef.current);
     window.addEventListener('resize', update);
-    const timer = window.setInterval(update, 500);
+    const timer = window.setInterval(update, tourActive ? 250 : 500);
     return () => {
       window.removeEventListener('resize', update);
       window.clearInterval(timer);
       ro?.disconnect();
     };
-  }, [activeLessonId, step, highlightIds, stepIndex, feedback, completed, explainOpen]);
+  }, [activeLessonId, step, highlightIds, stepIndex, feedback, completed, explainOpen, tourActive]);
 
   if (!activeLessonId || !lesson || !step) return null;
 
@@ -103,10 +154,10 @@ export function TutorialCoachMark() {
   const primaryLabel = step.verify?.label || 'Continue';
 
   return createPortal(
-    <div className="bb-coach-layer" aria-live="polite">
+    <div className={`bb-coach-layer${tourActive ? ' bb-coach-layer--tour' : ''}`} aria-live="polite">
       {layout?.anchor && (
         <div
-          className="bb-coach-spotlight"
+          className={`bb-coach-spotlight${tourActive ? ' bb-coach-spotlight--tour' : ''}`}
           style={{
             left: layout.anchor.left - 4,
             top: layout.anchor.top - 4,
@@ -118,7 +169,11 @@ export function TutorialCoachMark() {
 
       <div
         ref={cardRef}
-        className={`bb-coach-card bb-coach-card--${layout?.placement || 'below'}`}
+        className={[
+          'bb-coach-card',
+          `bb-coach-card--${layout?.placement || 'below'}`,
+          tourActive ? 'bb-coach-card--tour' : '',
+        ].filter(Boolean).join(' ')}
         style={layout ? {
           left: layout.left,
           top: layout.top,
@@ -140,9 +195,13 @@ export function TutorialCoachMark() {
         )}
 
         <div className="bb-coach-card__chrome">
-          <span className="bb-coach-card__lesson">{lesson.title}</span>
+          <span className="bb-coach-card__lesson">
+            {tourActive ? `Tour · ${lesson.title}` : lesson.title}
+          </span>
           <span className="bb-coach-card__step">
-            {Math.min(stepIndex + 1, stepCount)} of {stepCount}
+            {tourActive && tourProgress
+              ? `${tourProgress.stepOrdinal}/${tourProgress.totalSteps}`
+              : `${Math.min(stepIndex + 1, stepCount)} of ${stepCount}`}
           </span>
         </div>
 
@@ -153,7 +212,7 @@ export function TutorialCoachMark() {
         <h3 className="bb-coach-card__title">{step.title}</h3>
         <p className="bb-coach-card__body">{step.body}</p>
 
-        {step.terms?.length > 0 && (
+        {!tourActive && step.terms?.length > 0 && (
           <dl className="bb-tutorials-terms bb-tutorials-terms--compact">
             {step.terms.map((t) => (
               <div key={t.term} className="bb-tutorials-terms__row">
@@ -164,7 +223,7 @@ export function TutorialCoachMark() {
           </dl>
         )}
 
-        {step.explain && (
+        {!tourActive && step.explain && (
           <div className="bb-tutorials-explain">
             <button
               type="button"
@@ -181,26 +240,36 @@ export function TutorialCoachMark() {
           <p className="bb-tutorials-feedback" role="status">{feedback}</p>
         )}
 
-        {completed ? (
+        {tourActive && !completed ? (
+          <p className="bb-coach-card__waiting" role="status">
+            Performing tip… Esc or banner Stop cancels.
+          </p>
+        ) : completed ? (
           <>
             <p className="bb-tutorials-complete" role="status">
-              Lesson complete. Exit restores your project, or save this practice room under a new name.
+              {tourActive
+                ? 'Loading next lesson…'
+                : 'Lesson complete. Exit restores your project, or save this practice room under a new name.'}
             </p>
-            <div className="bb-coach-card__primary">
-              <button type="button" className="bb-btn bb-btn--primary bb-coach-primary" onClick={() => { void exitLesson(); }}>
-                Exit to project
-              </button>
-            </div>
-            <div className="bb-coach-card__secondary">
-              {isTutorialSession && (
-                <button type="button" className="bb-coach-link" onClick={() => { void saveLevel(); }}>
-                  Save practice…
-                </button>
-              )}
-              <button type="button" className="bb-coach-link" onClick={() => { void restartLesson(); }}>
-                Restart lesson
-              </button>
-            </div>
+            {!tourActive && (
+              <>
+                <div className="bb-coach-card__primary">
+                  <button type="button" className="bb-btn bb-btn--primary bb-coach-primary" onClick={() => { void exitLesson(); }}>
+                    Exit to project
+                  </button>
+                </div>
+                <div className="bb-coach-card__secondary">
+                  {isTutorialSession && (
+                    <button type="button" className="bb-coach-link" onClick={() => { void saveLevel(); }}>
+                      Save practice…
+                    </button>
+                  )}
+                  <button type="button" className="bb-coach-link" onClick={() => { void restartLesson(); }}>
+                    Restart lesson
+                  </button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
