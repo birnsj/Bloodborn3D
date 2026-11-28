@@ -3,7 +3,6 @@ import { WALL_MODULE_SIZE, WALL_THICKNESS } from '../core/units.js';
 import { createBrushUvState } from '../materials/MaterialDefinition.js';
 import { normalizeOpenings } from '../runtime/wallOpenings.js';
 import {
-  BOX_SURFACE_IDS,
   cloneFaceUVs,
   normalizeFaceMaterials,
   normalizeFaceUVs,
@@ -39,8 +38,9 @@ export class BrushComponent extends Component {
     this.color = color;
     this.collidable = collidable;
     this.materialId = materialId || null;
-    this.faceMaterials = normalizeFaceMaterials(faceMaterials, BOX_SURFACE_IDS);
-    this.faceUVs = normalizeFaceUVs(faceUVs, BOX_SURFACE_IDS);
+    // null allow-list → classic face keys plus World Solid patch ids (`pz#0`).
+    this.faceMaterials = normalizeFaceMaterials(faceMaterials);
+    this.faceUVs = normalizeFaceUVs(faceUVs);
     this.uv = createBrushUvState(uv || {});
     this.openings = normalizeOpenings(openings);
     this.operation = operation === 'subtract' ? 'subtract' : 'add';

@@ -71,6 +71,18 @@ import {
   marqueeSelectActors,
   marqueeSelectGeometry,
 } from './viewport/marqueeSelection.js';
+import {
+  beginDualElevate,
+  bothPrimaryButtonsHeld,
+  createDualElevateState,
+  endDualElevate,
+  stepDualElevate,
+} from './viewport/dualButtonElevate.js';
+import {
+  buildMeasureOverlay,
+  panCameraByPixels,
+  pickMeasurePoint,
+} from './viewport/measureTool.js';
 
 export function Viewport() {
   const shellRef = useRef(null);
@@ -83,9 +95,13 @@ export function Viewport() {
   const [viewportPrefs, setViewportPrefsState] = useState(() => viewportPrefsRef.current);
   const [shellSize, setShellSize] = useState({ width: 1, height: 1 });
   const [marqueeScreen, setMarqueeScreen] = useState(null);
+  /** Middle-mouse measuring tape overlay (shell-local CSS px). */
+  const [measureScreen, setMeasureScreen] = useState(null);
   /** Active toolbar/asset surface placement (preview only until commit). */
   const placeSessionRef = useRef(null);
-  /** Edit-mode perspective: Ctrl+move orbits; Alt+move/rotate/scale duplicates; RMB look; WASD fly. */
+  /** MMB measure or Shift+MMB pan session. */
+  const mmbSessionRef = useRef(null);
+  /** Edit-mode perspective: Ctrl+move orbits; Alt+duplicate; RMB look; LMB+RMB move; WASD fly. */
   const flyKeysRef = useRef(new Set());
   const flyClockRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0);
   const flyModeRef = useRef(false);
@@ -95,6 +111,8 @@ export function Viewport() {
   const rmbLookHeldRef = useRef(false);
   /** Distinguishes short RMB click (context menu) from drag look/orbit. */
   const rmbGestureRef = useRef(null);
+  /** LMB+RMB drag translates without turning (perspective). Shared with LMB pick path. */
+  const dualElevateRef = useRef(createDualElevateState());
   const openViewportContextMenuRef = useRef(() => {});
   const lookRef = useRef({
     active: false,
@@ -223,6 +241,9 @@ export function Viewport() {
       saveViewportPrefs(viewportPrefsRef.current);
     }, 200);
   }, [setViewportView]);
+  /** Mount-once OrbitControls effect reads this so RMB can activate the pane under the cursor. */
+  const setViewportPrefsRef = useRef(setViewportPrefs);
+  setViewportPrefsRef.current = setViewportPrefs;
 
   // Session / named-layout viewport chrome → live prefs (poses preserved).
   useEffect(() => {
@@ -533,9 +554,13 @@ export function Viewport() {
       // until the user released and pressed again.
       flyKeysRef.current.add(e.code);
       if (FLY_MOVE_KEYS.has(e.code)) {
-        // Q/E are vertical only while already free-flying. Alone, E is Rotate (and Q
-        // is unused as a tool) — do not start fly or the camera jumps on gizmo hotkeys.
-        if ((e.code === 'KeyQ' || e.code === 'KeyE') && !flyModeRef.current) {
+        // Q/E are vertical only while already free-flying or LMB+RMB moving.
+        // Alone, E is Rotate — do not start fly or the camera jumps on gizmo hotkeys.
+        if (
+          (e.code === 'KeyQ' || e.code === 'KeyE')
+          && !flyModeRef.current
+          && !dualElevateRef.current.active
+        ) {
           flyKeysRef.current.delete(e.code);
           return;
         }
@@ -556,10 +581,71 @@ export function Viewport() {
       ctrlOrbitHeldRef.current = false;
       ctrlOrbitTrack.primed = false;
       rmbLookHeldRef.current = false;
+      endDualElevate(dualElevateRef.current);
       exitFlyMode();
       lookRef.current.active = false;
       lookRef.current.pointerId = null;
       syncOrbitRightButton();
+    };
+
+    const stopFreeLookForDualMove = () => {
+      // Dual-button translate must not yaw/pitch — kill any active freelook.
+      lookRef.current.active = false;
+      lookRef.current.pointerId = null;
+    };
+
+    const startDualElevate = (e) => {
+      if (isOrthographicMode(activeCameraMode())) return;
+      beginDualElevate(dualElevateRef.current, e.clientX, e.clientY);
+      // Cancel pick / marquee / freelook — dual-button move owns the drag.
+      dragRef.current = null;
+      setMarqueeScreen(null);
+      stopFreeLookForDualMove();
+      if (rmbGestureRef.current) rmbGestureRef.current.moved = true;
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const applyDualElevateMove = (e) => {
+      const elev = dualElevateRef.current;
+      if (!elev.active && bothPrimaryButtonsHeld(e.buttons)) startDualElevate(e);
+      if (!elev.active) return false;
+      if (!bothPrimaryButtonsHeld(e.buttons)) {
+        if (endDualElevate(elev) && rmbGestureRef.current) rmbGestureRef.current.moved = true;
+        stopFreeLookForDualMove();
+        return false;
+      }
+      // Keep freelook suppressed for the whole dual-button hold.
+      stopFreeLookForDualMove();
+      const prefs = editorSettingsRef.current;
+      const delta = stepDualElevate(
+        elev,
+        e.clientX,
+        e.clientY,
+        prefs?.cameraFlySpeed ?? 450,
+      );
+      if (!delta || (delta.right === 0 && delta.up === 0)) return true;
+      const cam = activeCam();
+      cam.getWorldDirection(forward);
+      forward.y = 0;
+      if (forward.lengthSq() < 1e-8) {
+        forward.set(0, 0, -1).applyQuaternion(cam.quaternion);
+        forward.y = 0;
+      }
+      forward.normalize();
+      right.crossVectors(forward, worldUp).normalize();
+      if (right.lengthSq() < 1e-8) {
+        right.setFromMatrixColumn(cam.matrixWorld, 0);
+        right.y = 0;
+        right.normalize();
+      }
+      cam.position.addScaledVector(right, delta.right);
+      cam.position.addScaledVector(worldUp, delta.up);
+      syncLookTarget();
+      return true;
     };
     const onFlyBlur = () => {
       clearFlyInputState();
@@ -572,6 +658,8 @@ export function Viewport() {
     const PITCH_LIMIT = Math.PI / 2 - 0.05;
 
     const beginFlyLook = (e) => {
+      // Never start freelook while LMB+RMB translate is active.
+      if (dualElevateRef.current.active || bothPrimaryButtonsHeld(e?.buttons)) return;
       const look = lookRef.current;
       look.active = true;
       look.pointerId = e.pointerId;
@@ -588,10 +676,49 @@ export function Viewport() {
       // Clicking the viewport steals focus from Details number fields so WASD works.
       const ae = document.activeElement;
       if (ae?.tagName === 'INPUT' && ae.type === 'number') ae.blur();
+      if (runtime.mode !== 'edit') return;
 
-      if (e.button !== 2 || runtime.mode !== 'edit') return;
+      // LMB while RMB is held → dual-button move (same as RMB while LMB held).
+      if (
+        e.button === 0
+        && rmbLookHeldRef.current
+        && !ctrlOrbitHeldRef.current
+        && !e.ctrlKey
+        && !e.metaKey
+        && !isOrthographicMode(activeCameraMode())
+      ) {
+        startDualElevate(e);
+        return;
+      }
+
+      if (e.button !== 2) return;
       // Ctrl+move is orbit; don't treat as context / freelook start.
       if (ctrlOrbitHeldRef.current || e.ctrlKey || e.metaKey) return;
+
+      // Activate the pane under the cursor *before* choosing freelook vs orbit.
+      // Otherwise RMB on perspective after an ortho pane was active never starts
+      // look (common in multi-viewport subtractive brush editing).
+      {
+        const shellRect = shell.getBoundingClientRect();
+        const { width, height } = shellSizeRef.current;
+        const hit = resolvePointerInPanes(
+          viewportPrefsRef.current,
+          width,
+          height,
+          e.clientX,
+          e.clientY,
+          shellRect,
+        );
+        if (hit.paneId && hit.paneId !== viewportPrefsRef.current.activePaneId) {
+          const next = { ...viewportPrefsRef.current, activePaneId: hit.paneId };
+          setViewportPrefsRef.current?.(next);
+          syncActivePaneCamera(runtime.sceneView, viewportPrefsRef.current, controls, {
+            flying: flyModeRef.current,
+            settings: editorSettingsRef.current,
+          });
+          syncOrbitRightButton();
+        }
+      }
 
       rmbGestureRef.current = {
         pointerId: e.pointerId,
@@ -606,6 +733,11 @@ export function Viewport() {
       // Defer beginFlyLook until the pointer moves past a small threshold so a
       // short right-click can open the actor context menu instead.
       rmbLookHeldRef.current = true;
+      // LMB already down → dual-button move instead of freelook.
+      if (bothPrimaryButtonsHeld(e.buttons)) {
+        startDualElevate(e);
+        return;
+      }
       try {
         canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -615,10 +747,19 @@ export function Viewport() {
     const onLookPointerMove = (e) => {
       if (runtime.mode !== 'edit') return;
 
+      // LMB+RMB: strafe / up-down without turning (before freelook / Ctrl-orbit).
+      if (
+        (dualElevateRef.current.active || bothPrimaryButtonsHeld(e.buttons))
+        && !isOrthographicMode(activeCameraMode())
+      ) {
+        if (applyDualElevateMove(e)) return;
+      }
+
       // Perspective: hold Ctrl and move the mouse to orbit — no button required.
       if (
         ctrlOrbitHeldRef.current
         && !flyModeRef.current
+        && !dualElevateRef.current.active
         && !isOrthographicMode(activeCameraMode())
       ) {
         if (!ctrlOrbitTrack.primed) {
@@ -648,6 +789,12 @@ export function Viewport() {
         }
       }
 
+      // Dual-button translate owns the mouse — no free turn.
+      if (dualElevateRef.current.active || bothPrimaryButtonsHeld(e.buttons)) {
+        stopFreeLookForDualMove();
+        return;
+      }
+
       const looking = flyModeRef.current || rmbLookHeldRef.current;
       if (!looking) return;
       const look = lookRef.current;
@@ -655,6 +802,10 @@ export function Viewport() {
       if (!look.active) {
         if (!gesture?.moved && rmbLookHeldRef.current) return;
         beginFlyLook(e);
+      }
+      if (dualElevateRef.current.active) {
+        stopFreeLookForDualMove();
+        return;
       }
       if (look.pointerId != null && e.pointerId !== look.pointerId) return;
       const dx = e.clientX - look.lastX;
@@ -671,6 +822,11 @@ export function Viewport() {
       applyLookRotation();
     };
     const onLookPointerUp = (e) => {
+      if (dualElevateRef.current.active && !bothPrimaryButtonsHeld(e.buttons)) {
+        if (endDualElevate(dualElevateRef.current) && rmbGestureRef.current) {
+          rmbGestureRef.current.moved = true;
+        }
+      }
       if (e.button != null && e.button !== 2) return;
       const gesture = rmbGestureRef.current;
       rmbGestureRef.current = null;
@@ -747,11 +903,12 @@ export function Viewport() {
         } else if (
           !flyModeRef.current
           && !rmbLookHeldRef.current
+          && !dualElevateRef.current.active
           && !lookRef.current.active
           && !ctrlOrbitHeldRef.current
         ) {
           // Keep OrbitControls in sync (damping is off — no post-drag coast).
-          // Skip while Ctrl orbit / RMB / WASD freelook owns the camera.
+          // Skip while Ctrl orbit / RMB / LMB+RMB elevate / WASD freelook owns the camera.
           controls.update();
         }
 
@@ -1464,7 +1621,51 @@ export function Viewport() {
     }
 
     if (mode !== 'edit' || !runtimeRef.current || !world) return;
+
+    // Middle-mouse: measure (hold) · Shift+middle-mouse: pan.
+    if (e.button === 1) {
+      e.preventDefault();
+      const { nx, ny, camera, paneRect } = pointerNorm(e, { activate: true });
+      const sceneView = runtimeRef.current.sceneView;
+      const cam = camera || sceneView.camera;
+      const controls = orbitRef.current;
+      if (e.shiftKey && cam && controls) {
+        mmbSessionRef.current = {
+          type: 'pan',
+          pointerId: e.pointerId,
+          lastX: e.clientX,
+          lastY: e.clientY,
+        };
+        controls.enabled = false;
+      } else {
+        const start = pickMeasurePoint(sceneView, nx, ny, cam, 0);
+        if (!start) return;
+        mmbSessionRef.current = {
+          type: 'measure',
+          pointerId: e.pointerId,
+          start,
+          paneRect,
+          camera: cam,
+        };
+        setMeasureScreen(buildMeasureOverlay(
+          start,
+          start,
+          cam,
+          paneRect,
+          editorSettingsRef.current?.measureDisplayUnit,
+        ));
+      }
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+
     if (e.button !== 0) return;
+    // LMB+RMB elevate / RMB freelook owns the pointer — skip pick / marquee.
+    if (rmbLookHeldRef.current || dualElevateRef.current.active) return;
 
     // Armed click-to-place from creation toolbar (lights, spawn, cell, assets).
     if (placeSessionRef.current?.armed) {
@@ -1955,6 +2156,49 @@ export function Viewport() {
   };
 
   const onPointerMove = (e) => {
+    const mmb = mmbSessionRef.current;
+    if (mmb && runtimeRef.current) {
+      if (mmb.pointerId != null && e.pointerId !== mmb.pointerId) return;
+      const { nx, ny, camera, paneRect } = pointerNorm(e, { activate: false });
+      const sceneView = runtimeRef.current.sceneView;
+      const cam = mmb.camera || camera || sceneView.camera;
+      if (mmb.type === 'pan' && cam && orbitRef.current) {
+        const dx = e.clientX - mmb.lastX;
+        const dy = e.clientY - mmb.lastY;
+        mmb.lastX = e.clientX;
+        mmb.lastY = e.clientY;
+        if (dx !== 0 || dy !== 0) {
+          panCameraByPixels(
+            cam,
+            orbitRef.current.target,
+            dx,
+            dy,
+            paneRect?.height || shellSizeRef.current.height,
+            editorSettingsRef.current?.cameraOrbitPanSpeed,
+          );
+          cam.updateMatrixWorld?.(true);
+          orbitRef.current.update?.();
+        }
+        return;
+      }
+      if (mmb.type === 'measure') {
+        const end = pickMeasurePoint(sceneView, nx, ny, cam, mmb.start?.y || 0)
+          || mmb.end
+          || mmb.start;
+        mmb.end = end;
+        mmb.paneRect = paneRect || mmb.paneRect;
+        mmb.camera = cam;
+        setMeasureScreen(buildMeasureOverlay(
+          mmb.start,
+          end,
+          cam,
+          mmb.paneRect,
+          editorSettingsRef.current?.measureDisplayUnit,
+        ));
+        return;
+      }
+    }
+
     const drag = dragRef.current;
     if (!drag || !runtimeRef.current || !world) return;
     const { nx, ny, localX, localY, camera } = pointerNorm(e, { activate: false });
@@ -2189,6 +2433,21 @@ export function Viewport() {
   };
 
   const onPointerUp = (e) => {
+    const mmb = mmbSessionRef.current;
+    if (mmb && (e.button === 1 || e.pointerId === mmb.pointerId)) {
+      mmbSessionRef.current = null;
+      setMeasureScreen(null);
+      if (mmb.type === 'pan' && orbitRef.current && mode === 'edit' && !dragRef.current) {
+        orbitRef.current.enabled = !flyModeRef.current;
+      }
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (e.button === 1) return;
+    }
+
     const drag = dragRef.current;
     if (!drag) return;
 
@@ -2761,6 +3020,7 @@ export function Viewport() {
           shellWidth={shellSize.width}
           shellHeight={shellSize.height}
           marqueeRect={marqueeScreen}
+          measureRect={measureScreen}
           onChangePrefs={setViewportPrefs}
           onActivatePane={(paneId) => {
             const next = { ...viewportPrefsRef.current, activePaneId: paneId };

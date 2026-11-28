@@ -13,14 +13,14 @@ Last verified: 1259 tests / 134 files passing; build passes (editor + player pag
 | Undo / commands / hierarchy | history, componentPropertyCommands, deleteHierarchy, hierarchy | A |
 | Play / Stop / runtime lifecycle | gameRuntimeLifecycle, playRestore, physicsWorldDisposal, phase2f7fPhysics, phase2f7fStabilization | G |
 | Construction (walls, stairs, ramps, arches, curved, ceilings, openings) | brushFactory, wallJoin, wallOpenings, stair, curvedStair, ramp, curvedWall, archGeometry, ceilingBrush, creationToolbar (incl. recentCreationAssets), surfacePlacement, gridSnap, units, multilevelAcceptance, *Acceptance (curved*, creationToolbar) | B |
-| Subtractive maps / carving / batching | brushBoolean, phase2f7aSubtractive, worldSolidFit, subtractiveMazeFactory, newMapFactory, phase2gRenderBatching, phase2gRenderingIntegration | B |
+| Subtractive maps / carving / batching | brushBoolean, phase2f7aSubtractive, worldSolidFit, subtractiveMazeFactory, newMapFactory, phase2gRenderBatching, phase2gRenderingIntegration, subtractiveSurfaceMaterials | B |
 | Convex brush geometry editing | phase2f0ConvexBrush, phase2f1FaceEditing, phase2f2EdgeEditing, phase2f3VertexEditing, phase2f4ExtrusionClipping, phase2f5Integration, batch5Geometry | B |
 | Surfaces / UV / align | surfaces, surfaceSelection, alignSurfaces, faceUvFit, uvMapping, batch8UvRegression, phase2e5Persistence | C |
 | Materials / textures / PBR | batch2Materials, batch8Textures, materialDraft, materialPreviewBake, materialThumbnailBake, pbrGeneration | C |
 | Static meshes / assets / pivot | batch6StaticMeshes, batch6AcceptanceCorrections, batch7AssetTools, batch71PivotEditing, batch7AcceptanceVerification, glbPivot, meshThumbnail, contentFolders, listMultiSelect, folderForKind, sampleAssets, retryableAssetLoads, meshyStagingBrowse | C |
 | Lighting / environment / atmosphere / post-processing | batch3Lighting, batch4Environment, worldEnvironment, worldSceneRenderer, atmosphereController, postProcessing | D |
 | Prefabs / cells / authoring layers | prefab, prefabHardening, batch9AuthoringLayers, batch9AcceptanceClosure | E |
-| Multi-viewport / cameras / selection | phase2f6MultiViewport, viewportCameras, cameraBookmarks, viewportIsolation, viewportRenderIsolation, viewportPrefs, paneScissor, marqueeSelection, brushGizmo, listDropEdge, outlinerLayout, iconColor, colorHistory | F |
+| Multi-viewport / cameras / selection | phase2f6MultiViewport, viewportCameras, cameraBookmarks, dualButtonElevate, measureTool, viewportIsolation, viewportRenderIsolation, viewportPrefs, paneScissor, marqueeSelection, brushGizmo, listDropEdge, outlinerLayout, iconColor, colorHistory | F |
 | GPU lifecycle / performance / sync | gpuResources, c5GpuLifecycle, sceneViewStaleMaterials, phase2f7bAssetLifecycle, phase2f7cIncrementalSync, performanceStabilization, phase2f7gStabilization, consolidationC4Geometry | F, G |
 | Editor shell (layouts, dialogs, menus, settings, help) | dockLayout, workspaceLayouts, editorLifecycle, editorDialogs, editorContextMenu, editorSettingsPrefs, hoverHelp, colorThemes, collapsibleGroup, viewScale, sessionRecorder, stickyNotes, checklists | — |
 | Tutorials | tutorials (incl. Academy tour queue / speed prefs), coachMark | — |

@@ -88,6 +88,7 @@ export function ProviderNav({ selectedProviderId }) {
                     type="button"
                     className={`bb-ai-assets__provider${active ? ' is-active' : ''}${soon ? ' is-soon' : ''}`}
                     aria-current={active ? 'true' : undefined}
+                    title={provider.blurb || undefined}
                     onClick={() => selectAiProvider(provider.id)}
                     {...helpProps(providerHelpId(provider))}
                   >

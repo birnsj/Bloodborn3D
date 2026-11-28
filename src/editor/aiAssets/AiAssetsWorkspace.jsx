@@ -16,7 +16,7 @@ import { ProviderNav } from './ProviderNav.jsx';
 
 const NAV_MIN = 160;
 const NAV_MAX = 200;
-const SETTINGS_MIN = 260;
+const SETTINGS_MIN = 240;
 const SETTINGS_MAX = 360;
 const RESULTS_MIN = 360;
 
@@ -74,7 +74,7 @@ function GenerationWorkspace({
 }) {
   const rootRef = useRef(null);
   const [navW, setNavW] = useState(168);
-  const [settingsW, setSettingsW] = useState(290);
+  const [settingsW, setSettingsW] = useState(260);
 
   /** Grow/shrink Results by adjusting Settings (Results is the remaining 1fr). */
   const resizeResultsBy = useCallback((deltaFromResultsEdge) => {

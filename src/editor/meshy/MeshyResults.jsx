@@ -250,7 +250,7 @@ export function MeshyResults() {
       </div>
 
       {hasModel && (
-        <details className="bb-meshy-results__maps" open {...helpProps('meshy.pbrMaps')}>
+        <details className="bb-meshy-results__maps" {...helpProps('meshy.pbrMaps')}>
           <summary>PBR / texture maps</summary>
           <p className="bb-muted">
             Inspect maps from this completed task without spending credits.
@@ -306,8 +306,11 @@ export function MeshyResults() {
               const preview = found?.relativePath
                 ? meshyStagingPreviewUrl(found.relativePath)
                 : null;
+              const meta = found
+                ? `${found.fileName || found.source}${found.bytes != null ? ` · ${(found.bytes / 1024).toFixed(0)} KB` : ''}`
+                : 'Not returned for this task';
               return (
-                <li key={slot.id} className="bb-meshy-results__map-item">
+                <li key={slot.id} className="bb-meshy-results__map-item" title={meta}>
                   <div className="bb-meshy-results__map-thumb">
                     {preview ? (
                       <img src={preview} alt={slot.label} />
@@ -315,14 +318,8 @@ export function MeshyResults() {
                       <span className="bb-muted">{found ? 'Ready' : '—'}</span>
                     )}
                   </div>
-                  <div>
-                    <strong>{slot.label}</strong>
-                    <div className="bb-muted">
-                      {found
-                        ? `${found.fileName || found.source}${found.bytes != null ? ` · ${(found.bytes / 1024).toFixed(0)} KB` : ''}`
-                        : 'Not returned for this task'}
-                    </div>
-                  </div>
+                  <strong>{slot.label}</strong>
+                  <div className="bb-muted">{meta}</div>
                   <button
                     type="button"
                     className="bb-btn bb-btn--ghost"

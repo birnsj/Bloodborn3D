@@ -15,6 +15,27 @@ import { isIdentityUv, normalizeActorUv } from './uvMapping.js';
 /** Axis-aligned box faces (Brush solids, mitered walls, straight stair steps). */
 export const BOX_SURFACE_IDS = [...FACE_KEYS];
 
+/** World Solid exposed patches: `pz#0`, `nx#3`, … (one id per clipped quad). */
+const WORLD_SOLID_PATCH_RE = /^(px|nx|py|ny|pz|nz)#\d+$/;
+
+/** Semantic face key for a box / World Solid surface id (`pz#12` → `pz`). */
+export function semanticFaceKeyFromSurfaceId(surfaceId) {
+  if (!surfaceId || typeof surfaceId !== 'string') return null;
+  if (BOX_SURFACE_IDS.includes(surfaceId)) return surfaceId;
+  const m = WORLD_SOLID_PATCH_RE.exec(surfaceId);
+  return m ? m[1] : null;
+}
+
+/** True for classic face keys or World Solid patch ids. */
+export function isBrushSurfaceId(surfaceId) {
+  return Boolean(semanticFaceKeyFromSurfaceId(surfaceId));
+}
+
+/** Stable per-quad id for World Solid picking / materials / highlight. */
+export function worldSolidPatchSurfaceId(faceKey, patchIndex) {
+  return `${faceKey}#${patchIndex}`;
+}
+
 /** Ramp wedge surfaces — order matches createRampWedgeGeometry face batches. */
 export const RAMP_SURFACE_IDS = ['bottom', 'slope', 'high', 'sideNeg', 'sidePos'];
 
@@ -87,11 +108,12 @@ export function normalizeFaceMaterials(raw, allowed = null) {
   if (!raw || typeof raw !== 'object') return null;
   const allow = allowed
     ? (allowed instanceof Set ? allowed : new Set(allowed))
-    : ALL_SURFACE_IDS;
+    : null;
   const next = {};
   let any = false;
   for (const [key, value] of Object.entries(raw)) {
-    if (!allow.has(key) || !value) continue;
+    const ok = allow ? allow.has(key) : (ALL_SURFACE_IDS.has(key) || isBrushSurfaceId(key));
+    if (!ok || !value) continue;
     next[key] = String(value);
     any = true;
   }
@@ -107,11 +129,12 @@ export function normalizeFaceUVs(raw, allowed = null) {
   if (!raw || typeof raw !== 'object') return null;
   const allow = allowed
     ? (allowed instanceof Set ? allowed : new Set(allowed))
-    : ALL_SURFACE_IDS;
+    : null;
   const next = {};
   let any = false;
   for (const [key, value] of Object.entries(raw)) {
-    if (!allow.has(key) || !value || typeof value !== 'object') continue;
+    const ok = allow ? allow.has(key) : (ALL_SURFACE_IDS.has(key) || isBrushSurfaceId(key));
+    if (!ok || !value || typeof value !== 'object') continue;
     const uv = normalizeActorUv(value);
     if (isIdentityUv(uv)) continue;
     next[key] = uv;
@@ -154,6 +177,9 @@ export function allowedSurfaceIdsForComponent(comp) {
     // Invalid / empty geometry: allow nothing new; keep existing keys only via normalize callers.
     return new Set();
   }
+  // Brush: classic faces plus World Solid patch ids (`pz#0`). Use null so
+  // normalizeFaceMaterials / patchFaceMaterial accept isBrushSurfaceId keys.
+  if (comp.type === 'Brush') return null;
   return ALLOWED_BY_TYPE[comp.type] || ALL_SURFACE_IDS;
 }
 
@@ -181,6 +207,11 @@ export function resolveSurfaceMaterialId(comp, surfaceId) {
   if (surfaceId && comp.faceMaterials?.[surfaceId]) {
     return comp.faceMaterials[surfaceId];
   }
+  // World Solid patch `pz#3` inherits a legacy semantic `pz` override if present.
+  const base = semanticFaceKeyFromSurfaceId(surfaceId);
+  if (base && base !== surfaceId && comp.faceMaterials?.[base]) {
+    return comp.faceMaterials[base];
+  }
   return comp.materialId || null;
 }
 
@@ -193,6 +224,10 @@ export function resolveSurfaceUv(comp, surfaceId) {
   if (surfaceId && comp.faceUVs?.[surfaceId]) {
     return normalizeActorUv(comp.faceUVs[surfaceId]);
   }
+  const base = semanticFaceKeyFromSurfaceId(surfaceId);
+  if (base && base !== surfaceId && comp.faceUVs?.[base]) {
+    return normalizeActorUv(comp.faceUVs[base]);
+  }
   return normalizeActorUv(comp.uv);
 }
 
@@ -203,6 +238,10 @@ export function resolveSurfaceUv(comp, surfaceId) {
 export function getSurfaceUvOverrideOrDefault(comp, surfaceId) {
   if (surfaceId && comp?.faceUVs?.[surfaceId]) {
     return normalizeActorUv(comp.faceUVs[surfaceId]);
+  }
+  const base = semanticFaceKeyFromSurfaceId(surfaceId);
+  if (base && base !== surfaceId && comp?.faceUVs?.[base]) {
+    return normalizeActorUv(comp.faceUVs[base]);
   }
   return normalizeActorUv();
 }
@@ -252,7 +291,8 @@ export function surfaceIdFromHit(mesh, faceIndex) {
  */
 export function patchFaceMaterial(comp, surfaceId, materialId) {
   const allowed = allowedSurfaceIdsForComponent(comp);
-  if (!allowed.has(surfaceId)) {
+  const ok = allowed == null ? isBrushSurfaceId(surfaceId) : allowed.has(surfaceId);
+  if (!ok) {
     return null;
   }
   const before = comp.faceMaterials ? { ...comp.faceMaterials } : null;
@@ -270,7 +310,8 @@ export function patchFaceMaterial(comp, surfaceId, materialId) {
  */
 export function patchFaceUv(comp, surfaceId, uv) {
   const allowed = allowedSurfaceIdsForComponent(comp);
-  if (!allowed.has(surfaceId)) {
+  const ok = allowed == null ? isBrushSurfaceId(surfaceId) : allowed.has(surfaceId);
+  if (!ok) {
     return null;
   }
   const before = cloneFaceUVs(comp.faceUVs);

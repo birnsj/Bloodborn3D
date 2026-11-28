@@ -5,12 +5,10 @@ import { getStructuralComponent, patchFaceMaterial, patchFaceUv, resolveSurfaceM
 import { shouldApplyMaterialToSurface } from '../surfaceSelection.js';
 
 export function useSurfaceMaterials({
-  isEditorActorLocked,
   mode,
   selectedRef,
   selectedSurface,
   setSelectedActorIds,
-  setStatus,
   syncSelectionVisual,
   tool,
   updateSelectedArch,
@@ -37,10 +35,8 @@ export function useSurfaceMaterials({
     }
     const actor = world.getActor(target.actorId);
     if (!actor) return;
-    if (isEditorActorLocked(actor)) {
-      setStatus('Cannot edit surface: actor or authoring layer is locked.');
-      return;
-    }
+    // Actor lock blocks transforms, not per-face materials (subtractive World Solid
+    // is locked by design but must still accept material drag / Face Texture).
     const brush = actor.getComponent('Brush');
     const convex = actor.getComponent('ConvexBrush');
     const ramp = actor.getComponent('Ramp');
@@ -252,11 +248,6 @@ export function useSurfaceMaterials({
 
   const applySelectedMaterialToBrush = useCallback((materialId) => {
     if (!materialId) return;
-    const primaryId = selectedRef.current[selectedRef.current.length - 1];
-    if (primaryId && isEditorActorLocked(world?.getActor(primaryId))) {
-      setStatus('Cannot assign material: actor or authoring layer is locked.');
-      return;
-    }
     // Surface redirect only while Surface tool is active with a live pick.
     // Stale selectedSurface (e.g. after load / leave Surface) must not steal actor assigns.
     if (shouldApplyMaterialToSurface({

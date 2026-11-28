@@ -42,9 +42,10 @@ describe('editorSettingsPrefs', () => {
       .toBe(false);
   });
 
-  it('defaults middle-mouse pan to fast and fly look above 1', () => {
+  it('defaults Shift+middle-mouse pan to fast and fly look above 1', () => {
     expect(DEFAULT_EDITOR_SETTINGS.cameraOrbitPanSpeed).toBe(2);
     expect(DEFAULT_EDITOR_SETTINGS.cameraFlyLookSensitivity).toBeGreaterThan(1);
+    expect(DEFAULT_EDITOR_SETTINGS.measureDisplayUnit).toBe('meters');
   });
 
   it('includes grid and display-mode defaults', () => {

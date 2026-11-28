@@ -25,8 +25,20 @@ const updateSelectedBrush = useCallback((partial) => {
     const brush = actor?.getComponent('Brush');
     if (!brush) return;
     if (isEditorActorLocked(actor)) {
-      setStatus('Cannot edit brush: actor or authoring layer is locked.');
-      return;
+      // Lock freezes transform / carve shape. Surface dress (materials + UVs +
+      // color) stays allowed so locked World Solid can be painted like additive walls.
+      const dressOnly = Object.keys(partial).length > 0
+        && Object.keys(partial).every((key) => (
+          key === 'materialId'
+          || key === 'faceMaterials'
+          || key === 'faceUVs'
+          || key === 'uv'
+          || key === 'color'
+        ));
+      if (!dressOnly) {
+        setStatus('Cannot edit brush: actor or authoring layer is locked.');
+        return;
+      }
     }
 
     if (partial.size) {

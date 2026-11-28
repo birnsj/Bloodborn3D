@@ -7,13 +7,12 @@ import {
   getBrushRenderSolids,
 } from '../runtime/brushGeometry.js';
 import { FACE_OUTWARD } from '../runtime/brushBoolean.js';
-import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import { disposeObjectTree } from '../runtime/gpuResources.js';
 import {
   isCutterMaterialSharingEnabled,
   isWorldSolidBatchingEnabled,
 } from '../runtime/renderExperiments.js';
-import { surfaceIdFromHit } from '../runtime/surfaces.js';
+import { semanticFaceKeyFromSurfaceId, surfaceIdFromHit } from '../runtime/surfaces.js';
 import { toMeters } from '../core/units.js';
 
 const { SceneView } = await import('../runtime/SceneView.js');
@@ -180,13 +179,17 @@ describe('createBatchedWorldSolidGeometry', () => {
     merged.dispose();
   });
 
-  it('groups triangles by semantic face and each triangle faces its surface id', () => {
+  it('assigns one surface id per exposed quad and normals match the semantic face', () => {
     const { comp, solids } = mazeWorld(4, 3);
     const geom = createBatchedWorldSolidGeometry(solids, comp.size, comp.uv, null);
-    expect(geom.userData.surfaceIds).toEqual(FACE_KEYS);
-    expect(geom.groups.length).toBeLessThanOrEqual(6);
+    expect(geom.userData.surfaceIds.length).toBe(geom.groups.length);
+    expect(geom.userData.surfaceIds.length).toBeGreaterThan(6);
+    expect(new Set(geom.userData.surfaceIds).size).toBe(geom.userData.surfaceIds.length);
     const nor = geom.attributes.normal;
-    const mesh = new THREE.Mesh(geom, FACE_KEYS.map(() => new THREE.MeshBasicMaterial()));
+    const mesh = new THREE.Mesh(
+      geom,
+      geom.userData.surfaceIds.map(() => new THREE.MeshBasicMaterial()),
+    );
     mesh.userData.surfaceIds = geom.userData.surfaceIds;
     mesh.userData.surfaceScheme = 'grouped';
 
@@ -195,9 +198,10 @@ describe('createBatchedWorldSolidGeometry', () => {
       for (let i = g.start; i < g.start + g.count; i += 3) {
         const tri = i / 3;
         const surfaceId = surfaceIdFromHit(mesh, tri);
-        expect(surfaceId).toBe(FACE_KEYS[g.materialIndex]);
+        expect(surfaceId).toBe(geom.userData.surfaceIds[g.materialIndex]);
+        const face = semanticFaceKeyFromSurfaceId(surfaceId);
         const v = geom.index.getX(i);
-        const out = FACE_OUTWARD[surfaceId];
+        const out = FACE_OUTWARD[face];
         expect([nor.getX(v), nor.getY(v), nor.getZ(v)]).toEqual([out.x, out.y, out.z]);
         checked += 1;
       }
@@ -211,13 +215,14 @@ describe('createBatchedWorldSolidGeometry', () => {
     const edited = createBatchedWorldSolidGeometry(
       solids, comp.size, comp.uv, { py: { scale: { x: 2, y: 2 }, offset: { x: 0, y: 0 }, rotation: 0 } },
     );
-    const pyIndex = FACE_KEYS.indexOf('py');
     let pyChecked = 0;
     for (const g of plain.groups) {
+      const sid = plain.userData.surfaceIds[g.materialIndex];
+      const isPy = semanticFaceKeyFromSurfaceId(sid) === 'py';
       for (let i = g.start; i < g.start + g.count; i += 1) {
         const v = plain.index.getX(i);
         const du = edited.attributes.uv.getX(v) - plain.attributes.uv.getX(v);
-        if (g.materialIndex === pyIndex) {
+        if (isPy) {
           expect(edited.attributes.uv.getX(v)).toBeCloseTo(plain.attributes.uv.getX(v) * 2, 4);
           pyChecked += 1;
         } else {
@@ -236,7 +241,7 @@ describe('createBatchedWorldSolidGeometry', () => {
 });
 
 describe('SceneView batched World Solid visual', () => {
-  it('draws the World Solid as one mesh with at most six draw units', async () => {
+  it('draws the World Solid as one batched mesh with one material per exposed panel', async () => {
     globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = true;
     const { world } = mazeWorld(4, 3);
     const view = makeView();
@@ -248,11 +253,11 @@ describe('SceneView batched World Solid visual', () => {
     expect(substrate).toHaveLength(1);
     expect(substrate[0].userData.batchedWorldSolid).toBe(true);
     expect(substrate[0].userData.surfaceScheme).toBe('grouped');
-    expect(substrate[0].material).toHaveLength(6);
-    expect(drawUnits(substrate)).toBeLessThanOrEqual(6);
+    expect(substrate[0].material).toHaveLength(substrate[0].userData.surfaceIds.length);
+    expect(substrate[0].userData.surfaceIds.length).toBeGreaterThan(6);
   });
 
-  it('allocates far fewer materials and draw units than per-solid meshes', async () => {
+  it('uses one substrate mesh instead of one mesh per solid piece', async () => {
     const { world } = mazeWorld(5, 4);
 
     globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = false;
@@ -260,18 +265,15 @@ describe('SceneView batched World Solid visual', () => {
     base.syncFromWorld(world);
     await settle();
     const baseMeshes = worldSolidMeshes(base, world).filter((m) => m.userData.substrateMesh);
-    const baseMats = new Set(baseMeshes.flatMap((m) => m.material));
 
     delete globalThis.__BLOODBOUND_BATCH_WORLD_SOLID;
     const batched = makeView();
     batched.syncFromWorld(world);
     await settle();
     const batchedMeshes = worldSolidMeshes(batched, world).filter((m) => m.userData.substrateMesh);
-    const batchedMats = new Set(batchedMeshes.flatMap((m) => m.material));
 
-    expect(batchedMats.size).toBe(6);
-    expect(baseMats.size).toBeGreaterThan(batchedMats.size * 10);
-    expect(drawUnits(batchedMeshes)).toBeLessThan(drawUnits(baseMeshes) / 10);
+    expect(batchedMeshes).toHaveLength(1);
+    expect(baseMeshes.length).toBeGreaterThan(10);
     // Same surfaces drawn: only the batching changed.
     const triCount = (meshes) => meshes.reduce((n, m) => n + m.geometry.index.count / 3, 0);
     expect(triCount(batchedMeshes)).toBe(triCount(baseMeshes));
@@ -291,13 +293,18 @@ describe('SceneView batched World Solid visual', () => {
     await settle();
 
     const mesh = worldSolidMeshes(view, world).find((m) => m.userData.batchedWorldSolid);
-    const colorOf = (key) => `#${mesh.material[FACE_KEYS.indexOf(key)].color.getHexString()}`;
-    expect(colorOf('py')).toBe('#00aa00');
-    expect(colorOf('ny')).toBe('#0000aa');
-    for (const key of ['px', 'nx', 'pz', 'nz']) expect(colorOf(key)).toBe('#aa0000');
+    const colorOfSemantic = (face) => {
+      const idx = mesh.userData.surfaceIds.findIndex(
+        (id) => semanticFaceKeyFromSurfaceId(id) === face,
+      );
+      return `#${mesh.material[idx].color.getHexString()}`;
+    };
+    expect(colorOfSemantic('py')).toBe('#00aa00');
+    expect(colorOfSemantic('ny')).toBe('#0000aa');
+    for (const key of ['px', 'nx', 'pz', 'nz']) expect(colorOfSemantic(key)).toBe('#aa0000');
   });
 
-  it('paints a surface highlight on the selected face material only', async () => {
+  it('paints a surface highlight on the selected panel only', async () => {
     globalThis.__BLOODBOUND_BATCH_WORLD_SOLID = true;
     const { world, solid } = mazeWorld(3, 2);
     const view = makeView();
@@ -305,14 +312,21 @@ describe('SceneView batched World Solid visual', () => {
     view.syncFromWorld(world);
     await settle();
 
+    const mesh = worldSolidMeshes(view, world).find((m) => m.userData.batchedWorldSolid);
+    const targetId = mesh.userData.surfaceIds.find(
+      (id) => semanticFaceKeyFromSurfaceId(id) === 'py',
+    );
+    expect(targetId).toBeTruthy();
+
     // Same traversal the real highlight uses; binds to the batched mesh's surface ids.
     view._paintSurfaceHighlight = SceneView.prototype._paintSurfaceHighlight;
     view._restoreSurfaceEmissives = SceneView.prototype._restoreSurfaceEmissives;
-    view._paintSurfaceHighlight({ actorId: solid.id, surfaceId: 'py' }, 0xffaa33, 0.5);
+    view._paintSurfaceHighlight({ actorId: solid.id, surfaceId: targetId }, 0xffaa33, 0.5);
 
-    const mesh = worldSolidMeshes(view, world).find((m) => m.userData.batchedWorldSolid);
-    const lit = mesh.material.map((m) => m.userData._bbSurfaceHighlight === true);
-    expect(lit).toEqual(FACE_KEYS.map((k) => k === 'py'));
+    const litCount = mesh.material.filter((m) => m.userData._bbSurfaceHighlight === true).length;
+    expect(litCount).toBe(1);
+    expect(mesh.material[mesh.userData.surfaceIds.indexOf(targetId)].userData._bbSurfaceHighlight)
+      .toBe(true);
     view._restoreSurfaceEmissives();
     expect(mesh.material.some((m) => m.userData._bbSurfaceHighlight)).toBe(false);
   });

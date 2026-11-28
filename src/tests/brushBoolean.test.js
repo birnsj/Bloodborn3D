@@ -840,8 +840,10 @@ describe('world-solid hull faces', () => {
     const pos = geom.getAttribute('position');
     const nrm = geom.getAttribute('normal');
     const idx = geom.getIndex();
-    // First triangle of the +Y group should wind to +Y.
-    const pyGroup = geom.groups.find((g) => g.materialIndex === 2 && g.count > 0);
+    // First triangle of a +Y panel should wind to +Y.
+    const pyMat = geom.userData.surfaceIds.findIndex((id) => String(id).startsWith('py'));
+    expect(pyMat).toBeGreaterThanOrEqual(0);
+    const pyGroup = geom.groups.find((g) => g.materialIndex === pyMat && g.count > 0);
     expect(pyGroup).toBeTruthy();
     const i0 = idx.getX(pyGroup.start);
     const i1 = idx.getX(pyGroup.start + 1);

@@ -230,7 +230,13 @@ export class GeometryVisualMethods {
       const fallback = createFallbackBrushMaterial(baseColor, {
         editMode: this.editMode,
       });
-      const mats = FACE_KEYS.map(() => fallback.clone());
+      // Exposed World Solid patches have variable quads per face — use grouped
+      // scheme (geometry already stamps per-quad surfaceIds). Intact BoxGeometry
+      // solids keep the classic 2-triangles-per-face 'box' scheme.
+      const surfaceIds = hideOuterHull
+        ? (geom.userData?.surfaceIds ? [...geom.userData.surfaceIds] : [...BOX_SURFACE_IDS])
+        : [...BOX_SURFACE_IDS];
+      const mats = surfaceIds.map((_, i) => (i === 0 ? fallback : fallback.clone()));
       const mesh = new THREE.Mesh(geom, mats);
       mesh.position.set(
         toMeters(solid.center.x),
@@ -242,19 +248,14 @@ export class GeometryVisualMethods {
       mesh.userData.actorId = actor.id;
       mesh.userData.pickable = true;
       mesh.userData.brushSolid = solid.role;
-      // Exposed World Solid patches have variable quads per face — use grouped
-      // scheme (geometry already stamps surfaceIds). Intact BoxGeometry solids
-      // keep the classic 2-triangles-per-face 'box' scheme.
       if (hideOuterHull) {
         mesh.userData.surfaceScheme = 'grouped';
-        mesh.userData.surfaceIds = geom.userData?.surfaceIds
-          ? [...geom.userData.surfaceIds]
-          : [...BOX_SURFACE_IDS];
+        mesh.userData.surfaceIds = surfaceIds;
         mesh.userData.substrateMesh = true;
         anyVisibleFace = true;
       } else {
         mesh.userData.surfaceScheme = 'box';
-        mesh.userData.surfaceIds = [...BOX_SURFACE_IDS];
+        mesh.userData.surfaceIds = surfaceIds;
         anyVisibleFace = true;
       }
 
@@ -331,10 +332,10 @@ export class GeometryVisualMethods {
   }
 
   /**
-   * Batched World Solid visual: one mesh, six face-keyed materials. Surface IDs are
-   * the semantic face keys (grouped scheme), so picking, highlight and per-face
-   * material / UV edits behave as on any other grouped mesh. The actor group owns it
-   * and the normal rebuild path disposes it.
+   * Batched World Solid visual: one mesh with one material slot per exposed panel
+   * (`pz#0`, …). Picking / highlight / Face Texture target that panel; legacy
+   * face keys in faceMaterials still tint every panel on that axis. The actor
+   * group owns the mesh; the normal rebuild path disposes it.
    * @returns {boolean} whether anything was drawn
    */
   _addBatchedWorldSolidMesh(group, actor, comp, solids, syncToken) {
@@ -347,7 +348,11 @@ export class GeometryVisualMethods {
       ? (comp.color || '#888888')
       : darkenHex(comp.color || '#888888', 0.12);
     const fallback = createFallbackBrushMaterial(baseColor, { editMode: this.editMode });
-    const surfaceIds = [...BOX_SURFACE_IDS];
+    // Per-quad ids from createBatchedWorldSolidGeometry — one material slot per panel
+    // so surface highlight / Face Texture only affect the clicked wall.
+    const surfaceIds = geom.userData?.surfaceIds?.length
+      ? [...geom.userData.surfaceIds]
+      : [...BOX_SURFACE_IDS];
     const mats = surfaceIds.map((_, i) => (i === 0 ? fallback : fallback.clone()));
     const mesh = new THREE.Mesh(geom, mats);
     mesh.castShadow = true;

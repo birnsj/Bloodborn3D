@@ -741,12 +741,10 @@ export function EditorProvider({ children }) {
     getSelectedSurfaceMaterialId,
     resetSelectedSurfaceUv,
   } = useSurfaceMaterials({
-    isEditorActorLocked,
     mode,
     selectedRef,
     selectedSurface,
     setSelectedActorIds,
-    setStatus,
     syncSelectionVisual,
     tool,
     updateSelectedArch,

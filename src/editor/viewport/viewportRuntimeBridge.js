@@ -38,7 +38,8 @@ export function configureOrbitForPane(controls, pane, settings = null) {
   const mode = normalizeCameraMode(pane.cameraMode);
 
   // Ortho/isometric: RMB orbits. Perspective: RMB is freelook (Viewport); Ctrl+move
-  // orbits without a mouse button. Middle-mouse pans; wheel zooms.
+  // orbits without a mouse button. Middle-mouse measures (Viewport); Shift+MMB pans;
+  // wheel zooms.
   const perspective = mode === 'perspective';
   controls.enableRotate = true;
   controls.enablePan = true;
@@ -47,7 +48,7 @@ export function configureOrbitForPane(controls, pane, settings = null) {
   controls.enableDamping = false;
   controls.mouseButtons = {
     LEFT: -1,
-    MIDDLE: THREE.MOUSE.PAN,
+    MIDDLE: -1,
     RIGHT: perspective ? -1 : THREE.MOUSE.ROTATE,
   };
 

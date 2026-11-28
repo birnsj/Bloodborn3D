@@ -3,6 +3,10 @@ import {
   GRID_INCREMENTS,
 } from '../core/units.js';
 import { normalizeDisplayMode } from './viewport/viewportPrefs.js';
+import {
+  DEFAULT_MEASURE_DISPLAY_UNIT,
+  normalizeMeasureDisplayUnit,
+} from './viewport/measureTool.js';
 
 const STORAGE_KEY = 'bloodbound.editor.settings.v1';
 const USER_DEFAULTS_KEY = 'bloodbound.editor.settings.defaults.v1';
@@ -23,10 +27,12 @@ export const DEFAULT_EDITOR_SETTINGS = {
   cameraOrbitSpeed: 1,
   /** OrbitControls.zoomSpeed multiplier. */
   cameraOrbitZoomSpeed: 1,
-  /** Middle-mouse pan (OrbitControls.panSpeed). Default is fast. */
+  /** Shift+middle-mouse pan (OrbitControls.panSpeed). Default is fast. */
   cameraOrbitPanSpeed: 2,
   /** Multiplier on free-fly mouse look sensitivity. */
   cameraFlyLookSensitivity: 1.5,
+  /** Display unit for the middle-mouse measuring tape. */
+  measureDisplayUnit: DEFAULT_MEASURE_DISPLAY_UNIT,
   /** Free-fly move speed in editor units/sec (legacy default 450). */
   cameraFlySpeed: 450,
   /** Shift boost multiplier while free-flying. */
@@ -145,6 +151,7 @@ export function clampEditorSettings(partial = {}) {
   );
 
   next.cameraInvertY = Boolean(next.cameraInvertY);
+  next.measureDisplayUnit = normalizeMeasureDisplayUnit(next.measureDisplayUnit);
 
   const grid = Number(next.gridSize);
   next.gridSize = GRID_INCREMENTS.includes(grid)

@@ -18,6 +18,10 @@ import {
   normalizeActorUv,
 } from './uvMapping.js';
 import { FACE_KEYS } from '../materials/MaterialDefinition.js';
+import {
+  semanticFaceKeyFromSurfaceId,
+  worldSolidPatchSurfaceId,
+} from './surfaces.js';
 
 /**
  * Texture resolution contract: one 2048² map covers 1 m (100 editor units).
@@ -165,19 +169,27 @@ export function createExposedWorldSolidGeometry(
     index.push(base, base + 1, base + 2, base, base + 2, base + 3);
   };
 
+  // One group + surface id per exposed quad so selection / materials stay on the
+  // clicked wall panel (not every World Solid face that shares an axis).
+  const surfaceIds = [];
+  const patchCountByFace = Object.fromEntries(FACE_KEYS.map((k) => [k, 0]));
   for (let fi = 0; fi < FACE_KEYS.length; fi += 1) {
     const faceKey = FACE_KEYS[fi];
-    const start = index.length;
     const n = ({
       px: [1, 0, 0], nx: [-1, 0, 0],
       py: [0, 1, 0], ny: [0, -1, 0],
       pz: [0, 0, 1], nz: [0, 0, -1],
     })[faceKey];
     for (const rect of exposed[faceKey] || []) {
+      const start = index.length;
       pushQuad(faceKey, rect, n[0], n[1], n[2]);
+      const count = index.length - start;
+      const patchIndex = patchCountByFace[faceKey];
+      patchCountByFace[faceKey] = patchIndex + 1;
+      const materialIndex = surfaceIds.length;
+      surfaceIds.push(worldSolidPatchSurfaceId(faceKey, patchIndex));
+      groups.push({ start, count, materialIndex });
     }
-    const count = index.length - start;
-    groups.push({ start, count, materialIndex: fi });
   }
 
   if (!positions.length) return null;
@@ -190,10 +202,9 @@ export function createExposedWorldSolidGeometry(
   for (const g of groups) {
     geom.addGroup(g.start, g.count, g.materialIndex);
   }
-  // Variable quad counts per face — 'box' (faceIndex/2, face*4) is wrong here.
-  geom.userData.surfaceIds = [...FACE_KEYS];
+  geom.userData.surfaceIds = surfaceIds;
   geom.userData.surfaceScheme = 'grouped';
-  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'grouped', surfaceIds: FACE_KEYS });
+  applyFaceUvsToGeometry(geom, faceUVs, { scheme: 'grouped', surfaceIds });
   return geom;
 }
 
@@ -202,10 +213,10 @@ export function createExposedWorldSolidGeometry(
  *
  * Built from createExposedWorldSolidGeometry per solid (so clipping, winding and
  * UVs are identical to the per-solid path) and merged in brush-local space.
- * Triangles are grouped by semantic face (px…nz, `userData.surfaceIds`), so the
- * mesh needs at most six materials and six draw calls regardless of solid count,
- * while per-face materials, per-face UV overrides and surface picking keep working.
- * Collision still uses the unmerged solids.
+ * Triangles are grouped one material slot per exposed panel (`pz#0`, `nx#3`, …)
+ * so selection and face materials stay on the clicked wall, not every panel that
+ * shares an axis. Legacy face keys in faceMaterials / faceUVs still apply to all
+ * patches of that face. Collision still uses the unmerged solids.
  *
  * Returns null when nothing is exposed. Origin is the brush center (mesh sits at 0).
  */
@@ -213,16 +224,21 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
   const positions = [];
   const normals = [];
   const uvs = [];
-  const faceIndices = FACE_KEYS.map(() => []);
+  /** @type {number[][]} */
+  const patchIndices = [];
+  /** @type {string[]} */
+  const surfaceIds = [];
+  const patchCountByFace = Object.fromEntries(FACE_KEYS.map((k) => [k, 0]));
   let vertexCount = 0;
 
-  // Per-face overrides compose onto each vertex exactly once as it is copied (every
-  // vertex belongs to one face). applyFaceUvsToGeometry walks index entries, which
-  // would re-transform vertices shared by a quad's two triangles.
-  const faceUvOverride = FACE_KEYS.map((key) => {
-    const suv = faceUVs?.[key];
-    return suv && !isIdentityUv(suv) ? normalizeActorUv(suv) : null;
-  });
+  const resolveFaceUv = (surfaceId) => {
+    if (!faceUVs) return null;
+    const direct = faceUVs[surfaceId];
+    if (direct && !isIdentityUv(direct)) return normalizeActorUv(direct);
+    const base = semanticFaceKeyFromSurfaceId(surfaceId);
+    const legacy = base && faceUVs[base];
+    return legacy && !isIdentityUv(legacy) ? normalizeActorUv(legacy) : null;
+  };
 
   for (const solid of solids || []) {
     const bias = {
@@ -232,8 +248,8 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
         z: solid.center.z - solid.size.z * 0.5,
       },
     };
-    // faceUVs are applied once on the merged geometry (per-solid 'box' indexing
-    // assumes four vertices per face and is wrong for clipped patches).
+    // Per-quad surface ids come from createExposedWorldSolidGeometry; re-index them
+    // globally so the batched mesh keeps one material slot per wall panel.
     const part = createExposedWorldSolidGeometry(solid, solids, brushSize, uv, bias, null);
     if (!part) continue;
 
@@ -241,13 +257,20 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
     const nor = part.attributes.normal;
     const uvAttr = part.attributes.uv;
     const index = part.index;
+    const partSurfaceIds = part.userData.surfaceIds || [];
     const cx = toMeters(solid.center.x);
     const cy = toMeters(solid.center.y);
     const cz = toMeters(solid.center.z);
-    const remap = new Map();
 
     for (const g of part.groups) {
-      const target = faceIndices[g.materialIndex];
+      const partSid = partSurfaceIds[g.materialIndex];
+      const faceKey = semanticFaceKeyFromSurfaceId(partSid) || FACE_KEYS[0];
+      const patchIndex = patchCountByFace[faceKey];
+      patchCountByFace[faceKey] = patchIndex + 1;
+      const surfaceId = worldSolidPatchSurfaceId(faceKey, patchIndex);
+      const override = resolveFaceUv(surfaceId);
+      const target = [];
+      const remap = new Map();
       for (let i = g.start; i < g.start + g.count; i += 1) {
         const old = index.getX(i);
         let next = remap.get(old);
@@ -257,7 +280,6 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
           remap.set(old, next);
           positions.push(pos.getX(old) + cx, pos.getY(old) + cy, pos.getZ(old) + cz);
           normals.push(nor.getX(old), nor.getY(old), nor.getZ(old));
-          const override = faceUvOverride[g.materialIndex];
           if (override) {
             const [u, v] = composeActorUv(uvAttr.getX(old), uvAttr.getY(old), override);
             uvs.push(u, v);
@@ -267,6 +289,8 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
         }
         target.push(next);
       }
+      patchIndices.push(target);
+      surfaceIds.push(surfaceId);
     }
     part.dispose();
   }
@@ -275,10 +299,11 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
 
   const index = [];
   const groups = [];
-  for (let fi = 0; fi < FACE_KEYS.length; fi += 1) {
-    if (!faceIndices[fi].length) continue;
-    groups.push({ start: index.length, count: faceIndices[fi].length, materialIndex: fi });
-    for (const v of faceIndices[fi]) index.push(v);
+  for (let pi = 0; pi < patchIndices.length; pi += 1) {
+    const verts = patchIndices[pi];
+    if (!verts.length) continue;
+    groups.push({ start: index.length, count: verts.length, materialIndex: pi });
+    for (const v of verts) index.push(v);
   }
 
   const geom = new THREE.BufferGeometry();
@@ -287,7 +312,7 @@ export function createBatchedWorldSolidGeometry(solids, brushSize, uv = {}, face
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geom.setIndex(index);
   for (const g of groups) geom.addGroup(g.start, g.count, g.materialIndex);
-  geom.userData.surfaceIds = [...FACE_KEYS];
+  geom.userData.surfaceIds = surfaceIds;
   geom.userData.surfaceScheme = 'grouped';
   return geom;
 }

@@ -169,7 +169,9 @@ export function applyFaceUvsToGeometry(geom, faceUVs, options = {}) {
     const index = geom.index;
     for (const g of groups) {
       const sid = surfaceIds[g.materialIndex];
-      const suv = sid ? faceUVs[sid] : null;
+      // World Solid patches (`pz#3`) inherit a legacy semantic `pz` override.
+      const base = typeof sid === 'string' && sid.includes('#') ? sid.split('#')[0] : sid;
+      const suv = sid ? (faceUVs[sid] || (base && faceUVs[base]) || null) : null;
       if (!suv || isIdentityUv(suv)) continue;
       const n = normalizeActorUv(suv);
       const end = g.start + g.count;

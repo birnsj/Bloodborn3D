@@ -12,6 +12,7 @@ import {
   ROTATION_SNAP_INCREMENTS,
   SCALE_SNAP_INCREMENTS,
 } from './editorSettingsPrefs.js';
+import { MEASURE_DISPLAY_UNITS } from './viewport/measureTool.js';
 import {
   CREATION_TOOLBAR_SCALE_MAX,
   CREATION_TOOLBAR_SCALE_MIN,
@@ -366,14 +367,24 @@ export function EditorSettingsDialog({ open, onClose }) {
               onChange={(v) => patchSettings({ cameraOrbitZoomSpeed: v })}
             />
             <RangeRow
-              label="Middle-mouse pan"
-              hint="How fast middle-mouse pans the view. Default is fast (2.0)."
+              label="Shift + middle-mouse pan"
+              hint="How fast Shift+middle-mouse pans the view. Plain middle-mouse measures. Default is fast (2.0)."
               min={0.25}
               max={4}
               step={0.05}
               value={settings.cameraOrbitPanSpeed}
               display={settings.cameraOrbitPanSpeed.toFixed(2)}
               onChange={(v) => patchSettings({ cameraOrbitPanSpeed: v })}
+            />
+            <SelectRow
+              label="Measure units"
+              hint="Units shown while holding middle-mouse to measure. 100 editor units = 1 meter."
+              value={settings.measureDisplayUnit}
+              options={MEASURE_DISPLAY_UNITS.map((u) => ({
+                value: u.id,
+                label: u.label,
+              }))}
+              onChange={(v) => patchSettings({ measureDisplayUnit: v })}
             />
             <RangeRow
               label="Free-fly look sensitivity"

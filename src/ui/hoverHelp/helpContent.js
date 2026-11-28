@@ -19,7 +19,7 @@ export const HELP_CONTENT = {
   'file.newMap': {
     title: 'New Map',
     body: 'Creates a new level file. Additive starts empty (add brushes to build). Subtractive starts with an invisible solid World Solid — place subtract boxes to carve rooms out of that substrate; you see the cut faces, not a giant outer cube.',
-    tips: 'Map mode is set at create time and shown in Details → Level and the status bar. Existing levels without a mode load as Additive. World Solid stays locked in the Outliner as a faint wire outline.',
+    tips: 'Map mode is set at create time and shown in Details → Level and the status bar. Existing levels without a mode load as Additive. World Solid stays locked against moves but still accepts material drag and Face Texture (right-click) like additive walls.',
   },
 
   'world.ambient': {
@@ -1238,7 +1238,7 @@ export const HELP_CONTENT = {
   'viewport.camera': {
     title: 'Camera Mode',
     body: 'Perspective, isometric, or orthographic views (Top/Bottom/Front/Back/Left/Right) for this pane. Use Ctrl+1–9 / 1–9 for camera bookmarks (see Camera Bookmarks help).',
-    tips: 'Ctrl+1–9 stores this pane’s view on the level (Save to keep); 1–9 recalls it. Perspective: hold Ctrl + move to orbit · Alt+Move/Rotate/Scale duplicates · RMB drag looks · WASD free-fly. Ortho: RMB orbits.',
+    tips: 'Ctrl+1–9 stores this pane’s view on the level (Save to keep); 1–9 recalls it. Perspective: hold Ctrl + move to orbit · Alt+Move/Rotate/Scale duplicates · RMB drag looks · LMB+RMB drag moves (strafe/up-down, no turn) · MMB measures · Shift+MMB pans · WASD free-fly. Ortho: RMB orbits.',
   },
   'viewport.cameraBookmarks': {
     title: 'Camera Bookmarks',
@@ -1572,7 +1572,7 @@ export const HELP_CONTENT = {
   },
   'settings.camera': {
     title: 'Camera Feel',
-    body: 'Orbit speed, wheel zoom, middle-mouse pan (default fast), free-fly look/speed/boost, and Invert Y. Orbit stops when you release — no after-drift.',
+    body: 'Orbit speed, wheel zoom, middle-mouse measure (units in Settings), Shift+middle-mouse pan (default fast), free-fly look/speed/boost, LMB+RMB move (strafe/up-down at fly speed; freelook pauses), and Invert Y. Orbit stops when you release — no after-drift.',
   },
   'settings.appearance': {
     title: 'Appearance',

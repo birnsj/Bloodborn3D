@@ -45,7 +45,8 @@ export class PickingMethods {
       const entry = this._actorMeshes.get(actorId);
       const actor = entry?.actor;
       if (actor && !this._isActorEditorVisible(actor, actor.world)) continue;
-      if (actor && this._isActorEditorLocked(actor, actor.world)) continue;
+      // Locked still picks for surface dress (World Solid is locked but must
+      // accept material drag / Face Texture). Lock only blocks transforms.
       const comp = getStructuralComponent(actor);
       if (!comp) continue;
       const surfaceId = surfaceIdFromHit(inter.object, inter.faceIndex);

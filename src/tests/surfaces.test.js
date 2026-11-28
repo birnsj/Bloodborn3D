@@ -8,10 +8,12 @@ import {
   patchFaceUv,
   resolveSurfaceMaterialId,
   getSurfaceUvOverrideOrDefault,
+  semanticFaceKeyFromSurfaceId,
   surfaceIdFromBoxFaceIndex,
   surfaceIdFromHit,
   patchFaceMaterial,
   applySurfaceGroups,
+  worldSolidPatchSurfaceId,
 } from '../runtime/surfaces.js';
 import { createBrushBoxGeometry } from '../runtime/brushGeometry.js';
 import { createRampWedgeGeometry } from '../runtime/rampGeometry.js';
@@ -58,6 +60,22 @@ describe('Phase 2E.1 — semantic surface IDs', () => {
       px: 'mat_a',
     });
     expect(normalizeFaceMaterials({}, BOX_SURFACE_IDS)).toBeNull();
+  });
+
+  it('keeps World Solid patch ids and resolves legacy face material fallbacks', () => {
+    expect(worldSolidPatchSurfaceId('pz', 12)).toBe('pz#12');
+    expect(semanticFaceKeyFromSurfaceId('pz#12')).toBe('pz');
+    expect(normalizeFaceMaterials({ 'pz#3': 'mat_panel', px: 'mat_wall' }, null)).toEqual({
+      'pz#3': 'mat_panel',
+      px: 'mat_wall',
+    });
+    const brush = new BrushComponent({
+      materialId: 'mat_actor',
+      faceMaterials: { pz: 'mat_axis', 'pz#3': 'mat_panel' },
+    });
+    expect(resolveSurfaceMaterialId(brush, 'pz#3')).toBe('mat_panel');
+    expect(resolveSurfaceMaterialId(brush, 'pz#9')).toBe('mat_axis');
+    expect(resolveSurfaceMaterialId(brush, 'py#0')).toBe('mat_actor');
   });
 
   it('resolves surface material with actor fallback', () => {

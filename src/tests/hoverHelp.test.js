@@ -239,6 +239,8 @@ describe('keyboard shortcuts catalog', () => {
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Save All');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Store camera bookmark');
     expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Go to camera bookmark');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toContain('Measure');
+    expect(KEYBOARD_SHORTCUTS_TEXT).toMatch(/Shift.*MMB|MMB.*Pan/i);
     expect(flat.some((r) => r.keys.includes('Ctrl') && r.keys.includes('Shift') && r.keys.includes('S'))).toBe(true);
   });
 });

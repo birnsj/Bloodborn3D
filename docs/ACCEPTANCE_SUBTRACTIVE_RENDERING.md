@@ -8,7 +8,7 @@
 | Change | Detail |
 | --- | --- |
 | Defaults ON | `isWorldSolidBatchingEnabled()` / `isCutterMaterialSharingEnabled()` return true unless the global is explicitly `false` |
-| World Solid picking | Exposed geometry stamps `surfaceScheme: 'grouped'` + `surfaceIds`; SceneView per-solid legacy path uses grouped for World Solids (BoxGeometry additives keep `'box'`) |
+| World Solid picking | Exposed geometry stamps `surfaceScheme: 'grouped'` + one surface id per clipped quad (`pz#0`, …); SceneView per-solid legacy path uses the same; BoxGeometry additives keep `'box'` + classic face keys |
 | Clipped face UVs | `createExposedWorldSolidGeometry` applies `faceUVs` via grouped scheme (variable quads per face) |
 | Indexed UV once | `applyFaceUvsToGeometry` grouped branch visits each indexed vertex once |
 | Cutter z-fight | Subtract fill materials use `polygonOffset` (−1/−1), `depthWrite: false`, elevated `renderOrder`; editor visibility preserved |

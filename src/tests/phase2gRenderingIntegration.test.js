@@ -12,9 +12,8 @@ import {
   createExposedWorldSolidGeometry,
   getBrushRenderSolids,
 } from '../runtime/brushGeometry.js';
-import { FACE_KEYS } from '../materials/MaterialDefinition.js';
 import { FACE_OUTWARD } from '../runtime/brushBoolean.js';
-import { surfaceIdFromHit } from '../runtime/surfaces.js';
+import { semanticFaceKeyFromSurfaceId, surfaceIdFromHit } from '../runtime/surfaces.js';
 import { applyFaceUvsToGeometry, composeActorUv, normalizeActorUv } from '../runtime/uvMapping.js';
 import { toMeters } from '../core/units.js';
 
@@ -48,9 +47,14 @@ describe('Phase 2G — World Solid picking', () => {
     }
     expect(solid).toBeTruthy();
     expect(geom.userData.surfaceScheme).toBe('grouped');
-    expect(geom.userData.surfaceIds).toEqual(FACE_KEYS);
+    expect(geom.userData.surfaceIds.length).toBe(geom.groups.length);
+    expect(geom.userData.surfaceIds.length).toBeGreaterThan(0);
+    expect(new Set(geom.userData.surfaceIds).size).toBe(geom.userData.surfaceIds.length);
 
-    const mesh = new THREE.Mesh(geom, FACE_KEYS.map(() => new THREE.MeshBasicMaterial()));
+    const mesh = new THREE.Mesh(
+      geom,
+      geom.userData.surfaceIds.map(() => new THREE.MeshBasicMaterial()),
+    );
     mesh.userData.surfaceScheme = 'grouped';
     mesh.userData.surfaceIds = geom.userData.surfaceIds;
 
@@ -60,10 +64,11 @@ describe('Phase 2G — World Solid picking', () => {
       for (let i = g.start; i < g.start + g.count; i += 3) {
         const tri = i / 3;
         const sid = surfaceIdFromHit(mesh, tri);
-        expect(sid).toBe(FACE_KEYS[g.materialIndex]);
+        expect(sid).toBe(geom.userData.surfaceIds[g.materialIndex]);
+        const face = semanticFaceKeyFromSurfaceId(sid);
         const v = geom.index.getX(i);
         const n = geom.attributes.normal;
-        const out = FACE_OUTWARD[sid];
+        const out = FACE_OUTWARD[face];
         expect([n.getX(v), n.getY(v), n.getZ(v)]).toEqual([out.x, out.y, out.z]);
         checked += 1;
       }
@@ -72,16 +77,19 @@ describe('Phase 2G — World Solid picking', () => {
     geom.dispose();
   });
 
-  it('batched World Solid picking matches every triangle normal', () => {
+  it('batched World Solid picking matches every triangle to its panel surface id', () => {
     const { comp, solids } = mazeSolids(4, 3);
     const geom = createBatchedWorldSolidGeometry(solids, comp.size, comp.uv, null);
-    const mesh = new THREE.Mesh(geom, FACE_KEYS.map(() => new THREE.MeshBasicMaterial()));
+    const mesh = new THREE.Mesh(
+      geom,
+      geom.userData.surfaceIds.map(() => new THREE.MeshBasicMaterial()),
+    );
     mesh.userData.surfaceScheme = 'grouped';
-    mesh.userData.surfaceIds = [...FACE_KEYS];
+    mesh.userData.surfaceIds = geom.userData.surfaceIds;
     let ok = 0;
     for (const g of geom.groups) {
       for (let i = g.start; i < g.start + g.count; i += 3) {
-        expect(surfaceIdFromHit(mesh, i / 3)).toBe(FACE_KEYS[g.materialIndex]);
+        expect(surfaceIdFromHit(mesh, i / 3)).toBe(geom.userData.surfaceIds[g.materialIndex]);
         ok += 1;
       }
     }
@@ -106,7 +114,10 @@ describe('Phase 2G — clipped face UV assignment', () => {
       };
       const g = createExposedWorldSolidGeometry(s, solids, comp.size, comp.uv, b, null);
       if (!g) continue;
-      const py = g.groups.find((grp) => grp.materialIndex === FACE_KEYS.indexOf('py') && grp.count > 0);
+      const py = g.groups.find((grp) => {
+        const sid = g.userData.surfaceIds[grp.materialIndex];
+        return semanticFaceKeyFromSurfaceId(sid) === 'py' && grp.count > 0;
+      });
       if (py) {
         target = s;
         bias = b;
@@ -126,16 +137,17 @@ describe('Phase 2G — clipped face UV assignment', () => {
       bias,
       { py: { scale: { x: 2, y: 2 }, offset: { x: 0, y: 0 }, rotation: 0 } },
     );
-    const pyIndex = FACE_KEYS.indexOf('py');
     let pyHits = 0;
     for (const g of plain.groups) {
       if (!g.count) continue;
+      const sid = plain.userData.surfaceIds[g.materialIndex];
+      const isPy = semanticFaceKeyFromSurfaceId(sid) === 'py';
       const seen = new Set();
       for (let i = g.start; i < g.start + g.count; i += 1) {
         const v = plain.index.getX(i);
         if (seen.has(v)) continue;
         seen.add(v);
-        if (g.materialIndex === pyIndex) {
+        if (isPy) {
           expect(edited.attributes.uv.getX(v)).toBeCloseTo(plain.attributes.uv.getX(v) * 2, 4);
           pyHits += 1;
         } else {

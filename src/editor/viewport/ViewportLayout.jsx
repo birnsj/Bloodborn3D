@@ -20,6 +20,7 @@ export function ViewportLayout({
   onActivatePane,
   onResetCamera,
   marqueeRect,
+  measureRect,
   children,
 }) {
   const dragRef = useRef(null);
@@ -270,6 +271,41 @@ export function ViewportLayout({
             height: Math.abs(marqueeRect.y1 - marqueeRect.y0),
           }}
         />
+      )}
+
+      {measureRect && (
+        <div className="bb-viewport-measure" aria-hidden="true">
+          <svg className="bb-viewport-measure__svg">
+            <line
+              className="bb-viewport-measure__line"
+              x1={measureRect.x0}
+              y1={measureRect.y0}
+              x2={measureRect.x1}
+              y2={measureRect.y1}
+            />
+            <circle
+              className="bb-viewport-measure__dot"
+              cx={measureRect.x0}
+              cy={measureRect.y0}
+              r={3.5}
+            />
+            <circle
+              className="bb-viewport-measure__dot"
+              cx={measureRect.x1}
+              cy={measureRect.y1}
+              r={3.5}
+            />
+          </svg>
+          <div
+            className="bb-viewport-measure__label"
+            style={{
+              left: (measureRect.x0 + measureRect.x1) / 2,
+              top: (measureRect.y0 + measureRect.y1) / 2,
+            }}
+          >
+            {measureRect.label}
+          </div>
+        </div>
       )}
     </div>
   );

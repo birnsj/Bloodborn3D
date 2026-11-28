@@ -4,6 +4,7 @@
  */
 
 import { TEXTURE_TILE_EDITOR_UNITS, normalizeActorUv } from '../runtime/uvMapping.js';
+import { semanticFaceKeyFromSurfaceId } from '../runtime/surfaces.js';
 
 /** Common absolute surface UV scale presets. */
 export const BASIC_SURFACE_UV_SCALES = Object.freeze([
@@ -21,7 +22,7 @@ export function brushFaceSizeEditorUnits(size, surfaceId) {
   const sy = Number(size?.y);
   const sz = Number(size?.z);
   if (![sx, sy, sz].every((n) => Number.isFinite(n) && n > 0)) return null;
-  switch (surfaceId) {
+  switch (semanticFaceKeyFromSurfaceId(surfaceId) || surfaceId) {
     case 'px':
     case 'nx':
       return { u: sz, v: sy };
