@@ -9,6 +9,7 @@ import { PlaceholderWorkspace } from './PlaceholderWorkspace.jsx';
 import { LevelDockWorkspace } from './LevelDockWorkspace.jsx';
 import { MaterialsWorkspace } from '../materials/MaterialsWorkspace.jsx';
 import { AiAssetsWorkspace } from '../aiAssets/AiAssetsWorkspace.jsx';
+import { CharactersWorkspace } from '../characters/CharactersWorkspace.jsx';
 import { HoverHelpLayer } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { TutorialCoachMark } from '../../tutorials/TutorialCoachMark.jsx';
 import { AcademyTourBanner } from '../../tutorials/AcademyTourBanner.jsx';
@@ -19,6 +20,7 @@ export function EditorShell() {
   const isLevel = layout.workspace === 'level';
   const isMaterials = layout.workspace === 'materials';
   const isAiAssets = layout.workspace === 'ai';
+  const isCharacters = layout.workspace === 'characters';
   const scale = viewScaleFactor(layout.uiScale);
 
   useEffect(() => {
@@ -73,6 +75,8 @@ export function EditorShell() {
           <MaterialsWorkspace />
         ) : isAiAssets ? (
           <AiAssetsWorkspace />
+        ) : isCharacters ? (
+          <CharactersWorkspace />
         ) : (
           <PlaceholderWorkspace workspaceId={layout.workspace} />
         )}

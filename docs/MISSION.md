@@ -24,7 +24,7 @@ New work starts from a workspace goal below and needs designer approval before i
 | 1 | Level Editor | Final manual acceptance and targeted performance fixes | Foundation done (C1–C6); manual acceptance + perf fixes remain |
 | 2 | Procedural Map Generation (Phase 2G) | Rule-based level generation | Not started; `generatorIntegration.js` ready |
 | 3 | World Map | Locations, connections and transitions | Placeholder |
-| 4 | Characters | Character definitions, models, skeletons and rigging | Placeholder |
+| 4 | Characters | Character definitions, models, skeletons and rigging | v0 library + bind-pose (Meshy Auto-rig); no Play runtime yet |
 | 5 | Animation | Animation library, preview, retargeting and state machines | Placeholder |
 | 6 | Materials | PBR extraction and remaining material capabilities | Substantial; extraction/remaining items open |
 | 7 | Visual Scripting | Gameplay logic, events, triggers and interactions | Placeholder |

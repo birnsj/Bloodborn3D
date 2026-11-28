@@ -10,6 +10,7 @@ import { projectArtApiPlugin } from './vite-plugins/projectArtApi.js';
 import { googleDriveApiPlugin } from './vite-plugins/googleDriveApi.js';
 import { stickyNotesApiPlugin } from './vite-plugins/stickyNotesApi.js';
 import { checklistsApiPlugin } from './vite-plugins/checklistsApi.js';
+import { charactersApiPlugin } from './vite-plugins/charactersApi.js';
 
 export default defineConfig({
   plugins: [
@@ -23,6 +24,7 @@ export default defineConfig({
     googleDriveApiPlugin(),
     stickyNotesApiPlugin(),
     checklistsApiPlugin(),
+    charactersApiPlugin(),
   ],
   build: {
     // Two pages: the editor (index.html) and the standalone player (player.html).

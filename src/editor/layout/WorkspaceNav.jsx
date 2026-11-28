@@ -3,12 +3,13 @@ import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useLayout } from './LayoutContext.jsx';
 
 /** Workspaces with real editor UI today (others are shell placeholders). */
-const LIVE_WORKSPACES = new Set(['level', 'materials', 'ai']);
+const LIVE_WORKSPACES = new Set(['level', 'materials', 'ai', 'characters']);
 
 function workspaceHelpId(id) {
   if (id === 'level') return 'workspace.level';
   if (id === 'materials') return 'workspace.materials';
   if (id === 'ai') return 'workspace.ai';
+  if (id === 'characters') return 'workspace.characters';
   return 'workspace.placeholder';
 }
 

@@ -6,10 +6,15 @@ import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useLayout } from '../layout/LayoutContext.jsx';
 import {
   getMeshyUiState,
+  meshyAutoRig,
   meshyDiscardResult,
   meshyImportModel,
+  meshyLocalRigCredits,
+  meshySetRigHeight,
+  meshySummarizeRigSettings,
   subscribeMeshyUi,
 } from './meshyUiStore.js';
+import { MESHY_RIG_DEFAULT_HEIGHT_METERS } from '../../dev/meshy/meshyRigging.js';
 import { MeshyModelPreview } from './MeshyModelPreview.jsx';
 import {
   fetchMeshyTextureMaps,
@@ -20,6 +25,7 @@ import {
 } from '../../io/meshyClient.js';
 import { MESHY_MAP_SLOTS } from '../../dev/meshy/meshyPbrMapTypes.js';
 import { MeshyStagingBrowser } from './MeshyStagingBrowser.jsx';
+import { TextureMapInspectDialog } from '../../ui/TextureMapInspectDialog.jsx';
 
 /**
  * Meshy results / preview / import (right column).
@@ -29,15 +35,18 @@ export function MeshyResults() {
   const [maps, setMaps] = useState([]);
   const [mapsBusy, setMapsBusy] = useState(false);
   const [mapsNote, setMapsNote] = useState('');
+  const [inspectMap, setInspectMap] = useState(null);
   const { notify, setStatus, selectAsset, refreshRegistry } = useAssetBrowser();
-  const { prompt } = useEditorDialogs();
+  const { prompt, confirm } = useEditorDialogs();
   const { openFromEvent } = useEditorContextMenu();
-  const { patch } = useLayout();
+  const { patch, setWorkspace } = useLayout();
 
   useEffect(() => subscribeMeshyUi(setUi), []);
 
   const job = ui.job;
   const hasModel = Boolean(job?.modelUrl) && job?.phase === 'succeeded';
+  const canAutoRig = hasModel && job?.resource !== 'rigging' && Boolean(job?.taskId);
+  const isRigged = hasModel && job?.resource === 'rigging';
   const phaseLabel = describePhase(ui);
 
   const refreshMaps = useCallback(async () => {
@@ -63,8 +72,8 @@ export function MeshyResults() {
   const onImport = useCallback(async () => {
     try {
       const name = await prompt('Asset name', {
-        title: 'Import Meshy Model',
-        initialValue: ui.reference?.title || 'Meshy Model',
+        title: isRigged ? 'Import Rigged Character' : 'Import Meshy Model',
+        initialValue: ui.reference?.title || (isRigged ? 'Rigged Character' : 'Meshy Model'),
       });
       if (!name) return;
       setStatus('Importing Meshy GLB + texture maps into Content Browser…');
@@ -90,10 +99,58 @@ export function MeshyResults() {
           { dialog: false },
         );
       }
+      return result;
+    } catch (err) {
+      notify(err.message || String(err), { dialog: true });
+      return null;
+    }
+  }, [ui.reference, prompt, setStatus, refreshRegistry, selectAsset, patch, notify, isRigged]);
+
+  const onAutoRig = useCallback(async () => {
+    try {
+      const credits = meshyLocalRigCredits();
+      const summary = meshySummarizeRigSettings();
+      const ok = await confirm(
+        `Spend approximately ${credits} Meshy credits on Auto-rig?\n\n`
+        + `${summary}\n`
+        + '\nRequires a humanoid mesh with clear limbs. This will not auto-retry if it fails.',
+        {
+          title: 'Approve Meshy Auto-rig',
+          confirmLabel: 'Auto-rig',
+          tone: 'warning',
+        },
+      );
+      if (!ok) return;
+      setStatus('Submitting Meshy Auto-rig…');
+      await meshyAutoRig({ confirmSpend: true });
+      setStatus('Meshy Auto-rig finished');
     } catch (err) {
       notify(err.message || String(err), { dialog: true });
     }
-  }, [ui.reference, prompt, setStatus, refreshRegistry, selectAsset, patch, notify]);
+  }, [confirm, notify, setStatus]);
+
+  const onCreateCharacter = useCallback(async () => {
+    try {
+      let assetId = job?.importedAssetId || ui.imported?.id;
+      if (!assetId) {
+        const result = await onImport();
+        assetId = result?.asset?.id;
+      }
+      if (!assetId) return;
+      const { createCharacterFromMesh } = await import('../characters/characterActions.js');
+      const character = await createCharacterFromMesh({
+        meshAssetId: assetId,
+        name: ui.reference?.title || ui.imported?.name || 'Character',
+        heightMeters: job?.settings?.height_meters || ui.rigHeightMeters,
+        meshyRigTaskId: job?.resource === 'rigging' ? job.taskId : null,
+      });
+      await setWorkspace?.('characters');
+      setStatus(`Created character “${character.name}”`);
+      notify?.(`Created character “${character.name}”`, { dialog: false });
+    } catch (err) {
+      notify(err.message || String(err), { dialog: true });
+    }
+  }, [job, ui.imported, ui.reference, ui.rigHeightMeters, onImport, setWorkspace, setStatus, notify]);
 
   const onImportMapsOnly = useCallback(async () => {
     if (!job?.jobId && !job?.taskId) return;
@@ -223,6 +280,43 @@ export function MeshyResults() {
         >
           Import Model
         </button>
+        {canAutoRig && (
+          <>
+            <label className="bb-field bb-meshy-results__rig-height" {...helpProps('meshy.autoRig.height')}>
+              <span className="bb-field-caption">Height (m)</span>
+              <input
+                className="bb-input"
+                type="number"
+                min={0.1}
+                max={10}
+                step={0.05}
+                disabled={ui.busy}
+                value={ui.rigHeightMeters ?? MESHY_RIG_DEFAULT_HEIGHT_METERS}
+                onChange={(e) => meshySetRigHeight(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="bb-btn"
+              disabled={ui.busy}
+              onClick={() => { void onAutoRig(); }}
+              {...helpProps('meshy.autoRig')}
+            >
+              Auto-rig…
+            </button>
+          </>
+        )}
+        {isRigged && (
+          <button
+            type="button"
+            className="bb-btn"
+            disabled={ui.busy}
+            onClick={() => { void onCreateCharacter(); }}
+            {...helpProps('meshy.createCharacter')}
+          >
+            Create Character
+          </button>
+        )}
         <button
           type="button"
           className="bb-btn bb-btn--ghost"
@@ -234,7 +328,7 @@ export function MeshyResults() {
         </button>
         {job?.taskId && (
           <span className="bb-muted" title="Meshy task ID">
-            Task
+            {job.resource === 'rigging' ? 'Rig' : 'Task'}
             {' '}
             {job.taskId.slice(0, 8)}
             …
@@ -311,47 +405,87 @@ export function MeshyResults() {
                 : 'Not returned for this task';
               return (
                 <li key={slot.id} className="bb-meshy-results__map-item" title={meta}>
-                  <div className="bb-meshy-results__map-thumb">
+                  <button
+                    type="button"
+                    className="bb-meshy-results__map-thumb"
+                    disabled={!preview}
+                    title={preview ? 'Click to inspect full map' : undefined}
+                    onClick={() => {
+                      if (!preview) return;
+                      setInspectMap({
+                        url: preview,
+                        title: slot.label,
+                        subtitle: meta,
+                      });
+                    }}
+                    {...helpProps('meshy.pbrMaps')}
+                  >
                     {preview ? (
                       <img src={preview} alt={slot.label} />
                     ) : (
                       <span className="bb-muted">{found ? 'Ready' : '—'}</span>
                     )}
-                  </div>
+                  </button>
                   <strong>{slot.label}</strong>
                   <div className="bb-muted">{meta}</div>
-                  <button
-                    type="button"
-                    className="bb-btn bb-btn--ghost"
-                    disabled={!found?.localPath || mapsBusy}
-                    onClick={async () => {
-                      try {
-                        setMapsBusy(true);
-                        const result = await importMeshyTextureMap({
-                          jobId: job.jobId,
-                          taskId: job.taskId,
-                          mapId: slot.id,
-                          assetBaseName: ui.reference?.title || 'Meshy',
+                  <div className="bb-meshy-results__map-item-actions">
+                    <button
+                      type="button"
+                      className="bb-btn bb-btn--ghost"
+                      disabled={!preview}
+                      onClick={() => {
+                        if (!preview) return;
+                        setInspectMap({
+                          url: preview,
+                          title: slot.label,
+                          subtitle: meta,
                         });
-                        await refreshRegistry?.();
-                        if (result?.asset?.id) selectAsset?.(result.asset.id);
-                        notify(`Imported ${slot.label} → ${result?.asset?.name || result?.asset?.id}`);
-                        setStatus(`Imported texture ${result?.asset?.id || ''}`);
-                      } catch (err) {
-                        notify(err.message || String(err));
-                      } finally {
-                        setMapsBusy(false);
-                      }
-                    }}
-                  >
-                    Import
-                  </button>
+                      }}
+                    >
+                      Inspect
+                    </button>
+                    <button
+                      type="button"
+                      className="bb-btn bb-btn--ghost"
+                      disabled={!found?.localPath || mapsBusy}
+                      onClick={async () => {
+                        try {
+                          setMapsBusy(true);
+                          const result = await importMeshyTextureMap({
+                            jobId: job.jobId,
+                            taskId: job.taskId,
+                            mapId: slot.id,
+                            assetBaseName: ui.reference?.title || 'Meshy',
+                          });
+                          await refreshRegistry?.();
+                          if (result?.asset?.id) selectAsset?.(result.asset.id);
+                          notify(`Imported ${slot.label} → ${result?.asset?.name || result?.asset?.id}`);
+                          setStatus(`Imported texture ${result?.asset?.id || ''}`);
+                        } catch (err) {
+                          notify(err.message || String(err));
+                        } finally {
+                          setMapsBusy(false);
+                        }
+                      }}
+                    >
+                      Import
+                    </button>
+                  </div>
                 </li>
               );
             })}
           </ul>
         </details>
       )}
+
+      <TextureMapInspectDialog
+        key={inspectMap?.url || 'closed'}
+        open={Boolean(inspectMap)}
+        url={inspectMap?.url || null}
+        title={inspectMap?.title || 'Texture map'}
+        subtitle={inspectMap?.subtitle || null}
+        onClose={() => setInspectMap(null)}
+      />
 
       <MeshyStagingBrowser notify={notify} />
 

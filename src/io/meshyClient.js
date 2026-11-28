@@ -81,6 +81,28 @@ export function approveMeshyGeneration({ estimateId, confirmSpend = false } = {}
   });
 }
 
+export function estimateMeshyRigCredits(settings) {
+  return meshyFetch('estimate-rig-credits', { method: 'POST', body: { settings } });
+}
+
+export function validateMeshyRigSettings(settings) {
+  return meshyFetch('validate-rig', { method: 'POST', body: { settings } });
+}
+
+export function createMeshyRigEstimate({ settings } = {}) {
+  return meshyFetch('estimate-rig', {
+    method: 'POST',
+    body: { settings },
+  });
+}
+
+export function approveMeshyRigging({ estimateId, confirmSpend = false } = {}) {
+  return meshyFetch('generate-rig', {
+    method: 'POST',
+    body: { estimateId, confirmSpend },
+  });
+}
+
 export function fetchMeshyJob(jobId) {
   return meshyFetch('job', { query: { jobId } });
 }

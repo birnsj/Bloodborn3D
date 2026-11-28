@@ -16,6 +16,7 @@ import {
   MODEL_TYPES,
   validateImageTo3dSettings,
 } from './meshyModels.js';
+import { buildRiggingCreateArgv, validateRiggingSettings } from './meshyRigging.js';
 
 const WINDOWS = process.platform === 'win32';
 const MIN_NODE = { major: 22, minor: 12 };
@@ -531,6 +532,40 @@ export async function downloadImageTo3dTask(taskId, outputDir, {
   if (allAssets) argv.push('--all-assets');
   return runMeshy(argv, { timeoutMs: 180_000, ...opts });
 }
+
+/**
+ * Submit Rigging asynchronously. Caller must have spend approval.
+ */
+export async function submitRiggingAsync(params, opts = {}) {
+  const argv = buildRiggingCreateArgv({
+    settings: params.settings || params,
+    async: true,
+    operationId: params.operationId || null,
+  });
+  return runMeshy(argv, { timeoutMs: 90_000, ...opts });
+}
+
+export async function getRiggingTask(taskId, opts = {}) {
+  assertTaskId(taskId);
+  return runMeshy(['rigging', 'get', taskId], { timeoutMs: 30_000, allowNonZero: true, ...opts });
+}
+
+export async function downloadRiggingTask(taskId, outputDir, {
+  allAssets = false,
+  ...opts
+} = {}) {
+  assertTaskId(taskId);
+  if (typeof outputDir !== 'string' || !path.isAbsolute(outputDir)) {
+    throw new MeshyCliError('INVALID_OUTPUT', 'Download output directory must be an absolute path');
+  }
+  await fs.mkdir(outputDir, { recursive: true });
+  const argv = ['rigging', 'get', taskId, '-o', outputDir];
+  if (allAssets) argv.push('--all-assets');
+  return runMeshy(argv, { timeoutMs: 180_000, ...opts });
+}
+
+/** Re-export for session/plugin callers that already import from meshyCli. */
+export { buildRiggingCreateArgv, validateRiggingSettings };
 
 /**
  * Build `meshy image-to-3d create` argv from validated settings.

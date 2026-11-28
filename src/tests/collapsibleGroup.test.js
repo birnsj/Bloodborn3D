@@ -2,7 +2,11 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { createElement, act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Collapsible, CollapsibleGroup } from '../ui/Collapsible.jsx';
+import {
+  Collapsible,
+  CollapsibleGroup,
+  CollapsibleGroupToolbar,
+} from '../ui/Collapsible.jsx';
 
 describe('CollapsibleGroup', () => {
   let container;
@@ -39,7 +43,7 @@ describe('CollapsibleGroup', () => {
     expect(container.textContent).toContain('body-b');
 
     const collapseBtn = [...container.querySelectorAll('button')]
-      .find((b) => b.textContent === 'Collapse all');
+      .find((b) => b.textContent === 'Collapse All');
     act(() => {
       collapseBtn.click();
     });
@@ -50,7 +54,7 @@ describe('CollapsibleGroup', () => {
     expect(localStorage.getItem('bloodbound.ui.collapse.test.b')).toBe('0');
 
     const expandBtn = [...container.querySelectorAll('button')]
-      .find((b) => b.textContent === 'Expand all');
+      .find((b) => b.textContent === 'Expand All');
     act(() => {
       expandBtn.click();
     });
@@ -73,11 +77,33 @@ describe('CollapsibleGroup', () => {
     });
 
     const collapseBtn = [...container.querySelectorAll('button')]
-      .find((b) => b.textContent === 'Collapse all');
+      .find((b) => b.textContent === 'Collapse All');
     act(() => {
       collapseBtn.click();
     });
 
     expect(localStorage.getItem('bloodbound.ui.collapse.test.nested.child')).toBe('0');
+  });
+
+  it('supports a header toolbar without inline controls', () => {
+    act(() => {
+      root.render(
+        createElement(
+          CollapsibleGroup,
+          { showControls: false, storagePrefixes: ['test.'] },
+          createElement(CollapsibleGroupToolbar),
+          createElement(Collapsible, { title: 'A', storageKey: 'test.a', defaultOpen: true }, 'body-a'),
+        ),
+      );
+    });
+
+    expect(container.textContent).toContain('body-a');
+    const collapseBtn = [...container.querySelectorAll('button')]
+      .find((b) => b.textContent === 'Collapse All');
+    expect(collapseBtn).toBeTruthy();
+    act(() => {
+      collapseBtn.click();
+    });
+    expect(container.textContent).not.toContain('body-a');
   });
 });

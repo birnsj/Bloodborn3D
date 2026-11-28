@@ -10,8 +10,44 @@ import {
 import { IconCollapse, IconExpand } from './icons.jsx';
 
 const CollapseGroupContext = createContext(null);
+const CollapseGroupActionsContext = createContext(null);
 
 const STORAGE_PREFIX = 'bloodbound.ui.collapse.';
+
+/** Collapse All / Expand All for the nearest CollapsibleGroup. */
+export function useCollapseGroupActions() {
+  return useContext(CollapseGroupActionsContext);
+}
+
+/** Header-friendly Collapse All / Expand All buttons. */
+export function CollapsibleGroupToolbar({
+  className = 'bb-collapse-group__actions',
+  collapseHelpProps = null,
+  expandHelpProps = null,
+} = {}) {
+  const api = useCollapseGroupActions();
+  if (!api) return null;
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        className="bb-btn bb-btn--ghost"
+        onClick={api.collapseAll}
+        {...(collapseHelpProps || {})}
+      >
+        Collapse All
+      </button>
+      <button
+        type="button"
+        className="bb-btn bb-btn--ghost"
+        onClick={api.expandAll}
+        {...(expandHelpProps || {})}
+      >
+        Expand All
+      </button>
+    </div>
+  );
+}
 
 function storageKeyFor(key) {
   return `${STORAGE_PREFIX}${key}`;
@@ -89,28 +125,15 @@ export function CollapsibleGroup({
   const collapseAll = useCallback(() => setAll(false), [setAll]);
   const expandAll = useCallback(() => setAll(true), [setAll]);
 
+  const actions = { collapseAll, expandAll, setAll };
+
   return (
-    <CollapseGroupContext.Provider value={{ register, epoch }}>
-      {showControls ? (
-        <div className="bb-collapse-group__actions">
-          <button
-            type="button"
-            className="bb-btn bb-btn--ghost"
-            onClick={collapseAll}
-          >
-            Collapse all
-          </button>
-          <button
-            type="button"
-            className="bb-btn bb-btn--ghost"
-            onClick={expandAll}
-          >
-            Expand all
-          </button>
-        </div>
-      ) : null}
-      {children}
-    </CollapseGroupContext.Provider>
+    <CollapseGroupActionsContext.Provider value={actions}>
+      <CollapseGroupContext.Provider value={{ register, epoch }}>
+        {showControls ? <CollapsibleGroupToolbar /> : null}
+        {children}
+      </CollapseGroupContext.Provider>
+    </CollapseGroupActionsContext.Provider>
   );
 }
 

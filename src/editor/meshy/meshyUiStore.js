@@ -3,7 +3,9 @@
  */
 import {
   approveMeshyGeneration,
+  approveMeshyRigging,
   createMeshyEstimate,
+  createMeshyRigEstimate,
   discardMeshyJob,
   fetchMeshyCatalog,
   fetchMeshyStatus,
@@ -22,6 +24,11 @@ import {
   estimateImageTo3dCredits,
   presetForAssetCategory,
 } from '../../dev/meshy/meshyModels.js';
+import {
+  MESHY_RIG_DEFAULT_HEIGHT_METERS,
+  estimateRiggingCredits,
+  summarizeRiggingSettings,
+} from '../../dev/meshy/meshyRigging.js';
 
 const LISTENERS = new Set();
 
@@ -41,6 +48,10 @@ let state = {
   errorCode: null,
   localCreditEstimate: null,
   loginDevice: null, // { userCode, verificationUrl, flowId } while device sign-in is pending
+  /** Auto-rig (separate from Image-to-3D job). */
+  rigHeightMeters: MESHY_RIG_DEFAULT_HEIGHT_METERS,
+  rigEstimate: null,
+  rigJob: null,
 };
 
 function emit() {
@@ -79,8 +90,35 @@ export function __testResetMeshyUi() {
     errorCode: null,
     localCreditEstimate: null,
     loginDevice: null,
+    rigHeightMeters: MESHY_RIG_DEFAULT_HEIGHT_METERS,
+    rigEstimate: null,
+    rigJob: null,
   };
   emit();
+}
+
+export function meshySetRigHeight(meters) {
+  const n = Number(meters);
+  setState({
+    rigHeightMeters: Number.isFinite(n) && n > 0 ? n : MESHY_RIG_DEFAULT_HEIGHT_METERS,
+    rigEstimate: null,
+  });
+}
+
+function rigSourceSettings() {
+  const sourceJob = state.job;
+  const settings = {
+    height_meters: state.rigHeightMeters || MESHY_RIG_DEFAULT_HEIGHT_METERS,
+    animation_type: 'biped',
+  };
+  if (sourceJob?.taskId && sourceJob.resource !== 'rigging') {
+    settings.input_task_id = sourceJob.taskId;
+  } else if (sourceJob?.stagingGlbPath || sourceJob?.modelUrl) {
+    // Prefer task id; fallback uses absolute path resolved on server from staging relative.
+    const rel = sourceJob.stagingGlbPath;
+    if (rel) settings.model_url = rel;
+  }
+  return settings;
 }
 
 function refreshLocalEstimate(formValues = state.formValues) {
@@ -455,15 +493,134 @@ export async function meshyDiscardResult() {
       // ignore
     }
   }
+  if (state.rigJob?.jobId && state.rigJob.jobId !== state.job?.jobId) {
+    try {
+      await discardMeshyJob(state.rigJob.jobId);
+    } catch {
+      // ignore
+    }
+  }
   setState({
     job: null,
     estimate: null,
     imported: null,
+    rigEstimate: null,
+    rigJob: null,
     phase: state.status?.ok ? 'ready' : 'idle',
     busy: false,
     error: null,
     errorCode: null,
   });
+}
+
+/**
+ * Paid Auto-rig from the current succeeded Image-to-3D job.
+ * Requires confirmSpend === true after UI approval.
+ * Keeps the Image-to-3D job until the rig succeeds, then swaps preview/import to the rigged GLB.
+ */
+export async function meshyAutoRig({ confirmSpend = false } = {}) {
+  if (confirmSpend !== true) {
+    const err = new Error('Paid Meshy Auto-rig requires explicit spend approval');
+    err.code = 'APPROVAL_REQUIRED';
+    throw err;
+  }
+  const imageJob = state.job;
+  const settings = rigSourceSettings();
+  const localQuote = estimateRiggingCredits(settings);
+  if (!localQuote.ok) {
+    const err = new Error(localQuote.error || 'Invalid Auto-rig settings');
+    err.code = localQuote.code || 'INVALID_MODEL';
+    throw err;
+  }
+
+  setState({ busy: true, error: null, errorCode: null, phase: 'estimating' });
+  try {
+    const estimate = await createMeshyRigEstimate({ settings });
+    setState({
+      rigEstimate: estimate,
+      phase: 'submitting',
+    });
+    const submitted = await approveMeshyRigging({
+      estimateId: estimate.estimateId,
+      confirmSpend: true,
+    });
+    setState({
+      busy: true,
+      phase: 'running',
+      rigEstimate: null,
+      rigJob: {
+        jobId: submitted.jobId,
+        taskId: submitted.taskId,
+        resource: 'rigging',
+        phase: 'pending',
+        status: 'PENDING',
+        progress: 0,
+        settings: submitted.settings,
+        creditsEstimated: submitted.credits,
+      },
+    });
+
+    const started = Date.now();
+    const maxMs = 60 * 60 * 1000;
+    let delay = 5000;
+    let job = null;
+    while (Date.now() - started < maxMs) {
+      const result = await pollMeshyJob(submitted.jobId);
+      job = result.job;
+      setState({
+        rigJob: job,
+        job: imageJob,
+        phase: job.phase === 'succeeded'
+          ? 'succeeded'
+          : job.phase === 'failed'
+            ? 'failed'
+            : 'running',
+        busy: job.phase !== 'succeeded' && job.phase !== 'failed',
+        error: job.error || null,
+        errorCode: job.code || null,
+      });
+      if (job.phase === 'succeeded' || job.phase === 'failed' || job.phase === 'discarded') {
+        break;
+      }
+      delay = Math.max(2000, Number(result.retryAfterSec) * 1000 || delay);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+    if (!job || (job.phase !== 'succeeded' && job.phase !== 'failed')) {
+      const err = new Error('Timed out waiting for Meshy Auto-rig — recover the task later with the task ID');
+      err.code = 'POLL_TIMEOUT';
+      setState({ busy: false, phase: 'failed', error: err.message, errorCode: err.code, job: imageJob });
+      throw err;
+    }
+    if (job.phase === 'succeeded') {
+      // Swap active result to rigged mesh for preview/import.
+      setState({
+        job,
+        rigJob: job,
+        phase: 'succeeded',
+        busy: false,
+        imported: null,
+      });
+    }
+    return job;
+  } catch (err) {
+    setState({
+      busy: false,
+      phase: 'failed',
+      error: err.message,
+      errorCode: err.code || 'RIG_FAILED',
+      job: imageJob || state.job,
+    });
+    throw err;
+  }
+}
+
+export function meshySummarizeRigSettings(settings = rigSourceSettings()) {
+  return summarizeRiggingSettings(settings);
+}
+
+export function meshyLocalRigCredits(settings = rigSourceSettings()) {
+  const quote = estimateRiggingCredits(settings);
+  return quote.ok ? quote.credits : null;
 }
 
 if (typeof window !== 'undefined') {
@@ -472,5 +629,6 @@ if (typeof window !== 'undefined') {
     connect: meshyConnect,
     estimate: meshyEstimate,
     generate: meshyGenerate,
+    autoRig: meshyAutoRig,
   };
 }

@@ -31,8 +31,8 @@
 
 ## Explicit non-goals (this pass)
 
-- Text-to-3D / multi-image / retexture / standalone remesh / UV / rig / animate / text-to-motion editor UIs
-- Animation or character runtime systems
+- Text-to-3D / multi-image / retexture / standalone remesh / UV / animate / text-to-motion editor UIs
+- Animation runtime / level Character actors (Characters v0 is library + bind-pose only; see `ACCEPTANCE_MESHY_RIGGING.md`)
 - Spending credits without user confirmation
 
 ## Verification commands

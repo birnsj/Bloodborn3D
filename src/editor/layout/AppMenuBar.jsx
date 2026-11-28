@@ -4,6 +4,7 @@ import { EditorSettingsDialog } from '../EditorSettingsDialog.jsx';
 import { useLayout } from './LayoutContext.jsx';
 import { useHoverHelp } from '../../ui/hoverHelp/HoverHelpContext.jsx';
 import { KeyboardShortcutsDialog } from '../../ui/hoverHelp/KeyboardShortcutsDialog.jsx';
+import { EncyclopediaDialog } from '../../ui/hoverHelp/EncyclopediaDialog.jsx';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import { useEditorDialogs } from '../../ui/dialogs/EditorDialogContext.jsx';
 import { useTutorials } from '../../tutorials/TutorialProvider.jsx';
@@ -154,6 +155,8 @@ export function AppMenuBar() {
   } = useTutorials();
   const { alert, confirm, prompt } = useEditorDialogs();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
+  const [encyclopediaSession, setEncyclopediaSession] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isPlay = mode === 'play';
@@ -342,6 +345,12 @@ export function AppMenuBar() {
               close={close}
               onClick={() => setWorkspace('ai')}
               helpId="workspace.ai"
+            />
+            <Item
+              label="Open Characters"
+              close={close}
+              onClick={() => setWorkspace('characters')}
+              helpId="workspace.characters"
             />
             <Sep />
             <Item
@@ -550,6 +559,15 @@ export function AppMenuBar() {
               onClick={() => setShortcutsOpen(true)}
               helpId="help.shortcuts"
             />
+            <Item
+              label="Encyclopedia…"
+              close={close}
+              onClick={() => {
+                setEncyclopediaSession((n) => n + 1);
+                setEncyclopediaOpen(true);
+              }}
+              helpId="help.encyclopedia"
+            />
             <Sep />
             <Item
               label="Academy…"
@@ -584,6 +602,11 @@ export function AppMenuBar() {
       <KeyboardShortcutsDialog
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+      />
+      <EncyclopediaDialog
+        key={encyclopediaSession}
+        open={encyclopediaOpen}
+        onClose={() => setEncyclopediaOpen(false)}
       />
       <EditorSettingsDialog
         open={settingsOpen}

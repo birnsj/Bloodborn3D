@@ -9,6 +9,7 @@ import { MeshPreviewCanvas, MaterialPreviewCanvas } from '../assets/MeshPreviewC
 import { MeshAssetTools } from '../assets/MeshAssetTools.jsx';
 import { TextureInspector } from '../assets/TextureInspector.jsx';
 import { TexturePreviewCanvas } from '../assets/TexturePreviewCanvas.jsx';
+import { TextureMapInspectDialog } from '../../ui/TextureMapInspectDialog.jsx';
 import { isCompressedTextureMeta, isCompressedTexturePath } from '../../assets/textureSampling.js';
 import { loadGltfScene } from '../../runtime/meshLoader.js';
 import { uploadMaterialPreview, uploadMeshPreview } from '../../io/assetFileApi.js';
@@ -426,6 +427,7 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
   const [previewScale, setPreviewScale] = useState(1);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [textureDraft, setTextureDraft] = useState(null);
+  const [inspectFullMap, setInspectFullMap] = useState(false);
   const previewApiRef = useRef(null);
   const isTexture = asset?.type === 'texture';
   const isMaterial = asset?.type === 'material';
@@ -674,9 +676,32 @@ function AssetPreviewDialog({ asset, onClose, importDerivedMeshGlb, updateMeshMe
         </div>
         <div className="bb-dialog__body bb-asset-preview-dialog">
           {previewStage}
+          {isTexture && asset?.url ? (
+            <div className="bb-asset-preview__inspect-row">
+              <button
+                type="button"
+                className="bb-btn"
+                onClick={() => setInspectFullMap(true)}
+                {...helpProps('meshy.pbrMaps')}
+              >
+                Inspect full map
+              </button>
+              <span className="bb-muted">Pan/zoom UV atlases in a larger viewer</span>
+            </div>
+          ) : null}
           {previewMeta}
         </div>
       </div>
+      {isTexture ? (
+        <TextureMapInspectDialog
+          key={inspectFullMap ? asset?.url || 'open' : 'closed'}
+          open={inspectFullMap}
+          url={asset?.url || null}
+          title={asset?.name || 'Texture'}
+          subtitle={asset?.folder || null}
+          onClose={() => setInspectFullMap(false)}
+        />
+      ) : null}
     </div>,
     document.body,
   );

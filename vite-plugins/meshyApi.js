@@ -18,9 +18,11 @@ import {
 } from '../src/dev/meshy/meshyModels.js';
 import {
   approveAndGenerateMeshy,
+  approveAndRigMeshy,
   beginMeshyLogin,
   beginMeshyLogout,
   createMeshyEstimate,
+  createMeshyRigEstimate,
   getMeshyJob,
   getMeshyStatus,
   pollMeshyJob,
@@ -31,6 +33,11 @@ import {
   resolveMeshyMapFile,
   saveReferenceImageToStaging,
 } from '../src/dev/meshy/meshySession.js';
+import {
+  estimateRiggingCredits,
+  summarizeRiggingSettings,
+  validateRiggingSettings,
+} from '../src/dev/meshy/meshyRigging.js';
 import { listStagingMeshyMaps } from '../src/dev/meshy/meshyPbrMaps.js';
 import { listMeshyStagingDir } from '../src/dev/meshy/meshyStagingBrowse.js';
 import {
@@ -149,6 +156,48 @@ export function meshyApiPlugin() {
               projectRoot: PROJECT_ROOT,
               stagingRoot: STAGING_ROOT,
             }));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'validate-rig') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, validateRiggingSettings(body?.settings || body || {}));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'estimate-rig-credits') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, estimateRiggingCredits(body?.settings || body || {}));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'estimate-rig') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await createMeshyRigEstimate({
+              settings: body.settings || {},
+              projectRoot: PROJECT_ROOT,
+              stagingRoot: STAGING_ROOT,
+            }));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'generate-rig') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, await approveAndRigMeshy({
+              estimateId: body.estimateId,
+              confirmSpend: body.confirmSpend === true,
+              projectRoot: PROJECT_ROOT,
+              stagingRoot: STAGING_ROOT,
+            }));
+            return;
+          }
+
+          if (req.method === 'POST' && action === 'summarize-rig') {
+            const body = JSON.parse(await readBody(req));
+            sendJson(res, 200, {
+              ok: true,
+              summary: summarizeRiggingSettings(body?.settings || body || {}),
+            });
             return;
           }
 
@@ -285,10 +334,13 @@ export function meshyApiPlugin() {
             const result = await importMeshBuffer(normalized.buffer, {
               name: assetName,
               originalName: `${assetName}.glb`,
-              tags: ['meshy', 'ai-generated'],
+              tags: job.resource === 'rigging'
+                ? ['meshy', 'ai-generated', 'rigged']
+                : ['meshy', 'ai-generated'],
               meta: {
                 meshyTaskId: job.taskId,
                 meshyJobId: job.jobId,
+                meshyResource: job.resource || 'image-to-3d',
                 meshySettings: job.settings,
                 meshyCliArgv: job.cliArgv || null,
                 provenance: job.provenance || null,
@@ -581,9 +633,13 @@ function mapErrorStatus(code) {
     case 'SPEND_RESERVED':
     case 'SPEND_AMBIGUOUS':
     case 'IMAGE_REQUIRED':
+    case 'SOURCE_REQUIRED':
     case 'BAD_REQUEST':
     case 'INVALID_MODEL':
     case 'INVALID_IMAGE':
+    case 'INVALID_HEIGHT':
+    case 'INVALID_ANIMATION_TYPE':
+    case 'INVALID_MODEL_URL':
       return 400;
     case 'JOB_NOT_FOUND':
     case 'NOT_FOUND':
@@ -599,6 +655,7 @@ function publicJob(job) {
     jobId: job.jobId,
     taskId: job.taskId,
     estimateId: job.estimateId,
+    resource: job.resource || 'image-to-3d',
     phase: job.phase,
     status: job.status,
     progress: job.progress,

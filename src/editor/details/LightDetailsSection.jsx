@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
-import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
+import { Collapsible } from '../../ui/Collapsible.jsx';
 import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
 import { helpProps } from '../../ui/hoverHelp/helpProps.js';
 import {
@@ -49,7 +49,6 @@ export function LightDetailsSection({
   return (
     <Collapsible title="Light" storageKey="details.light" defaultOpen>
       <div {...helpProps('details.light')}>
-        <CollapsibleGroup storagePrefixes={['details.light.']}>
           <label className="bb-field" {...helpProps('details.light.type')}>
             <span className="bb-field__label">Type</span>
             <select
@@ -423,7 +422,6 @@ export function LightDetailsSection({
               <span className="bb-field__label">Show native light helper</span>
             </label>
           </Collapsible>
-        </CollapsibleGroup>
       </div>
     </Collapsible>
   );

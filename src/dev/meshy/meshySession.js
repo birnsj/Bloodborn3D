@@ -15,9 +15,11 @@ import { randomUUID } from 'node:crypto';
 import {
   MeshyCliError,
   buildImageTo3dCreateArgv,
+  buildRiggingCreateArgv,
   defaultStagingRoot,
   detectMeshyCli,
   downloadImageTo3dTask,
+  downloadRiggingTask,
   dryRunImageTo3d,
   extractBalance,
   extractTaskId,
@@ -25,16 +27,19 @@ import {
   getImageTo3dTask,
   getMeshyAuthStatus,
   getMeshyBalance,
+  getRiggingTask,
   listImageTo3dTasks,
   logoutMeshy,
   startMeshyLogin,
   submitImageTo3dAsync,
+  submitRiggingAsync,
   validateGlbBuffer,
 } from './meshyCli.js';
 import {
   estimateImageTo3dCredits,
   validateImageTo3dSettings,
 } from './meshyModels.js';
+import { estimateRiggingCredits } from './meshyRigging.js';
 
 /** @type {Map<string, object>} */
 const estimates = new Map();
@@ -465,6 +470,7 @@ export async function approveAndGenerateMeshy({
     jobId,
     taskId: String(taskId),
     estimateId: record.estimateId,
+    resource: 'image-to-3d',
     phase: 'pending',
     status: 'PENDING',
     progress: 0,
@@ -497,6 +503,7 @@ export async function approveAndGenerateMeshy({
     credits: record.credits,
     settings: record.settings,
     cliArgv: record.cliArgv,
+    resource: 'image-to-3d',
   };
 }
 
@@ -521,7 +528,9 @@ export async function pollMeshyJob({
     throw new MeshyCliError(status.code || 'CLI_MISSING', status.error);
   }
 
-  const envelope = await getImageTo3dTask(job.taskId, { executable: status.cli.executable });
+  const envelope = job.resource === 'rigging'
+    ? await getRiggingTask(job.taskId, { executable: status.cli.executable })
+    : await getImageTo3dTask(job.taskId, { executable: status.cli.executable });
   // CLI ok means the get worked; task may still be FAILED.
   const taskInfo = extractTaskStatus(envelope);
   if (!taskInfo?.status) {
@@ -572,12 +581,17 @@ export async function pollMeshyJob({
 async function downloadJobGlb(job, staging, executable) {
   const outDir = path.join(staging, 'models', job.taskId);
   await fs.mkdir(outDir, { recursive: true });
-  // --all-assets pulls separate PBR maps when present (base/normal/metallic/roughness).
-  // Free for already-SUCCEEDED tasks — no generation spend.
-  await downloadImageTo3dTask(job.taskId, outDir, {
-    executable,
-    allAssets: Boolean(job.settings?.enable_pbr || job.settings?.should_texture !== false),
-  });
+  if (job.resource === 'rigging') {
+    // Rigged GLB only in v0 — bundled walk/run stay on Meshy until Animation workspace.
+    await downloadRiggingTask(job.taskId, outDir, { executable, allAssets: false });
+  } else {
+    // --all-assets pulls separate PBR maps when present (base/normal/metallic/roughness).
+    // Free for already-SUCCEEDED tasks — no generation spend.
+    await downloadImageTo3dTask(job.taskId, outDir, {
+      executable,
+      allAssets: Boolean(job.settings?.enable_pbr || job.settings?.should_texture !== false),
+    });
+  }
 
   const glbPath = await findDownloadedGlb(outDir);
   if (!glbPath) {
@@ -825,9 +839,228 @@ export async function saveReferenceImageToStaging({
   return { stagingId: id, relativePath: rel, absolutePath: abs, bytes: buffer.length };
 }
 
+/**
+ * Create a spend estimate for Meshy Auto-rig (humanoid biped).
+ * Binds exact CLI argv for later approve+submit.
+ */
+export async function createMeshyRigEstimate({
+  settings = {},
+  projectRoot,
+  stagingRoot = null,
+} = {}) {
+  const staging = stagingRoot || defaultStagingRoot(projectRoot);
+  const status = await getMeshyStatus(projectRoot);
+  if (!status.cli?.ok) {
+    throw new MeshyCliError(status.code || 'CLI_MISSING', status.error || 'Meshy CLI missing');
+  }
+  if (!status.authenticated) {
+    throw new MeshyCliError(status.code || 'AUTH_FAILED', status.error || 'Meshy not authenticated');
+  }
+
+  const quote = estimateRiggingCredits(settings);
+  if (!quote.ok) {
+    throw new MeshyCliError(quote.code || 'INVALID_MODEL', quote.error || 'Invalid rig settings');
+  }
+
+  // Resolve staged GLB to absolute path when using model_url fallback.
+  const resolved = { ...quote.settings };
+  if (!resolved.input_task_id && resolved.model_url) {
+    const abs = path.isAbsolute(resolved.model_url)
+      ? resolved.model_url
+      : path.join(staging, resolved.model_url);
+    try {
+      await fs.access(abs);
+    } catch {
+      throw new MeshyCliError('SOURCE_REQUIRED', `Staged GLB not found: ${abs}`);
+    }
+    resolved.model_url = abs;
+  }
+
+  const operationId = `op_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+  const cliArgv = buildRiggingCreateArgv({
+    settings: resolved,
+    async: true,
+    operationId,
+  });
+
+  const estimateId = `mrig_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+  const record = {
+    estimateId,
+    resource: 'rigging',
+    createdAt: Date.now(),
+    settings: resolved,
+    credits: quote.credits,
+    breakdown: quote.breakdown,
+    cliArgv,
+    operationId,
+    spent: false,
+    reserved: false,
+    ambiguous: false,
+    jobId: null,
+  };
+  estimates.set(estimateId, record);
+
+  return {
+    ok: true,
+    estimateId,
+    credits: quote.credits,
+    breakdown: quote.breakdown,
+    settings: resolved,
+    balance: status.balance,
+    cliArgv,
+    resource: 'rigging',
+  };
+}
+
+/**
+ * Approve a rig estimate and submit exactly one Rigging task.
+ * Requires confirmSpend === true. Never auto-retries.
+ */
+export async function approveAndRigMeshy({
+  estimateId,
+  confirmSpend = false,
+  projectRoot,
+  stagingRoot = null,
+  _submit = submitRiggingAsync,
+} = {}) {
+  if (confirmSpend !== true) {
+    throw new MeshyCliError('APPROVAL_REQUIRED', 'Paid Meshy Auto-rig requires confirmSpend: true');
+  }
+  const record = estimates.get(estimateId);
+  if (!record || record.resource !== 'rigging') {
+    throw new MeshyCliError('ESTIMATE_NOT_FOUND', 'Rig estimate not found or expired — re-estimate first');
+  }
+  if (record.ambiguous) {
+    throw new MeshyCliError(
+      'SPEND_AMBIGUOUS',
+      'A previous rig submit may have charged credits — recover the task instead of resubmitting',
+    );
+  }
+  if (record.spent || record.jobId) {
+    throw new MeshyCliError('ALREADY_SPENT', 'This rig estimate was already used for a paid submission');
+  }
+  if (record.reserved) {
+    throw new MeshyCliError('SPEND_RESERVED', 'A rig submission is already in progress for this estimate');
+  }
+
+  const staging = stagingRoot || defaultStagingRoot(projectRoot);
+  const status = await getMeshyStatus(projectRoot);
+  if (!status.cli?.ok) {
+    throw new MeshyCliError(status.code || 'CLI_MISSING', status.error);
+  }
+  if (!status.authenticated) {
+    throw new MeshyCliError(status.code || 'AUTH_FAILED', status.error);
+  }
+
+  const expectedArgv = buildRiggingCreateArgv({
+    settings: record.settings,
+    async: true,
+    operationId: record.operationId,
+  });
+  if (JSON.stringify(expectedArgv) !== JSON.stringify(record.cliArgv)) {
+    throw new MeshyCliError(
+      'ESTIMATE_MISMATCH',
+      'Rig settings changed since estimate — re-estimate before generating',
+    );
+  }
+
+  record.reserved = true;
+
+  let taskId = null;
+  let createEnvelope = null;
+  try {
+    createEnvelope = await _submit({
+      settings: record.settings,
+      operationId: record.operationId,
+    }, { executable: status.cli.executable });
+    taskId = extractTaskId(createEnvelope);
+    if (!taskId) {
+      throw new MeshyCliError(
+        'SPEND_AMBIGUOUS',
+        'Rig create returned no task id — reconcile with meshy rigging list before retrying',
+        { envelope: createEnvelope },
+      );
+    }
+  } catch (err) {
+    record.reserved = false;
+    if (err instanceof MeshyCliError && PREFLIGHT_FAILURE_CODES.has(err.code) && err.code !== 'SPEND_AMBIGUOUS') {
+      throw err;
+    }
+    record.ambiguous = true;
+    await writeJobSidecar(staging, {
+      jobId: `ambiguous_${record.estimateId}`,
+      estimateId: record.estimateId,
+      resource: 'rigging',
+      phase: 'ambiguous',
+      settings: record.settings,
+      credits: record.credits,
+      cliArgv: record.cliArgv,
+      operationId: record.operationId,
+      error: err.message,
+      code: err.code || 'SPEND_AMBIGUOUS',
+      updatedAt: Date.now(),
+    });
+    throw new MeshyCliError(
+      'SPEND_AMBIGUOUS',
+      `Rig submit failed after reservation — do not retry: ${err.message}. `
+      + 'Run meshy rigging list / recover before another paid submission.',
+      { exitCode: err.exitCode, envelope: err.envelope },
+    );
+  }
+
+  record.spent = true;
+  record.reserved = false;
+  const jobId = `mrg_${String(taskId).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24)}`;
+  record.jobId = jobId;
+
+  const job = {
+    jobId,
+    taskId: String(taskId),
+    estimateId: record.estimateId,
+    resource: 'rigging',
+    phase: 'pending',
+    status: 'PENDING',
+    progress: 0,
+    settings: record.settings,
+    creditsEstimated: record.credits,
+    creditsConsumed: null,
+    provenance: {
+      kind: 'meshy-rigging',
+      inputTaskId: record.settings.input_task_id || null,
+    },
+    imageStagingPath: null,
+    cliArgv: record.cliArgv,
+    operationId: record.operationId,
+    modelUrls: null,
+    textureUrls: null,
+    thumbnailUrl: null,
+    stagingGlbPath: null,
+    stagingThumbPath: null,
+    importedAssetId: null,
+    error: null,
+    code: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  jobs.set(jobId, job);
+  await writeJobSidecar(staging, job);
+
+  return {
+    ok: true,
+    jobId,
+    taskId: String(taskId),
+    estimateId: record.estimateId,
+    credits: record.credits,
+    settings: record.settings,
+    cliArgv: record.cliArgv,
+    resource: 'rigging',
+  };
+}
+
 export {
   validateImageTo3dSettings,
   estimateImageTo3dCredits,
+  estimateRiggingCredits,
   PREFLIGHT_FAILURE_CODES,
   validateGlbBuffer,
   defaultStagingRoot,

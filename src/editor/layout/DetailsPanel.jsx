@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useEditor } from '../EditorContext.jsx';
 import { useAssetBrowser } from '../assets/AssetBrowserContext.jsx';
-import { Collapsible, CollapsibleGroup } from '../../ui/Collapsible.jsx';
+import { Collapsible } from '../../ui/Collapsible.jsx';
 import { ScrubNumberInput } from '../../ui/ScrubNumberInput.jsx';
 import { FACE_KEYS } from '../../materials/MaterialDefinition.js';
 import { listByKind, ASSET_KINDS } from '../../assets/AssetRegistry.js';
@@ -22,6 +22,7 @@ import { LightDetailsSection } from '../details/LightDetailsSection.jsx';
 import { EnvironmentDetailsSection } from '../details/EnvironmentDetailsSection.jsx';
 import { PrimitiveMeshDetailsSection } from '../details/PrimitiveMeshDetailsSection.jsx';
 import { StaticMeshDetailsSection } from '../details/StaticMeshDetailsSection.jsx';
+import { DetailsPanelShell } from './DetailsPanelShell.jsx';
 
 export function DetailsPanel({ docked = false } = {}) {
   const {
@@ -114,33 +115,11 @@ export function DetailsPanel({ docked = false } = {}) {
     [registry],
   );
 
-  return (
-    <aside className={`bb-panel-chrome bb-details${docked ? ' bb-panel-chrome--docked' : ''}`}>
-      <div className="bb-panel-chrome__head">
-        <div className="bb-panel-chrome__tabs">
-          <button
-            type="button"
-            className={`bb-panel-chrome__tab${tab === 'details' ? ' is-active' : ''}`}
-            onClick={() => setTab('details')}
-          >
-            Details
-          </button>
-          <button
-            type="button"
-            className={`bb-panel-chrome__tab${tab === 'world' ? ' is-active' : ''}`}
-            onClick={() => setTab('world')}
-          >
-            World Settings
-          </button>
-        </div>
-      </div>
-
-      <div className="bb-panel-chrome__body">
-        {tab === 'world' ? (
-          <WorldSettings />
-        ) : !selectedActor ? (
-          <p className="bb-muted">Select an actor in the viewport or outliner.</p>
-        ) : (
+  const detailsBody = tab === 'world' ? (
+    <WorldSettings />
+  ) : !selectedActor ? (
+    <p className="bb-muted">Select an actor in the viewport or outliner.</p>
+  ) : (
           <>
             {selectedActorIds.length > 1 && (
               <p className="bb-muted">{selectedActorIds.length} selected · editing primary</p>
@@ -192,7 +171,6 @@ export function DetailsPanel({ docked = false } = {}) {
               {spawn && <span>PlayerSpawn</span>}
             </div>
 
-            <CollapsibleGroup storagePrefixes={['details.']}>
             {selectedSurface && selectedSurface.actorId === selectedActor.id && (() => {
               const surfaceComp = brush || convexBrush || ramp || stair || column || arch || curvedWall;
               const surfaceUv = surfaceComp?.faceUVs?.[selectedSurface.surfaceId] || {
@@ -1854,10 +1832,17 @@ export function DetailsPanel({ docked = false } = {}) {
                 </p>
               </Collapsible>
             )}
-            </CollapsibleGroup>
           </>
-        )}
-      </div>
-    </aside>
+  );
+
+  return (
+    <DetailsPanelShell
+      docked={docked}
+      tab={tab}
+      setTab={setTab}
+      showCollapseTools={tab === 'details' && Boolean(selectedActor)}
+    >
+      {detailsBody}
+    </DetailsPanelShell>
   );
 }

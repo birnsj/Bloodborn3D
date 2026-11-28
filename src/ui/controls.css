@@ -242,6 +242,13 @@ body.bb-is-scrubbing * {
   font-size: var(--bb-font-size-sm);
 }
 
+.bb-panel-chrome__head > .bb-collapse-group__actions,
+.bb-details__collapse-actions {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
 .bb-collapse {
   border: 1px solid var(--bb-border-subtle);
   border-radius: var(--bb-radius);

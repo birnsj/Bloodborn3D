@@ -116,8 +116,8 @@ export const workspaceLesson = {
     {
       id: 'hover-help',
       title: 'Hover Help',
-      body: 'Help → Show Hover Help. Pause on a toolbar, Content Browser, Outliner, sticky note, Checklist, or viewport control for a tip. Help → Keyboard Shortcuts… lists hotkeys (including camera bookmarks Ctrl+1–9 / 1–9) plus Content/Outliner drag and Note/Checklist helpers.',
-      highlight: ['toolbar.select', 'help.hoverHelp', 'help.shortcuts', 'content.folder'],
+      body: 'Help → Show Hover Help. Pause on a toolbar, Content Browser, Outliner, sticky note, Checklist, or viewport control for a tip. Help → Keyboard Shortcuts… lists hotkeys (including camera bookmarks Ctrl+1–9 / 1–9). Help → Encyclopedia… defines editor terms (Brush, Cell, Prefab, eu, …).',
+      highlight: ['toolbar.select', 'help.hoverHelp', 'help.shortcuts', 'help.encyclopedia', 'content.folder'],
       verify: { type: 'manualConfirm', label: 'I saw a tip' },
     },
     {

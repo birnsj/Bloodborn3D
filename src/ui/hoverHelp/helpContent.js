@@ -122,6 +122,11 @@ export const HELP_CONTENT = {
     body: 'Open Help → Keyboard Shortcuts… for edit (Ctrl+Shift+S Save All), transform, geometry/clip, grid, placement, camera (Ctrl+1–9 store / 1–9 recall bookmarks), play, Content Browser multi-select and folder/category menus, Outliner drag/reparent, sticky notes & Checklist, and Project Art gallery bindings.',
     tips: 'Hover Help shows matching shortcuts on toolbar, viewport, Content Browser, Outliner, and AI Assets controls.',
   },
+  'help.encyclopedia': {
+    title: 'Encyclopedia',
+    body: 'Open Help → Encyclopedia… for a searchable glossary of BloodBound editor terms (Brush, Cell, Prefab, Surface, eu, World Solid, and more). Concept definitions — not control tips.',
+    tips: 'Hover Help explains individual controls; Academy teaches with lessons; Encyclopedia defines vocabulary.',
+  },
   'help.hoverHelp': {
     title: 'Show Hover Help',
     body: 'When enabled, pausing the cursor over toolbar, panel, Content Browser, Outliner, sticky notes, and Checklist controls shows a tip with description and shortcut when available.',
@@ -816,8 +821,8 @@ export const HELP_CONTENT = {
   },
   'workspace.ai': {
     title: 'AI Assets',
-    body: 'Workspace for Project Art Library and Asset Generation (OpenArt images + Meshy Image-to-3D). Switch sections with the tabs under the workspace title.',
-    tips: 'OpenArt and Meshy both use their official CLIs with browser sign-in. Both require explicit spend approval.',
+    body: 'Workspace for Project Art Library and Asset Generation (OpenArt images + Meshy Image-to-3D / Auto-rig). Switch sections with the tabs under the workspace title.',
+    tips: 'OpenArt and Meshy both use their official CLIs with browser sign-in. Both require explicit spend approval. After Image-to-3D, Auto-rig creates a skinned mesh for Characters.',
   },
   'workspace.level': {
     title: 'Level Editor',
@@ -826,6 +831,11 @@ export const HELP_CONTENT = {
   'workspace.materials': {
     title: 'Materials',
     body: 'Edit material definitions: shading model (Standard / Physical / Basic / Toon / Matcap), maps, Physical groups, opacity/flags, and live preview. Use Generate PBR Maps to derive local normal and roughness from a base-color texture. Scrub Undo/Redo is draft-local (one entry per finished numeric adjustment). Switch back to Level Editor to assign materials to brushes and faces.',
+  },
+  'workspace.characters': {
+    title: 'Characters',
+    body: 'Character library (v0): name + mesh asset reference with bind-pose preview. Create from Content Browser meshes or Meshy Auto-rig → Import → Create Character. No animation playback or level Character actors yet.',
+    tips: 'Rigged Meshy meshes show in bind pose here. Animation workspace will own clips later.',
   },
   'materials.shadingModel': {
     title: 'Shading Model',
@@ -921,7 +931,20 @@ export const HELP_CONTENT = {
   },
   'meshy.pose': {
     title: 'Character pose',
-    body: 'Forwards Meshy pose_mode: Default omits the flag; T-pose / A-pose constrain the generated character for rigging. A-pose keeps limbs clearer for auto-rig.',
+    body: 'Forwards Meshy pose_mode: Default omits the flag; T-pose / A-pose constrain the generated character for rigging. A-pose keeps limbs clearer for auto-rig. Soft constraint — the reference image pose still dominates.',
+  },
+  'meshy.autoRig': {
+    title: 'Auto-rig',
+    body: 'Runs Meshy Rigging on the succeeded Image-to-3D task (humanoid biped). Estimate → approve spend (~5 credits) → downloads a skinned GLB. Requires clear limbs; not for props.',
+    tips: 'After success, Import Model then Create Character opens the Characters workspace.',
+  },
+  'meshy.autoRig.height': {
+    title: 'Auto-rig height',
+    body: 'Approximate character height in meters for Meshy bone proportions (default 1.7). Meshy scales the rigged model to this height.',
+  },
+  'meshy.createCharacter': {
+    title: 'Create Character',
+    body: 'Imports the rigged mesh if needed, then creates a Characters-library entry pointing at that mesh and opens the Characters workspace.',
   },
   'meshy.includeObjects': {
     title: 'Include objects',
@@ -985,7 +1008,7 @@ export const HELP_CONTENT = {
   },
   'meshy.pbrMaps': {
     title: 'PBR map inspector',
-    body: 'Lists albedo, normal, metallic, roughness, and emission (when returned) from a completed Meshy task. Fetch PBR maps re-downloads --all-assets — no generation credits. Import Model (or Import maps to Content Browser) writes maps into Textures/<asset name> so they appear in the Content Browser.',
+    body: 'Albedo/normal/metallic/roughness/emission from a finished Meshy task. Fetch is free. Click thumb or Inspect for pan/zoom (UV atlases). Import writes into Textures.',
   },
   'meshy.stagingBrowser': {
     title: 'Staging files (advanced)',
@@ -1362,7 +1385,15 @@ export const HELP_CONTENT = {
   },
   'panel.details': {
     title: 'Details',
-    body: 'Inspects and edits the current selection (transform, brush, materials, lights, world settings when nothing is selected).',
+    body: 'Inspects and edits the current selection (transform, brush, materials, lights, world settings when nothing is selected). Collapse All / Expand All in the panel header folds or opens every Details section.',
+  },
+  'details.collapseAll': {
+    title: 'Collapse All',
+    body: 'Collapses every Details section for the selected actor (including nested light subsections). Use a section chevron or Expand All to open them again.',
+  },
+  'details.expandAll': {
+    title: 'Expand All',
+    body: 'Opens every Details section for the selected actor, including nested light subsections.',
   },
   'panel.content': {
     title: 'Content Browser',

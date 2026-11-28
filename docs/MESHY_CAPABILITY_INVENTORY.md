@@ -76,7 +76,7 @@ Default download previously skipped maps (`reason: embedded_textures`). **Fetch 
 | Retexture | `retexture` | v1 | **Unsupported in editor** | PBR, resolution, remove-lighting |
 | Remesh (standalone) | `remesh` | v1 | **Unsupported in editor** (inline remesh on Image-to-3D Standard only) | topology, polycount, decimation 1–4 |
 | UV unwrap | `uv-unwrap` | v1 | **Unsupported in editor** | GLB ≤40k faces |
-| Rigging | `rigging` | v1 | **Unsupported in editor** | Humanoid + height-meters; no runtime |
+| Rigging | `rigging` | v1 | **Supported (v0 Auto-rig)** | Biped + height-meters after Image-to-3D; import skinned GLB; bundled walk/run not imported yet |
 | Animation library | `animate` | v1 | **Unsupported in editor** | action-id(s) / motion-task; no runtime |
 | Text-to-Motion | `text-to-motion` | v1 | **Unsupported in editor** | prime/swift; duration 2–10s |
 | Convert / resize / print / Creative Lab | various | yes | **Unsupported in editor** | See `meshy resources` |
